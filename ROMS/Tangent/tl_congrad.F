@@ -1,12 +1,16 @@
 #include "cppdefs.h"
 
-#if defined SENSITIVITY_4DVAR || defined TL_W4DPSAS || defined TL_W4DVAR
+#if (defined SENSITIVITY_4DVAR || \
+     defined TL_RBL4DVAR       || \
+     defined TL_R4DVAR)        && \
+    !defined RPCG
+
       SUBROUTINE tl_congrad (ng, model, outLoop, innLoop, NinnLoop,     &
      &                       Lcgini)
 !
-!svn $Id: tl_congrad.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: tl_congrad.F 1022 2020-05-13 03:03:15Z arango $
 !=================================================== Andrew M. Moore ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group      Hernan G. Arango   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group      Hernan G. Arango   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -14,7 +18,7 @@
 !  Weak Constraint 4-Dimensional Variational (4DVar) Pre-conditioned   !
 !                     Conjugate Gradient Algorithm                     !
 
-# if defined TL_W4DVAR || defined W4DVAR_SENSITIVITY
+# if defined R4DVAR_ANA_SENSITIVITY || defined TL_R4DVAR
 !                                                                      !
 !  The indirect representer method solves the system:                  !
 !                                                                      !
@@ -55,7 +59,7 @@
 !    Chua, B. S. and A. F. Bennett,  2001:  An inverse ocean modeling  !
 !      sytem, Ocean Modelling, 3, 137-165.                             !
 
-# elif defined TL_W4DPSAS || defined W4DPSAS_SENSITIVITY
+# elif defined RBL4DVAR_ANA_SENSITIVITY || defined TL_RBL4DVAR
 !                                                                      !
 !  Solve the system (following Courtier, 1997):                        !
 !                                                                      !
@@ -185,7 +189,7 @@
 !
         IF (innLoop.eq.0) THEN
 
-# if defined W4DPSAS || defined TL_W4DPSAS
+# if defined RBL4DVAR || defined TL_RBL4DVAR
 !
 !  If this is the first inner-loop, save NLmodVal in BCKmodVal.
 !
@@ -212,7 +216,7 @@
 !  observation error standard deviations (i.e. sqrt(ObsErr)).
 !
             DO iobs=1,Ndatum(ng)
-# if defined W4DPSAS || defined TL_W4DPSAS
+# if defined RBL4DVAR || defined TL_RBL4DVAR
 !>            pgrad(iobs)=-ObsScale(iobs)*                              &
 !>   &                    (ObsVal(iobs)-BCKmodVal(iobs))
 !>
@@ -327,7 +331,7 @@
 !<>             tl_ADmodVal(iobs)=tl_cg_pxsave(iobs)
 !>
                 ADmodVal(iobs)=tl_cg_pxsave(iobs)
-# if defined W4DPSAS || defined TL_W4DPSAS
+# if defined RBL4DVAR || defined TL_RBL4DVAR
 !>              cg_innov(iobs)=-ObsScale(iobs)*                         &
 !>   &                         (ObsVal(iobs)-BCKmodVal(iobs))
 !<>             tl_cg_innov(iobs)=0.0_r8

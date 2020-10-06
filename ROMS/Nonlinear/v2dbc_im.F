@@ -2,9 +2,9 @@
 
       MODULE v2dbc_mod
 !
-!svn $Id: v2dbc_im.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: v2dbc_im.F 995 2020-01-10 04:01:28Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -99,7 +99,10 @@
       real(r8) :: Ce, Cx, Ze
       real(r8) :: bry_pgr, bry_cor, bry_str, bry_val
       real(r8) :: cff, cff1, cff2, cff3, dt2d, dVde, dVdt, dVdx
-      real(r8) :: obc_in, obc_out, tau
+      real(r8) :: obc_in, obc_out, phi, tau
+#if defined ATM_PRESS && defined PRESS_COMPENSATE
+      real(r8) :: OneAtm, fac
+#endif
 
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: grad
 
@@ -119,6 +122,10 @@
         know=kstp
         dt2d=dtfast(ng)
       END IF
+#if defined ATM_PRESS && defined PRESS_COMPENSATE
+      OneAtm=1013.25_r8                  ! 1 atm = 1013.25 mb
+      fac=100.0_r8/(g*rho0)
+#endif
 !
 !-----------------------------------------------------------------------
 !  Lateral boundary conditions at the southern edge.
@@ -155,7 +162,11 @@
                 ELSE
                   tau=obc_out
                 END IF
+#ifdef IMPLICIT_NUDGING
+                IF (tau.gt.0.0_r8) tau=1.0_r8/tau
+#else
                 tau=tau*dt2d
+#endif
               END IF
 
               IF ((dVdt*dVde).lt.0.0_r8) dVdt=0.0_r8
@@ -184,9 +195,16 @@
      &                          (cff+Ce)
 
               IF (LBC(isouth,isVbar,ng)%nudging) THEN
+#ifdef IMPLICIT_NUDGING
+                phi=dt(ng)/(tau+dt(ng))
+                vbar(i,Jstr,kout)=(1.0_r8-phi)*vbar(i,Jstr,kout)+       &
+     &                            phi*BOUNDARY(ng)%vbar_south(i)
+
+#else
                 vbar(i,Jstr,kout)=vbar(i,Jstr,kout)+                    &
      &                            tau*(BOUNDARY(ng)%vbar_south(i)-      &
      &                                 vbar(i,Jstr,know))
+#endif
               END IF
 #ifdef MASKING
               vbar(i,Jstr,kout)=vbar(i,Jstr,kout)*                      &
@@ -245,10 +263,21 @@
      &                            GRID(ng)%h(i,Jstr  )+                 &
      &                            zeta(i,Jstr  ,know)))
               Ce=SQRT(g*cff)
+#if defined ATM_PRESS && defined PRESS_COMPENSATE
+              vbar(i,Jstr,kout)=bry_val-                                &
+     &                          Ce*(0.5_r8*                             &
+     &                              (zeta(i,Jstr-1,know)+               &
+     &                               zeta(i,Jstr  ,know)+               &
+     &                               fac*(FORCES(ng)%Pair(i,Jstr-1)+    &
+     &                                    FORCES(ng)%Pair(i,Jstr  )-    &
+     &                                    2.0_r8*OneAtm))-              &
+     &                              BOUNDARY(ng)%zeta_south(i))
+#else
               vbar(i,Jstr,kout)=bry_val-                                &
      &                          Ce*(0.5_r8*(zeta(i,Jstr-1,know)+        &
      &                                      zeta(i,Jstr  ,know))-       &
      &                              BOUNDARY(ng)%zeta_south(i))
+#endif
 #ifdef MASKING
               vbar(i,Jstr,kout)=vbar(i,Jstr,kout)*                      &
      &                          GRID(ng)%vmask(i,Jstr)
@@ -429,7 +458,9 @@
 # ifdef MASKING
                 bry_val=bry_val*GRID(ng)%vmask(i,Jstr)
 # endif
+# ifdef NESTING_DEBUG
                 BRY_CONTACT(isouth,cr)%Mflux(i)=cff*bry_val
+# endif
                 vbar(i,Jstr,kout)=bry_val
               END DO
             END IF
@@ -473,7 +504,11 @@
                 ELSE
                   tau=obc_out
                 END IF
+#ifdef IMPLICIT_NUDGING
+                IF (tau.gt.0.0_r8) tau=1.0_r8/tau
+#else
                 tau=tau*dt2d
+#endif
               END IF
 
               IF ((dVdt*dVde).lt.0.0_r8) dVdt=0.0_r8
@@ -502,9 +537,16 @@
      &                            (cff+Ce)
 
               IF (LBC(inorth,isVbar,ng)%nudging) THEN
+#ifdef IMPLICIT_NUDGING
+                phi=dt(ng)/(tau+dt(ng))
+                vbar(i,Jend+1,kout)=(1.0_r8-phi)*vbar(i,Jend+1,kout)+   &
+     &                              phi*BOUNDARY(ng)%vbar_north(i)
+
+#else
                 vbar(i,Jend+1,kout)=vbar(i,Jend+1,kout)+                &
      &                              tau*(BOUNDARY(ng)%vbar_north(i)-    &
      &                                   vbar(i,Jend+1,know))
+#endif
               END IF
 #ifdef MASKING
               vbar(i,Jend+1,kout)=vbar(i,Jend+1,kout)*                  &
@@ -563,10 +605,21 @@
      &                            GRID(ng)%h(i,Jend+1)+                 &
      &                            zeta(i,Jend+1,know)))
               Ce=SQRT(g*cff)
+#if defined ATM_PRESS && defined PRESS_COMPENSATE
+            vbar(i,Jend+1,kout)=bry_val+                                &
+     &                          Ce*(0.5_r8*                             &
+     &                              (zeta(i,Jend  ,know)+               &
+     &                               zeta(i,Jend+1,know)+               &
+     &                               fac*(FORCES(ng)%Pair(i,Jend  )+    &
+     &                                    FORCES(ng)%Pair(i,Jend+1)-    &
+     &                                    2.0_r8*OneAtm))-              &
+     &                              BOUNDARY(ng)%zeta_north(i))
+#else
               vbar(i,Jend+1,kout)=bry_val+                              &
      &                            Ce*(0.5_r8*(zeta(i,Jend  ,know)+      &
      &                                        zeta(i,Jend+1,know))-     &
      &                                BOUNDARY(ng)%zeta_north(i))
+#endif
 #ifdef MASKING
               vbar(i,Jend+1,kout)=vbar(i,Jend+1,kout)*                  &
      &                            GRID(ng)%vmask(i,Jend+1)
@@ -747,7 +800,9 @@
 # ifdef MASKING
                 bry_val=bry_val*GRID(ng)%vmask(i,Jend+1)
 # endif
+# ifdef NESTING_DEBUG
                 BRY_CONTACT(inorth,cr)%Mflux(i)=cff*bry_val
+# endif
                 vbar(i,Jend+1,kout)=bry_val
               END DO
             END IF
@@ -791,7 +846,11 @@
                 ELSE
                   tau=obc_out
                 END IF
+#ifdef IMPLICIT_NUDGING
+                IF (tau.gt.0.0_r8) tau=1.0_r8/tau
+#else
                 tau=tau*dt2d
+#endif
               END IF
 
               IF ((dVdt*dVdx).lt.0.0_r8) dVdt=0.0_r8
@@ -820,9 +879,15 @@
      &                            (cff+Cx)
 
               IF (LBC(iwest,isVbar,ng)%nudging) THEN
+#ifdef IMPLICIT_NUDGING
+                phi=dt(ng)/(tau+dt(ng))
+                vbar(Istr-1,j,kout)=(1.0_r8-phi)*vbar(Istr-1,j,kout)+   &
+     &                              phi*BOUNDARY(ng)%vbar_west(j)
+#else
                 vbar(Istr-1,j,kout)=vbar(Istr-1,j,kout)+                &
      &                              tau*(BOUNDARY(ng)%vbar_west(j)-     &
      &                                   vbar(Istr-1,j,know))
+#endif
               END IF
 #ifdef MASKING
               vbar(Istr-1,j,kout)=vbar(Istr-1,j,kout)*                  &

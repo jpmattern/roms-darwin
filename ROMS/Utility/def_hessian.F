@@ -1,19 +1,19 @@
 #include "cppdefs.h"
-#if defined IS4DVAR               || \
+#if defined I4DVAR                || \
     (defined WEAK_CONSTRAINT      && \
      (defined POSTERIOR_EOFS      || defined POSTERIOR_ERROR_I || \
-      defined POSTERIOR_ERROR_F)) ||  defined LCZ_FINAL
+      defined POSTERIOR_ERROR_F)) || defined LCZ_FINAL
       SUBROUTINE def_hessian (ng)
 !
-!svn $Id: def_hessian.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: def_hessian.F 1022 2020-05-13 03:03:15Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
 !                                                                      !
 !  This routine creates the Hessian eigenvectors NetCDF file used for  !
-!  the pre-conditioning of the 4DVar conjugate gradient algorithm. It  !
+!  the pre-conditioning of the 4D-Var conjugate gradient algorithm. It !
 !  defines its dimensions, attributes, and variables.                  !
 !                                                                      !
 !=======================================================================
@@ -60,11 +60,11 @@
 # if defined POSTERIOR_EOFS && defined WEAK_CONSTRAINT
       integer :: NpostDim
 # endif
-      integer :: DimIDs(32), t2dgrd(3), u2dgrd(3), v2dgrd(3)
+      integer :: DimIDs(nDimID)
+      integer :: t2dgrd(3), u2dgrd(3), v2dgrd(3)
 # ifdef ADJUST_BOUNDARY
       integer :: t2dobc(4)
 # endif
-      integer :: Vsize(4)
 
       integer :: def_dim
 
@@ -273,6 +273,11 @@
 #  endif
 
 #  ifdef ECOSIM
+        status=def_dim(ng, iNLM, HSS(ng)%ncid, ncname, 'Nbands',        &
+     &                 NBands, DimIDs(33))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
         status=def_dim(ng, iADM, HSS(ng)%ncid, ncname, 'Nphy',          &
      &                 Nphy, DimIDs(25))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -538,7 +543,7 @@
         Vinfo( 4)=TRIM(Rclock%calendar)
         Vinfo(14)=Vname(4,idtime)
         status=def_var(ng, iADM, HSS(ng)%ncid, HSS(ng)%Vid(idtime),     &
-     &                 NF_TYPE, 1, (/recdim/), Aval, Vinfo,ncname,      &
+     &                 NF_TOUT, 1, (/recdim/), Aval, Vinfo,ncname,      &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN

@@ -1,8 +1,8 @@
       MODULE ocean_control_mod
 !
-!svn $Id: adsen_ocean.h 889 2018-02-10 03:32:52Z arango $
+!svn $Id: adsen_ocean.h 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -60,6 +60,7 @@
       USE mod_iounits
       USE mod_scalars
 !
+      USE inp_par_mod,       ONLY : inp_par
 #ifdef MCT_LIB
 # ifdef ATM_COUPLING
       USE ocean_coupler_mod, ONLY : initialize_ocn2atm_coupling
@@ -93,7 +94,7 @@
 #ifdef DISTRIBUTE
 !
 !-----------------------------------------------------------------------
-!  Set distribute-memory (MPI) world communictor.
+!  Set distribute-memory (mpi) world communictor.
 !-----------------------------------------------------------------------
 !
       IF (PRESENT(mpiCOMM)) THEN
@@ -192,11 +193,26 @@
 !  applicable. Define adjoint sensitivity functional.
 !-----------------------------------------------------------------------
 !
+#if defined BULK_FLUXES && defined NL_BULK_FLUXES
+!  Set structure for the nonlinear surface fluxes to be processed by
+!  by the tangent linear and adjoint models. Also, set switches to
+!  process the BLK structure in routine "check_multifile".  Notice that
+!  it is possible to split solution into multiple NetCDF files to reduce
+!  their size.
+!
+      CALL edit_multifile ('FWD2BLK')
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+      DO ng=1,Ngrids
+        LreadBLK(ng)=.TRUE.
+      END DO
+#endif
+!
+!  Initialize adjoint model with sensitivity functional.
+!
       Lstiffness=.FALSE.
       DO ng=1,Ngrids
-#if defined BULK_FLUXES && defined NL_BULK_FLUXES
-        BLK(ng)%name=FWD(ng)%name
-#endif
+        LreadFWD(ng)=.TRUE.
 !$OMP PARALLEL
         CALL ad_initial (ng)
 !$OMP END PARALLEL
@@ -271,7 +287,7 @@
 !
 !  Imported variable declarations.
 !
-      real(r8), intent(in) :: RunInterval            ! seconds
+      real(dp), intent(in) :: RunInterval            ! seconds
 !
 !  Local variable declarations.
 !
@@ -334,7 +350,7 @@
             IF (Master) WRITE (stdout,10)
  10         FORMAT (/,' Blowing-up: Saving latest model state into ',   &
      &                ' RESTART file',/)
-            Fcount=RST(ng)%Fcount
+            Fcount=RST(ng)%load
             IF (LcycleRST(ng).and.(RST(ng)%Nrec(Fcount).ge.2)) THEN
               RST(ng)%Rindex=2
               LcycleRST(ng)=.FALSE.
@@ -347,16 +363,17 @@
       END IF
 !
 !-----------------------------------------------------------------------
-!  Stop model and time profiling clocks.  Close output NetCDF files.
+!  Stop model and time profiling clocks, report memory requirements, and
+!  close output NetCDF files.
 !-----------------------------------------------------------------------
 !
 !  Stop time clocks.
 !
       IF (Master) THEN
         WRITE (stdout,20)
- 20     FORMAT (/,' Elapsed CPU time (seconds):',/)
+ 20     FORMAT (/,'Elapsed wall CPU time for each process (seconds):',/)
       END IF
-
+!
       DO ng=1,Ngrids
 !$OMP PARALLEL
         DO thread=THREAD_RANGE
@@ -365,8 +382,17 @@
 !$OMP END PARALLEL
       END DO
 !
+!  Report dynamic memory and automatic memory requirements.
+!
+!$OMP PARALLEL
+      CALL memory
+!$OMP END PARALLEL
+!
 !  Close IO files.
 !
+      DO ng=1,Ngrids
+        CALL close_inp (ng, iADM)
+      END DO
       CALL close_out
 
       RETURN

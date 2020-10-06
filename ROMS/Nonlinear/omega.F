@@ -2,9 +2,9 @@
       MODULE omega_mod
 #ifdef SOLVE3D
 !
-!svn $Id: omega.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: omega.F 1029 2020-07-11 02:11:09Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -160,6 +160,11 @@
 !
 !  Apply mass point sources (volume vertical influx), if any.
 !
+!  Overwrite W(Isrc,Jsrc,k) with the same divergence of Huon,Hvom as
+!  above but add in point source Qsrc(k) and reaccumulate the vertical
+!  sum to obtain the correct net Qbar given in user input - J. Levin
+!  (Jupiter Intelligence Inc.) and J. Wilkin
+!
         IF (LwSrc(ng)) THEN
           DO is=1,Nsrc(ng)
             ii=SOURCES(ng)%Isrc(is)
@@ -168,7 +173,10 @@
      &          ((JstrR.le.jj).and.(jj.le.JendR)).and.                  &
      &          (j.eq.jj)) THEN
               DO k=1,N(ng)
-                W(ii,jj,k)=W(ii,jj,k)+SOURCES(ng)%Qsrc(is,k)
+                W(ii,jj,k)=W(ii,jj,k-1)-                                &
+     &                     (Huon(ii+1,jj,k)-Huon(ii,jj,k)+              &
+     &                      Hvom(ii,jj+1,k)-Hvom(ii,jj,k))+             &
+     &                     SOURCES(ng)%Qsrc(is,k)
               END DO
             END IF
           END DO

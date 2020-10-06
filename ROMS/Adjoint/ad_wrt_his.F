@@ -2,9 +2,9 @@
 #ifdef ADJOINT
       SUBROUTINE ad_wrt_his (ng)
 !
-!svn $Id: ad_wrt_his.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: ad_wrt_his.F 1028 2020-06-01 00:24:59Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -71,7 +71,8 @@
 # ifdef SOLVE3D
       integer :: itrc, k, nout
 # endif
-      real(r8) :: scale
+!
+      real(dp) :: scale
       real(r8) :: Tval(1)
 !
       LBi=LBOUND(GRID(ng)%h,DIM=1)
@@ -108,7 +109,7 @@
 # else
       kout=kstp(ng)
 # endif
-# if defined WEAK_CONSTRAINT && !defined TIME_CONV
+# if defined WEAK_CONSTRAINT
       kfout=2
 # endif
 # ifdef SOLVE3D
@@ -128,11 +129,8 @@
 !  Set time record index.
 !
       ADM(ng)%Rindex=ADM(ng)%Rindex+1
-      Fcount=ADM(ng)%Fcount
+      Fcount=ADM(ng)%load
       ADM(ng)%Nrec(Fcount)=ADM(ng)%Nrec(Fcount)+1
-# if defined WEAK_CONSTRAINT && defined TIME_CONV
-      kfout=NrecTC(ng)-ADM(ng)%Rindex+1
-# endif
 !
 !  If requested, set time index to recycle time records in the adjoint
 !  file.
@@ -147,17 +145,8 @@
         IF (LwrtPER(ng)) THEN
           Tval(1)=REAL(ADM(ng)%Rindex,r8)*day2sec
         ELSE
-# ifdef WEAK_CONSTRAINT
-#  ifdef TIME_CONV
-          IF (ADM(ng)%Rindex.le.NrecTC(ng)) THEN
-            Tval(1)=dstart*day2sec+                                     &
-     &              REAL(kfout-1,r8)*nADJ(ng)*dt(ng)
-          ELSE
-            Tval(1)=dstart*day2sec
-          END IF
-#  else
+# if defined WEAK_CONSTRAINT && !defined WEAK_NOINTERP
           Tval(1)=ForceTime(ng)
-#  endif
 # else
           Tval(1)=time(ng)
 # endif
@@ -177,7 +166,7 @@
 !  own fixed time-dimension (of size Nfrec) to allow 4DVAR adjustments
 !  at other times in addition to initialization time.
 !
-      scale=1.0_r8                          ! m2/s2
+      scale=1.0_dp                          ! m2/s2
       gtype=gfactor*u3dvar
       status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idUsms),   &
      &                   ADM(ng)%Rindex, gtype,                         &
@@ -198,7 +187,7 @@
 !
 !  Write out surface V-momentum stress.
 !
-      scale=1.0_r8                          ! m2/s2
+      scale=1.0_dp                          ! m2/s2
       gtype=gfactor*v3dvar
       status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idVsms),   &
      &                   ADM(ng)%Rindex, gtype,                         &
@@ -225,7 +214,7 @@
 !
       DO itrc=1,NT(ng)
         IF (Lstflux(itrc,ng)) THEN
-          scale=1.0_r8                      ! kinematic flux units
+          scale=1.0_dp                      ! kinematic flux units
           gtype=gfactor*r3dvar
           status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                    &
      &                       ADM(ng)%Vid(idTsur(itrc)),                 &
@@ -251,7 +240,7 @@
 !  Write out bathymetry.
 !
       IF (Hout(idbath,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idbath), &
      &                     ADM(ng)%Rindex, gtype,                       &
@@ -277,7 +266,7 @@
       IF (Hout(idFsur,ng)) THEN
 # ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*r2dvar
           status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                    &
      &                       ADM(ng)%Vid(idFsur),                       &
@@ -286,11 +275,7 @@
 #  ifdef MASKING
      &                       GRID(ng) % rmask,                          &
 #  endif
-#  ifdef TIME_CONV
-     &                       OCEAN(ng)% f_zetaS(:,:,kfout))
-#  else
      &                       OCEAN(ng)% f_zetaG(:,:,kfout))
-#  endif
           IF (FoundError(status, nf90_noerr, __LINE__,                  &
      &                   __FILE__)) THEN
             IF (Master) THEN
@@ -302,7 +287,7 @@
           END IF
         ELSE
 # endif
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*r2dvar
           IF (LwrtState2d(ng)) THEN
             status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
@@ -352,7 +337,7 @@
 !  Write out free-surface open boundaries.
 !
       IF (ANY(Lobc(:,isFsur,ng))) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         status=nf_fwrite2d_bry (ng, iADM, ADM(ng)%name, ADM(ng)%ncid,   &
      &                          Vname(1,idSbry(isFsur)),                &
      &                          ADM(ng)%Vid(idSbry(isFsur)),            &
@@ -378,7 +363,7 @@
       IF (Hout(idUbar,ng)) THEN
 # ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*u2dvar
           status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                    &
      &                       ADM(ng)%Vid(idUbar),                       &
@@ -387,11 +372,7 @@
 #  ifdef MASKING
      &                       GRID(ng) % umask_full,                     &
 #  endif
-#  ifdef TIME_CONV
-     &                       OCEAN(ng) % f_ubarS(:,:,kfout))
-#  else
      &                       OCEAN(ng) % f_ubarG(:,:,kfout))
-#  endif
           IF (FoundError(status, nf90_noerr, __LINE__,                  &
      &                   __FILE__)) THEN
             IF (Master) THEN
@@ -403,7 +384,7 @@
           END IF
         ELSE
 # endif
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*u2dvar
           IF (LwrtState2d(ng)) THEN
             status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
@@ -443,7 +424,7 @@
 !  Write out 2D U-momentum component open boundaries.
 !
       IF (ANY(Lobc(:,isUbar,ng))) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         status=nf_fwrite2d_bry (ng, iADM, ADM(ng)%name, ADM(ng)%ncid,   &
      &                          Vname(1,idSbry(isUbar)),                &
      &                          ADM(ng)%Vid(idSbry(isUbar)),            &
@@ -469,7 +450,7 @@
       IF (Hout(idVbar,ng)) THEN
 # ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*v2dvar
           status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                    &
      &                       ADM(ng)%Vid(idVbar),                       &
@@ -478,11 +459,7 @@
 #  ifdef MASKING
      &                       GRID(ng) % vmask_full,                     &
 #  endif
-#  ifdef TIME_CONV
-     &                       OCEAN(ng) % f_vbarS(:,:,kfout))
-#  else
      &                       OCEAN(ng) % f_vbarG(:,:,kfout))
-#  endif
           IF (FoundError(status, nf90_noerr, __LINE__,                  &
      &                   __FILE__)) THEN
             IF (Master) THEN
@@ -494,7 +471,7 @@
           END IF
         ELSE
 # endif
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*v2dvar
           IF (LwrtState2d(ng)) THEN
             status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
@@ -534,7 +511,7 @@
 !  Write out 2D V-momentum component open boundaries.
 !
       IF (ANY(Lobc(:,isVbar,ng))) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         status=nf_fwrite2d_bry (ng, iADM, ADM(ng)%name, ADM(ng)%ncid,   &
      &                          Vname(1,idSbry(isVbar)),                &
      &                          ADM(ng)%Vid(idSbry(isVbar)),            &
@@ -562,7 +539,7 @@
       IF (Hout(idUvel,ng)) THEN
 #  ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*u3dvar
           status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                    &
      &                       ADM(ng)%Vid(idUvel),                       &
@@ -571,11 +548,7 @@
 #   ifdef MASKING
      &                       GRID(ng) % umask_full,                     &
 #   endif
-#  ifdef TIME_CONV
-     &                       OCEAN(ng) % f_uS(:,:,:,kfout))
-#  else
      &                       OCEAN(ng) % f_uG(:,:,:,kfout))
-#  endif
           IF (FoundError(status, nf90_noerr, __LINE__,                  &
      &                   __FILE__)) THEN
             IF (Master) THEN
@@ -587,7 +560,7 @@
           END IF
         ELSE
 #  endif
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*u3dvar
 #  if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
           IF (LwrtState3d(ng)) THEN
@@ -631,7 +604,7 @@
 !  Write out 3D U-momentum component open boundaries.
 !
       IF (ANY(Lobc(:,isUvel,ng))) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         status=nf_fwrite3d_bry (ng, iADM, ADM(ng)%name, ADM(ng)%ncid,   &
      &                          Vname(1,idSbry(isUvel)),                &
      &                          ADM(ng)%Vid(idSbry(isUvel)),            &
@@ -657,7 +630,7 @@
       IF (Hout(idVvel,ng)) THEN
 #  ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*v3dvar
           status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                    &
      &                       ADM(ng)%Vid(idVvel),                       &
@@ -666,11 +639,7 @@
 #   ifdef MASKING
      &                       GRID(ng) % vmask_full,                     &
 #   endif
-#  ifdef TIME_CONV
-     &                       OCEAN(ng) % f_vS(:,:,:,kfout))
-#  else
      &                       OCEAN(ng) % f_vG(:,:,:,kfout))
-#  endif
           IF (FoundError(status, nf90_noerr, __LINE__,                  &
      &                   __FILE__)) THEN
             IF (Master) THEN
@@ -682,7 +651,7 @@
           END IF
         ELSE
 #  endif
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*v3dvar
 #  if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
           IF (LwrtState3d(ng)) THEN
@@ -726,7 +695,7 @@
 !  Write out 3D V-momentum component open boundaries.
 !
       IF (ANY(Lobc(:,isVvel,ng))) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         status=nf_fwrite3d_bry (ng, iADM, ADM(ng)%name, ADM(ng)%ncid,   &
      &                          Vname(1,idSbry(isVvel)),                &
      &                          ADM(ng)%Vid(idSbry(isVvel)),            &
@@ -753,7 +722,7 @@
         IF (Hout(idTvar(itrc),ng)) THEN
 #  ifdef WEAK_CONSTRAINT
           IF (WRTforce(ng)) THEN
-            scale=1.0_r8
+            scale=1.0_dp
             gtype=gfactor*r3dvar
             status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                  &
      &                         ADM(ng)%Tid(itrc),                       &
@@ -762,11 +731,7 @@
 #   ifdef MASKING
      &                         GRID(ng) % rmask,                        &
 #   endif
-#  ifdef TIME_CONV
-     &                         OCEAN(ng) % f_tS(:,:,:,kfout,itrc))
-#  else
      &                         OCEAN(ng) % f_tG(:,:,:,kfout,itrc))
-#  endif
             IF (FoundError(status, nf90_noerr, __LINE__,                &
      &                     __FILE__)) THEN
               IF (Master) THEN
@@ -779,7 +744,7 @@
             END IF
           ELSE
 #  endif
-            scale=1.0_r8
+            scale=1.0_dp
             gtype=gfactor*r3dvar
 #  if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
             IF (LwrtState3d(ng)) THEN
@@ -826,7 +791,7 @@
 !
       DO itrc=1,NT(ng)
         IF (ANY(Lobc(:,isTvar(itrc),ng))) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           status=nf_fwrite3d_bry (ng, iADM, ADM(ng)%name, ADM(ng)%ncid, &
      &                            Vname(1,idSbry(isTvar(itrc))),        &
      &                            ADM(ng)%Vid(idSbry(isTvar(itrc))),    &
@@ -852,7 +817,7 @@
 !  Write out density anomaly.
 !
       IF (Hout(idDano,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idDano), &
      &                     ADM(ng)%Rindex, gtype,                       &
@@ -875,7 +840,7 @@
 !  Write out vertical viscosity coefficient.
 !
       IF (Hout(idVvis,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*w3dvar
         status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idVvis), &
      &                     ADM(ng)%Rindex, gtype,                       &
@@ -899,7 +864,7 @@
 !  Write out vertical diffusion coefficient for potential temperature.
 !
       IF (Hout(idTdif,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*w3dvar
         status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idTdif), &
      &                     ADM(ng)%Rindex, gtype,                       &
@@ -924,7 +889,7 @@
 !  Write out vertical diffusion coefficient for salinity.
 !
       IF (Hout(idSdif,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*w3dvar
         status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idSdif), &
      &                     ADM(ng)%Rindex, gtype,                       &
@@ -951,16 +916,16 @@
 !
       DO itrc=1,NT(ng)
         IF (Hout(idTsur(itrc),ng)) THEN
-#   if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+#   if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
        defined OPT_OBSERVATIONS
           IF (itrc.eq.itemp) THEN
 !!          scale=rho0*Cp
-            scale=1.0_r8/(rho0*Cp)
+            scale=1.0_dp/(rho0*Cp)
           ELSE
-            scale=1.0_r8
+            scale=1.0_dp
           END IF
 #   else
-          scale=1.0_r8
+          scale=1.0_dp
 #   endif
           gtype=gfactor*r2dvar
           status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                    &
@@ -990,12 +955,12 @@
 !  Write out surface U-momentum stress.
 !
       IF (Hout(idUsms,ng)) THEN
-#  if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+#  if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
       defined OPT_OBSERVATIONS
 !!      scale=rho0
-        scale=1.0_r8/rho0
+        scale=1.0_dp/rho0
 #  else
-        scale=1.0_r8
+        scale=1.0_dp
 #  endif
         gtype=gfactor*u2dvar
         status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idUsms), &
@@ -1020,11 +985,11 @@
 !
       IF (Hout(idVsms,ng)) THEN
 !!      scale=rho0
-#  if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+#  if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
       defined OPT_OBSERVATIONS
-        scale=1.0_r8/rho0
+        scale=1.0_dp/rho0
 #  else
-        scale=1.0_r8
+        scale=1.0_dp
 #  endif
         gtype=gfactor*v2dvar
         status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idVsms), &
@@ -1050,7 +1015,7 @@
 !
       IF (Hout(idUbms,ng)) THEN
 !!      scale=-rho0
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u2dvar
         status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idUbms), &
      &                     ADM(ng)%Rindex, gtype,                       &
@@ -1074,7 +1039,7 @@
 !
       IF (Hout(idVbms,ng)) THEN
 !!      scale=-rho0
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v2dvar
         status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idVbms), &
      &                     ADM(ng)%Rindex, gtype,                       &
@@ -1110,13 +1075,13 @@
 # endif
 !
   10  FORMAT (/,' AD_WRT_HIS - error while writing variable: ',a,/,14x, &
-     &        'into adjoint NetCDF file for time record: ',i4)
+     &        'into adjoint NetCDF file for time record: ',i0)
 # ifdef SOLVE3D
   20  FORMAT (3x,'AD_WRT_HIS   - wrote adjoint  fields (Index=', i1,    &
-     &        ',',i1,') into time record = ',i7.7)
+     &        ',',i1,') into time record = ',i0)
 # else
   20  FORMAT (3x,'AD_WRT_HIS   - wrote adjoint  fields (Index=', i1,    &
-     &        ') into time record = ',i7.7)
+     &        ') into time record = ',i0)
 # endif
       RETURN
       END SUBROUTINE ad_wrt_his

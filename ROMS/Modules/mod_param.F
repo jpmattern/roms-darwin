@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE mod_param
 !
-!svn $Id: mod_param.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: mod_param.F 1016 2020-04-27 02:06:37Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -77,12 +77,22 @@
 !                                                                      !
 !  Diagnostic fields parameters:                                       !
 !                                                                      !
+# if defined ECOSIM && defined BIO_OPTIC
+!  NDbands    Number of spectral irradiance bands.                     !
+# endif
 !  NDbio2d    Number of diagnostic 2D biology fields.                  !
 !  NDbio3d    Number of diagnostic 3D biology fields.                  !
+!  NDbio4d    Number of diagnostic 4D bio-optical fields.              !
 !  NDT        Number of diagnostic tracer fields.                      !
 !  NDM2d      Number of diagnostic 2D momentum fields.                 !
 !  NDM3d      Number of diagnostic 3D momentum fields.                 !
 !  NDrhs      Number of diagnostic 3D right-hand-side fields.          !
+!                                                                      !
+!  Estimated Dynamic and automatic memory parameters:                  !
+!                                                                      !
+!  BmemMax    Maximum automatic memory for distributed-memory buffers  !
+!               (bytes).                                               !
+!  Dmem       Dynamic memory requirements (array elements)             !
 !                                                                      !
 !=======================================================================
 !
@@ -112,6 +122,16 @@
 !
       integer, allocatable :: GridNumber(:,:)   ! [Ngrids,NestLayers]
 !
+!  Maximum automatic memory (bytes) required in distributed-memory
+!  buffers due to parallel exchanges.
+!
+      real(r8), allocatable :: BmemMax(:)       ! [Ngrids]
+!
+!  Estimated dynamic memory requirement (number of array elements) for
+!  a particular application per nested grid.
+!
+      real(r8), allocatable :: Dmem(:)          ! [Ngrids]
+!
 !-----------------------------------------------------------------------
 !  Define derived type structure, T_IO, used to store information about
 !  the input and output files.
@@ -119,20 +139,24 @@
 !
 !  This structure is used to declare the variables associated with
 !  input and output files, like TYPE(IO) :: HIS(Ngrids). It is a
-!  compact way to store a lot of information.
+!  compact way to store a lot of information.  The "Fcount" variable
+!  is used during data processing in "check_multifile" and "inquiry"
+!  whereas "load" is used storing information in the structure.
 !
       TYPE T_IO
         integer :: Nfiles                        ! number of multi-files
         integer :: Fcount                        ! multi-file counter
+        integer :: load                          ! filename load counter
         integer :: Rindex                        ! NetCDF record index
         integer :: ncid                          ! NetCDF file ID
         integer,  pointer :: Nrec(:)             ! NetCDF record size
         integer,  pointer :: Vid(:)              ! NetCDF variables IDs
         integer,  pointer :: Tid(:)              ! NetCDF tracers IDs
-        real(r8), pointer :: time_min(:)         ! starting time
-        real(r8), pointer :: time_max(:)         ! ending time
+        real(dp), pointer :: time_min(:)         ! starting time
+        real(dp), pointer :: time_max(:)         ! ending time
         character (len=50 ) :: label             ! structure label
-        character (len=256) :: base              ! base file name
+        character (len=256) :: head              ! head filename
+        character (len=256) :: base              ! base filename
         character (len=256) :: name              ! current name
         character (len=256), pointer :: files(:) ! multi-file names
       END TYPE T_IO
@@ -369,6 +393,40 @@
       TYPE (T_LBC), allocatable :: ad_LBC(:,:,:)
       TYPE (T_LBC), allocatable :: tl_LBC(:,:,:)
 #endif
+#ifdef SOLVE3D
+!
+!-----------------------------------------------------------------------
+!  Tracer horizontal and vertical advection switches structure.
+!-----------------------------------------------------------------------
+!
+!  A different advection scheme is allowed for each tracer.  For
+!  example, a positive-definite algorithm can be activated for salinity,
+!  biological, and sediment tracers, while a different one is set for
+!  temperature.
+!
+      TYPE T_ADV
+        logical :: AKIMA4         ! fourth-order Akima
+        logical :: CENTERED2      ! second-order centered differences
+        logical :: CENTERED4      ! fourth-order centered differences
+        logical :: HSIMT          ! third-order HSIMT-TVD
+        logical :: MPDATA         ! recursive flux corrected MPDATA
+        logical :: SPLINES        ! parabolic splines (vertical only)
+        logical :: SPLIT_U3       ! split third-order upstream
+        logical :: UPSTREAM3      ! third-order upstream bias
+      END TYPE T_ADV
+
+      TYPE (T_ADV), allocatable :: Hadvection(:,:)       ! horizontal
+      TYPE (T_ADV), allocatable :: Vadvection(:,:)       ! vertical
+
+# ifdef ADJOINT
+      TYPE (T_ADV), allocatable :: ad_Hadvection(:,:)    ! horizontal
+      TYPE (T_ADV), allocatable :: ad_Vadvection(:,:)    ! vertical
+# endif
+# if defined TANGENT || defined TL_IOMS
+      TYPE (T_ADV), allocatable :: tl_Hadvection(:,:)    ! horizontal
+      TYPE (T_ADV), allocatable :: tl_Vadvection(:,:)    ! vertical
+# endif
+#endif
 !
 !-----------------------------------------------------------------------
 !  Field statistics STATS structure.
@@ -525,15 +583,23 @@
       integer :: NDM2d                  ! 2D momentum
       integer :: NDM3d                  ! 3D momentum
 !
-!  Number of diagnostic biology fields.  Currenly, only available for
-!  the Fennel model.
+!  Number of diagnostic biology/bio-optical fields.  Currently, only
+!  available for the Fennel and EcoSim models.
 !
       integer :: NDbio2d                ! 2D fields
       integer :: NDbio3d                ! 3D fields
+      integer :: NDbio4d                ! 4D fields
 !
 !  Number of diagnostic 3D right-hand-side fields.
 !
       integer :: NDrhs
+
+# if defined ECOSIM && defined BIO_OPTIC
+!
+!  Number of light spectral irradiance bands to process.
+!
+      integer :: NDbands
+# endif
 #endif
 
 #if defined FOUR_DVAR || defined IMPULSE
@@ -601,6 +667,9 @@
       integer :: iTLM = 2
       integer :: iRPM = 3
       integer :: iADM = 4
+
+      character (len=3), dimension(4) :: kernel =                       &
+     &                                   (/ 'NLM','TLM','RPM','ADM' /)
 !
 !-----------------------------------------------------------------------
 !  Domain partition parameters.
@@ -659,60 +728,126 @@
 !  Allocate dimension parameters.
 !-----------------------------------------------------------------------
 !
-      allocate ( Lm(Ngrids) )
-      allocate ( Mm(Ngrids) )
+      IF (.not.allocated(Lm)) THEN
+        allocate ( Lm(Ngrids) )
+      END IF
+      IF (.not.allocated(Mm)) THEN
+        allocate ( Mm(Ngrids) )
+      END IF
 
-      allocate ( Im(Ngrids) )
-      allocate ( Jm(Ngrids) )
+      IF (.not.allocated(Im)) THEN
+        allocate ( Im(Ngrids) )
+      END IF
+      IF (.not.allocated(Jm)) THEN
+        allocate ( Jm(Ngrids) )
+      END IF
 
-      allocate ( N(Ngrids) )
+      IF (.not.allocated(N)) THEN
+        allocate ( N(Ngrids) )
+      END IF
 
-      allocate ( NT(Ngrids) )
+      IF (.not.allocated(NT)) THEN
+        allocate ( NT(Ngrids) )
+      END IF
 
 #if defined TIME_CONV && defined WEAK_CONSTRAINT
-      allocate ( NrecTC(Ngrids) )
+      IF (.not.allocated(NrecTC)) THEN
+        allocate ( NrecTC(Ngrids) )
+      END IF
 #endif
 
-      allocate ( NTCLM(Ngrids) )
+      IF (.not.allocated(NTCLM)) THEN
+        allocate ( NTCLM(Ngrids) )
+      END IF
 
-      allocate ( NSV(Ngrids) )
+      IF (.not.allocated(NSV)) THEN
+        allocate ( NSV(Ngrids) )
+      END IF
 
-      allocate ( NtileI(Ngrids) )
-      allocate ( NtileJ(Ngrids) )
+      IF (.not.allocated(NtileI)) THEN
+        allocate ( NtileI(Ngrids) )
+      END IF
+      IF (.not.allocated(NtileJ)) THEN
+        allocate ( NtileJ(Ngrids) )
+      END IF
 
-      allocate ( NtileX(Ngrids) )
-      allocate ( NtileE(Ngrids) )
+      IF (.not.allocated(NtileX)) THEN
+        allocate ( NtileX(Ngrids) )
+      END IF
+      IF (.not.allocated(NtileE)) THEN
+        allocate ( NtileE(Ngrids) )
+      END IF
 
-      allocate ( HaloBry(Ngrids) )
+      IF (.not.allocated(HaloBry)) THEN
+        allocate ( HaloBry(Ngrids) )
+      END IF
 
-      allocate ( HaloSizeI(Ngrids) )
-      allocate ( HaloSizeJ(Ngrids) )
+      IF (.not.allocated(HaloSizeI)) THEN
+        allocate ( HaloSizeI(Ngrids) )
+      END IF
+      IF (.not.allocated(HaloSizeJ)) THEN
+        allocate ( HaloSizeJ(Ngrids) )
+      END IF
 
-      allocate ( TileSide(Ngrids) )
-      allocate ( TileSize(Ngrids) )
+      IF (.not.allocated(TileSide)) THEN
+        allocate ( TileSide(Ngrids) )
+      END IF
+      IF (.not.allocated(TileSize)) THEN
+        allocate ( TileSize(Ngrids) )
+      END IF
+
+      IF (.not.allocated(BmemMax)) THEN
+        allocate ( BmemMax(Ngrids) )
+        BmemMax=0.0_r8
+      END IF
+
+      IF (.not.allocated(Dmem)) THEN
+        allocate ( Dmem(Ngrids) )
+        Dmem=0.0_r8
+      END IF
 
 #ifdef PROPAGATOR
-      allocate ( Mstate(Ngrids) )
-      allocate ( Nstate(Ngrids) )
-      allocate ( Nstr(Ngrids) )
-      allocate ( Nend(Ngrids) )
-      allocate ( Nsize(Ngrids) )
+      IF (.not.allocated(Mstate)) THEN
+        allocate ( Mstate(Ngrids) )
+      END IF
+      IF (.not.allocated(Nstate)) THEN
+        allocate ( Nstate(Ngrids) )
+      END IF
+      IF (.not.allocated(Nstr)) THEN
+        allocate ( Nstr(Ngrids) )
+      END IF
+      IF (.not.allocated(Nend)) THEN
+        allocate ( Nend(Ngrids) )
+      END IF
+      IF (.not.allocated(Nsize)) THEN
+        allocate ( Nsize(Ngrids) )
+      END IF
 # ifdef SO_SEMI
-      allocate ( Nsemi(Ngrids) )
+      IF (.not.allocated(Nsemi)) THEN
+        allocate ( Nsemi(Ngrids) )
+      END IF
 # endif
 #endif
 
 #ifdef FLOATS
-      allocate ( Nfloats(Ngrids) )
-      allocate ( NFV(Ngrids) )
+      IF (.not.allocated(Nfloats)) THEN
+        allocate ( Nfloats(Ngrids) )
+      END IF
+      IF (.not.allocated(NFV)) THEN
+        allocate ( NFV(Ngrids) )
+      END IF
 #endif
 
 #ifdef STATIONS
-      allocate ( Nstation(Ngrids) )
+      IF (.not.allocated(Nstation)) THEN
+        allocate ( Nstation(Ngrids) )
+      END IF
 #endif
 
 #if defined BALANCE_OPERATOR && defined ZETA_ELLIPTIC
-      allocate ( Nbico(Ngrids) )
+      IF (.not.allocated(Nbico)) THEN
+        allocate ( Nbico(Ngrids) )
+      END IF
 #endif
 
       RETURN
@@ -730,7 +865,7 @@
 !  Local variable declarations
 !
       integer :: I_padd, J_padd, Ntiles
-      integer :: ibry, ivar, ng
+      integer :: ibry, itrc, ivar, ng
 !
 !-----------------------------------------------------------------------
 !  Now that we know the values for the tile partitions (NtileI,NtileJ),
@@ -853,7 +988,9 @@
 !
 !  Allocate lower and upper bounds structure for I/O NetCDF files.
 !
-      allocate ( IOBOUNDS(Ngrids) )
+      IF (.not.allocated(IOBOUNDS)) THEN
+        allocate ( IOBOUNDS(Ngrids) )
+      END IF
 
 #ifdef DIAGNOSTICS
 !
@@ -957,13 +1094,9 @@
 #endif
       END DO
 !
-!  Set maximum number of tracer between all nested grids.
+!  Set the maximum number of tracer between all nested grids.
 !
-#if defined IS4DVAR || defined W4DVAR || defined W4DPSAS
       MT=MAX(NAT,MAXVAL(NT))
-#else
-      MT=MAX(2,MAXVAL(NT))
-#endif
 !
 !-----------------------------------------------------------------------
 !  Allocate Lateral Boundary Conditions switches structure.
@@ -994,6 +1127,7 @@
               LBC(ibry,ivar,ng)%nudging = .FALSE.
               LBC(ibry,ivar,ng)%periodic = .FALSE.
               LBC(ibry,ivar,ng)%radiation = .FALSE.
+              LBC(ibry,ivar,ng)%reduced = .FALSE.
               LBC(ibry,ivar,ng)%Shchepetkin = .FALSE.
             END DO
           END DO
@@ -1046,6 +1180,119 @@
           END DO
         END DO
       END IF
+#endif
+#ifdef SOLVE3D
+!
+!-----------------------------------------------------------------------
+!  Allocate rracer horizontal and vertical advection switches structure.
+!-----------------------------------------------------------------------
+!
+!  Nonlinear model kernel.
+!
+      IF (.not.allocated(Hadvection)) THEN
+        allocate ( Hadvection(MAXVAL(NT),Ngrids) )
+        DO ng=1,Ngrids
+          DO itrc=1,NT(ng)
+            Hadvection(itrc,ng)%AKIMA4 = .FALSE.
+            Hadvection(itrc,ng)%CENTERED2 = .FALSE.
+            Hadvection(itrc,ng)%CENTERED4 = .FALSE.
+            Hadvection(itrc,ng)%HSIMT = .FALSE.
+            Hadvection(itrc,ng)%MPDATA = .FALSE.
+            Hadvection(itrc,ng)%SPLINES = .FALSE.
+            Hadvection(itrc,ng)%SPLIT_U3 = .FALSE.
+            Hadvection(itrc,ng)%UPSTREAM3 = .FALSE.
+          END DO
+        END DO
+      END IF
+!
+      IF (.not.allocated(Vadvection)) THEN
+        allocate ( Vadvection(MAXVAL(NT),Ngrids) )
+        DO ng=1,Ngrids
+          DO itrc=1,NT(ng)
+            Vadvection(itrc,ng)%AKIMA4 = .FALSE.
+            Vadvection(itrc,ng)%CENTERED2 = .FALSE.
+            Vadvection(itrc,ng)%CENTERED4 = .FALSE.
+            Vadvection(itrc,ng)%HSIMT = .FALSE.
+            Vadvection(itrc,ng)%MPDATA = .FALSE.
+            Vadvection(itrc,ng)%SPLINES = .FALSE.
+            Vadvection(itrc,ng)%SPLIT_U3 = .FALSE.
+            Vadvection(itrc,ng)%UPSTREAM3 = .FALSE.
+          END DO
+        END DO
+      END IF
+
+# ifdef ADJOINT
+!
+!  Adjoint model kernel.
+!
+      IF (.not.allocated(ad_Hadvection)) THEN
+        allocate ( ad_Hadvection(MAXVAL(NT),Ngrids) )
+        DO ng=1,Ngrids
+          DO itrc=1,NT(ng)
+            ad_Hadvection(itrc,ng)%AKIMA4 = .FALSE.
+            ad_Hadvection(itrc,ng)%CENTERED2 = .FALSE.
+            ad_Hadvection(itrc,ng)%CENTERED4 = .FALSE.
+            ad_Hadvection(itrc,ng)%HSIMT = .FALSE.
+            ad_Hadvection(itrc,ng)%MPDATA = .FALSE.
+            ad_Hadvection(itrc,ng)%SPLINES = .FALSE.
+            ad_Hadvection(itrc,ng)%SPLIT_U3 = .FALSE.
+            ad_Hadvection(itrc,ng)%UPSTREAM3 = .FALSE.
+          END DO
+        END DO
+      END IF
+!
+      IF (.not.allocated(ad_Vadvection)) THEN
+        allocate ( ad_Vadvection(MAXVAL(NT),Ngrids) )
+        DO ng=1,Ngrids
+          DO itrc=1,NT(ng)
+            ad_Vadvection(itrc,ng)%AKIMA4 = .FALSE.
+            ad_Vadvection(itrc,ng)%CENTERED2 = .FALSE.
+            ad_Vadvection(itrc,ng)%CENTERED4 = .FALSE.
+            ad_Vadvection(itrc,ng)%HSIMT = .FALSE.
+            ad_Vadvection(itrc,ng)%MPDATA = .FALSE.
+            ad_Vadvection(itrc,ng)%SPLINES = .FALSE.
+            ad_Vadvection(itrc,ng)%SPLIT_U3 = .FALSE.
+            ad_Vadvection(itrc,ng)%UPSTREAM3 = .FALSE.
+          END DO
+        END DO
+      END IF
+# endif
+# if defined TANGENT || defined TL_IOMS
+!
+!  Perturbation or finite-amplitude tangent linear model kernels.
+!
+      IF (.not.allocated(tl_Hadvection)) THEN
+        allocate ( tl_Hadvection(MAXVAL(NT),Ngrids) )
+        DO ng=1,Ngrids
+          DO itrc=1,NT(ng)
+            tl_Hadvection(itrc,ng)%AKIMA4 = .FALSE.
+            tl_Hadvection(itrc,ng)%CENTERED2 = .FALSE.
+            tl_Hadvection(itrc,ng)%CENTERED4 = .FALSE.
+            tl_Hadvection(itrc,ng)%HSIMT = .FALSE.
+            tl_Hadvection(itrc,ng)%MPDATA = .FALSE.
+            tl_Hadvection(itrc,ng)%SPLINES = .FALSE.
+            tl_Hadvection(itrc,ng)%SPLIT_U3 = .FALSE.
+            tl_Hadvection(itrc,ng)%UPSTREAM3 = .FALSE.
+          END DO
+        END DO
+      END IF
+!
+      IF (.not.allocated(tl_Vadvection)) THEN
+        allocate ( tl_Vadvection(MAXVAL(NT),Ngrids) )
+        DO ng=1,Ngrids
+          DO itrc=1,NT(ng)
+            tl_Vadvection(itrc,ng)%AKIMA4 = .FALSE.
+            tl_Vadvection(itrc,ng)%CENTERED2 = .FALSE.
+            tl_Vadvection(itrc,ng)%CENTERED4 = .FALSE.
+            tl_Vadvection(itrc,ng)%HSIMT = .FALSE.
+            tl_Vadvection(itrc,ng)%MPDATA = .FALSE.
+            tl_Vadvection(itrc,ng)%SPLINES = .FALSE.
+            tl_Vadvection(itrc,ng)%SPLIT_U3 = .FALSE.
+            tl_Vadvection(itrc,ng)%UPSTREAM3 = .FALSE.
+          END DO
+        END DO
+      END IF
+# endif
 #endif
 
       RETURN

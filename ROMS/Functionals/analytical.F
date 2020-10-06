@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE analytical_mod
 !
-!svn $Id: analytical.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: analytical.F 1022 2020-05-13 03:03:15Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -188,8 +188,8 @@
 # endif
 
 # if defined ANA_GRID        && \
-   (defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
-    defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR   || \
+   (defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
+    defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
     defined SO_SEMI)
 #  include <ana_scope.h>
 # endif
@@ -212,7 +212,7 @@
 #  include <ana_sponge.h>
 # endif
 
-# if (defined ANA_SRFLUX && defined SOLVE3D) || defined DIURNAL_SRFLUX
+# if (defined ANA_SRFLUX || defined DIURNAL_SRFLUX) && defined SOLVE3D
 #  include <ana_srflux.h>
 # endif
 

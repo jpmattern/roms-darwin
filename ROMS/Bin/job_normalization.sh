@@ -1,13 +1,13 @@
-#!/bin/csh -f
+#!/bin/bash
 #
-# svn $Id: job_normalization.sh 889 2018-02-10 03:32:52Z arango $
+# svn $Id: job_normalization.sh 1019 2020-04-30 20:46:51Z arango $
 #######################################################################
-# Copyright (c) 2002-2018 The ROMS/TOMS Group                         #
+# Copyright (c) 2002-2020 The ROMS/TOMS Group                         #
 #   Licensed under a MIT/X style license                              #
 #   See License_ROMS.txt                                              #
 #######################################################################
 #                                                                     #
-# 4D-Var error covariance normalization coefficients job script:      #
+# 4D-Var error covariance normalization coefficients job BASH script: #
 #                                                                     #
 # This script NEEDS to be run before any run:                         #
 #                                                                     #
@@ -28,11 +28,11 @@
 
 # Set path definition to one directory up in the tree.
 
- set Dir=`dirname ${PWD}`
+ Dir=`dirname ${PWD}`
 
 # Set string manipulations perl script.
 
- set SUBSTITUTE=${ROMS_ROOT}/ROMS/Bin/substitute
+ SUBSTITUTE=${ROMS_ROOT}/ROMS/Bin/substitute
 
 # Copy nonlinear model initial conditions file.
 
@@ -41,37 +41,37 @@
 # Set model, initial conditions, boundary conditions and surface
 # forcing error covariance standard deviations files.
 
- set STDnameM=${Dir}/Data/wc13_std_m.nc
- set STDnameI=${Dir}/Data/wc13_std_i.nc
- set STDnameB=${Dir}/Data/wc13_std_b.nc
- set STDnameF=${Dir}/Data/wc13_std_f.nc
+ STDnameM=${Dir}/Data/wc13_std_m.nc
+ STDnameI=${Dir}/Data/wc13_std_i.nc
+ STDnameB=${Dir}/Data/wc13_std_b.nc
+ STDnameF=${Dir}/Data/wc13_std_f.nc
 
 # Set model, initial conditions, boundary conditions and surface
 # forcing error covariance normalization factors filenames.
 
- set NRMnameM=wc13_nrm_m.nc
- set NRMnameI=wc13_nrm_i.nc
- set NRMnameB=wc13_nrm_b.nc
- set NRMnameF=wc13_nrm_f.nc
+ NRMnameM=wc13_nrm_m.nc
+ NRMnameI=wc13_nrm_i.nc
+ NRMnameB=wc13_nrm_b.nc
+ NRMnameF=wc13_nrm_f.nc
 
 # Modify 4D-Var template input script and specify above files.
 
- set NORM=c4dvar.in
- if (-e $NORM) then
+ NORM=c4dvar.in
+ if [ -f $NORM ]; then
    /bin/rm $NORM
- endif
+ fi
  cp s4dvar.in $NORM
 
- $SUBSTITUTE $NORM ocean_std_m.nc $STDnameM
- $SUBSTITUTE $NORM ocean_std_i.nc $STDnameI
- $SUBSTITUTE $NORM ocean_std_b.nc $STDnameB
- $SUBSTITUTE $NORM ocean_std_f.nc $STDnameF
- $SUBSTITUTE $NORM ocean_nrm_m.nc $NRMnameM
- $SUBSTITUTE $NORM ocean_nrm_i.nc $NRMnameI
- $SUBSTITUTE $NORM ocean_nrm_b.nc $NRMnameB
- $SUBSTITUTE $NORM ocean_nrm_f.nc $NRMnameF
- $SUBSTITUTE $NORM ocean_obs.nc wc13_obs.nc
- $SUBSTITUTE $NORM ocean_hss.nc wc13_hss.nc
- $SUBSTITUTE $NORM ocean_lcz.nc wc13_lcz.nc
- $SUBSTITUTE $NORM ocean_mod.nc wc13_mod.nc
- $SUBSTITUTE $NORM ocean_err.nc wc13_err.nc
+ $SUBSTITUTE $NORM roms_std_m.nc $STDnameM
+ $SUBSTITUTE $NORM roms_std_i.nc $STDnameI
+ $SUBSTITUTE $NORM roms_std_b.nc $STDnameB
+ $SUBSTITUTE $NORM roms_std_f.nc $STDnameF
+ $SUBSTITUTE $NORM roms_nrm_m.nc $NRMnameM
+ $SUBSTITUTE $NORM roms_nrm_i.nc $NRMnameI
+ $SUBSTITUTE $NORM roms_nrm_b.nc $NRMnameB
+ $SUBSTITUTE $NORM roms_nrm_f.nc $NRMnameF
+ $SUBSTITUTE $NORM roms_obs.nc wc13_obs.nc
+ $SUBSTITUTE $NORM roms_hss.nc wc13_hss.nc
+ $SUBSTITUTE $NORM roms_lcz.nc wc13_lcz.nc
+ $SUBSTITUTE $NORM roms_mod.nc wc13_mod.nc
+ $SUBSTITUTE $NORM roms_err.nc wc13_err.nc

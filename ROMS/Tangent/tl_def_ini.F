@@ -2,9 +2,9 @@
 #if (defined TANGENT || defined TL_IOMS) && defined FOUR_DVAR
       SUBROUTINE tl_def_ini (ng)
 !
-!svn $Id: tl_def_ini.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: tl_def_ini.F 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -40,17 +40,18 @@
 
       integer :: i, j, ifield, itrc, nvd3, nvd4
       integer :: recdim, status, varid
+      integer :: Fcount
 # ifdef ADJUST_BOUNDARY
       integer :: IorJdim, brecdim
 # endif
 # if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
       integer :: frecdim
 # endif
-      integer :: DimIDs(32), t2dgrd(3), u2dgrd(3), v2dgrd(3)
+      integer :: DimIDs(nDimID)
+      integer :: t2dgrd(3), u2dgrd(3), v2dgrd(3)
 # ifdef ADJUST_BOUNDARY
       integer :: t2dobc(4)
 # endif
-      integer :: Vsize(4)
 
       integer :: def_dim
 
@@ -905,19 +906,22 @@
           RETURN
         END IF
 # ifdef ADJUST_BOUNDARY
-        IF (.not.got_var(idSbry(isFsur))) THEN
+        IF (.not.got_var(idSbry(isFsur)).and.                           &
+     &      ANY(Lobc(:,isFsur,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isFsur))),  &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-        IF (.not.got_var(idSbry(isUbar))) THEN
+        IF (.not.got_var(idSbry(isUbar)).and.                           &
+     &      ANY(Lobc(:,isUbar,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isUbar))),  &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-        IF (.not.got_var(idSbry(isVbar))) THEN
+        IF (.not.got_var(idSbry(isVbar)).and.                           &
+     &      ANY(Lobc(:,isVbar,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isVbar))),  &
      &                                  TRIM(ncname)
           exit_flag=3
@@ -952,13 +956,15 @@
           RETURN
         END IF
 #  ifdef ADJUST_BOUNDARY
-        IF (.not.got_var(idSbry(isUvel))) THEN
+        IF (.not.got_var(idSbry(isUvel)).and.                           &
+     &      ANY(Lobc(:,isUvel,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isUvel))),  &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-        IF (.not.got_var(idSbry(isVvel))) THEN
+        IF (.not.got_var(idSbry(isVvel)).and.                           &
+     &      ANY(Lobc(:,isVvel,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isVvel))),  &
      &                                  TRIM(ncname)
           exit_flag=3
@@ -975,7 +981,8 @@
             RETURN
           END IF
 #  ifdef ADJUST_BOUNDARY
-          IF (.not.got_var(idSbry(isTvar(itrc)))) THEN
+          IF (.not.got_var(idSbry(isTvar(itrc))).and.                   &
+     &        ANY(Lobc(:,isTvar(itrc),ng))) THEN
             IF (Master) WRITE (stdout,70)                               &
      &                        TRIM(Vname(1,idSbry(isTvar(itrc)))),      &
      &                        TRIM(ncname)
@@ -997,6 +1004,8 @@
 !  Set unlimited time record dimension to the appropriate value.
 !
         ITL(ng)%Rindex=rec_size
+        Fcount=ITL(ng)%Fcount
+        ITL(ng)%Nrec(Fcount)=rec_size
       END IF QUERY
 !
   10  FORMAT (3x,'TL_DEF_INI   - creating initial file: ',a)

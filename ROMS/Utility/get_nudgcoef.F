@@ -2,9 +2,9 @@
 #ifndef ANA_NUDGCOEF
       SUBROUTINE get_nudgcoef (ng, model)
 !
-!svn $Id: get_nudgcoef.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: get_nudgcoef.F 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -51,14 +51,19 @@
 # ifdef SOLVE3D
       logical :: got_generic
       logical :: got_specific(NT(ng))
+!
 # endif
       integer :: tile, LBi, UBi, LBj, UBj
       integer :: gtype, i, ic, itrc
       integer :: nvatt, nvdim, status, vindex
       integer :: Vsize(4)
-
-      real(r8) :: Fmax, Fmin, Fscl
-
+# ifdef CHECKSUM
+      integer(i8b) :: Fhash
+# endif
+!
+      real(dp) :: Fscl
+      real(r8) :: Fmax, Fmin
+!
       character (len=40 ) :: tunits
       character (len=256) :: ncname
 !
@@ -182,7 +187,7 @@
       IF (LnudgeM2CLM(ng)) THEN
         gtype=r2dvar
         vindex=idM2nc
-        Fscl=1.0_r8/day2sec                    ! default units: 1/day
+        Fscl=1.0_dp/day2sec                    ! default units: 1/day
 !
         CALL netcdf_inq_var (ng, model, ncname,                         &
      &                       ncid = NUD(ng)%ncid,                       &
@@ -196,9 +201,9 @@
           IF (TRIM(var_Aname(i)).eq.'units') THEN
             tunits=TRIM(var_Achar(i))
             IF (tunits(1:3).eq.'day') THEN
-              Fscl=1.0_r8/day2sec
+              Fscl=1.0_dp/day2sec
             ELSE IF (tunits(1:6).eq.'second') THEN
-              Fscl=1.0_r8
+              Fscl=1.0_dp
             END IF
           END IF
         END DO
@@ -211,7 +216,12 @@
 # ifdef MASKING
      &                    GRID(ng) % rmask,                             &
 # endif
+# ifdef CHECKSUM
+     &                    CLIMA(ng) % M2nudgcof,                        &
+     &                    checksum = Fhash)
+# else
      &                    CLIMA(ng) % M2nudgcof)
+# endif
         IF (FoundError(status, nf90_noerr, __LINE__,                    &
      &                 __FILE__)) THEN
           exit_flag=2
@@ -222,6 +232,9 @@
             WRITE (stdout,40) TRIM(Vname(2,vindex))//': '//             &
      &                        TRIM(Vname(1,vindex)),                    &
      &                        ng, TRIM(ncname), Fmin, Fmax
+# ifdef CHECKSUM
+            WRITE (stdout,50) Fhash
+# endif
           END IF
         END IF
 !
@@ -247,7 +260,7 @@
       IF (LnudgeM3CLM(ng)) THEN
         gtype=r3dvar
         vindex=idM3nc
-        Fscl=1.0_r8/day2sec                    ! default units: 1/day
+        Fscl=1.0_dp/day2sec                    ! default units: 1/day
 !
         CALL netcdf_inq_var (ng, model, ncname,                         &
      &                       ncid = NUD(ng)%ncid,                       &
@@ -261,9 +274,9 @@
           IF (TRIM(var_Aname(i)).eq.'units') THEN
             tunits=TRIM(var_Achar(i))
             IF (tunits(1:3).eq.'day') THEN
-              Fscl=1.0_r8/day2sec
+              Fscl=1.0_dp/day2sec
             ELSE IF (tunits(1:6).eq.'second') THEN
-              Fscl=1.0_r8
+              Fscl=1.0_dp
             END IF
           END IF
         END DO
@@ -276,7 +289,12 @@
 #  ifdef MASKING
      &                    GRID(ng) % rmask,                             &
 #  endif
+#  ifdef CHECKSUM
+     &                    CLIMA(ng) % M3nudgcof,                        &
+     &                    checksum = Fhash)
+#  else
      &                    CLIMA(ng) % M3nudgcof)
+#  endif
         IF (FoundError(status, nf90_noerr, __LINE__,                    &
      &                 __FILE__)) THEN
           exit_flag=2
@@ -287,6 +305,9 @@
             WRITE (stdout,40) TRIM(Vname(2,vindex))//': '//             &
      &                        TRIM(Vname(1,vindex)),                    &
      &                        ng, TRIM(ncname), Fmin, Fmax
+#  ifdef CHECKSUM
+            WRITE (stdout,50) Fhash
+#  endif
           END IF
         END IF
 !
@@ -317,10 +338,10 @@
           gtype=r3dvar
           IF (got_specific(itrc)) THEN
             vindex=idTnud(itrc)                ! specific variable
-            Fscl=1.0_r8/day2sec                ! default units: 1/day
+            Fscl=1.0_dp/day2sec                ! default units: 1/day
           ELSE IF (got_generic) THEN
             vindex=idgTnc                      ! generic variable
-            Fscl=1.0_r8/day2sec                ! default units: 1/day
+            Fscl=1.0_dp/day2sec                ! default units: 1/day
           END IF
 !
           CALL netcdf_inq_var (ng, model, ncname,                       &
@@ -335,9 +356,9 @@
             IF (TRIM(var_Aname(i)).eq.'units') THEN
               tunits=TRIM(var_Achar(i))
               IF (tunits(1:3).eq.'day') THEN
-                Fscl=1.0_r8/day2sec
+                Fscl=1.0_dp/day2sec
               ELSE IF (tunits(1:6).eq.'second') THEN
-                Fscl=1.0_r8
+                Fscl=1.0_dp
               END IF
             END IF
           END DO
@@ -350,7 +371,12 @@
 #  ifdef MASKING
      &                      GRID(ng) % rmask,                           &
 #  endif
+#  ifdef CHECKSUM
+     &                      CLIMA(ng) % Tnudgcof(:,:,:,ic),             &
+     &                      checksum = Fhash)
+#  else
      &                      CLIMA(ng) % Tnudgcof(:,:,:,ic))
+#  endif
           IF (FoundError(status, nf90_noerr, __LINE__,                  &
      &                   __FILE__)) THEN
             exit_flag=2
@@ -361,6 +387,9 @@
               WRITE (stdout,40) TRIM(Vname(2,vindex))//': '//           &
      &                          TRIM(Vname(1,vindex)),                  &
      &                          ng, TRIM(ncname), Fmin, Fmax
+#  ifdef CHECKSUM
+              WRITE (stdout,50) Fhash
+#  endif
             END IF
           END IF
 !
@@ -391,6 +420,10 @@
   40  FORMAT(2x,' GET_NUDGCOEF - ',a,/,19x,                             &
      &        '(Grid = ',i2.2,', File: ',a,')',/,19x,                   &
      &        '(Min = ', 1p,e15.8,0p,' Max = ',1p,e15.8,0p,')')
+# ifdef CHECKSUM
+  50  FORMAT (19x,'(CheckSum = ',i0,')')
+# endif
+!
 #else
       SUBROUTINE get_nudgcoef
 #endif

@@ -1,8 +1,8 @@
       MODULE ocean_control_mod
 !
-!svn $Id: hessian_op_ocean.h 889 2018-02-10 03:32:52Z arango $
+!svn $Id: hessian_op_ocean.h 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -56,6 +56,7 @@
       USE mod_fourdvar
       USE mod_netcdf
 !
+      USE inp_par_mod,       ONLY : inp_par
 #ifdef MCT_LIB
 # ifdef ATM_COUPLING
       USE ocean_coupler_mod, ONLY : initialize_ocn2atm_coupling
@@ -87,7 +88,7 @@
 #ifdef DISTRIBUTE
 !
 !-----------------------------------------------------------------------
-!  Set distribute-memory (MPI) world communictor.
+!  Set distribute-memory (mpi) world communictor.
 !-----------------------------------------------------------------------
 !
       IF (PRESENT(mpiCOMM)) THEN
@@ -126,7 +127,6 @@
 !  computed only once since the "first_tile" and "last_tile" values
 !  are private for each parallel thread/node.
 !
-!$OMP PARALLEL
 #if defined _OPENMP
       MyThread=my_threadnum()
 #elif defined DISTRIBUTE
@@ -139,7 +139,6 @@
         first_tile(ng)=MyThread*chunk_size
         last_tile (ng)=first_tile(ng)+chunk_size-1
       END DO
-!$OMP END PARALLEL
 !
 !  Initialize internal wall clocks. Notice that the timings does not
 !  includes processing standard input because several parameters are
@@ -151,18 +150,14 @@
         END IF
 !
         DO ng=1,Ngrids
-!$OMP PARALLEL
           DO thread=THREAD_RANGE
             CALL wclock_on (ng, iTLM, 0, __LINE__, __FILE__)
           END DO
-!$OMP END PARALLEL
         END DO
 !
 !  Allocate and initialize modules variables.
 !
-!$OMP PARALLEL
         CALL mod_arrays (allocate_vars)
-!$OMP END PARALLEL
 !
 !  Allocate and initialize 4D-Var arrays.
 !
@@ -192,20 +187,33 @@
 !  routine "wpoints".
 !-----------------------------------------------------------------------
 !
-      DO ng=1,Ngrids
 #if defined BULK_FLUXES && defined NL_BULK_FLUXES
-        BLK(ng)%name=FWD(ng)%name
+!  Set structure for the nonlinear surface fluxes to be processed by
+!  by the tangent linear and adjoint models. Also, set switches to
+!  process the BLK structure in routine "check_multifile".  Notice that
+!  it is possible to split solution into multiple NetCDF files to reduce
+!  their size.
+!
+      CALL edit_multifile ('FWD2BLK')
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+      DO ng=1,Ngrids
+        LreadBLK(ng)=.TRUE.
+      END DO
 #endif
-!$OMP PARALLEL
+!
+!  Initialize perturbation tangent linear model.
+!
+      DO ng=1,Ngrids
+        LreadFWD(ng)=.TRUE
         CALL tl_initial (ng)
-!$OMP END PARALLEL
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
       END DO
 !
 !-----------------------------------------------------------------------
 !  Read in Lanczos algorithm coefficients (cg_beta, cg_delta) from
-!  file LCZ(ng)%name NetCDF (IS4DVAR adjoint file), as computed in the
+!  file LCZ(ng)%name NetCDF (I4D-Var adjoint file), as computed in the
 !  I4D-Var Lanczos data assimilation algorithm for the first outer
 !  loop.  They are needed here, in routine "tl_inner2state", to compute
 !  the tangent linear model initial conditions as the weighted sum
@@ -345,7 +353,7 @@
 !
 !  Imported variable declarations
 !
-      real(r8), intent(in) :: RunInterval            ! seconds
+      real(dp), intent(in) :: RunInterval            ! seconds
 !
 !  Local variable declarations.
 !
@@ -454,9 +462,9 @@
 !
         IF (ANY(ABS(ido).eq.1)) THEN
           DO ng=1,Ngrids
-            Fcount=ADM(ng)%Fcount
+            Fcount=ADM(ng)%load
             ADM(ng)%Nrec(Fcount)=0
-            Fcount=TLM(ng)%Fcount
+            Fcount=TLM(ng)%load
             TLM(ng)%Nrec(Fcount)=0
             ADM(ng)%Rindex=0
             TLM(ng)%Rindex=0
@@ -480,10 +488,8 @@
             Ie=Is+Nsize(ng)-1
             ad_state(ng)%vector => STORAGE(ng)%SworkD(Is:Ie)
           END DO
-
-!$OMP PARALLEL
+!
           CALL propagator (RunInterval, state, ad_state)
-!$OMP END PARALLEL
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
         ELSE
@@ -564,9 +570,9 @@
               DO i=1,MAXVAL(NconvRitz)
                 DO ng=1,Ngrids
                   IF ((i.eq.1).or.LmultiGST) THEN
-                    Fcount=ADM(ng)%Fcount
+                    Fcount=ADM(ng)%load
                     ADM(ng)%Nrec(Fcount)=0
-                    Fcount=TLM(ng)%Fcount
+                    Fcount=TLM(ng)%load
                     TLM(ng)%Nrec(Fcount)=0
                     ADM(ng)%Rindex=0
                     TLM(ng)%Rindex=0
@@ -594,10 +600,8 @@
                   state(ng)%vector => STORAGE(ng)%Rvector(Is:Ie,i)
                   ad_state(ng)%vector => SworkR(Is:Ie)
                 END DO
-
-!$OMP PARALLEL
+!
                 CALL propagator (RunInterval, state, ad_state)
-!$OMP END PARALLEL
                 IF (FoundError(exit_flag, NoError, __LINE__,            &
      &                         __FILE__)) RETURN
 !
@@ -725,7 +729,7 @@
             IF (Master) WRITE (stdout,10)
  10         FORMAT (/,' Blowing-up: Saving latest model state into ',   &
      &                ' RESTART file',/)
-            Fcount=RST(ng)%Fcount
+            Fcount=RST(ng)%load
             IF (LcycleRST(ng).and.(RST(ng)%Nrec(Fcount).ge.2)) THEN
               RST(ng)%Rindex=2
               LcycleRST(ng)=.FALSE.
@@ -738,26 +742,32 @@
       END IF
 !
 !-----------------------------------------------------------------------
-!  Stop model and time profiling clocks.  Close output NetCDF files.
+!  Stop model and time profiling clocks, report memory requirements, and
+!  close output NetCDF files.
 !-----------------------------------------------------------------------
 !
 !  Stop time clocks.
 !
       IF (Master) THEN
         WRITE (stdout,20)
- 20     FORMAT (/,' Elapsed CPU time (seconds):',/)
+ 20     FORMAT (/,'Elapsed wall CPU time for each process (seconds):',/)
       END IF
-
+!
       DO ng=1,Ngrids
-!$OMP PARALLEL
         DO thread=THREAD_RANGE
           CALL wclock_off (ng, iTLM, 0, __LINE__, __FILE__)
         END DO
-!$OMP END PARALLEL
       END DO
+!
+!  Report dynamic memory and automatic memory requirements.
+!
+      CALL memory
 !
 !  Close IO files.
 !
+      DO ng=1,Ngrids
+        CALL close_inp (ng, iTLM)
+      END DO
       CALL close_out
 
       RETURN

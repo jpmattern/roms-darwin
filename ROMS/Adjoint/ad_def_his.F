@@ -2,9 +2,9 @@
 #ifdef ADJOINT
       SUBROUTINE ad_def_his (ng, ldef)
 !
-!svn $Id: ad_def_his.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: ad_def_his.F 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -44,26 +44,27 @@
 !  Local variable declarations.
 !
       logical :: got_var(NV)
-
+!
       integer, parameter :: Natt = 25
 
       integer :: i, j, ifield, itrc, nvd3, nvd4
       integer :: recdim, status, varid
+      integer :: Fcount
 # ifdef ADJUST_BOUNDARY
       integer :: IorJdim, brecdim
 # endif
 # if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
       integer :: frecdim
 # endif
-# if defined IS4DVAR
+# if defined I4DVAR
       integer :: MinnerDim, NinnerDim, NouterDim
       integer :: vardim(2)
 # endif
-      integer :: DimIDs(32), t2dgrd(3), u2dgrd(3), v2dgrd(3)
+      integer :: DimIDs(nDimID)
+      integer :: t2dgrd(3), u2dgrd(3), v2dgrd(3)
 # ifdef ADJUST_BOUNDARY
       integer :: t2dobc(4)
 # endif
-      integer :: Vsize(4)
 
       integer :: def_dim
 
@@ -79,9 +80,9 @@
 # ifdef ADJUST_WSTRESS
       integer :: u3dfrc(4), v3dfrc(4)
 # endif
-
+!
       real(r8) :: Aval(6)
-
+!
       character (len=120) :: Vinfo(Natt)
       character (len=256) :: ncname
 !
@@ -248,6 +249,11 @@
 #  endif
 
 #  ifdef ECOSIM
+        status=def_dim(ng, iNLM, ADM(ng)%ncid, ncname, 'Nbands',        &
+     &                 NBands, DimIDs(33))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
         status=def_dim(ng, iADM, ADM(ng)%ncid, ncname, 'Nphy',          &
      &                 Nphy, DimIDs(25))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -296,7 +302,7 @@
      &                 __FILE__)) RETURN
 # endif
 
-# if defined IS4DVAR
+# if defined I4DVAR
         status=def_dim(ng, iADM, ADM(ng)%ncid, ncname, 'Ninner',        &
      &                 Ninner, NinnerDim)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -515,7 +521,7 @@
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
 # endif
-# if defined IS4DVAR
+# if defined I4DVAR
 !
 !  Define Lanczos algorithm coefficients which can be used to
 !  compute the sensitivity of the observations to the 4DVAR
@@ -1156,6 +1162,14 @@
             got_var(idSbry(isVbar))=.TRUE.
             ADM(ng)%Vid(idSbry(isVbar))=var_id(i)
 # endif
+# ifdef ADJUST_WSTRESS
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUsms))) THEN
+            got_var(idUsms)=.TRUE.
+            ADM(ng)%Vid(idUsms)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVsms))) THEN
+            got_var(idVsms)=.TRUE.
+            ADM(ng)%Vid(idVsms)=var_id(i)
+# endif
 # ifdef SOLVE3D
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUvel))) THEN
             got_var(idUvel)=.TRUE.
@@ -1186,18 +1200,6 @@
             got_var(idSdif)=.TRUE.
             ADM(ng)%Vid(idSdif)=var_id(i)
 # endif
-          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUsms))) THEN
-            got_var(idUsms)=.TRUE.
-            ADM(ng)%Vid(idUsms)=var_id(i)
-          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVsms))) THEN
-            got_var(idVsms)=.TRUE.
-            ADM(ng)%Vid(idVsms)=var_id(i)
-          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUbms))) THEN
-            got_var(idUbms)=.TRUE.
-            ADM(ng)%Vid(idUbms)=var_id(i)
-          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVbms))) THEN
-            got_var(idVbms)=.TRUE.
-            ADM(ng)%Vid(idVbms)=var_id(i)
           END IF
 # ifdef SOLVE3D
           DO itrc=1,NT(ng)
@@ -1210,10 +1212,12 @@
               got_var(idSbry(isTvar(itrc)))=.TRUE.
               ADM(ng)%Vid(idSbry(isTvar(itrc)))=var_id(i)
 #  endif
+#  ifdef ADJUST_STFLUX
             ELSE IF (TRIM(var_name(i)).eq.                              &
      &               TRIM(Vname(1,idTsur(itrc)))) THEN
               got_var(idTsur(itrc))=.TRUE.
               ADM(ng)%Vid(idTsur(itrc))=var_id(i)
+#  endif
             END IF
           END DO
 #endif
@@ -1246,20 +1250,37 @@
           RETURN
         END IF
 # ifdef ADJUST_BOUNDARY
-        IF (.not.got_var(idSbry(isFsur))) THEN
+        IF (.not.got_var(idSbry(isFsur)).and.                           &
+     &      ANY(Lobc(:,isFsur,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isFsur))),  &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-        IF (.not.got_var(idSbry(isUbar))) THEN
+        IF (.not.got_var(idSbry(isUbar)).and.                           &
+     &      ANY(Lobc(:,isUbar,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isUbar))),  &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-        IF (.not.got_var(idSbry(isVbar))) THEN
+        IF (.not.got_var(idSbry(isVbar)).and.                           &
+     &      ANY(Lobc(:,isVbar,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isVbar))),  &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+# endif
+# ifdef ADJUST_WSTRESS
+        IF (.not.got_var(idUsms)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idUsms)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idVsms)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idVsms)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
@@ -1279,13 +1300,15 @@
           RETURN
         END IF
 #  ifdef ADJUST_BOUNDARY
-        IF (.not.got_var(idSbry(isUvel))) THEN
+        IF (.not.got_var(idSbry(isUvel)).and.                           &
+     &      ANY(Lobc(:,isUvel,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isUvel))),  &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-        IF (.not.got_var(idSbry(isVvel))) THEN
+        IF (.not.got_var(idSbry(isVvel)).and.                           &
+     &      ANY(Lobc(:,isVvel,ng))) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idSbry(isVvel))),  &
      &                                  TRIM(ncname)
           exit_flag=3
@@ -1299,30 +1322,6 @@
           RETURN
         END IF
 # endif
-        IF (.not.got_var(idUsms).and.Hout(idUsms,ng)) THEN
-          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idUsms)),          &
-     &                                  TRIM(ncname)
-          exit_flag=3
-          RETURN
-        END IF
-        IF (.not.got_var(idVsms).and.Hout(idVsms,ng)) THEN
-          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idVsms)),          &
-     &                                  TRIM(ncname)
-          exit_flag=3
-          RETURN
-        END IF
-        IF (.not.got_var(idUbms).and.Hout(idUbms,ng)) THEN
-          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idUbms)),          &
-     &                                  TRIM(ncname)
-          exit_flag=3
-          RETURN
-        END IF
-        IF (.not.got_var(idVbms).and.Hout(idVbms,ng)) THEN
-          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idVbms)),          &
-     &                                  TRIM(ncname)
-          exit_flag=3
-          RETURN
-        END IF
 # ifdef SOLVE3D
         DO itrc=1,NT(ng)
           IF (.not.got_var(idTvar(itrc)).and.Hout(idTvar(itrc),ng)) THEN
@@ -1332,7 +1331,8 @@
             RETURN
           END IF
 #  ifdef ADJUST_BOUNDARY
-          IF (.not.got_var(idSbry(isTvar(itrc)))) THEN
+          IF (.not.got_var(idSbry(isTvar(itrc))).and.                   &
+     &        ANY(Lobc(:,isTvar(itrc),ng))) THEN
             IF (Master) WRITE (stdout,70)                               &
      &                        TRIM(Vname(1,idSbry(isTvar(itrc)))),      &
      &                        TRIM(ncname)
@@ -1340,12 +1340,14 @@
             RETURN
           END IF
 #  endif
-          IF (.not.got_var(idTsur(itrc)).and.Hout(idTsur(itrc),ng)) THEN
+#  ifdef ADJUST_STFLUX
+          IF (.not.got_var(idTsur(itrc)).and.Lstflux(itrc,ng)) THEN
             IF (Master) WRITE (stdout,70) TRIM(Vname(1,idTsur(itrc))),  &
      &                                    TRIM(ncname)
             exit_flag=3
             RETURN
           END IF
+#  endif
         END DO
 # endif
 !
@@ -1359,6 +1361,8 @@
           ADM(ng)%Rindex=(ntstart(ng)-1)/nADJ(ng)
         END IF
         ADM(ng)%Rindex=MIN(ADM(ng)%Rindex,rec_size)
+        Fcount=ADM(ng)%Fcount
+        ADM(ng)%Nrec(Fcount)=rec_size
       END IF QUERY
 !
   10  FORMAT (3x,'AD_DEF_HIS   - creating adjoint  file: ',a)

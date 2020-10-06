@@ -1,9 +1,9 @@
 #include "cppdefs.h"
-      SUBROUTINE inp_par (model)
+      MODULE inp_par_mod
 !
-!svn $Id: inp_par.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: inp_par.F 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -12,6 +12,14 @@
 !  It also writes out these parameters to standard output.             !
 !                                                                      !
 !=======================================================================
+!
+      USE mod_kinds
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE inp_par (model)
+!***********************************************************************
 !
       USE mod_param
       USE mod_parallel
@@ -38,7 +46,7 @@
 !  Local variable declarations.
 !
       logical :: Lwrite
-
+!
       integer :: Itile, Jtile, Nghost, Ntiles, tile
       integer :: Imin, Imax, Jmin, Jmax
       integer :: Uoff, Voff
@@ -47,14 +55,46 @@
 #endif
       integer :: ibry, inp, out, i, ic, ifield, itrc, j, ng, npts
       integer :: sequence, varid
-
+!
       real(r8) :: cff
       real(r8), parameter :: epsilon = 1.0E-8_r8
       real(r8), parameter :: spv = 0.0_r8
 !
+      character (len=10) :: stdout_file
+!
+      SourceFile=__FILE__
+!
 !-----------------------------------------------------------------------
 !  Read in and report input model parameters.
 !-----------------------------------------------------------------------
+
+#ifdef ROMS_STDOUT
+!
+!  Change default Fortran standard out unit, so ROMS run information is
+!  directed to a file. This is advantageous in coupling applications to
+!  ROMS information separated from other models. It overwite Fortran
+!  default unit 6.
+!
+# if defined DISTRIBUTE && defined DISJOINTED
+       stdout=60+ForkColor
+       WRITE (stdout_file,'(a,i2.2,a)') 'log', ForkColor+1, '.roms'
+# else
+       stdout=60
+       stdout_file='log.roms'
+# endif
+!
+!  Open ROMS standard output file.
+!
+       IF (Master) THEN
+         IF (Lappend) THEN
+           OPEN (stdout, FILE=TRIM(stdout_file), FORM='formatted',      &
+     &           STATUS='old', POSITION='append', ACTION='write')
+         ELSE
+           OPEN (stdout, FILE=TRIM(stdout_file), FORM='formatted',      &
+     &           STATUS='replace')
+         END IF
+       END IF
+#endif
 !
 !  Set input units.
 !
@@ -66,6 +106,15 @@
       Lwrite=Master
       inp=stdinp
       out=stdout
+#endif
+#if defined SPLIT_4DVAR && SUPPRESS_REPORT
+!
+!  Supress reporting the information in the split 4D-Var algorithm when
+!  appending into standard output.
+!
+      IF (Lappend) THEN
+        Lwrite=.FALSE.
+      END IF
 #endif
 !
 !  Get current date.
@@ -81,10 +130,10 @@
 !  Read in physical model input parameters.
 !-----------------------------------------------------------------------
 !
-      IF (Lwrite) WRITE (out,10) version, TRIM(date_str)
+      IF (Master.and.Lwrite) WRITE (out,10) version, TRIM(date_str)
  10   FORMAT (80('-'),/,                                                &
               ' Model Input Parameters:  ROMS/TOMS version ',a,/,       &
-     &        26x,a,/,1x,80('-'))
+     &        26x,a,/,80('-'))
 
 #ifdef MODEL_COUPLING
 !
@@ -126,22 +175,61 @@
      &        /,11x,'routine GETARG is used to get script file name.',  &
      &        /,11x,'For example, in MPI applications make sure that',  &
      &        /,11x,'command line is something like:',/,                &
-     &        /,11x,'mpirun -np 4 ocean ocean.in',/,/,11x,'and not',/,  &
-     &        /,11x,'mpirun -np 4 ocean < ocean.in',/)
+     &        /,11x,'mpirun -np 4 romsM roms.in',/,/,11x,'and not',/,   &
+     &        /,11x,'mpirun -np 4 romsM < roms.in',/)
  40   CONTINUE
 # endif
 #endif
-
+!
       CALL read_PhyPar (model, inp, out, Lwrite)
 #ifdef DISTRIBUTE
       CALL mp_bcasti (1, model, exit_flag)
 #endif
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
+
+#if defined SPLIT_4DVAR && SUPPRESS_REPORT
+!
+!  If appending into standard output file, supress the reporting of
+!  information.  Turn of "LwrtInfo" switch.
+!  appending into standard output.
+!
+      IF (Lappend) THEN
+        DO ng=1,Ngrids
+          LwrtInfo(ng)=.FALSE.
+        END DO
+      END IF
+#endif
+#ifdef BIOLOGY
+!
+!-----------------------------------------------------------------------
+!  Read in biological model input parameters.
+!-----------------------------------------------------------------------
+!
+      OPEN (15, FILE=TRIM(bparnam), FORM='formatted', STATUS='old')
+
+      CALL read_BioPar (model, 15, out, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+#endif
+#ifdef SEDIMENT
+!
+!-----------------------------------------------------------------------
+!  Read in sediment model input parameters.
+!-----------------------------------------------------------------------
+!
+      OPEN (25, FILE=TRIM(sparnam), FORM='formatted', STATUS='old')
+
+      CALL read_SedPar (model, 25, out, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+#endif
 #ifdef NESTING
 !
+!-----------------------------------------------------------------------
 !  Read in nesting contact points NetCDF file and allocate and
 !  initialize several structures and variables.
+!-----------------------------------------------------------------------
 !
       CALL set_contact (1, model)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -153,13 +241,23 @@
 !  nested grids.
 !-----------------------------------------------------------------------
 !
+!  Set switch for three ghost-points in the halo region.
+!
+#ifdef SOLVE3D
+      ThreeGhostPoints=ANY(Hadvection(:,:)%MPDATA).or.                  &
+     &                 ANY(Hadvection(:,:)%HSIMT)
+#endif
+#ifdef UV_VIS4
+      ThreeGhostPoints=.TRUE.
+#endif
+!
 !  Determine the number of ghost-points in the halo region.
 !
-#if defined TS_MPDATA || defined UV_VIS4
-      NghostPoints=3
-#else
-      NghostPoints=2
-#endif
+      IF (ThreeGhostPoints) THEN
+        NghostPoints=3
+      ELSE
+        NghostPoints=2
+      END IF
       IF (ANY(CompositeGrid).or.ANY(RefinedGrid)) THEN
         NghostPoints=MAX(3,NghostPoints)
       END IF
@@ -567,7 +665,7 @@
 !  file.
 !-----------------------------------------------------------------------
 !
-      IF (Master) THEN
+      IF (Master.and.Lwrite) THEN
         DO ng=1,Ngrids
 #ifdef SOLVE3D
           WRITE (stdout,50) ng, Lm(ng), Mm(ng), N(ng),                  &
@@ -625,12 +723,12 @@
         END DO
 #ifdef SOLVE3D
  50     FORMAT (/,' Tile partition information for Grid ',i2.2,':',2x,  &
-     &          i4.4,'x',i4.4,'x',i4.4,2x,'tiling: ',i3.3,'x',i3.3,/,/, &
+     &          i0,'x',i0,'x',i0,2x,'tiling: ',i0,'x',i0,/,/,           &
      &          5x,'tile',5x,'Istr',5x,'Iend',5x,'Jstr',5x,'Jend',      &
      &          5x,'Npts',/)
 #else
  50     FORMAT (/,' Tile partition information for Grid ',i2.2,':',2x,  &
-     &          i4.4,'x',i4.4,2x,'tiling: ',i3.3,'x',i3.3,/,/,          &
+     &          i0,'x',i0,2x,'tiling: ',i0,'x',i0,/,/,                  &
      &          5x,'tile',5x,'Istr',5x,'Iend',5x,'Jstr',5x,'Jend',      &
      &          5x,'Npts',/)
 #endif
@@ -639,12 +737,12 @@
      &                       'Adjoint model.',/,11x,'Partitions are ',  &
      &          'allowed in distributed-menory (MPI) applications.'/)
 #endif
- 70     FORMAT (5(5x,i4),2x,i7)
+ 70     FORMAT (5(4x,i5),1x,i8)
  80     FORMAT (/,' INP_PAR - domain decomposition error in input ',    &
-     &                        'script file for grid: ',i2,/,            &
-     &          /,11x,'The domain partition parameter, ',a,i3,          &
-     &          /,11x,'is incompatible with grid size, ',a,i4,          &
-     &          /,11x,'because it yields too small tile, ',a,i3,a,i3,   &
+     &                        'script file for grid: ',i2.2,/,          &
+     &          /,11x,'The domain partition parameter, ',a,i0,          &
+     &          /,11x,'is incompatible with grid size, ',a,i0,          &
+     &          /,11x,'because it yields too small tile, ',a,i0,a,i0,   &
      &          /,11x,'Decrease partition parameter: ',a)
       END IF
 #ifdef DISTRIBUTE
@@ -656,7 +754,7 @@
 !  Report tile minimum and maximum fractional grid coordinates.
 !
       DO ng=1,Ngrids
-        IF (Master) THEN
+        IF (Master.and.Lwrite) THEN
           WRITE (stdout,90) ng
           DO tile=0,NtileI(ng)*NtileJ(ng)-1
             WRITE (stdout,100) tile,                                    &
@@ -724,7 +822,7 @@
         HaloSizeJ(ng)=Nghost*MaxHaloLenJ+6*Nghost
         TileSide(ng)=MAX(MaxHaloLenI,MaxHaloLenJ)
         TileSize(ng)=MaxHaloLenI*MaxHaloLenJ
-        IF (Master) THEN
+        IF (Master.and.Lwrite) THEN
           WRITE (stdout,110) ng, HaloSizeI(ng), ng, HaloSizeJ(ng),      &
      &                       ng, TileSide(ng),  ng, TileSize(ng)
  110      FORMAT (/,' Maximum halo size in XI and ETA directions:',/,   &
@@ -736,26 +834,6 @@
       END DO
 #endif
 
-#ifdef BIOLOGY
-!
-!-----------------------------------------------------------------------
-!  Read in biological model input parameters.
-!-----------------------------------------------------------------------
-!
-      OPEN (15, FILE=TRIM(bparnam), FORM='formatted', STATUS='old')
-
-      CALL read_BioPar (model, 15, out, Lwrite)
-#endif
-#ifdef SEDIMENT
-!
-!-----------------------------------------------------------------------
-!  Read in sediment model input parameters.
-!-----------------------------------------------------------------------
-!
-      OPEN (25, FILE=TRIM(sparnam), FORM='formatted', STATUS='old')
-
-      CALL read_SedPar (model, 25, out, Lwrite)
-#endif
 #if defined FOUR_DVAR || defined VERIFICATION
 !
 !-----------------------------------------------------------------------
@@ -765,6 +843,8 @@
       OPEN (35, FILE=TRIM(aparnam), FORM='formatted', STATUS='old')
 
       CALL read_AssPar (model, 35, out, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 #endif
 #ifdef FLOATS
 !
@@ -775,6 +855,8 @@
       OPEN (45, FILE=TRIM(fposnam), FORM='formatted', STATUS='old')
 
       CALL read_FltPar (model, 45, out, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 #endif
 #if defined FLOATS && defined FLOAT_BIOLOGY
 !
@@ -785,6 +867,8 @@
       OPEN (50, FILE=TRIM(fbionam), FORM='formatted', STATUS='old')
 
       CALL read_FltBioPar (model, 50, out, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 #endif
 #ifdef STATIONS
 !
@@ -795,15 +879,71 @@
       OPEN (55, FILE=TRIM(sposnam), FORM='formatted', STATUS='old')
 
       CALL read_StaPar (model, 55, out, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+#endif
+#ifdef SOLVE3D
+!
+!-----------------------------------------------------------------------
+!  Report tracer advection scheme.
+!-----------------------------------------------------------------------
+!
+      IF (Master.and.Lwrite) THEN
+        WRITE (out,120) 'NLM'
+ 120    FORMAT (/,1x,'Tracer Advection Scheme: ',a,/,1x,24('='),/,      &
+     &          /,1x,'Variable',t25,'Grid',t31,'Horizontal',            &
+     &          t50,'Vertical', /,1x,'---------',t25,'----',            &
+     &          t31,2('------------',7x))
+      END IF
+      CALL tadv_report (out, iNLM, Hadvection, Vadvection, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+
+# if defined ADJOINT || defined TANGENT || defined TL_IOMS
+!
+      IF (Master.and.Lwrite) THEN
+        WRITE (out,120) 'TLM, RPM, and ADM'
+      END IF
+      CALL tadv_report (out, iADM, ad_Hadvection, ad_Vadvection, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+# endif
+#endif
+#if defined TANGENT || defined TL_IOMS
+!
+!  Set tracer advection scheme switches for the tangent linear models
+!  (TLM and RPM) to the same values as the adjoint model.
+!
+      DO ng=1,Ngrids
+        DO i=1,NT(ng)
+          tl_Hadvection(i,ng)%AKIMA4    = ad_Hadvection(i,ng)%AKIMA4
+          tl_Hadvection(i,ng)%CENTERED2 = ad_Hadvection(i,ng)%CENTERED2
+          tl_Hadvection(i,ng)%CENTERED4 = ad_Hadvection(i,ng)%CENTERED4
+          tl_Hadvection(i,ng)%HSIMT     = ad_Hadvection(i,ng)%HSIMT
+          tl_Hadvection(i,ng)%MPDATA    = ad_Hadvection(i,ng)%MPDATA
+          tl_Hadvection(i,ng)%SPLINES   = ad_Hadvection(i,ng)%SPLINES
+          tl_Hadvection(i,ng)%SPLIT_U3  = ad_Hadvection(i,ng)%SPLIT_U3
+          tl_Hadvection(i,ng)%UPSTREAM3 = ad_Hadvection(i,ng)%UPSTREAM3
+!
+          tl_Vadvection(i,ng)%AKIMA4    = ad_Vadvection(i,ng)%AKIMA4
+          tl_Vadvection(i,ng)%CENTERED2 = ad_Vadvection(i,ng)%CENTERED2
+          tl_Vadvection(i,ng)%CENTERED4 = ad_Vadvection(i,ng)%CENTERED4
+          tl_Vadvection(i,ng)%HSIMT     = ad_Vadvection(i,ng)%HSIMT
+          tl_Vadvection(i,ng)%MPDATA    = ad_Vadvection(i,ng)%MPDATA
+          tl_Vadvection(i,ng)%SPLINES   = ad_Vadvection(i,ng)%SPLINES
+          tl_Vadvection(i,ng)%SPLIT_U3  = ad_Vadvection(i,ng)%SPLIT_U3
+          tl_Vadvection(i,ng)%UPSTREAM3 = ad_Vadvection(i,ng)%UPSTREAM3
+        END DO
+      END DO
 #endif
 !
 !-----------------------------------------------------------------------
 !  Report lateral boundary conditions.
 !-----------------------------------------------------------------------
 !
-      IF (Master) THEN
-        WRITE (out,120) 'NLM'
- 120    FORMAT (/,1x,'Lateral Boundary Conditions: ',a,/,1x,28('='),/,  &
+      IF (Master.and.Lwrite) THEN
+        WRITE (out,130) 'NLM'
+ 130    FORMAT (/,1x,'Lateral Boundary Conditions: ',a,/,1x,28('='),/,  &
      &          /,1x,'Variable',t25,'Grid',t31,'West Edge',             &
      &          t44,'South Edge', t57,'East Edge',t70,'North Edge',     &
      &          /,1x,'---------',t25,'----',t31,4('----------',3x))
@@ -812,7 +952,8 @@
         END DO
 
 #if defined ADJOINT || defined TANGENT || defined TL_IOMS
-        WRITE (out,120) 'TLM, RPM, and ADM'
+!
+        WRITE (out,130) 'TLM, RPM, and ADM'
         DO ifield=1,nLBCvar
           CALL lbc_report (out, ifield, ad_LBC)
         END DO
@@ -1073,8 +1214,8 @@
         IF (ANY(LnudgeTCLM(i,:))) THEN
           varid=varid+1
           IF (varid.gt.MV) THEN
-            WRITE (stdout,130) MV, varid
- 130        FORMAT (/,' INP_PAR - too small dimension ',                &
+            WRITE (stdout,140) MV, varid
+ 140        FORMAT (/,' INP_PAR - too small dimension ',                &
      &              'parameter, MV = ',2i5,/,15x,                       &
      &              'change file  mod_ncparam.F  and recompile.')
             STOP
@@ -1103,7 +1244,7 @@
 !  Check C-preprocessing options and definitions.
 !-----------------------------------------------------------------------
 !
-      IF (Master) THEN
+      IF (Master.and.Lwrite) THEN
         CALL checkdefs
         CALL my_flush (out)
       END IF
@@ -1121,1159 +1262,8 @@
 !
       sequence=759
       CALL ran_seed (sequence)
-
+!
       RETURN
       END SUBROUTINE inp_par
-
-      FUNCTION decode_line (line_text, KeyWord, Nval, Cval, Rval)
 !
-!=======================================================================
-!                                                                      !
-!  This function decodes lines of text from input script files. It is  !
-!  to evaluate ROMS unique namelist parameters.                        !
-!                                                                      !
-!  Arguments:                                                          !
-!                                                                      !
-!    line_text      Input scripts lines as text (string)               !
-!    KeyWord        Input parameter keyword (string)                   !
-!    Nval           Number of values processed (integer)               !
-!    Cval           Input values as characters (string array)          !
-!    Rval           Input values as mumbers (real array)               !
-!                                                                      !
-!=======================================================================
-!
-      USE mod_kinds
-!
-      implicit none
-!
-! Imported variable declarations.
-!
-      character (len=*), intent(in) :: line_text
-
-      character (len=40), intent(inout) :: KeyWord
-
-      integer, intent(inout) :: Nval
-
-      character (len=256), dimension(200), intent(inout) :: Cval
-
-      real(r8), dimension(100), intent(inout) :: Rval
-!
-! Local variable declarations
-!
-      logical :: IsString, Kextract, decode, nested
-      integer :: Iblank, Icomm, Icont, Ipipe, Kstr, Kend, Linp
-      integer :: Lend, LenS, Lstr, Lval, Nmul, Schar
-      integer :: copies, i, ic, ie, is, j, status
-
-      integer, dimension(20) :: Imul
-
-      integer :: decode_line
-
-      character (len=1 ), parameter :: blank = ' '
-      character (len=256) :: Vstring, line, string
-!
-!------------------------------------------------------------------------
-!  Decode input line.
-!------------------------------------------------------------------------
-!
-!  Initialize.
-!
-      DO i=1,LEN(line)
-        line(i:i)=blank
-        Vstring(i:i)=blank
-        string(i:i)=blank
-      END DO
-!
-!  Get length of "line". Remove comment after the KEYWORD, if any.
-!  Then, remove leading and trailing blanks.
-!
-      Linp=LEN(line_text)
-      IF ((Linp.gt.0).and.(line_text(1:1).ne.CHAR(33))) THEN
-        Icomm=INDEX(line_text,CHAR(33),BACK=.FALSE.)
-        IF (Icomm.gt.0) Linp=Icomm-1
-        line=TRIM(ADJUSTL(line_text(1:Linp)))
-        Linp=LEN_TRIM(line)
-      ELSE
-        line=TRIM(ADJUSTL(line_text))
-        Linp=LEN_TRIM(line)
-      END IF
-!
-!  If not a blank or comment line [char(33)=!], decode and extract input
-!  values.  Find equal sign [char(61)].
-!
-      status=-1
-      nested=.FALSE.
-      IF ((Linp.gt.0).and.(line(1:1).ne.CHAR(33))) THEN
-        status=1
-        Kstr=1
-        Kend=INDEX(line,CHAR(61),BACK=.FALSE.)-1
-        Lstr=INDEX(line,CHAR(61),BACK=.TRUE.)+1
-!
-! Determine if KEYWORD is followed by double equal sign (==) indicating
-! nested parameter.
-!
-        IF ((Lstr-Kend).eq.3) nested=.TRUE.
-!
-! Extract KEYWORD, trim leading and trailing blanks.
-!
-        Kextract=.FALSE.
-        IF (Kend.gt.0) THEN
-          Lend=Linp
-          KeyWord=line(Kstr:Kend)
-          Nval=0
-          Kextract=.TRUE.
-        ELSE
-          Lstr=1
-          Lend=Linp
-          Kextract=.TRUE.
-        END IF
-!
-! Extract parameter values string.  Remove continuation symbol
-! [char(92)=\] or multi-line value [char(124)=|], if any.  Trim
-! leading trailing blanks.
-!
-        IF (Kextract) THEN
-          Icont=INDEX(line,CHAR(92 ),BACK=.FALSE.)
-          Ipipe=INDEX(line,CHAR(124),BACK=.FALSE.)
-          IF (Icont.gt.0) Lend=Icont-1
-          IF (Ipipe.gt.0) Lend=Ipipe-1
-          Vstring=ADJUSTL(line(Lstr:Lend))
-          Lval=LEN_TRIM(Vstring)
-!
-! The TITLE KEYWORD is a special one since it can include strings,
-! numbers, spaces, and continuation symbol.
-!
-          IsString=.FALSE.
-          IF (TRIM(KeyWord).eq.'TITLE') THEN
-            Nval=Nval+1
-            Cval(Nval)=Vstring(1:Lval)
-            IsString=.TRUE.
-          ELSE
-!
-! Check if there is a multiplication symbol [char(42)=*] in the variable
-! string indicating repetition of input values.
-!
-            Nmul=0
-            DO i=1,Lval
-              IF (Vstring(i:i).eq.CHAR(42)) THEN
-                Nmul=Nmul+1
-                Imul(Nmul)=i
-              END IF
-            END DO
-            ic=1
-!
-! Check for blank spaces [char(32)=' '] between entries and decode.
-!
-            is=1
-            ie=Lval
-            Iblank=0
-            decode=.FALSE.
-            DO i=1,Lval
-              IF (Vstring(i:i).eq.CHAR(32)) THEN
-                IF (Vstring(i+1:i+1).ne.CHAR(32)) decode=.TRUE.
-                Iblank=i
-              ELSE
-                ie=i
-              ENDIF
-              IF (decode.or.(i.eq.Lval)) THEN
-                Nval=Nval+1
-!
-! Processing numeric values.  Check starting character to determine
-! if numeric or character values. It is possible to have both when
-! processing repetitions via the multiplication symbol.
-!
-                Schar=ICHAR(Vstring(is:is))
-                IF (((48.le.Schar).and.(Schar.le.57)).or.               &
-     &              (Schar.eq.43).or.(Schar.eq.45)) THEN
-                  IF ((Nmul.gt.0).and.                                  &
-     &                (is.lt.Imul(ic)).and.(Imul(ic).lt.ie)) THEN
-                    READ (Vstring(is:Imul(ic)-1),*) copies
-                    Schar=ICHAR(Vstring(Imul(ic)+1:Imul(ic)+1))
-                    IF ((43.le.Schar).and.(Schar.le.57)) THEN
-                      READ (Vstring(Imul(ic)+1:ie),*) Rval(Nval)
-                      DO j=1,copies-1
-                        Rval(Nval+j)=Rval(Nval)
-                      END DO
-                    ELSE
-                      string=Vstring(Imul(ic)+1:ie)
-                      LenS=LEN_TRIM(string)
-                      Cval(Nval)=string(1:LenS)
-                      DO j=1,copies-1
-                        Cval(Nval+j)=Cval(Nval)
-                      END DO
-                    END IF
-                    Nval=Nval+copies-1
-                    ic=ic+1
-                  ELSE
-                    string=Vstring(is:ie)
-                    LenS=LEN_TRIM(string)
-                    READ (string(1:LenS),*) Rval(Nval)
-                  END IF
-                ELSE
-!
-! Processing character values (logicals and strings).
-!
-                  IF ((Nmul.gt.0).and.                                  &
-     &                (is.lt.Imul(ic)).and.(Imul(ic).lt.ie)) THEN
-                    READ (Vstring(is:Imul(ic)-1),*) copies
-                    Cval(Nval)=Vstring(Imul(ic)+1:ie)
-                    DO j=1,copies-1
-                      Cval(Nval+j)=Cval(Nval)
-                    END DO
-                    Nval=Nval+copies-1
-                    ic=ic+1
-                  ELSE
-                    string=Vstring(is:ie)
-                    Cval(Nval)=TRIM(ADJUSTL(string))
-                  END IF
-                  IsString=.TRUE.
-                END IF
-                is=Iblank+1
-                ie=Lval
-                decode=.FALSE.
-              END IF
-            END DO
-          END IF
-        END IF
-        status=Nval
-      END IF
-      decode_line=status
-      RETURN
-      END FUNCTION decode_line
-
-      FUNCTION find_file (ng, fname, KeyWord) RESULT (foundit)
-!
-!=======================================================================
-!                                                                      !
-!  This function checks if provided input file exits.                  !
-!                                                                      !
-!  On Input:                                                           !
-!                                                                      !
-!     ng         Nested grid number.                                   !
-!     fname      File name (path and name).                            !
-!     KeyWord    Keyword associated with file name (string,OPTIONAL).  !
-!                                                                      !
-!  On Output:                                                          !
-!                                                                      !
-!     foundit    The value of the result is TRUE/FALSE if the file     !
-!                  was found or not.                                   !
-!                                                                      !
-!=======================================================================
-!
-      USE mod_kinds
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_netcdf
-      USE mod_scalars
-!
-      USE strings_mod,   ONLY : FoundError
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: ng
-
-      character (len=*), intent(in) :: fname
-      character (len=*), intent(in) :: KeyWord
-!
-!  Local variable declarations.
-!
-      logical :: foundit, isURL
-
-      integer :: lstr, ncid
-!
-      SourceFile=__FILE__ // ", find_file"
-!
-!-----------------------------------------------------------------------
-!  Check if the file exit.
-!-----------------------------------------------------------------------
-!
-      foundit=.FALSE.
-!
-!  Check for empty file name string.
-!
-      lstr=LEN_TRIM(fname)
-      IF (lstr.eq.0) THEN
-        IF (Master) THEN
-          WRITE (stdout,10) TRIM(KeyWord)
- 10       FORMAT (/,' INP_PAR:FIND_FILE - empty file name string ',     &
-     &            'for standard input script KeyWord: ',a)
-        END IF
-        exit_flag=5
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-      END IF
-!
-!  Check if provided file is a URL.  This implies the file is a NetCDF
-!  file on Data Access Protocol (DAP) server (like OPeNDAP).
-!
-      isURL=.FALSE.
-      IF (INDEX(TRIM(fname),'http:').ne.0) THEN
-        isURL=.TRUE.
-      END IF
-!
-!  Use F90 intrinsic function for non URL files.
-!
-      IF (.not.isURL) THEN
-        INQUIRE (FILE=TRIM(fname), EXIST=foundit)
-!
-!  Use NetCDF library (version 4.1.1 or higher) to check URL NetCDF
-!  files.
-!
-      ELSE
-        CALL netcdf_open (ng, iNLM, fname, 0, ncid)
-        IF (exit_flag.eq.NoError) THEN
-          foundit=.TRUE.
-        END IF
-      END IF
-
-      RETURN
-      END FUNCTION find_file
-
-      FUNCTION load_i (Ninp, Vinp, Nout, Vout)
-!
-!=======================================================================
-!                                                                      !
-!  This function loads input values into a requested model integer     !
-!  variable.                                                           !
-!                                                                      !
-!  On Input:                                                           !
-!                                                                      !
-!     Ninp       Size of input variable.                               !
-!     Vinp       Input values                                          !
-!     Nout       Number of output values.                              !
-!                                                                      !
-!  On Output:                                                          !
-!                                                                      !
-!     Vout       Output integer variable.                              !
-!     load_i     Number of output values processed.                    !
-!                                                                      !
-!=======================================================================
-!
-      USE mod_kinds
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: Ninp, Nout
-      real(r8), intent(in) :: Vinp(Ninp)
-      integer, intent(out) :: Vout(Nout)
-!
-!  Local variable declarations.
-!
-      integer :: i, ic
-      integer :: load_i
-!
-!-----------------------------------------------------------------------
-!  Load integer variable with input values.
-!-----------------------------------------------------------------------
-!
-!  If not all values are provided for variable, assume the last value
-!  for the rest of the array.
-!
-      ic=0
-      IF (Ninp.le.Nout) THEN
-        DO i=1,Ninp
-          ic=ic+1
-          Vout(i)=INT(Vinp(i))
-        END DO
-        DO i=Ninp+1,Nout
-          ic=ic+1
-          Vout(i)=INT(Vinp(Ninp))
-        END DO
-      ELSE
-        DO i=1,Nout
-          ic=ic+1
-          Vout(i)=INT(Vinp(i))
-        END DO
-      END IF
-      load_i=ic
-
-      RETURN
-      END FUNCTION load_i
-
-      FUNCTION load_l (Ninp, Vinp, Nout, Vout)
-!
-!=======================================================================
-!                                                                      !
-!  This function loads input values into a requested model logical     !
-!  variable.                                                           !
-!                                                                      !
-!  On Input:                                                           !
-!                                                                      !
-!     Ninp       Size of input variable.                               !
-!     Vinp       Input values                                          !
-!     Nout       Number of output values.                              !
-!                                                                      !
-!  On Output:                                                          !
-!                                                                      !
-!     Vout       Output integer variable.                              !
-!     load_l     Number of output values processed.                    !
-!                                                                      !
-!=======================================================================
-!
-      USE mod_kinds
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: Ninp, Nout
-      character (len=*), intent(in) :: Vinp(Ninp)
-      logical, intent(out) :: Vout(Nout)
-!
-!  Local variable declarations.
-!
-      integer :: i, ic
-      integer :: load_l
-!
-!-----------------------------------------------------------------------
-!  Load integer variable with input values.
-!-----------------------------------------------------------------------
-!
-!  If not all values are provided for variable, assume the last value
-!  for the rest of the array.
-!
-      ic=0
-      IF (Ninp.le.Nout) THEN
-        DO i=1,Ninp
-          ic=ic+1
-          IF ((Vinp(i)(1:1).eq.'T').or.(Vinp(i)(1:1).eq.'t')) THEN
-            Vout(i)=.TRUE.
-          ELSE
-            Vout(i)=.FALSE.
-          END IF
-        END DO
-        DO i=Ninp+1,Nout
-          ic=ic+1
-          IF ((Vinp(Ninp)(1:1).eq.'T').or.(Vinp(Ninp)(1:1).eq.'t')) THEN
-            Vout(i)=.TRUE.
-          ELSE
-            Vout(i)=.FALSE.
-          END IF
-        END DO
-      ELSE
-        DO i=1,Nout
-          ic=ic+1
-          IF ((Vinp(i)(1:1).eq.'T').or.(Vinp(i)(1:1).eq.'t')) THEN
-            Vout(i)=.TRUE.
-          ELSE
-            Vout(i)=.FALSE.
-          END IF
-        END DO
-      END IF
-      load_l=ic
-
-      RETURN
-      END FUNCTION load_l
-
-      FUNCTION load_lbc (Ninp, Vinp, line, nline, ifield, igrid,        &
-     &                   iTrcStr, iTrcEnd, svname, S)
-!
-!=======================================================================
-!                                                                      !
-!  This function sets lateral boundary conditions logical switches     !
-!  according to input string keywords.                                 !
-!                                                                      !
-!  On Input:                                                           !
-!                                                                      !
-!     Ninp       Size of input variable (integer)                      !
-!     Vinp       Input values (string)                                 !
-!     line       Current input line (string)                           !
-!     nline      Multi-line counter (integer)                          !
-!     ifield     Lateral boundary variable index (integer)             !
-!     igrid      Nested grid counter (integer)                         !
-!     iTrcStr    Starting tracer index to process (integer)            !
-!     iTrcEnd    Ending   tracer index to process (integer)            !
-!     svname     State variable name (string)                          !
-!     S          Derived type structure, TYPE(T_LBC)                   !
-!                                                                      !
-!  On Output:                                                          !
-!                                                                      !
-!     nline      Updated multi-line counter (integer)                  !
-!     igrid      Updated nested grid counter (integer)                 !
-!     S          Updated derived type structure, TYPE(T_LBC)           !
-!     load_lbc   Number of output values processed.                    !
-!                                                                      !
-!=======================================================================
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      USE strings_mod, ONLY : uppercase
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: Ninp, ifield, iTrcStr, iTrcEnd
-      integer, intent(inout) :: igrid, nline
-
-      character (len=256), intent(in) :: line
-      character (len=256), intent(in) :: Vinp(Ninp)
-      character (len=*  ), intent(in) :: svname
-
-      TYPE(T_LBC), intent(inout) :: S(4,nLBCvar,Ngrids)
-!
-!  Local variable declarations.
-!
-      integer :: Icont, i, ibry, ic
-      integer :: load_lbc
-
-      character (len=10) :: Bstring(4), string
-!
-!-----------------------------------------------------------------------
-!  Set lateral boundary conditions switches in structure.
-!-----------------------------------------------------------------------
-!
-!  Check current line for the continuation symbol [char(92)=\].
-!
-      Icont=INDEX(TRIM(line),CHAR(92) ,BACK=.FALSE.)
-!
-!  Extract lateral boundary condition keywords from Vinp. Notice that
-!  additional array elements are added to Vinp during continuation
-!  lines.
-!
-      i=nline*4
-      Bstring(1)=TRIM(Vinp(i+1))
-      Bstring(2)=TRIM(Vinp(i+2))
-      Bstring(3)=TRIM(Vinp(i+3))
-      Bstring(4)=TRIM(Vinp(i+4))
-!
-!  Advance or reset entry lines counter.
-!
-      IF (Icont.gt.0) THEN
-        nline=nline+1
-      ELSE
-        nline=0
-      END IF
-!
-!  Set switches for each boundary segment.
-!
-      ic=1
-      IF ((0.lt.ifield).and.(ifield.le.nLBCvar)) THEN
-        DO ibry=1,4
-          string=uppercase(Bstring(ibry))
-          SELECT CASE (TRIM(string))
-            CASE ('CHA')
-              S(ibry,ifield,igrid)%Chapman_implicit = .TRUE.
-            CASE ('CHE')
-              S(ibry,ifield,igrid)%Chapman_explicit = .TRUE.
-            CASE ('CLA')
-              S(ibry,ifield,igrid)%clamped = .TRUE.
-              S(ibry,ifield,igrid)%acquire = .TRUE.
-            CASE ('CLO')
-              S(ibry,ifield,igrid)%closed = .TRUE.
-            CASE ('FLA')
-              S(ibry,ifield,igrid)%Flather = .TRUE.
-              S(ibry,ifield,igrid)%acquire = .TRUE.
-              S(ibry,isFsur,igrid)%acquire = .TRUE.
-            CASE ('GRA')
-              S(ibry,ifield,igrid)%gradient = .TRUE.
-            CASE ('NES')
-              S(ibry,ifield,igrid)%nested = .TRUE.
-            CASE ('PER')
-              S(ibry,ifield,igrid)%periodic = .TRUE.
-              IF ((ibry.eq.ieast).or.(ibry.eq.iwest)) THEN
-                EWperiodic(igrid)=.TRUE.
-              ELSE IF ((ibry.eq.inorth).or.(ibry.eq.isouth)) THEN
-                NSperiodic(igrid)=.TRUE.
-              END IF
-            CASE ('RAD')
-              S(ibry,ifield,igrid)%radiation = .TRUE.
-            CASE ('RADNUD')
-              S(ibry,ifield,igrid)%radiation = .TRUE.
-              S(ibry,ifield,igrid)%nudging = .TRUE.
-              S(ibry,ifield,igrid)%acquire = .TRUE.
-            CASE ('RED')
-              S(ibry,ifield,igrid)%reduced = .TRUE.
-#if defined FSOBC_REDUCED
-              S(ibry,isFsur,igrid)%acquire = .TRUE.
-#endif
-            CASE ('SHC')
-              S(ibry,ifield,igrid)%Shchepetkin = .TRUE.
-              S(ibry,ifield,igrid)%acquire = .TRUE.
-              S(ibry,isFsur,igrid)%acquire = .TRUE.
-            CASE DEFAULT
-              IF (Master) THEN
-                WRITE (stdout,10) TRIM(Vinp(ibry)), TRIM(line)
-              END IF
-              exit_flag=2
-              RETURN
-          END SELECT
-        END DO
-
-#ifdef SOLVE3D
-!
-!  If processing tracers and last standard input entry (Icont=0), set
-!  unspecified tracer values to the last tracer entry.
-!
-        IF ((iTrcStr.gt.0).and.(iTrcEnd.gt.0)) THEN
-          IF ((Icont.eq.0).and.(ifield.lt.isTvar(iTrcEnd))) THEN
-            DO i=ifield+1,isTvar(iTrcEnd)
-              DO ibry=1,4
-                S(ibry,i,igrid)%clamped   = S(ibry,ifield,igrid)%clamped
-                S(ibry,i,igrid)%closed    = S(ibry,ifield,igrid)%closed
-                S(ibry,i,igrid)%gradient  = S(ibry,ifield,igrid)%gradient
-                S(ibry,i,igrid)%nested    = S(ibry,ifield,igrid)%nested
-                S(ibry,i,igrid)%periodic  = S(ibry,ifield,igrid)%periodic
-                S(ibry,i,igrid)%radiation = S(ibry,ifield,igrid)%radiation
-                S(ibry,i,igrid)%nudging   = S(ibry,ifield,igrid)%nudging
-                S(ibry,i,igrid)%acquire   = S(ibry,ifield,igrid)%acquire
-              END DO
-              ic=ic+1
-            END DO
-          END IF
-        END IF
-#endif
-      END IF
-!
-!  If appropriate, increase or reset nested grid counter.
-!
-      IF ((Icont.gt.0).and.(Ngrids.gt.1)) THEN
-        IF ((iTrcStr.gt.0).and.(iTrcEnd.gt.0)) THEN
-          IF ((ifield.eq.isTvar(iTrcEnd)).or.(ic.gt.1)) THEN
-            igrid=igrid+MIN(1,Icont)
-          END IF
-        ELSE
-          igrid=igrid+MIN(1,Icont)
-        END IF
-        IF (igrid.gt.Ngrids) THEN
-          IF (Master) THEN
-            WRITE (stdout,20) TRIM(line)
-          END IF
-          exit_flag=2
-          RETURN
-        END IF
-      ELSE
-        igrid=1
-      END IF
-      load_lbc=ic
-
- 10   FORMAT (/,' INP_PAR - illegal lateral boundary condition ',       &
-     &        'keyword: ',a,/,11x,a)
- 20   FORMAT (/,' INP_PAR - incorrect continuation symbol in line:',/,  &
-     &        11x,a,/,11x,'number of nested grid values exceeded.')
-
-      RETURN
-      END FUNCTION load_lbc
-
-      FUNCTION load_r (Ninp, Vinp, Nout, Vout)
-!
-!=======================================================================
-!                                                                      !
-!  This function loads input values into a requested model real        !
-!  variable.                                                           !
-!                                                                      !
-!  On Input:                                                           !
-!                                                                      !
-!     Ninp       Size of input variable.                               !
-!     Vinp       Input values                                          !
-!     Nout       Number of output values.                              !
-!                                                                      !
-!  On Output:                                                          !
-!                                                                      !
-!     Vout       Output real variable.                                 !
-!     load_r     Number of output values processed.                    !
-!                                                                      !
-!=======================================================================
-!
-      USE mod_kinds
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: Ninp, Nout
-      real(r8), intent(in) :: Vinp(Ninp)
-      real(r8), intent(out) :: Vout(Nout)
-!
-!  Local variable declarations.
-!
-      integer :: i, ic
-      integer :: load_r
-!
-!-----------------------------------------------------------------------
-!  Load integer variable with input values.
-!-----------------------------------------------------------------------
-!
-!  If not all values are provided for variable, assume the last value
-!  for the rest of the array.
-!
-      ic=0
-      IF (Ninp.le.Nout) THEN
-        DO i=1,Ninp
-          ic=ic+1
-          Vout(i)=Vinp(i)
-        END DO
-        DO i=Ninp+1,Nout
-          ic=ic+1
-          Vout(i)=Vinp(Ninp)
-        END DO
-      ELSE
-        DO i=1,Nout
-          ic=ic+1
-          Vout(i)=Vinp(i)
-        END DO
-      END IF
-      load_r=ic
-
-      RETURN
-      END FUNCTION load_r
-
-      FUNCTION load_s1d (Nval, Fname, Fdim, line, label, igrid, Nfiles, &
-     &                   S)
-!
-!=======================================================================
-!                                                                      !
-!  This function loads input values into requested 1D structure        !
-!  containing information about I/O files.                             !
-!                                                                      !
-!  On Input:                                                           !
-!                                                                      !
-!     Nval       Number of values processed (integer)                  !
-!     Fname      File name(s) processed (string array)                 !
-!     Fdim       File name(s) dimension in calling program (integer)   !
-!     line       Current input line (string)                           !
-!     label      I/O structure label (string)                          !
-!     igrid      Nested grid counter (integer)                         !
-!     Nfiles     Number of files per grid (integer array)              !
-!     S          Derived type structure, TYPE(T_IO)                    !
-!                                                                      !
-!  On Output:                                                          !
-!                                                                      !
-!     igrid      Updated nested grid counter.                          !
-!     S          Updated derived type structure, TYPE(T_IO).           !
-!     load_s1d   Number of output values processed.                    !
-!                                                                      !
-!=======================================================================
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in)    :: Nval, Fdim
-      integer, intent(inout) :: igrid
-      integer, intent(inout) :: Nfiles(Ngrids)
-
-      character (len=*),   intent(in) :: line
-      character (len=256), intent(in) :: Fname(Fdim)
-      character (len=*),   intent(inout) :: label
-
-      TYPE(T_IO), intent(inout) :: S(Ngrids)
-!
-!  Local variable declarations.
-!
-      logical :: load, persist
-
-      integer :: Icont, Ipipe, i, j, lstr, my_Ngrids, ng
-      integer :: load_s1d
-
-      character (len=1 ), parameter :: blank = ' '
-!
-!-----------------------------------------------------------------------
-!  Count files for all grids and activate load switch.
-!-----------------------------------------------------------------------
-!
-!  Check current line for the continuation symbol [char(92)=\] or pipe
-!  symbol [char(124)=|]. The continuation symbol is used to separate
-!  string values for different grid, whereas the pipe symbol is used
-!  to separate multi-string values for split input files. User may
-!  split the records for a particular input field into several files.
-!
-      Icont=INDEX(TRIM(line),CHAR(92) ,BACK=.FALSE.)
-      Ipipe=INDEX(TRIM(line),CHAR(124),BACK=.FALSE.)
-      IF ((Icont.eq.0).and.(Ipipe.eq.0)) THEN
-        load=.TRUE.                           ! last input string
-      ELSE
-        load=.FALSE.                          ! process next string
-      END IF
-!
-!  Accumulate number of multi-files per each grid.
-!
-      Nfiles(igrid)=Nfiles(igrid)+1
-!
-!  Set grid counter.
-!
-      IF (.not.load) THEN
-        igrid=igrid+MIN(1,Icont)
-      END IF
-      IF (igrid.gt.Ngrids) THEN
-        IF (Master) THEN
-          WRITE (stdout,10) TRIM(line)
-        END IF
-        exit_flag=2
-        RETURN
-      END IF
-!
-!-----------------------------------------------------------------------
-!  Load I/O information into structure.
-!-----------------------------------------------------------------------
-!
-      IF (load) THEN
-!
-!  If nesting and the number of file name entries is less than Ngrids,
-!  persist the last values provided.  This is the case when not enough
-!  entries are provided by "==" plural symbol after the KEYWORD.
-!
-        IF (igrid.lt.Ngrids) THEN
-          DO i=igrid+1,Ngrids
-            Nfiles(i)=Nfiles(igrid)
-          END DO
-          my_Ngrids=igrid
-          persist=.TRUE.
-        ELSE
-          my_Ngrids=Ngrids
-          persist=.FALSE.
-        END IF
-!
-!  Allocate various fields in structure, if not continuation or pipe
-!  symbol is found which indicates end of input data.
-!
-        DO ng=1,Ngrids
-          allocate ( S(ng)%Nrec(Nfiles(ng)) )
-          allocate ( S(ng)%time_min(Nfiles(ng)) )
-          allocate ( S(ng)%time_max(Nfiles(ng)) )
-          IF (label(1:3).eq.'FLT') THEN
-#ifdef FLOAT_BIOLOGY
-            allocate ( S(ng)%Vid(-10:NV) )
-#else
-            allocate ( S(ng)%Vid(-6:NV) )
-#endif
-          ELSE
-            allocate ( S(ng)%Vid(NV) )
-          END IF
-          allocate ( S(ng)%Tid(MT) )
-          allocate ( S(ng)%files(Nfiles(ng)) )
-        END DO
-!
-!  Intialize strings to blank to facilitate processing.
-!
-        DO ng=1,Ngrids
-          lstr=LEN(S(ng)%name)
-          DO i=1,lstr
-            S(ng)%base(i:i)=blank
-            S(ng)%name(i:i)=blank
-          END DO
-          DO j=1,Nfiles(ng)
-            DO i=1,lstr
-              S(ng)%files(j)(i:i)=blank
-            END DO
-          END DO
-        END DO
-!
-!  Initialize and load fields into structure.
-!
-        i=0
-        DO ng=1,my_Ngrids
-          S(ng)%Nfiles=Nfiles(ng)              ! number of multi-files
-          S(ng)%Fcount=1                       ! multi-file counter
-          S(ng)%Rindex=0                       ! time index
-          S(ng)%ncid=-1                        ! closed NetCDF state
-          S(ng)%Vid=-1                         ! NetCDF variables IDs
-          S(ng)%Tid=-1                         ! NetCDF tracers IDs
-          DO j=1,Nfiles(ng)
-            i=i+1
-            S(ng)%files(j)=TRIM(Fname(i))      ! load multi-files
-            S(ng)%Nrec(j)=0                    ! record counter
-            S(ng)%time_min(j)=0.0_r8           ! starting time
-            S(ng)%time_max(j)=0.0_r8           ! ending time
-          END DO
-          S(ng)%label=TRIM(label)              ! structure label
-          S(ng)%name=TRIM(S(ng)%files(1))      ! load first file
-          lstr=LEN_TRIM(S(ng)%name)
-          S(ng)%base=S(ng)%name(1:lstr-3)      ! do not include ".nc"
-          Nfiles(ng)=0                         ! clean file counter
-        END DO
-!
-!  If appropriate, persist last value(s).
-!
-        IF (persist) THEN
-          DO ng=igrid+1,Ngrids
-            S(ng)%Nfiles=S(igrid)%Nfiles
-            S(ng)%Fcount=1
-            S(ng)%Rindex=0
-            S(ng)%ncid=-1
-            S(ng)%Vid=-1
-            S(ng)%Tid=-1
-            DO j=1,S(igrid)%Nfiles
-              S(ng)%files(j)=S(igrid)%files(j)
-              S(ng)%Nrec(j)=0
-              S(ng)%time_min(j)=0.0_r8
-              S(ng)%time_max(j)=0.0_r8
-            END DO
-            S(ng)%label=TRIM(label)
-            S(ng)%name=S(igrid)%name
-            S(ng)%base=S(igrid)%base
-            Nfiles(ng)=0
-          END DO
-        END IF
-!
-!  Reset counters and clean label.
-!
-        igrid=1
-        DO ng=1,Ngrids
-          Nfiles(ng)=0
-        END DO
-        DO i=1,LEN(label)
-          label(i:i)=blank
-        END DO
-      END IF
-      load_s1d=Nval
-
- 10   FORMAT (/,' INP_PAR - incorrect continuation symbol in line:',/,  &
-     &        11x,a,/,11x,'number of nested grid values exceeded.')
-
-      RETURN
-      END FUNCTION load_s1d
-
-      FUNCTION load_s2d (Nval, Fname, Fdim, line, label, ifile, igrid,  &
-     &                   Mgrids, Nfiles, Ncount, idim, S)
-!
-!=======================================================================
-!                                                                      !
-!  This function loads input values into requested 2D structure        !
-!  containing information about input forcing files. Notice that       !
-!  Mgrids is passed for flexibility in coupling algorithms.            !
-!                                                                      !
-!  On Input:                                                           !
-!                                                                      !
-!     Nval       Number of values processed (integer)                  !
-!     Fname      File name(s) processed (string array)                 !
-!     Fdim       File name(s) dimension in calling program (integer)   !
-!     line       Current input line (string)                           !
-!     label      I/O structure label (string)                          !
-!     ifile      File structure counter (integer)                      !
-!     igrid      Nested grid counter (integer)                         !
-!     Mgrids     Number of nested grids (integer)                      !
-!     Nfiles     Number of input files per grid (integer vector)       !
-!     Ncount     Number of files per grid counter (integer array)      !
-!     idim       Size of structure inner dimension (integer)           !
-!     S          Derived type structure, TYPE(T_IO)                    !
-!                                                                      !
-!  On Output:                                                          !
-!                                                                      !
-!     ifile      Updated file counter.                                 !
-!     igrid      Updated nested grid counter.                          !
-!     S          Updated derived type structure, TYPE(T_IO).           !
-!     load_s2d   Number of output values processed.                    !
-!                                                                      !
-!=======================================================================
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in)    :: Mgrids, Nval, Fdim, idim
-      integer, intent(in)    :: Nfiles(Mgrids)
-      integer, intent(inout) :: ifile, igrid
-      integer, intent(inout) :: Ncount(idim,Mgrids)
-
-      character (len=*),   intent(in) :: line
-      character (len=256), intent(in) :: Fname(Fdim)
-      character (len=*),   intent(inout) :: label
-
-      TYPE(T_IO), intent(inout) :: S(idim,Mgrids)
-!
-!  Local variable declarations.
-!
-      logical :: load, persist
-
-      integer :: Icont, Ipipe, i, j, k, lstr, my_Mgrids, ng
-      integer :: load_s2d
-
-      character (len=1 ), parameter :: blank = ' '
-!
-!-----------------------------------------------------------------------
-!  Count files for all grids and activate load switch.
-!-----------------------------------------------------------------------
-!
-!  Check current line for the continuation symbol [char(92)=\] or pipe
-!  symbol [char(124)=|]. The continuation symbol is used to separate
-!  string values for different grid, whereas the pipe symbol is used
-!  to separate multi-string values for split input files. User may
-!  split the records for a particular input field into several files.
-!
-      Icont=INDEX(TRIM(line),CHAR(92) ,BACK=.FALSE.)
-      Ipipe=INDEX(TRIM(line),CHAR(124),BACK=.FALSE.)
-      IF ((Icont.eq.0).and.(Ipipe.eq.0)) THEN
-        load=.TRUE.                           ! last input string
-      ELSE
-        load=.FALSE.                          ! process next string
-      END IF
-!
-!  Accumulate number of multi-files per each grid.
-!
-      Ncount(ifile,igrid)=Ncount(ifile,igrid)+1
-!
-!  Set counters for next processing file, if any.  The continuation
-!  symbol in the input "line" is used to advance the counters.
-!
-      IF (.not.load) THEN
-        IF ((ifile.lt.Nfiles(igrid)).or.(Ipipe.ne.0)) THEN
-          ifile=ifile+MIN(1,Icont)
-        ELSE
-          ifile=1
-          igrid=igrid+MIN(1,Icont)
-        END IF
-      END IF
-      IF (ifile.gt.idim) THEN
-        IF (Master) THEN
-          WRITE (stdout,10) TRIM(line)
-        END IF
-        exit_flag=2
-        RETURN
-      END IF
-      IF (igrid.gt.Mgrids) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(line)
-        END IF
-        exit_flag=2
-        RETURN
-      END IF
-!
-!-----------------------------------------------------------------------
-!  Load I/O information into structure.
-!-----------------------------------------------------------------------
-!
-      IF (load) THEN
-!
-!  If nesting and the number of file name entries is less than Mgrids,
-!  persist the last values provided.  This is the case when not enough
-!  entries are provided by "==" plural symbol after the KEYWORD.
-!
-        IF (igrid.lt.Mgrids) THEN
-          DO j=igrid+1,Mgrids
-            DO i=1,idim
-              Ncount(i,j)=Ncount(i,igrid)
-            END DO
-          END DO
-          my_Mgrids=igrid
-          persist=.TRUE.
-        ELSE
-          my_Mgrids=Mgrids
-          persist=.FALSE.
-        END IF
-
-!
-!  Allocate various fields in structure, if not continuation or pipe
-!  symbol is found which indicates end of input data.
-!
-        DO ng=1,Mgrids
-          DO i=1,idim
-            allocate ( S(i,ng)%Nrec(Ncount(i,ng)) )
-            allocate ( S(i,ng)%time_min(Ncount(i,ng)) )
-            allocate ( S(i,ng)%time_max(Ncount(i,ng)) )
-            allocate ( S(i,ng)%Vid(NV) )
-            allocate ( S(i,ng)%Tid(MT) )
-            allocate ( S(i,ng)%files(Ncount(i,ng)) )
-          END DO
-        END DO
-!
-!  Intialize strings to blank to facilitate processing.
-!
-        DO ng=1,Mgrids
-          DO i=1,idim
-            lstr=LEN(S(i,ng)%name)
-            DO j=1,lstr
-              S(i,ng)%base(j:j)=blank
-              S(i,ng)%name(j:j)=blank
-            END DO
-            DO k=1,Ncount(i,ng)
-              DO j=1,lstr
-                S(i,ng)%files(k)(j:j)=blank
-              END DO
-            END DO
-          END DO
-        END DO
-!
-!  Initialize and load fields into structure.
-!
-        k=0
-        DO ng=1,my_Mgrids
-          DO i=1,Nfiles(ng)
-            S(i,ng)%Nfiles=Ncount(i,ng)         ! number of multi-files
-            S(i,ng)%Fcount=1                    ! multi-file counter
-            S(i,ng)%Rindex=0                    ! time index
-            S(i,ng)%ncid=-1                     ! closed NetCDF state
-            S(i,ng)%Vid=-1                      ! NetCDF variables IDs
-            S(i,ng)%Tid=-1                      ! NetCDF tracers IDs
-            DO j=1,Ncount(i,ng)
-              k=k+1
-              S(i,ng)%files(j)=TRIM(Fname(k))   ! load multi-files
-              S(i,ng)%Nrec(j)=0                 ! record counter
-              S(i,ng)%time_min(j)=0.0_r8        ! starting time
-              S(i,ng)%time_max(j)=0.0_r8        ! ending time
-            END DO
-            S(i,ng)%label=TRIM(label)           ! structure label
-            S(i,ng)%name=TRIM(S(i,ng)%files(1)) ! load first file
-            lstr=LEN_TRIM(S(i,ng)%name)
-            S(i,ng)%base=S(i,ng)%name(1:lstr-3) ! do not include ".nc"
-          END DO
-        END DO
-!
-!  If appropriate, persist last value(s).
-!
-        IF (persist) THEN
-          DO ng=igrid+1,Mgrids
-            DO i=1,Nfiles(ng)
-              S(i,ng)%Nfiles=S(i,igrid)%Nfiles
-              S(i,ng)%Fcount=1
-              S(i,ng)%Rindex=0
-              S(i,ng)%ncid=-1
-              S(i,ng)%Vid=-1
-              S(i,ng)%Tid=-1
-              DO j=1,S(i,igrid)%Nfiles
-                S(i,ng)%files(j)=S(i,igrid)%files(j)
-                S(i,ng)%Nrec(j)=0
-                S(i,ng)%time_min(j)=0.0_r8
-                S(i,ng)%time_max(j)=0.0_r8
-              END DO
-              S(i,ng)%label=TRIM(label)
-              S(i,ng)%name=S(i,igrid)%name
-              S(i,ng)%base=S(i,igrid)%base
-              Ncount(i,ng)=0
-            END DO
-          END DO
-        END IF
-!
-!  Reset counters and clean label.
-!
-        igrid=1
-        ifile=1
-        DO ng=1,Mgrids
-          DO i=1,idim
-            Ncount(i,ng)=0
-          END DO
-        END DO
-        DO i=1,LEN(label)
-          label(i:i)=blank
-        END DO
-      END IF
-      load_s2d=Nval
-
- 10   FORMAT (/,' INP_PAR - incorrect continuation symbol in line:',/,  &
-     &        11x,a,/,11x,'inner dimension of structure exceeded.')
- 20   FORMAT (/,' INP_PAR - incorrect continuation symbol in line:',/,  &
-     &        11x,a,/,11x,'number of nested grid values exceeded.')
-
-      RETURN
-      END FUNCTION load_s2d
+      END MODULE inp_par_mod

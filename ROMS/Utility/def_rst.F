@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE def_rst (ng)
 !
-!svn $Id: def_rst.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: def_rst.F 1016 2020-04-27 02:06:37Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -52,12 +52,11 @@
       integer :: i, j, nvd3, nvd4, nvd5
       integer :: recdim, status, varid
 
-      integer :: DimIDs(32)
+      integer :: DimIDs(nDimID)
       integer :: r2dgrd(4), ru2dgrd(4), rv2dgrd(4)
       integer :: sp2dgrd(3), sr2dgrd(3), su2dgrd(3), sv2dgrd(3)
       integer :: sr3dgrd(4), su3dgrd(4), sv3dgrd(4)
       integer :: t2dgrd(4), u2dgrd(4), v2dgrd(4)
-      integer :: Vsize(4)
 
       integer :: def_dim
 
@@ -230,6 +229,11 @@
 # endif
 
 # ifdef ECOSIM
+        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Nbands',        &
+     &                 NBands, DimIDs(33))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
         status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Nphy',          &
      &                 Nphy, DimIDs(25))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -629,7 +633,7 @@
         Vinfo( 4)=TRIM(Rclock%calendar)
         Vinfo(14)=Vname(4,idtime)
         status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idtime),     &
-     &                 NF_TYPE, 1, (/recdim/), Aval, Vinfo, ncname,     &
+     &                 NF_TOUT, 1, (/recdim/), Aval, Vinfo, ncname,     &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
@@ -1676,10 +1680,12 @@
      &             TRIM(Vname(1,idGhat(itemp)))) THEN
             got_var(idGhat(itemp))=.TRUE.
             RST(ng)%Vid(idGhat(itemp))=var_id(i)
+#  ifdef SALINITY
           ELSE IF (TRIM(var_name(i)).eq.                                &
      &             TRIM(Vname(1,idGhat(isalt)))) THEN
             got_var(idGhat(isalt))=.TRUE.
             RST(ng)%Vid(idGhat(isalt))=var_id(i)
+#  endif
 # endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVvis))) THEN
             got_var(idVvis)=.TRUE.

@@ -1,7 +1,7 @@
 !
-!svn $Id: ecosim_mod.h 889 2018-02-10 03:32:52Z arango $
+!svn $Id: ecosim_mod.h 995 2020-01-10 04:01:28Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -270,6 +270,40 @@
       integer :: iSiO_              ! Silica concentration
       integer :: iDIC_              ! Dissolved inorganic Carbon
       integer :: FirstPig           ! Index of first tracer pigment
+
+#if defined DIAGNOSTICS && defined DIAGNOSTICS_BIO
+!
+!-----------------------------------------------------------------------
+!  Set biological diagnostic identification indices.
+!-----------------------------------------------------------------------
+!
+!  Center wavelenght of spectral irradiance bands for diagnostic
+!  terms.
+!
+      real(r8), allocatable :: dia_light(:)
+!
+!  3D diagnostic variable IDs.
+!
+      integer, allocatable :: iDbio3(:)
+!
+      integer  :: idSpIr = 1        ! surface spectral irradiance
+!
+!  4D diagnostic variable IDs.
+!
+      integer, allocatable :: iDbio4(:)
+!
+      integer  :: iddIrr = 1        ! downward irradiance (Ed)
+      integer  :: idsIrr = 2        ! scalar irradiance (E0)
+      integer  :: idLatt = 3        ! light attenuation (Kd)
+      integer  :: idaPHY = 4        ! PHY absorption (aPHYN_at)
+      integer  :: idaDET = 5        ! detrital absorption (aDET)
+      integer  :: idaCDC = 6        ! CDC absorption (aCDC)
+      integer  :: idAcos = 7        ! avg cosine zenith angle (avgcos)
+      integer  :: idbPHY = 8        ! PHY backscattering (bb_phy)
+      integer  :: idsPHY = 9        ! PHY scattering (b_phy)
+      integer  :: idbTOT = 10       ! total backscattering (bb_tot)
+      integer  :: idsTOT = 11       ! total scattering (b_tot)
+#endif
 !
 !-----------------------------------------------------------------------
 !  EcoSim group names used on standard output.
@@ -404,14 +438,14 @@
 !-----------------------------------------------------------------------
 !
 !  Spectral band width used in light calculations.
-
+!
       real(r8), parameter :: DLAM  = 5.0_r8
 !
 !  Flags used for testing purposes.
 !
       real(r8), parameter :: SMALL  = 1.0e-6_r8
       real(r8), parameter :: VSMALL = 1.0e-14_r8
-      real(r8), parameter :: LARGE  = 1.0e+10_r8
+      real(r8), parameter :: LARGER = 1.0e+10_r8
       real(r8), parameter :: VLARGE = 1.0e+50_r8
 !
 !  Array indexes for frequently used constituents.
@@ -480,7 +514,7 @@
 !        Bacteria: C, Fe, N, P                   (Nbac*4)
 !             DOM: CDM, C, N, P                  (Ndom*4)
 !           Fecal: C, Fe, N, P, Si               (Nfec*5)
-!    Phytoplakton: C, Fe, N, P                   (Nfec*4 + Si)
+!    Phytoplakton: C, Fe, N, P                   (Nphy*4 + Si)
 !        Pigments: look table
 !
       NBT=6+(Nbac*4)+(Ndom*4)+(Nfec*5)+(Nphy*4)
@@ -499,6 +533,16 @@
           IF (PIG(PHY(i),j).eq.1) NBT=NBT+1
         END DO
       END DO
+
+#if defined DIAGNOSTICS && defined DIAGNOSTICS_BIO
+!
+!-----------------------------------------------------------------------
+!  Set sources and sinks biology number of diagnostic terms.
+!-----------------------------------------------------------------------
+!
+      NDbio3d=1
+      NDbio4d=11
+#endif
 !
 !-----------------------------------------------------------------------
 !  Allocate various module variables.
@@ -506,322 +550,535 @@
 !
       IF (.not.allocated(BioIter)) THEN
         allocate ( BioIter(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(RtUVR_flag)) THEN
         allocate ( RtUVR_flag(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(NFIX_flag)) THEN
         allocate ( NFIX_flag(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(Regen_flag)) THEN
         allocate ( Regen_flag(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 !
       IF (.not.allocated(HsNO3)) THEN
         allocate ( HsNO3(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsNH4)) THEN
         allocate ( HsNH4(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsSiO)) THEN
         allocate ( HsSiO(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsPO4)) THEN
         allocate ( HsPO4(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsFe)) THEN
         allocate ( HsFe(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(GtALG_max)) THEN
         allocate ( GtALG_max(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(PhyTbase)) THEN
         allocate ( PhyTbase(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(PhyTfac)) THEN
         allocate ( PhyTfac(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(BET_)) THEN
         allocate ( BET_(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(maxC2nALG)) THEN
         allocate ( maxC2nALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(minC2nALG)) THEN
         allocate ( minC2nALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2nALGminABS)) THEN
         allocate ( C2nALGminABS(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(maxC2SiALG)) THEN
         allocate ( maxC2SiALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(minC2SiALG)) THEN
         allocate ( minC2SiALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2SiALGminABS)) THEN
         allocate ( C2SiALGminABS(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(maxC2pALG)) THEN
         allocate ( maxC2pALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(minC2pALG)) THEN
         allocate ( minC2pALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2pALGminABS)) THEN
         allocate ( C2pALGminABS(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(maxC2FeALG)) THEN
         allocate ( maxC2FeALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(minC2FeALG)) THEN
         allocate ( minC2FeALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2FeALGminABS)) THEN
         allocate ( C2FeALGminABS(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(qu_yld)) THEN
         allocate ( qu_yld(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(E0_comp)) THEN
         allocate ( E0_comp(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(E0_inhib)) THEN
         allocate ( E0_inhib(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(inhib_fac)) THEN
         allocate ( inhib_fac(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2CHL_max)) THEN
         allocate ( C2CHL_max(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxC2Cl)) THEN
         allocate ( mxC2Cl(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_C2Cl)) THEN
         allocate ( b_C2Cl(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxC2Cn)) THEN
         allocate ( mxC2Cn(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_C2Cn)) THEN
         allocate ( b_C2Cn(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxPacEff)) THEN
         allocate ( mxPacEff(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_PacEff)) THEN
         allocate ( b_PacEff(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxChlB)) THEN
         allocate ( mxChlB(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_ChlB)) THEN
         allocate ( b_ChlB(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxChlC)) THEN
         allocate ( mxChlC(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_ChlC)) THEN
         allocate ( b_ChlC(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxPSC)) THEN
         allocate ( mxPSC(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_PSC)) THEN
         allocate ( b_PSC(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxPPC)) THEN
         allocate ( mxPPC(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_PPC)) THEN
         allocate ( b_PPC(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxLPUb)) THEN
         allocate ( mxLPUb(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_LPUb)) THEN
         allocate ( b_LPUb(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(mxHPUb)) THEN
         allocate ( mxHPUb(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(b_HPUb)) THEN
         allocate ( b_HPUb(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(FecDOC)) THEN
         allocate ( FecDOC(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(FecPEL)) THEN
         allocate ( FecPEL(Nphy,Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Nfec*Ngrids,r8)
       END IF
+
       IF (.not.allocated(FecCYC)) THEN
         allocate ( FecCYC(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(ExALG)) THEN
         allocate ( ExALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(WS)) THEN
         allocate ( WS(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsGRZ)) THEN
         allocate ( HsGRZ(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(MinRefuge)) THEN
         allocate ( MinRefuge(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RefugeDep)) THEN
         allocate ( RefugeDep(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(Norm_Vol)) THEN
         allocate ( Norm_Vol(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(Norm_Surf)) THEN
         allocate ( Norm_Surf(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsDOP)) THEN
         allocate ( HsDOP(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2pALKPHOS)) THEN
         allocate ( C2pALKPHOS(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsDON)) THEN
         allocate ( HsDON(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2nNupDON)) THEN
         allocate ( C2nNupDON(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
 !
       IF (.not.allocated(HsDOC_ba)) THEN
         allocate ( HsDOC_ba(Nbac,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nbac*Ngrids,r8)
       END IF
+
       IF (.not.allocated(GtBAC_max)) THEN
         allocate ( GtBAC_max(Nbac,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nbac*Ngrids,r8)
       END IF
+
       IF (.not.allocated(BacTbase)) THEN
         allocate ( BacTbase(Nbac,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nbac*Ngrids,r8)
       END IF
+
       IF (.not.allocated(BacTfac)) THEN
         allocate ( BacTfac(Nbac,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nbac*Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2nBAC)) THEN
         allocate ( C2nBAC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2pBAC)) THEN
         allocate ( C2pBAC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(C2FeBAC)) THEN
         allocate ( C2FeBAC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(BacDOC)) THEN
         allocate ( BacDOC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(BacPEL)) THEN
         allocate ( BacPEL(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(BacCYC)) THEN
         allocate ( BacCYC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(ExBAC_c)) THEN
         allocate ( ExBAC_c(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(ExBacC2N)) THEN
         allocate ( ExBacC2N(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(Bac_Ceff)) THEN
         allocate ( Bac_Ceff(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(RtNIT)) THEN
         allocate ( RtNIT(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsNIT)) THEN
         allocate ( HsNIT(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 !
       IF (.not.allocated(cDOCfrac_c)) THEN
         allocate ( cDOCfrac_c(Ndom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ndom*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RtUVR_DIC)) THEN
         allocate ( RtUVR_DIC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(RtUVR_DOC)) THEN
         allocate ( RtUVR_DOC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 !
       IF (.not.allocated(WF)) THEN
         allocate ( WF(Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nfec*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RegTbase)) THEN
         allocate ( RegTbase(Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nfec*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RegTfac)) THEN
         allocate ( RegTfac(Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nfec*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RegCR)) THEN
         allocate ( RegCR(Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nfec*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RegNR)) THEN
         allocate ( RegNR(Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nfec*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RegSR)) THEN
         allocate ( RegSR(Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nfec*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RegPR)) THEN
         allocate ( RegPR(Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nfec*Ngrids,r8)
       END IF
+
       IF (.not.allocated(RegFR)) THEN
         allocate ( RegFR(Nfec,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nfec*Ngrids,r8)
       END IF
 !
       IF (.not.allocated(ImaxC2nALG)) THEN
         allocate ( ImaxC2nALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(ImaxC2SiALG)) THEN
         allocate ( ImaxC2SiALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(ImaxC2pALG)) THEN
         allocate ( ImaxC2pALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
+
       IF (.not.allocated(ImaxC2FeALG)) THEN
         allocate ( ImaxC2FeALG(Nphy,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nphy*Ngrids,r8)
       END IF
 !
       IF (.not.allocated(N2cBAC)) THEN
         allocate ( N2cBAC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(P2cBAC)) THEN
         allocate ( P2cBAC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(Fe2cBAC)) THEN
         allocate ( Fe2cBAC(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsNH4_ba)) THEN
         allocate ( HsNH4_ba(Nbac,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nbac*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsPO4_ba)) THEN
         allocate ( HsPO4_ba(Nbac,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nbac*Ngrids,r8)
       END IF
+
       IF (.not.allocated(HsFe_ba)) THEN
         allocate ( HsFe_ba(Nbac,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Nbac*Ngrids,r8)
       END IF
+
       IF (.not.allocated(R_ExBAC_c)) THEN
         allocate ( R_ExBAC_c(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(ExBAC_n)) THEN
         allocate ( ExBAC_n(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(Frac_ExBAC_n)) THEN
         allocate ( Frac_ExBAC_n(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+
       IF (.not.allocated(I_Bac_Ceff)) THEN
         allocate ( I_Bac_Ceff(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 !
 !  Allocate biological tracer vector.
 !
       IF (.not.allocated(idbio)) THEN
         allocate ( idbio(NBT) )
+        Dmem(1)=Dmem(1)+REAL(NBT,r8)
       END IF
+
+#if defined DIAGNOSTICS && defined DIAGNOSTICS_BIO
+!
+!  Allocate biological diagnostics vectors
+!
+      IF (.not.allocated(iDbio3)) THEN
+        allocate ( iDbio3(NDbio3d) )
+        Dmem(1)=Dmem(1)+REAL(NDbio3d,r8)
+      END IF
+
+      IF (.not.allocated(iDbio4)) THEN
+        allocate ( iDbio4(NDbio4d) )
+        Dmem(1)=Dmem(1)+REAL(NDbio4d,r8)
+      END IF
+#endif
 !
 !-----------------------------------------------------------------------
 !  Initialize tracer identification indices.

@@ -2,9 +2,9 @@
       MODULE distribute_mod
 #ifdef DISTRIBUTE
 !
-!svn $Id: distribute.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: distribute.F 1026 2020-05-20 02:05:37Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -19,6 +19,7 @@
 !  mp_bcasti         broadcasts integer variables                      !
 !  mp_bcastl         broadcasts logical variables                      !
 !  mp_bcasts         broadcasts character variables                    !
+!  mp_bcast_struc    broadcats NetCDF IDs of an IO_TYPE structure      !
 !  mp_boundary       exchanges boundary data between tiles             !
 !  mp_assemblef_1d   assembles 1D floating point array from tiles      !
 !  mp_assemblef_2d   assembles 2D floating point array from tiles      !
@@ -56,6 +57,10 @@
       END INTERFACE mp_assemble
 !
       INTERFACE mp_bcastf
+# ifdef SINGLE_PRECISION
+        MODULE PROCEDURE mp_bcastf_0dp   ! double-precision exchanges
+        MODULE PROCEDURE mp_bcastf_1dp   ! double-precision exchanges
+# endif
         MODULE PROCEDURE mp_bcastf_0d
         MODULE PROCEDURE mp_bcastf_1d
         MODULE PROCEDURE mp_bcastf_2d
@@ -78,6 +83,8 @@
       INTERFACE mp_bcasts
         MODULE PROCEDURE mp_bcasts_0d
         MODULE PROCEDURE mp_bcasts_1d
+        MODULE PROCEDURE mp_bcasts_2d
+        MODULE PROCEDURE mp_bcasts_3d
       END INTERFACE mp_bcasts
 !
       INTERFACE mp_collect
@@ -86,18 +93,28 @@
       END INTERFACE mp_collect
 !
       INTERFACE mp_reduce
+# ifdef SINGLE_PRECISION
+        MODULE PROCEDURE mp_reduce_0dp   ! double-precision reduction
+        MODULE PROCEDURE mp_reduce_1dp   ! double-precision reduction
+# endif
         MODULE PROCEDURE mp_reduce_0d
         MODULE PROCEDURE mp_reduce_1d
       END INTERFACE mp_reduce
 !
       CONTAINS
 !
-      SUBROUTINE mp_barrier (ng, model)
+      SUBROUTINE mp_barrier (ng, model, InpComm)
 !
 !***********************************************************************
 !                                                                      !
 !  This routine blocks the caller until all group members have called  !
 !  it.                                                                 !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !***********************************************************************
 !
@@ -109,10 +126,12 @@
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
+
+      integer, intent(in), optional :: InpComm
 !
 !  Local variable declarations.
 !
-      integer :: MyError
+      integer ::  MyCOMM, MyError
 
 # ifdef PROFILE
 !
@@ -123,13 +142,25 @@
       CALL wclock_on (ng, model, 72, __LINE__,                          &
      &                __FILE__//":mp_barrier")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Synchronize all distribute-memory nodes in the group.
 !-----------------------------------------------------------------------
 !
 # ifdef MPI
-      CALL mpi_barrier (OCN_COMM_WORLD, MyError)
+      CALL mpi_barrier (MyCOMM, MyError)
 # endif
 # ifdef PROFILE
 !
@@ -143,20 +174,23 @@
 
       RETURN
       END SUBROUTINE mp_barrier
+
+# ifdef SINGLE_PRECISION
 !
-      SUBROUTINE mp_bcastf_0d (ng, model, A)
+      SUBROUTINE mp_bcastf_0dp (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a floating-point scalar variable to all     !
-!  processors the in group. It is called by all the members in the     !
-!  group.                                                              !
+!  This routine broadcasts a double-precision floating-point scalar    !
+!  variable to all processors in the communicator. It is called by     !
+!  all the members in the group.                                       !
 !                                                                      !
 !  On Input:                                                           !
 !                                                                      !
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          Variable to broadcast (real).                         !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -175,11 +209,204 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
+      real(dp), intent(inout) :: A
+!
+!  Local variable declarations
+!
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
+
+      character (len=MPI_MAX_ERROR_STRING) :: string
+
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn on time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_on (ng, model, 64, __LINE__,                          &
+     &                __FILE__//":mp_bcastf")
+#  endif
+#  ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+#  endif
+!
+!-----------------------------------------------------------------------
+!  Broadcast requested variable.
+!-----------------------------------------------------------------------
+!
+      Npts=1
+#  ifdef MPI
+      CALL mpi_bcast (A, Npts, MP_DOUBLE, MyMaster, MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+ 10     FORMAT (/,' MP_BCASTF_0DP - error during ',a,' call, Node = ',  &
+     &          i3.3,' Error = ',i3,/,13x,a)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn off time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_off (ng, model, 64, __LINE__,                         &
+     &                 __FILE__//":mp_bcastf")
+#  endif
+
+      RETURN
+      END SUBROUTINE mp_bcastf_0dp
+!
+      SUBROUTINE mp_bcastf_1dp (ng, model, A, InpComm)
+!
+!***********************************************************************
+!                                                                      !
+!  This routine broadcasts a 1D double precission floating-point,      !
+!  non-tiled, array to all processors in the communicator. It is       !
+!  called by all the members in the group.                             !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     A          1D array to broadcast (real).                         !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     A          Broadcasted 1D array.                                 !
+!                                                                      !
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_parallel
+      USE mod_iounits
+      USE mod_scalars
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, model
+
+      integer, intent(in), optional :: InpComm
+
+      real(dp), intent(inout) :: A(:)
+!
+!  Local variable declarations
+!
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
+
+      character (len=MPI_MAX_ERROR_STRING) :: string
+
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn on time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_on (ng, model, 64, __LINE__,                          &
+     &                __FILE__//":mp_bcastf")
+
+#  endif
+#  ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+#  endif
+!
+!-----------------------------------------------------------------------
+!  Broadcast requested variable.
+!-----------------------------------------------------------------------
+!
+      Npts=UBOUND(A, DIM=1)
+
+#  ifdef MPI
+      CALL mpi_bcast (A, Npts, MP_DOUBLE, MyMaster, MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+ 10     FORMAT (/,' MP_BCASTF_1DP - error during ',a,' call, Node = ',  &
+     &          i3.3,' Error = ',i3,/,13x,a)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn off time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_off (ng, model, 64, __LINE__,                         &
+     &                 __FILE__//":mp_bcastf")
+#  endif
+
+      RETURN
+      END SUBROUTINE mp_bcastf_1dp
+# endif
+!
+      SUBROUTINE mp_bcastf_0d (ng, model, A, InpComm)
+!
+!***********************************************************************
+!                                                                      !
+!  This routine broadcasts a floating-point scalar variable to all     !
+!  processors in the communicator. It is called by all the members     !
+!  in the group.                                                       !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     A          Variable to broadcast (real).                         !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     A          Broadcasted variable.                                 !
+!                                                                      !
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_parallel
+      USE mod_iounits
+      USE mod_scalars
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, model
+
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(inout) :: A
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -192,13 +419,26 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcastf")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
 !-----------------------------------------------------------------------
 !
+      Npts=1
 # ifdef MPI
-      CALL mpi_bcast (A, 1, MP_FLOAT, MyMaster, OCN_COMM_WORLD, MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -222,12 +462,12 @@
       RETURN
       END SUBROUTINE mp_bcastf_0d
 !
-      SUBROUTINE mp_bcastf_1d (ng, model, A)
+      SUBROUTINE mp_bcastf_1d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a 1D floating-point, nontiled, array to     !
-!  all processors processors in the group. It is called by all the     !
+!  This routine broadcasts a 1D floating-point, non-tiled, array       !
+!  to all processors in the communicator. It is called by all the      !
 !  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
@@ -235,6 +475,7 @@
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          1D array to broadcast (real).                         !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -253,11 +494,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(inout) :: A(:)
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Npts, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -271,6 +514,18 @@
      &                __FILE__//":mp_bcastf")
 
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -279,8 +534,7 @@
       Npts=UBOUND(A, DIM=1)
 
 # ifdef MPI
-      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -304,12 +558,12 @@
       RETURN
       END SUBROUTINE mp_bcastf_1d
 !
-      SUBROUTINE mp_bcastf_2d (ng, model, A)
+      SUBROUTINE mp_bcastf_2d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a 2D floating-point, nontiled, array to     !
-!  all processors processors in the group. It is called by all the     !
+!  This routine broadcasts a 2D floating-point, non-tiled, array       !
+!  to all processors in the communicator. It is called by all the      !
 !  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
@@ -317,6 +571,7 @@
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          2D array to broadcast (real).                         !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -335,11 +590,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(inout) :: A(:,:)
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Npts, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       integer :: Asize(2)
 
@@ -354,6 +611,18 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcastf")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -364,8 +633,7 @@
       Npts=Asize(1)*Asize(2)
 
 # ifdef MPI
-      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -389,12 +657,12 @@
       RETURN
       END SUBROUTINE mp_bcastf_2d
 !
-      SUBROUTINE mp_bcastf_3d (ng, model, A)
+      SUBROUTINE mp_bcastf_3d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a 3D floating-point, nontiled, array to     !
-!  all processors processors in the group. It is called by all the     !
+!  This routine broadcasts a 3D floating-point, non-tiled, array       !
+!  to all processors in the communicator. It is called by all the      !
 !  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
@@ -402,6 +670,7 @@
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          3D array to broadcast (real).                         !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -420,11 +689,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(inout) :: A(:,:,:)
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Npts, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       integer :: Asize(3)
 
@@ -439,6 +710,18 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcastf")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -450,8 +733,7 @@
       Npts=Asize(1)*Asize(2)*Asize(3)
 
 # ifdef MPI
-      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -475,12 +757,12 @@
       RETURN
       END SUBROUTINE mp_bcastf_3d
 !
-      SUBROUTINE mp_bcastf_4d (ng, model, A)
+      SUBROUTINE mp_bcastf_4d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a 4D floating-point, nontiled, array to     !
-!  all processors processors in the group. It is called by all the     !
+!  This routine broadcasts a 4D floating-point, non-tiled, array       !
+!  to all processors in the communicator. It is called by all the      !
 !  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
@@ -506,11 +788,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(inout) :: A(:,:,:,:)
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Npts, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       integer :: Asize(4)
 
@@ -525,6 +809,18 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcastf")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -537,8 +833,7 @@
       Npts=Asize(1)*Asize(2)*Asize(3)*Asize(4)
 
 # ifdef MPI
-      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -562,19 +857,20 @@
       RETURN
       END SUBROUTINE mp_bcastf_4d
 !
-      SUBROUTINE mp_bcasti_0d (ng, model, A)
+      SUBROUTINE mp_bcasti_0d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
 !  This routine broadcasts an integer scalar variable to all           !
-!  processors the in group.  It is called by all the members           !
-!  in the group.                                                       !
+!  processors in the communicator.  It is called by all the            !
+!  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
 !                                                                      !
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          Variable to broadcast (integer).                      !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -592,11 +888,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       integer, intent(inout) :: A
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -609,13 +907,26 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcasti")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
 !-----------------------------------------------------------------------
 !
+      Npts=1
 # ifdef MPI
-      CALL mpi_bcast (A, 1, MPI_INTEGER, MyMaster, OCN_COMM_WORLD,      &
+      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, OCN_COMM_WORLD,   &
      &                MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -639,12 +950,12 @@
       RETURN
       END SUBROUTINE mp_bcasti_0d
 !
-      SUBROUTINE mp_bcasti_1d (ng, model, A)
+      SUBROUTINE mp_bcasti_1d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a 1D nontiled, integer array to all         1
-!  processors processors in the group. It is called by all the         !
+!  This routine broadcasts a 1D non-tiled, integer array to all        !
+!  processors in the communicator. It is called by all the             !
 !  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
@@ -652,6 +963,7 @@
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          1D array to broadcast (integer).                      !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -670,11 +982,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       integer, intent(inout) :: A(:)
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Npts, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -687,6 +1001,18 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcasti")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -695,8 +1021,7 @@
       Npts=UBOUND(A, DIM=1)
 
 # ifdef MPI
-      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, OCN_COMM_WORLD,   &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -720,12 +1045,12 @@
       RETURN
       END SUBROUTINE mp_bcasti_1d
 !
-      SUBROUTINE mp_bcasti_2d (ng, model, A)
+      SUBROUTINE mp_bcasti_2d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a 2D nontiled, integer array to all         1
-!  processors processors in the group. It is called by all the         !
+!  This routine broadcasts a 2D non-tiled, integer array to all        !
+!  processors in the communicator. It is called by all the             !
 !  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
@@ -733,6 +1058,7 @@
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          2D array to broadcast (integer).                      !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -751,11 +1077,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       integer, intent(inout) :: A(:,:)
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Npts, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
       integer :: Asize(2)
 
       character (len=MPI_MAX_ERROR_STRING) :: string
@@ -769,6 +1097,18 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcasti")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -779,8 +1119,7 @@
       Npts=Asize(1)*Asize(2)
 
 # ifdef MPI
-      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, OCN_COMM_WORLD,   &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -804,19 +1143,20 @@
       RETURN
       END SUBROUTINE mp_bcasti_2d
 !
-      SUBROUTINE mp_bcastl_0d (ng, model, A)
+      SUBROUTINE mp_bcastl_0d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
 !  This routine broadcasts a logical scalar variable to all            !
-!  processors the in group. It is called by all the members            !
-!  in the group.                                                       !
+!  processors in the communicator. It is called by all the             !
+!  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
 !                                                                      !
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          Variable to broadcast (logical).                      !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -835,11 +1175,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       logical, intent(inout) :: A
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -852,14 +1194,26 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcastl")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
 !-----------------------------------------------------------------------
 !
+      Npts=1
 # ifdef MPI
-      CALL mpi_bcast (A, 1, MPI_LOGICAL, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MPI_LOGICAL, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -883,12 +1237,12 @@
       RETURN
       END SUBROUTINE mp_bcastl_0d
 !
-      SUBROUTINE mp_bcastl_1d (ng, model, A)
+      SUBROUTINE mp_bcastl_1d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
 !  This routine broadcasts a 1D nontiled, logical array to all         !
-!  processors processors in the group. It is called by all the         !
+!  processors in the communicator. It is called by all the             !
 !  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
@@ -896,6 +1250,7 @@
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          1D array to broadcast (logical).                      !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -914,11 +1269,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       logical, intent(inout) :: A(:)
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Npts, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -931,6 +1288,18 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcastl")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -939,8 +1308,7 @@
       Npts=UBOUND(A, DIM=1)
 
 # ifdef MPI
-      CALL mpi_bcast (A, Npts, MPI_LOGICAL, MyMaster, OCN_COMM_WORLD,   &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MPI_LOGICAL, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -964,12 +1332,12 @@
       RETURN
       END SUBROUTINE mp_bcastl_1d
 !
-      SUBROUTINE mp_bcastl_2d (ng, model, A)
+      SUBROUTINE mp_bcastl_2d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a 2D nontiled, logical array to all         !
-!  processors processors in the group. It is called by all the         !
+!  This routine broadcasts a 2D non-tiled, logical array to all        !
+!  processors in the communicator. It is called by all the             !
 !  members in the group.                                               !
 !                                                                      !
 !  On Input:                                                           !
@@ -977,6 +1345,7 @@
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          2D array to broadcast (logical).                      !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -995,11 +1364,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       logical, intent(inout) :: A(:,:)
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Npts, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
       integer :: Asize(2)
 
       character (len=MPI_MAX_ERROR_STRING) :: string
@@ -1013,6 +1384,18 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcastl")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -1023,8 +1406,7 @@
       Npts=Asize(1)*Asize(2)
 
 # ifdef MPI
-      CALL mpi_bcast (A, Npts, MPI_LOGICAL, MyMaster, OCN_COMM_WORLD,   &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MPI_LOGICAL, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1048,18 +1430,19 @@
       RETURN
       END SUBROUTINE mp_bcastl_2d
 !
-      SUBROUTINE mp_bcasts_0d (ng, model, A)
+      SUBROUTINE mp_bcasts_0d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
 !  This routine broadcasts a string scalar variable to all processors  !
-!  in the group. It is called by all the members in the group.         !
+!  in the communicator. It is called by all the members in the group.  !
 !                                                                      !
 !  On Input:                                                           !
 !                                                                      !
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          Variable to broadcast (string).                       !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -1078,11 +1461,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       character (len=*), intent(inout) :: A
 !
 !  Local variable declarations
 !
-      integer :: Lstr, MyError, Nchars, Serror
+      integer :: Lstr, MyCOMM, MyError, Nchars, Serror
 
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -1097,6 +1482,18 @@
      &                  __FILE__//":mp_bcasts")
       END IF
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -1104,8 +1501,7 @@
 !
       Nchars=LEN(A)
 # ifdef MPI
-      CALL mpi_bcast (A, Nchars, MPI_BYTE, MyMaster, OCN_COMM_WORLD,    &
-     &                MyError)
+      CALL mpi_bcast (A, Nchars, MPI_BYTE, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1131,19 +1527,19 @@
       RETURN
       END SUBROUTINE mp_bcasts_0d
 !
-      SUBROUTINE mp_bcasts_1d (ng, model, A)
+      SUBROUTINE mp_bcasts_1d (ng, model, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine broadcasts a 1D nontiled,  string array to all         !
-!  processors processors in the group. It is called by all the         !
-!  members in the group.                                               !
+!  This routine broadcasts a 1D string array to all processors in the  !
+!  communicator. It is called by all the members in the group.         !
 !                                                                      !
 !  On Input:                                                           !
 !                                                                      !
 !     ng         Nested grid number.                                   !
 !     model      Calling model identifier.                             !
 !     A          1D array to broadcast (string).                       !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -1162,11 +1558,13 @@
 !
       integer, intent(in) :: ng, model
 
+      integer, intent(in), optional :: InpComm
+
       character (len=*), intent(inout) :: A(:)
 !
 !  Local variable declarations
 !
-      integer :: Asize, Lstr, MyError, Nchars, Serror
+      integer :: Asize, Lstr, MyCOMM, MyError, Nchars, Serror
 
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -1179,6 +1577,18 @@
       CALL wclock_on (ng, model, 64, __LINE__,                          &
      &                __FILE__//":mp_bcasts")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Broadcast requested variable.
@@ -1188,8 +1598,7 @@
       Nchars=LEN(A(1))*Asize
 
 # ifdef MPI
-      CALL mpi_bcast (A, Nchars, MPI_BYTE, MyMaster, OCN_COMM_WORLD,    &
-     &                MyError)
+      CALL mpi_bcast (A, Nchars, MPI_BYTE, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1212,6 +1621,385 @@
 
       RETURN
       END SUBROUTINE mp_bcasts_1d
+!
+      SUBROUTINE mp_bcasts_2d (ng, model, A, InpComm)
+!
+!***********************************************************************
+!                                                                      !
+!  This routine broadcasts a 2D string array to all processors in the  !
+!  communicator. It is called by all the members in the group.         !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     A          2D array to broadcast (string).                       !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     A          Broadcasted 2D array.                                 !
+!                                                                      !
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_parallel
+      USE mod_iounits
+      USE mod_scalars
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, model
+
+      integer, intent(in), optional :: InpComm
+
+      character (len=*), intent(inout) :: A(:,:)
+!
+!  Local variable declarations
+!
+      integer :: Lstr, MyCOMM, MyError, Nchars, Serror
+      integer :: Asize(2)
+
+      character (len=MPI_MAX_ERROR_STRING) :: string
+
+# ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn on time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_on (ng, model, 64, __LINE__,                          &
+     &                __FILE__//":mp_bcasts")
+# endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
+!
+!-----------------------------------------------------------------------
+!  Broadcast requested variable.
+!-----------------------------------------------------------------------
+!
+      Asize(1)=UBOUND(A, DIM=1)
+      Asize(2)=UBOUND(A, DIM=2)
+      Nchars=LEN(A(1,1))*Asize(1)*Asize(2)
+
+# ifdef MPI
+      CALL mpi_bcast (A, Nchars, MPI_BYTE, MyMaster, MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+ 10     FORMAT (/,' MP_BCASTS_2D - error during ',a,' call, Node = ',   &
+     &          i3.3,' Error = ',i3,/,13x,a)
+        exit_flag=2
+        RETURN
+      END IF
+# endif
+# ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn off time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_off (ng, model, 64, __LINE__,                         &
+     &                 __FILE__//":mp_bcasts")
+# endif
+
+      RETURN
+      END SUBROUTINE mp_bcasts_2d
+!
+      SUBROUTINE mp_bcasts_3d (ng, model, A, InpComm)
+!
+!***********************************************************************
+!                                                                      !
+!  This routine broadcasts a 3D string array to all processors in the  !
+!  communicator. It is called by all the members in the group.         !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     A          3D array to broadcast (string).                       !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     A          Broadcasted 3D array.                                 !
+!                                                                      !
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_parallel
+      USE mod_iounits
+      USE mod_scalars
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, model
+
+      integer, intent(in), optional :: InpComm
+
+      character (len=*), intent(inout) :: A(:,:,:)
+!
+!  Local variable declarations
+!
+      integer :: Lstr, MyCOMM, MyError, Nchars, Serror
+      integer :: Asize(3)
+
+      character (len=MPI_MAX_ERROR_STRING) :: string
+
+# ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn on time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_on (ng, model, 64, __LINE__,                          &
+     &                __FILE__//":mp_bcasts")
+# endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
+!
+!-----------------------------------------------------------------------
+!  Broadcast requested variable.
+!-----------------------------------------------------------------------
+!
+      Asize(1)=UBOUND(A, DIM=1)
+      Asize(2)=UBOUND(A, DIM=2)
+      Asize(3)=UBOUND(A, DIM=3)
+      Nchars=LEN(A(1,1,1))*Asize(1)*Asize(2)*Asize(3)
+
+# ifdef MPI
+      CALL mpi_bcast (A, Nchars, MPI_BYTE, MyMaster, MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+ 10     FORMAT (/,' MP_BCASTS_3D - error during ',a,' call, Node = ',   &
+     &          i3.3,' Error = ',i3,/,13x,a)
+        exit_flag=2
+        RETURN
+      END IF
+# endif
+# ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn off time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_off (ng, model, 64, __LINE__,                         &
+     &                 __FILE__//":mp_bcasts")
+# endif
+
+      RETURN
+      END SUBROUTINE mp_bcasts_3d
+!
+      SUBROUTINE mp_bcast_struc (ng, model, S, InpComm)
+!
+!***********************************************************************
+!                                                                      !
+!  This routine broadcasts the NetCDF IDs of a TYPE_IO structure to    !
+!  all processors in the communicator. It is called by all the         !
+!  members in the group.                                               !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     S          ROMS I/O structure, TYPE(T_IO).                       !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     S          Broadcasted ROMS I/O structure.                       !
+!                                                                      !
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_parallel
+      USE mod_iounits
+      USE mod_scalars
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, model
+
+      integer, intent(in), optional :: InpComm
+
+      TYPE(T_IO), intent(inout) :: S(:)
+!
+!  Local variable declarations
+!
+      integer :: Lstr, MyCOMM, MyError, Nchars, Npts, Serror
+      integer :: buffer(5)
+
+      character (len=MPI_MAX_ERROR_STRING) :: string
+
+# ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn on time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_on (ng, model, 64, __LINE__,                          &
+     &                __FILE__//":mp_bcasts")
+# endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
+!
+!-----------------------------------------------------------------------
+!  Broadcast variables in structure.
+!-----------------------------------------------------------------------
+
+# ifdef MPI
+!
+!  Structure scalar integer variables.
+!
+      buffer(1)=S(ng)%Nfiles
+      buffer(2)=S(ng)%Fcount
+      buffer(3)=S(ng)%load
+      buffer(4)=S(ng)%Rindex
+      buffer(5)=S(ng)%ncid
+!
+      CALL mpi_bcast (buffer, 5, MPI_INTEGER, MyMaster,                 &
+     &                MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+ 10     FORMAT (/,' MP_BCAST_STRUC - error during ',a,' call, Node = ', &
+     &          i3.3,' Error = ',i3,/,13x,a)
+        exit_flag=2
+        RETURN
+      ELSE
+        S(ng)%Nfiles=buffer(1)
+        S(ng)%Fcount=buffer(2)
+        S(ng)%load  =buffer(3)
+        S(ng)%Rindex=buffer(4)
+        S(ng)%ncid  =buffer(5)
+      END IF
+!
+!  Variables IDs.
+!
+      Npts=UBOUND(S(ng)%Vid, DIM=1)
+      CALL mpi_bcast (S(ng)%Vid, Npts, MPI_INTEGER, MyMaster,           &
+     &                MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+
+#  ifdef SOLVE3D
+!
+!  Tracer variables IDs.
+!
+      Npts=UBOUND(S(ng)%Tid, DIM=1)
+      CALL mpi_bcast (S(ng)%Tid, Npts, MPI_INTEGER, MyMaster,           &
+     &                MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+!
+!  Structure Filenames.
+!
+      Nchars=LEN(S(ng)%head)
+      CALL mpi_bcast (S(ng)%head, Nchars, MPI_BYTE, MyMaster,            &
+     &                MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+!
+      Nchars=LEN(S(ng)%base)
+      CALL mpi_bcast (S(ng)%base, Nchars, MPI_BYTE, MyMaster,            &
+     &                MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+!
+      Nchars=LEN(S(ng)%name)
+      CALL mpi_bcast (S(ng)%name, Nchars, MPI_BYTE, MyMaster,            &
+     &                MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+!
+      Nchars=LEN(S(ng)%files(1))*S(ng)%Nfiles
+      CALL mpi_bcast (S(ng)%files, Nchars, MPI_BYTE, MyMaster,            &
+     &                MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+# endif
+# ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn off time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_off (ng, model, 64, __LINE__,                         &
+     &                 __FILE__//":mp_bcast_struc")
+# endif
+      RETURN
+      END SUBROUTINE mp_bcast_struc
 !
       SUBROUTINE mp_boundary (ng, model, Imin, Imax,                    &
      &                        LBi, UBi, LBk, UBk,                       &
@@ -1269,7 +2057,7 @@
 
       real(r8), dimension((UBi-LBi+1)*(UBk-LBk+1)) :: Asend
 
-# ifdef BOUNDARY_ALLGAHTER
+# ifdef BOUNDARY_ALLGATHER
       real(r8), dimension((UBi-LBi+1)*(UBk-LBk+1),                      &
      &                    0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
 # else
@@ -1292,6 +2080,11 @@
 !  by the appropriate node, so sum reduction can be perfomed during
 !  unpacking.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Asend)+                   &
+     &                                   SIZE(Arecv))*KIND(A),r8))
 !
 !  Initialize buffer to the full range so unpacking is correct with
 !  summation.  This also allows even exchange of segments with
@@ -1321,7 +2114,7 @@
 !-----------------------------------------------------------------------
 !
 # ifdef MPI
-#  ifdef BOUNDARY_ALLGAHTER
+#  ifdef BOUNDARY_ALLGATHER
       CALL mpi_allgather (Asend, Npts, MP_FLOAT, Arecv, Npts, MP_FLOAT, &
      &                    OCN_COMM_WORLD, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
@@ -1354,7 +2147,7 @@
 !  Unpack data: reduction sum.
 !-----------------------------------------------------------------------
 !
-# ifdef BOUNDARY_ALLGAHTER
+# ifdef BOUNDARY_ALLGATHER
       Nnodes=NtileI(ng)*NtileJ(ng)-1
       ik=0
       DO k=LBk,UBk
@@ -1388,7 +2181,7 @@
       RETURN
       END SUBROUTINE mp_boundary
 !
-      SUBROUTINE mp_assemblef_1d (ng, model, Npts, Aspv, A)
+      SUBROUTINE mp_assemblef_1d (ng, model, Npts, Aspv, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -1405,6 +2198,7 @@
 !                  not operated by the current parallel node. It must  !
 !                  be zero to collect data by a global reduction sum.  !
 !     A          1D array to collect.                                  !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -1423,13 +2217,15 @@
 !
       integer, intent(in) :: ng, model, Npts
 
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(in) :: Aspv
 
       real(r8), intent(inout) :: A(:)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, MyNpts, Nnodes, Serror
+      integer :: Lstr, MyCOMM, MyError, MyNpts, Nnodes, Serror
       integer :: i, rank, request
 
       integer, dimension(MPI_STATUS_SIZE) :: status
@@ -1453,10 +2249,30 @@
       CALL wclock_on (ng, model, 70, __LINE__,                          &
      &                __FILE__//":mp_assemble")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Check input parameters.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+# if defined ASSEMBLE_ALLGATHER
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Arecv)*KIND(A),r8))
+# else
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(Npts*KIND(A),r8))
+# endif
 !
       MyNpts=UBOUND(A, DIM=1)
       IF (Npts.ne.MyNpts) THEN
@@ -1479,7 +2295,7 @@
 !
 # if defined ASSEMBLE_ALLGATHER
       CALL mpi_allgather (A, Npts, MP_FLOAT, Arecv, Npts, MP_FLOAT,     &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1520,7 +2336,7 @@
 !  Collect data from all nodes as a reduced sum.
 !
       CALL mpi_allreduce (Asend, A, Npts, MP_FLOAT, MPI_SUM,            &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1544,7 +2360,7 @@
 !
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv, Npts, MP_FLOAT, rank, rank+5,          &
-     &                    OCN_COMM_WORLD, request, MyError)
+     &                    MyCOMM, request, MyError)
           CALL mpi_wait (request, status, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1563,7 +2379,7 @@
 !
       ELSE
         CALL mpi_isend (A, Npts, MP_FLOAT, MyMaster, MyRank+5,          &
-     &                  OCN_COMM_WORLD, request, MyError)
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, status, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1576,8 +2392,7 @@
 !
 !  Broadcast accumulated (full) data to all nodes.
 !
-      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1609,7 +2424,7 @@
       RETURN
       END SUBROUTINE mp_assemblef_1d
 !
-      SUBROUTINE mp_assemblef_2d (ng, model, Npts, Aspv, A)
+      SUBROUTINE mp_assemblef_2d (ng, model, Npts, Aspv, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -1626,6 +2441,7 @@
 !                  not operated by the current parallel node. It must  !
 !                  be zero to collect data by a global reduction sum.  !
 !     A          2D array to collect.                                  !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -1644,13 +2460,15 @@
 !
       integer, intent(in) :: ng, model, Npts
 
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(in) :: Aspv
 
       real(r8), intent(inout) :: A(:,:)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, MyNpts, Nnodes, Serror
+      integer :: Lstr, MyCOMM, MyError, MyNpts, Nnodes, Serror
       integer :: i, rank, request
 
       integer :: Asize(2)
@@ -1678,10 +2496,30 @@
       CALL wclock_on (ng, model, 70, __LINE__,                          &
      &                __FILE__//":mp_assemble")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Check input parameters.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+# if defined ASSEMBLE_ALLGATHER
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((Npts+SIZE(Arecv))*KIND(A),r8))
+# else
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(2*Npts*KIND(A),r8))
+# endif
 !
       Asize(1)=UBOUND(A, DIM=1)
       Asize(2)=UBOUND(A, DIM=2)
@@ -1713,7 +2551,7 @@
 !  Collect data from all nodes.
 !
       CALL mpi_allgather (Asend, Npts, MP_FLOAT, Arecv, Npts, MP_FLOAT, &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1752,7 +2590,7 @@
 !  Collect data from all nodes as a reduced sum.
 !
       CALL mpi_allreduce (Asend, Arecv, Npts, MP_FLOAT, MPI_SUM,        &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1781,7 +2619,7 @@
 !
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv, Npts, MP_FLOAT, rank, rank+5,          &
-     &                    OCN_COMM_WORLD, request, MyError)
+     &                    MyCOMM, request, MyError)
           CALL mpi_wait (request, status, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1804,7 +2642,7 @@
 !
       ELSE
         CALL mpi_isend (Asend, Npts, MP_FLOAT, MyMaster, MyRank+5,      &
-     &                  OCN_COMM_WORLD, request, MyError)
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, status, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1817,8 +2655,7 @@
 !
 !  Broadcast accumulated (full) data to all nodes.
 !
-      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1849,7 +2686,7 @@
       RETURN
       END SUBROUTINE mp_assemblef_2d
 !
-      SUBROUTINE mp_assemblef_3d (ng, model, Npts, Aspv, A)
+      SUBROUTINE mp_assemblef_3d (ng, model, Npts, Aspv, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -1866,6 +2703,7 @@
 !                  not operated by the current parallel node. It must  !
 !                  be zero to collect data by a global reduction sum.  !
 !     A          3D array to collect.                                  !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -1884,13 +2722,15 @@
 !
       integer, intent(in) :: ng, model, Npts
 
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(in) :: Aspv
 
       real(r8), intent(inout) :: A(:,:,:)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, MyNpts, Nnodes, Serror
+      integer :: Lstr, MyCOMM, MyError, MyNpts, Nnodes, Serror
       integer :: i, rank, request
 
       integer :: Asize(3)
@@ -1918,10 +2758,30 @@
       CALL wclock_on (ng, model, 70, __LINE__,                          &
      &                __FILE__//":mp_assemble")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Check input parameters.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+# if defined ASSEMBLE_ALLGATHER
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((Npts+SIZE(Arecv))*KIND(A),r8))
+# else
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(2*Npts*KIND(A),r8))
+# endif
 !
       Asize(1)=UBOUND(A, DIM=1)
       Asize(2)=UBOUND(A, DIM=2)
@@ -1954,7 +2814,7 @@
 !  Collect data from all nodes.
 !
       CALL mpi_allgather (Asend, Npts, MP_FLOAT, Arecv, Npts, MP_FLOAT, &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -1993,7 +2853,7 @@
 !  Collect data from all nodes as a reduced sum.
 !
       CALL mpi_allreduce (Asend, Arecv, Npts, MP_FLOAT, MPI_SUM,        &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2022,7 +2882,7 @@
 !
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv, Npts, MP_FLOAT, rank, rank+5,          &
-     &                    OCN_COMM_WORLD, request, MyError)
+     &                    MyCOMM, request, MyError)
           CALL mpi_wait (request, status, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2045,7 +2905,7 @@
 !
       ELSE
         CALL mpi_isend (Asend, Npts, MP_FLOAT, MyMaster, MyRank+5,      &
-     &                  OCN_COMM_WORLD, request, MyError)
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, status, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2058,8 +2918,7 @@
 !
 !  Broadcast accumulated (full) data to all nodes.
 !
-      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2090,7 +2949,7 @@
       RETURN
       END SUBROUTINE mp_assemblef_3d
 !
-      SUBROUTINE mp_assemblei_1d (ng, model, Npts, Aspv, A)
+      SUBROUTINE mp_assemblei_1d (ng, model, Npts, Aspv, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -2107,6 +2966,7 @@
 !                  not operated by the current parallel node. It must  !
 !                  be zero to collect data by a global reduction sum.  !
 !     A          1D array to collect.                                  !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -2125,13 +2985,15 @@
 !
       integer, intent(in) :: ng, model, Npts
 
+      integer, intent(in), optional :: InpComm
+
       integer, intent(in) :: Aspv
 
       integer, intent(inout) :: A(:)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, MyNpts, Nnodes, Serror
+      integer :: Lstr, MyCOMM, MyError, MyNpts, Nnodes, Serror
       integer :: i, rank, request
 
       integer, dimension(MPI_STATUS_SIZE) :: status
@@ -2155,10 +3017,30 @@
       CALL wclock_on (ng, model, 70, __LINE__,                          &
      &                __FILE__//":mp_assemble")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Check input parameters.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+# if defined ASSEMBLE_ALLGATHER
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Arecv)*KIND(A),r8))
+# else
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(Npts*KIND(A),r8))
+# endif
 !
       MyNpts=UBOUND(A, DIM=1)
       IF (Npts.ne.MyNpts) THEN
@@ -2182,7 +3064,7 @@
 # if defined ASSEMBLE_ALLGATHER
       CALL mpi_allgather (A, Npts, MPI_INTEGER,                         &
      &                    Arecv, Npts, MPI_INTEGER,                     &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2223,7 +3105,7 @@
 !  Collect data from all nodes as a reduced sum.
 !
       CALL mpi_allreduce (Asend, A, Npts, MPI_INTEGER, MPI_SUM,         &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2247,7 +3129,7 @@
 !
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv, Npts, MPI_INTEGER, rank, rank+5,       &
-     &                    OCN_COMM_WORLD, request, MyError)
+     &                    MyCOMM, request, MyError)
           CALL mpi_wait (request, status, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2266,7 +3148,7 @@
 !
       ELSE
         CALL mpi_isend (A, Npts, MPI_INTEGER, MyMaster, MyRank+5,       &
-     &                  OCN_COMM_WORLD, request, MyError)
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, status, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2279,8 +3161,7 @@
 !
 !  Broadcast accumulated (full) data to all nodes.
 !
-      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, OCN_COMM_WORLD,   &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2310,7 +3191,7 @@
       RETURN
       END SUBROUTINE mp_assemblei_1d
 !
-      SUBROUTINE mp_assemblei_2d (ng, model, Npts, Aspv, A)
+      SUBROUTINE mp_assemblei_2d (ng, model, Npts, Aspv, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -2327,6 +3208,7 @@
 !                  not operated by the current parallel node. It must  !
 !                  be zero to collect data by a global reduction sum.  !
 !     A          2D array to collect.                                  !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -2345,13 +3227,15 @@
 !
       integer, intent(in) :: ng, model, Npts
 
+      integer, intent(in), optional :: InpComm
+
       integer, intent(in) :: Aspv
 
       integer, intent(inout) :: A(:,:)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, MyNpts, Nnodes, Serror
+      integer :: Lstr,  MyCOMM, MyError, MyNpts, Nnodes, Serror
       integer :: i, rank, request
 
       integer :: Asize(2)
@@ -2379,10 +3263,30 @@
       CALL wclock_on (ng, model, 70, __LINE__,                          &
      &                __FILE__//":mp_assemble")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Check input parameters.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+# if defined ASSEMBLE_ALLGATHER
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((Npts+SIZE(Arecv))*KIND(A),r8))
+# else
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(2*Npts*KIND(A),r8))
+# endif
 !
       Asize(1)=UBOUND(A, DIM=1)
       Asize(2)=UBOUND(A, DIM=2)
@@ -2415,7 +3319,7 @@
 !
       CALL mpi_allgather (Asend, Npts, MPI_INTEGER,                     &
      &                    Arecv, Npts, MPI_INTEGER,                     &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2454,7 +3358,7 @@
 !  Collect data from all nodes as a reduced sum.
 !
       CALL mpi_allreduce (Asend, Arecv, Npts, MPI_INTEGER, MPI_SUM,     &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2483,7 +3387,7 @@
 !
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv, Npts, MPI_INTEGER, rank, rank+5,       &
-     &                    OCN_COMM_WORLD, request, MyError)
+     &                    MyCOMM, request, MyError)
           CALL mpi_wait (request, status, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2506,7 +3410,7 @@
 !
       ELSE
         CALL mpi_isend (Asend, Npts, MPI_INTEGER, MyMaster, MyRank+5,   &
-     &                  OCN_COMM_WORLD, request, MyError)
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, status, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2519,8 +3423,7 @@
 !
 !  Broadcast accumulated (full) data to all nodes.
 !
-      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, OCN_COMM_WORLD,   &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2550,7 +3453,7 @@
       RETURN
       END SUBROUTINE mp_assemblei_2d
 !
-      SUBROUTINE mp_collect_f (ng, model, Npts, Aspv, A)
+      SUBROUTINE mp_collect_f (ng, model, Npts, Aspv, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -2567,6 +3470,7 @@
 !     Aspv       Special value indicating no data.  This implies that  !
 !                  desired data is tile unbouded.                      !
 !     A          Collected data.                                       !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -2585,13 +3489,15 @@
 !
       integer, intent(in) :: ng, model, Npts
 
+      integer, intent(in), optional :: InpComm
+
       real(r8), intent(in) :: Aspv
 
       real(r8), intent(inout) :: A(Npts)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, Nnodes, Serror
+      integer :: Lstr, MyCOMM, MyError, Nnodes, Serror
       integer :: i, rank, request
 
       integer, dimension(MPI_STATUS_SIZE) :: status
@@ -2615,15 +3521,35 @@
       CALL wclock_on (ng, model, 69, __LINE__,                          &
      &                __FILE__//":mp_collect")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Collect data from all nodes.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+# if defined COLLECT_ALLGATHER
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Arecv)*KIND(A),r8))
+# else
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(Npts*KIND(A),r8))
+# endif
 
 # if defined COLLECT_ALLGATHER
 !
       CALL mpi_allgather (A, Npts, MP_FLOAT, Arecv, Npts, MP_FLOAT,     &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2663,7 +3589,7 @@
 !  Collect data from all nodes as a reduced sum.
 !
       CALL mpi_allreduce (Asend, A, Npts, MP_FLOAT, MPI_SUM,            &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2687,7 +3613,7 @@
 !
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv, Npts, MP_FLOAT, rank, rank+5,          &
-     &                    OCN_COMM_WORLD, request, MyError)
+     &                    MyCOMM, request, MyError)
           CALL mpi_wait (request, status, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2706,7 +3632,7 @@
 !
       ELSE
         CALL mpi_isend (A, Npts, MP_FLOAT, MyMaster, MyRank+5,          &
-     &                  OCN_COMM_WORLD, request, MyError)
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, status, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2719,8 +3645,7 @@
 !
 !  Broadcast accumulated (full) data to all nodes.
 !
-      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, OCN_COMM_WORLD,      &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MP_FLOAT, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2745,7 +3670,7 @@
       RETURN
       END SUBROUTINE mp_collect_f
 !
-      SUBROUTINE mp_collect_i (ng, model, Npts, Aspv, A)
+      SUBROUTINE mp_collect_i (ng, model, Npts, Aspv, A, InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -2762,6 +3687,7 @@
 !     Aspv       Special value indicating no data.  This implies that  !
 !                  desired data is tile unbouded.                      !
 !     A          Collected data.                                       !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -2782,11 +3708,13 @@
 
       integer, intent(in) :: Aspv
 
+      integer, intent(in), optional :: InpComm
+
       integer, intent(inout) :: A(Npts)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, Nnodes, Serror
+      integer :: Lstr, MyCOMM, MyError, Nnodes, Serror
       integer :: i, rank, request
 
       integer, dimension(MPI_STATUS_SIZE) :: status
@@ -2810,15 +3738,35 @@
       CALL wclock_on (ng, model, 69, __LINE__,                          &
      &                __FILE__//":mp_collect")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Collect data from all nodes.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+# if defined COLLECT_ALLGATHER
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Arecv)*KIND(A),r8))
+# else
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(Npts*KIND(A),r8))
+# endif
 
 # if defined COLLECT_ALLGATHER
 !
       CALL mpi_allgather (A, Npts, MPI_INTEGER, Arecv, Npts,            &
-     &                    MPI_INTEGER, OCN_COMM_WORLD, MyError)
+     &                    MPI_INTEGER, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2858,7 +3806,7 @@
 !  Collect data from all nodes as a reduced sum.
 !
       CALL mpi_allreduce (Asend, A, Npts, MPI_INTEGER, MPI_SUM,         &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2882,7 +3830,7 @@
 !
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv, Npts, MPI_INTEGER, rank, rank+5,       &
-     &                    OCN_COMM_WORLD, request, MyError)
+     &                    MyCOMM, request, MyError)
           CALL mpi_wait (request, status, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2901,7 +3849,7 @@
 !
       ELSE
         CALL mpi_isend (A, Npts, MPI_INTEGER, MyMaster, MyRank+5,       &
-     &                  OCN_COMM_WORLD, request, MyError)
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, status, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -2914,8 +3862,7 @@
 !
 !  Broadcast accumulated (full) data to all nodes.
 !
-      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, OCN_COMM_WORLD,   &
-     &                MyError)
+      CALL mpi_bcast (A, Npts, MPI_INTEGER, MyMaster, MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -2996,7 +3943,7 @@
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(out) :: Npts
 
-      real(r8), intent(in) :: Ascl
+      real(dp), intent(in) :: Ascl
 
 # ifdef MASKING
       real(r8), intent(in) :: Amask(LBi:UBi,LBj:UBj)
@@ -3043,6 +3990,11 @@
 !  Set horizontal starting and ending indices for parallel domain
 !  partitions in the XI- and ETA-directions.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Asend)+                   &
+     &                                   SIZE(Arecv))*KIND(A),r8))
 !
 !  Set full grid first and last point according to staggered C-grid
 !  classification. Notice that the offsets are for the private array
@@ -3096,7 +4048,7 @@
 !  tile rank.
 !
       ghost=0
-
+!
       SELECT CASE (MyType)
         CASE (p2dvar, p3dvar)
           Cgrid=1
@@ -3327,7 +4279,7 @@
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk
       integer, intent(out) :: Npts
 
-      real(r8), intent(in) :: Ascl
+      real(dp), intent(in) :: Ascl
 
 # ifdef MASKING
       real(r8), intent(in) :: Amask(LBi:UBi,LBj:UBj)
@@ -3374,6 +4326,11 @@
 !  Set horizontal starting and ending indices for parallel domain
 !  partitions in the XI- and ETA-directions.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Asend)+                   &
+     &                                   SIZE(Arecv))*KIND(A),r8))
 !
 !  Set full grid first and last point according to staggered C-grid
 !  classification. Notice that the offsets are for the private array
@@ -3435,7 +4392,7 @@
 !  to tile rank.
 !
       ghost=0
-
+!
       SELECT CASE (MyType)
         CASE (p2dvar, p3dvar)
           Cgrid=1
@@ -3956,6 +4913,10 @@
       exit_flag=ibuffer(1)
       ioerror=ibuffer(2)
 !
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Asend)*KIND(A),r8))
+!
 !  Deallocate send buffer.
 !
       IF (allocated(Asend).and.(MyRank.eq.MyMaster)) THEN
@@ -4181,6 +5142,10 @@
       exit_flag=ibuffer(1)
       ioerror=ibuffer(2)
 !
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Asend)*KIND(A),r8))
+!
 !  Deallocate send buffer.
 !
       IF (allocated(Asend).and.(MyRank.eq.MyMaster)) THEN
@@ -4399,6 +5364,10 @@
       CALL mp_bcasti (ng, model, ibuffer)
       exit_flag=ibuffer(1)
       ioerror=ibuffer(2)
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Arecv)*KIND(A),r8))
 !
 !  Deallocate receive buffer.
 !
@@ -4631,6 +5600,10 @@
       exit_flag=ibuffer(1)
       ioerror=ibuffer(2)
 !
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Arecv)*KIND(A),r8))
+!
 !  Deallocate receive buffer.
 !
       IF (allocated(Arecv).and.(MyRank.eq.MyMaster)) THEN
@@ -4657,13 +5630,15 @@
       RETURN
       END FUNCTION mp_ncwrite2d
 
-      SUBROUTINE mp_reduce_0d (ng, model, Asize, A, op_handle)
+# ifdef SINGLE_PRECISION
+!
+      SUBROUTINE mp_reduce_0dp (ng, model, Asize, A, handle_op, InpComm)
 !
 !***********************************************************************
 !                                                                      !
-!  This routine collects and reduces requested variables from all      !
-!  nodes in the group.  Then,  it broadcasts reduced variables to      !
-!  all nodes in the group.                                             !
+!  This routine collects and reduces requested double precision        !
+!  variables from all nodes in the group.  Then, it broadcasts         !
+!  reduced variables to all nodes in the group.                        !
 !                                                                      !
 !  On Input:                                                           !
 !                                                                      !
@@ -4671,9 +5646,10 @@
 !     model      Calling model identifier.                             !
 !     Asize      Number of scalar variables to reduce.                 !
 !     A          Vector of scalar variables to reduce.                 !
-!     op_handle  Reduction operation handle (string).  The following   !
+!     handle_op  Reduction operation handle (string).  The following   !
 !                  reduction operations are supported:                 !
 !                  'MIN', 'MAX', 'SUM'                                 !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -4692,13 +5668,434 @@
 !
       integer, intent(in) :: ng, model, Asize
 
-      character (len=*), intent(in) :: op_handle
+      integer, intent(in), optional :: InpComm
+
+      character (len=*), intent(in) :: handle_op
+
+      real(dp), intent(inout) :: A
+!
+!  Local variable declarations.
+!
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
+      integer :: handle, i, rank, request
+
+      integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
+
+      integer, dimension(MPI_STATUS_SIZE) :: Rstatus
+      integer, dimension(MPI_STATUS_SIZE) :: Sstatus
+
+      real(dp) :: Areduce
+      real(dp) :: Asend
+      real(dp), dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
+
+      character (len=MPI_MAX_ERROR_STRING) :: string
+
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn on time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_on (ng, model, 65, __LINE__,                          &
+     &                __FILE__//":mp_reduce")
+#  endif
+#  ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+#  endif
+!
+!-----------------------------------------------------------------------
+!  Collect and reduce requested scalar variables.
+!-----------------------------------------------------------------------
+!
+!  Pack data to reduce.
+!
+      Asend=A
+      Npts=1
+!
+!  Collect and reduce.
+!
+#  if defined REDUCE_ALLREDUCE
+      IF (handle_op(1:3).eq.'MIN') THEN
+        handle=MPI_MIN
+      ELSE IF (handle_op(1:3).eq.'MAX') THEN
+        handle=MPI_MAX
+      ELSE IF (handle_op(1:3).eq.'SUM') THEN
+        handle=MPI_SUM
+      END IF
+      CALL mpi_allreduce (Asend, Areduce, Npts, MP_DOUBLE, handle,      &
+     &                    MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_ALLREDUCE', MyRank, MyError,             &
+     &                    string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+#  elif defined REDUCE_ALLGATHER
+      CALL mpi_allgather (Asend, Npts, MP_DOUBLE,                       &
+     &                    Arecv, Npts, MP_DOUBLE,                       &
+     &                    MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_ALLGATHER', MyRank, MyError,             &
+     &                    string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+      Areduce=Arecv(0)
+      DO rank=1,NtileI(ng)*NtileJ(ng)-1
+        IF (handle_op(1:3).eq.'MIN') THEN
+          Areduce=MIN(Areduce,Arecv(rank))
+        ELSE IF (handle_op(1:3).eq.'MAX') THEN
+          Areduce=MAX(Areduce,Arecv(rank))
+        ELSE IF (handle_op(1:3).eq.'SUM') THEN
+          Areduce=Areduce+Arecv(rank)
+        END IF
+      END DO
+#  else
+      IF (MyRank.eq.MyMaster) THEN
+        DO rank=1,NtileI(ng)*NtileJ(ng)-1
+          CALL mpi_irecv (Arecv(rank), Npts, MP_DOUBLE, rank,           &
+     &                    rank+500, MyCOMM, Rrequest(rank),             &
+     &                    MyError)
+        END DO
+        Areduce=Asend
+        DO rank=1,NtileI(ng)*NtileJ(ng)-1
+          CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
+          IF (MyError.ne.MPI_SUCCESS) THEN
+            CALL mpi_error_string (MyError, string, Lstr, Serror)
+            Lstr=LEN_TRIM(string)
+            WRITE (stdout,10) 'MPI_IRECV', rank, Rerror, string(1:Lstr)
+            exit_flag=2
+            RETURN
+          END IF
+          IF (handle_op(1:3).eq.'MIN') THEN
+            Areduce=MIN(Areduce,Arecv(rank))
+          ELSE IF (handle_op(1:3).eq.'MAX') THEN
+            Areduce=MAX(Areduce,Arecv(rank))
+          ELSE IF (handle_op(1:3).eq.'SUM') THEN
+            Areduce=Areduce+Arecv(rank)
+          END IF
+        END DO
+      ELSE
+        CALL mpi_isend (Asend, npts, MP_DOUBLE, MyMaster, MyRank+500,   &
+     &                  MyCOMM, request, MyError)
+        CALL mpi_wait (request, Sstatus, MyError)
+        IF (Serror.ne.MPI_SUCCESS) THEN
+          CALL mpi_error_string (MyError, string, Lstr, Serror)
+          Lstr=LEN_TRIM(string)
+          WRITE (stdout,10) 'MPI_ISEND', MyRank, Serror, string(1:Lstr)
+          exit_flag=2
+          RETURN
+        END IF
+      END IF
+!
+!  Broadcast reduced variables from process to all processes in the
+!  group.
+!
+      CALL mpi_bcast (Areduce, Npts, MP_DOUBLE, MyMaster,               &
+     &                MyCOMM, MyError)
+      IF (Serror.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+ 10   FORMAT (/,' MP_REDUCE_0DP - error during ',a,' call, Node = ',    &
+     &        i3.3,' Error = ',i3,/,16x,a)
+!
+!  Unpack.
+!
+      A=Areduce
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn off time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_off (ng, model, 65, __LINE__,                         &
+     &                 __FILE__//":mp_reduce")
+#  endif
+
+      RETURN
+      END SUBROUTINE mp_reduce_0dp
+!
+      SUBROUTINE mp_reduce_1dp (ng, model, Asize, A, handle_op, InpComm)
+!
+!***********************************************************************
+!                                                                      !
+!  This routine collects and reduces requested double precision        !
+!  variables from all nodes in the group.  Then, it broadcasts         !
+!  reduced variables to all nodes in the group.                        !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     Asize      Number of scalar variables to reduce.                 !
+!     A          Vector of scalar variables to reduce.                 !
+!     handle_op  Reduction operation handle (string).  The following   !
+!                  reduction operations are supported:                 !
+!                  'MIN', 'MAX', 'SUM'                                 !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     A          Vector of reduced scalar variables.                   !
+!                                                                      !
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_parallel
+      USE mod_iounits
+      USE mod_scalars
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, model, Asize
+
+      integer, intent(in), optional :: InpComm
+
+      character (len=*), intent(in) :: handle_op(Asize)
+
+      real(dp), intent(inout) :: A(Asize)
+!
+!  Local variable declarations.
+!
+      integer :: Lstr, MyCOMM, MyError, Serror
+      integer :: handle, i, rank, request
+
+      integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
+
+      integer, dimension(MPI_STATUS_SIZE) :: Rstatus
+      integer, dimension(MPI_STATUS_SIZE) :: Sstatus
+
+      real(dp), dimension(Asize,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
+      real(dp), dimension(Asize) :: Areduce
+      real(dp), dimension(Asize) :: Asend
+
+      character (len=MPI_MAX_ERROR_STRING) :: string
+
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn on time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_on (ng, model, 65, __LINE__,                          &
+     &                __FILE__//":mp_reduce")
+#  endif
+#  ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+#  endif
+!
+!-----------------------------------------------------------------------
+!  Collect and reduce requested scalar variables.
+!-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Arecv)+                   &
+     &                                   2*Asize)*KIND(A),r8))
+!
+!  Pack data to reduce.
+!
+      DO i=1,Asize
+        Asend(i)=A(i)
+      END DO
+!
+!  Collect and reduce.
+!
+#  if defined REDUCE_ALLREDUCE
+      DO i=1,Asize
+        IF (handle_op(i)(1:3).eq.'MIN') THEN
+          handle=MPI_MIN
+        ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
+          handle=MPI_MAX
+        ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
+          handle=MPI_SUM
+        END IF
+        CALL mpi_allreduce (Asend(i), Areduce(i), 1, MP_DOUBLE, handle, &
+     &                      MyCOMM, MyError)
+        IF (MyError.ne.MPI_SUCCESS) THEN
+          CALL mpi_error_string (MyError, string, Lstr, Serror)
+          Lstr=LEN_TRIM(string)
+          WRITE (stdout,10) 'MPI_ALLREDUCE', MyRank, MyError,           &
+     &                      string(1:Lstr)
+          exit_flag=2
+          RETURN
+        END IF
+      END DO
+#  elif defined REDUCE_ALLGATHER
+      CALL mpi_allgather (Asend, Asize, MP_DOUBLE,                      &
+     &                    Arecv, Asize, MP_DOUBLE,                      &
+     &                    MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_ALLGATHER', MyRank, MyError,             &
+     &                    string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+      DO i=1,Asize
+        Areduce(i)=Arecv(i,0)
+        DO rank=1,NtileI(ng)*NtileJ(ng)-1
+          IF (handle_op(i)(1:3).eq.'MIN') THEN
+            Areduce(i)=MIN(Areduce(i),Arecv(i,rank))
+          ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
+            Areduce(i)=MAX(Areduce(i),Arecv(i,rank))
+          ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
+            Areduce(i)=Areduce(i)+Arecv(i,rank)
+          END IF
+        END DO
+      END DO
+#  else
+      IF (MyRank.eq.MyMaster) THEN
+        DO rank=1,NtileI(ng)*NtileJ(ng)-1
+          CALL mpi_irecv (Arecv(1,rank), Asize, MP_DOUBLE, rank,        &
+     &                    rank+500, MyCOMM, Rrequest(rank),             &
+     &                    MyError)
+        END DO
+        DO i=1,Asize
+          Areduce(i)=Asend(i)
+        END DO
+        DO rank=1,NtileI(ng)*NtileJ(ng)-1
+          CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
+          IF (MyError.ne.MPI_SUCCESS) THEN
+            CALL mpi_error_string (MyError, string, Lstr, Serror)
+            Lstr=LEN_TRIM(string)
+            WRITE (stdout,10) 'MPI_IRECV', rank, Rerror, string(1:Lstr)
+            exit_flag=2
+            RETURN
+          END IF
+          DO i=1,Asize
+            IF (handle_op(i)(1:3).eq.'MIN') THEN
+              Areduce(i)=MIN(Areduce(i),Arecv(i,rank))
+            ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
+              Areduce(i)=MAX(Areduce(i),Arecv(i,rank))
+            ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
+              Areduce(i)=Areduce(i)+Arecv(i,rank)
+            END IF
+          END DO
+        END DO
+      ELSE
+        CALL mpi_isend (Asend, Asize, MP_DOUBLE, MyMaster, MyRank+500,  &
+     &                  MyCOMM, request, MyError)
+        CALL mpi_wait (request, Sstatus, MyError)
+        IF (Serror.ne.MPI_SUCCESS) THEN
+          CALL mpi_error_string (MyError, string, Lstr, Serror)
+          Lstr=LEN_TRIM(string)
+          WRITE (stdout,10) 'MPI_ISEND', MyRank, Serror, string(1:Lstr)
+          exit_flag=2
+          RETURN
+        END IF
+      END IF
+!
+!  Broadcast reduced variables from process to all processes in the
+!  group.
+!
+      CALL mpi_bcast (Areduce, Asize, MP_DOUBLE, MyMaster,              &
+     &                MyCOMM, MyError)
+      IF (Serror.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+ 10   FORMAT (/,' MP_REDUCE_1DP - error during ',a,' call, Node = ',    &
+     &        i3.3,' Error = ',i3,/,16x,a)
+!
+!  Unpack.
+!
+      DO i=1,Asize
+        A(i)=Areduce(i)
+      END DO
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn off time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_off (ng, model, 65, __LINE__,                         &
+     &                 __FILE__//":mp_reduce")
+#  endif
+
+      RETURN
+      END SUBROUTINE mp_reduce_1dp
+# endif
+!
+      SUBROUTINE mp_reduce_0d (ng, model, Asize, A, handle_op, InpComm)
+!
+!***********************************************************************
+!                                                                      !
+!  This routine collects and reduces requested variables from all      !
+!  nodes in the group.  Then,  it broadcasts reduced variables to      !
+!  all nodes in the group.                                             !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     Asize      Number of scalar variables to reduce.                 !
+!     A          Vector of scalar variables to reduce.                 !
+!     handle_op  Reduction operation handle (string).  The following   !
+!                  reduction operations are supported:                 !
+!                  'MIN', 'MAX', 'SUM'                                 !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     A          Vector of reduced scalar variables.                   !
+!                                                                      !
+!***********************************************************************
+!
+      USE mod_param
+      USE mod_parallel
+      USE mod_iounits
+      USE mod_scalars
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, model, Asize
+
+      integer, intent(in), optional :: InpComm
+
+      character (len=*), intent(in) :: handle_op
 
       real(r8), intent(inout) :: A
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, Serror
+      integer :: Lstr, MyCOMM, MyError, Npts, Serror
       integer :: handle, i, rank, request
 
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
@@ -4721,6 +6118,18 @@
       CALL wclock_on (ng, model, 65, __LINE__,                          &
      &                __FILE__//":mp_reduce")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Collect and reduce requested scalar variables.
@@ -4729,19 +6138,20 @@
 !  Pack data to reduce.
 !
       Asend=A
+      Npts=1
 !
 !  Collect and reduce.
 !
 # if defined REDUCE_ALLREDUCE
-      IF (op_handle(1:3).eq.'MIN') THEN
+      IF (handle_op(1:3).eq.'MIN') THEN
         handle=MPI_MIN
-      ELSE IF (op_handle(1:3).eq.'MAX') THEN
+      ELSE IF (handle_op(1:3).eq.'MAX') THEN
         handle=MPI_MAX
-      ELSE IF (op_handle(1:3).eq.'SUM') THEN
+      ELSE IF (handle_op(1:3).eq.'SUM') THEN
         handle=MPI_SUM
       END IF
-      CALL mpi_allreduce (Asend, Areduce, 1, MP_FLOAT, handle,          &
-     &                    OCN_COMM_WORLD, MyError)
+      CALL mpi_allreduce (Asend, Areduce, Npts, MP_FLOAT, handle,       &
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -4751,9 +6161,9 @@
         RETURN
       END IF
 # elif defined REDUCE_ALLGATHER
-      CALL mpi_allgather (Asend, 1, MP_FLOAT,                           &
-     &                    Arecv, 1, MP_FLOAT,                           &
-     &                    OCN_COMM_WORLD, MyError)
+      CALL mpi_allgather (Asend, Npts, MP_FLOAT,                        &
+     &                    Arecv, Npts, MP_FLOAT,                        &
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -4764,19 +6174,19 @@
       END IF
       Areduce=Arecv(0)
       DO rank=1,NtileI(ng)*NtileJ(ng)-1
-        IF (op_handle(1:3).eq.'MIN') THEN
+        IF (handle_op(1:3).eq.'MIN') THEN
           Areduce=MIN(Areduce,Arecv(rank))
-        ELSE IF (op_handle(1:3).eq.'MAX') THEN
+        ELSE IF (handle_op(1:3).eq.'MAX') THEN
           Areduce=MAX(Areduce,Arecv(rank))
-        ELSE IF (op_handle(1:3).eq.'SUM') THEN
+        ELSE IF (handle_op(1:3).eq.'SUM') THEN
           Areduce=Areduce+Arecv(rank)
         END IF
       END DO
 # else
       IF (MyRank.eq.MyMaster) THEN
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
-          CALL mpi_irecv (Arecv(rank), 1, MP_FLOAT, rank,               &
-     &                    rank+500, OCN_COMM_WORLD, Rrequest(rank),     &
+          CALL mpi_irecv (Arecv(rank), Npts, MP_FLOAT, rank,            &
+     &                    rank+500, MyCOMM, Rrequest(rank),             &
      &                    MyError)
         END DO
         Areduce=Asend
@@ -4789,17 +6199,17 @@
             exit_flag=2
             RETURN
           END IF
-          IF (op_handle(1:3).eq.'MIN') THEN
+          IF (handle_op(1:3).eq.'MIN') THEN
             Areduce=MIN(Areduce,Arecv(rank))
-          ELSE IF (op_handle(1:3).eq.'MAX') THEN
+          ELSE IF (handle_op(1:3).eq.'MAX') THEN
             Areduce=MAX(Areduce,Arecv(rank))
-          ELSE IF (op_handle(1:3).eq.'SUM') THEN
+          ELSE IF (handle_op(1:3).eq.'SUM') THEN
             Areduce=Areduce+Arecv(rank)
           END IF
         END DO
       ELSE
-        CALL mpi_isend (Asend, 1, MP_FLOAT, MyMaster, MyRank+500,       &
-     &                  OCN_COMM_WORLD, request, MyError)
+        CALL mpi_isend (Asend, npts, MP_FLOAT, MyMaster, MyRank+500,    &
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, Sstatus, MyError)
         IF (Serror.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -4813,8 +6223,8 @@
 !  Broadcast reduced variables from process to all processes in the
 !  group.
 !
-      CALL mpi_bcast (Areduce, 1, MP_FLOAT, MyMaster,                   &
-     &                OCN_COMM_WORLD, MyError)
+      CALL mpi_bcast (Areduce, Npts, MP_FLOAT, MyMaster,                &
+     &                MyCOMM, MyError)
       IF (Serror.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -4842,7 +6252,7 @@
       RETURN
       END SUBROUTINE mp_reduce_0d
 !
-      SUBROUTINE mp_reduce_1d (ng, model, Asize, A, op_handle)
+      SUBROUTINE mp_reduce_1d (ng, model, Asize, A, handle_op, InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -4856,9 +6266,10 @@
 !     model      Calling model identifier.                             !
 !     Asize      Number of scalar variables to reduce.                 !
 !     A          Vector of scalar variables to reduce.                 !
-!     op_handle  Reduction operation handle (string).  The following   !
+!     handle_op  Reduction operation handle (string).  The following   !
 !                  reduction operations are supported:                 !
 !                  'MIN', 'MAX', 'SUM'                                 !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -4877,13 +6288,15 @@
 !
       integer, intent(in) :: ng, model, Asize
 
-      character (len=*), intent(in) :: op_handle(Asize)
+      integer, intent(in), optional :: InpComm
+
+      character (len=*), intent(in) :: handle_op(Asize)
 
       real(r8), intent(inout) :: A(Asize)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, Serror
+      integer :: Lstr, MyCOMM, MyError, Serror
       integer :: handle, i, rank, request
 
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
@@ -4906,10 +6319,27 @@
       CALL wclock_on (ng, model, 65, __LINE__,                          &
      &                __FILE__//":mp_reduce")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Collect and reduce requested scalar variables.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Arecv)+                   &
+     &                                   2*Asize)*KIND(A),r8))
 !
 !  Pack data to reduce.
 !
@@ -4921,15 +6351,15 @@
 !
 # if defined REDUCE_ALLREDUCE
       DO i=1,Asize
-        IF (op_handle(i)(1:3).eq.'MIN') THEN
+        IF (handle_op(i)(1:3).eq.'MIN') THEN
           handle=MPI_MIN
-        ELSE IF (op_handle(i)(1:3).eq.'MAX') THEN
+        ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
           handle=MPI_MAX
-        ELSE IF (op_handle(i)(1:3).eq.'SUM') THEN
+        ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
           handle=MPI_SUM
         END IF
         CALL mpi_allreduce (Asend(i), Areduce(i), 1, MP_FLOAT, handle,  &
-     &                      OCN_COMM_WORLD, MyError)
+     &                      MyCOMM, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
           Lstr=LEN_TRIM(string)
@@ -4942,7 +6372,7 @@
 # elif defined REDUCE_ALLGATHER
       CALL mpi_allgather (Asend, Asize, MP_FLOAT,                       &
      &                    Arecv, Asize, MP_FLOAT,                       &
-     &                    OCN_COMM_WORLD, MyError)
+     &                    MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -4954,11 +6384,11 @@
       DO i=1,Asize
         Areduce(i)=Arecv(i,0)
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
-          IF (op_handle(i)(1:3).eq.'MIN') THEN
+          IF (handle_op(i)(1:3).eq.'MIN') THEN
             Areduce(i)=MIN(Areduce(i),Arecv(i,rank))
-          ELSE IF (op_handle(i)(1:3).eq.'MAX') THEN
+          ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
             Areduce(i)=MAX(Areduce(i),Arecv(i,rank))
-          ELSE IF (op_handle(i)(1:3).eq.'SUM') THEN
+          ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
             Areduce(i)=Areduce(i)+Arecv(i,rank)
           END IF
         END DO
@@ -4967,8 +6397,7 @@
       IF (MyRank.eq.MyMaster) THEN
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv(1,rank), Asize, MP_FLOAT, rank,         &
-     &                    rank+500, OCN_COMM_WORLD, Rrequest(rank),     &
-     &                    MyError)
+     &                    rank+500, MyCOMM, Rrequest(rank), MyError)
         END DO
         DO i=1,Asize
           Areduce(i)=Asend(i)
@@ -4983,18 +6412,18 @@
             RETURN
           END IF
           DO i=1,Asize
-            IF (op_handle(i)(1:3).eq.'MIN') THEN
+            IF (handle_op(i)(1:3).eq.'MIN') THEN
               Areduce(i)=MIN(Areduce(i),Arecv(i,rank))
-            ELSE IF (op_handle(i)(1:3).eq.'MAX') THEN
+            ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
               Areduce(i)=MAX(Areduce(i),Arecv(i,rank))
-            ELSE IF (op_handle(i)(1:3).eq.'SUM') THEN
+            ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
               Areduce(i)=Areduce(i)+Arecv(i,rank)
             END IF
           END DO
         END DO
       ELSE
         CALL mpi_isend (Asend, Asize, MP_FLOAT, MyMaster, MyRank+500,   &
-     &                  OCN_COMM_WORLD, request, MyError)
+     &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, Sstatus, MyError)
         IF (Serror.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -5009,7 +6438,7 @@
 !  group.
 !
       CALL mpi_bcast (Areduce, Asize, MP_FLOAT, MyMaster,               &
-     &                OCN_COMM_WORLD, MyError)
+     &                MyCOMM, MyError)
       IF (Serror.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
@@ -5039,7 +6468,8 @@
       RETURN
       END SUBROUTINE mp_reduce_1d
 !
-      SUBROUTINE mp_reduce2 (ng, model, Isize, Jsize, A, op_handle)
+      SUBROUTINE mp_reduce2 (ng, model, Isize, Jsize, A, handle_op,     &
+     &                       InpComm)
 !
 !***********************************************************************
 !                                                                      !
@@ -5056,9 +6486,10 @@
 !     Jsize      Size of J-dimension: number of different sets of      !
 !                  minimum and/or maximum to process.                  !
 !     A          Matrix of variables and qualifiers to reduce.         !
-!     op_handle  Reduction operation handle (string) of size Jsize.    !
+!     handle_op  Reduction operation handle (string) of size Jsize.    !
 !                  The following  reduction operations are supported:  !
 !                  'MINLOC', 'MAXLOC'                                  !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -5077,13 +6508,15 @@
 !
       integer, intent(in) :: ng, model, Isize, Jsize
 
-      character (len=*), intent(in) :: op_handle(Jsize)
+      integer, intent(in), optional :: InpComm
+
+      character (len=*), intent(in) :: handle_op(Jsize)
 
       real(r8), intent(inout) :: A(Isize,Jsize)
 !
 !  Local variable declarations.
 !
-      integer :: Lstr, MyError, Serror
+      integer :: Lstr, MyCOMM, MyError, Serror
       integer :: handle, i, j
 
       real(r8), dimension(2,Isize) :: Areduce
@@ -5100,10 +6533,27 @@
       CALL wclock_on (ng, model, 65, __LINE__,                          &
      &                __FILE__//":mp_reduce2")
 # endif
+# ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Reduce requested variables and qualifiers.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Areduce)+                 &
+     &                                   SIZE(Asend))*KIND(A),r8))
 !
 !  Pack and reduce.
 !
@@ -5112,9 +6562,9 @@
           Asend(1,i)=A(1,j)
           Asend(2,i)=A(i,j)
         END DO
-        IF (op_handle(j)(1:6).eq.'MINLOC') THEN
+        IF (handle_op(j)(1:6).eq.'MINLOC') THEN
           handle=MPI_MINLOC
-        ELSE IF (op_handle(j)(1:6).eq.'MAXLOC') THEN
+        ELSE IF (handle_op(j)(1:6).eq.'MAXLOC') THEN
           handle=MPI_MAXLOC
         END IF
         CALL mpi_allreduce (Asend, Areduce, Isize,                      &
@@ -5123,7 +6573,7 @@
 # else
      &                      MPI_2REAL,                                  &
 # endif
-     &                      handle, OCN_COMM_WORLD, MyError)
+     &                      handle, MyCOMM, MyError)
         IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
           Lstr=LEN_TRIM(string)
@@ -5166,7 +6616,7 @@
 !***********************************************************************
 !                                                                      !
 !  This routine broadcasts input global data, packed as 1D real array, !
-!  to each spawned MPI node.  Because this routine is also used by the !
+!  to each spawned mpi node.  Because this routine is also used by the !
 !  adjoint model,  the ghost-points in the halo region are NOT updated !
 !  in the ouput tile array (Awrk).  It is used by the  master node  to !
 !  scatter input global data to each tiled node.                       !
@@ -5248,6 +6698,10 @@
 !  partitions in the XI- and ETA-directions.
 !-----------------------------------------------------------------------
 !
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Arecv)*KIND(A),r8))
+!
 !  Set full grid first and last point according to staggered C-grid
 !  classification. Notice that the offsets are for the private array
 !  counter.
@@ -5304,7 +6758,7 @@
       ELSE
         ghost=1                                   ! overlapping
       END IF
-
+!
       SELECT CASE (MyType)
         CASE (p2dvar, p3dvar)
           Imin=BOUNDS(ng) % Imin(1,ghost,MyRank)
@@ -5435,7 +6889,7 @@
 !***********************************************************************
 !                                                                      !
 !  This routine broadcasts input global data, packed as 1D real array, !
-!  to each spawned MPI node.  Because this routine is also used by the !
+!  to each spawned mpi node.  Because this routine is also used by the !
 !  adjoint model,  the ghost-points in the halo region are NOT updated !
 !  in the ouput tile array (Awrk).  It is used by the  master node  to !
 !  scatter input global data to each tiled node.                       !
@@ -5519,6 +6973,10 @@
 !  partitions in the XI- and ETA-directions.
 !-----------------------------------------------------------------------
 !
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(SIZE(Arecv)*KIND(A),r8))
+!
 !  Set full grid first and last point according to staggered C-grid
 !  classification. Notice that the offsets are for the private array
 !  counter.
@@ -5582,7 +7040,7 @@
       ELSE
         ghost=1                                   ! overlapping
       END IF
-
+!
       SELECT CASE (MyType)
         CASE (p2dvar, p3dvar)
           Imin=BOUNDS(ng) % Imin(1,ghost,MyRank)
@@ -5726,7 +7184,7 @@
 !     model      Calling model identifier.                             !
 !     Mstr       Threaded array lower bound.                           !
 !     Mend       Threaded array upper bound.                           !
-!     Asize      Size of the .                                         !
+!     Asize      Size of array A.                                      !
 !     A          Threaded 1D array process.                            !
 !                                                                      !
 !  On Output:                                                          !
@@ -5779,6 +7237,10 @@
 !-----------------------------------------------------------------------
 !  Collect data blocks from all nodes and scatter the data to all nodes.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL(Asize*KIND(A),r8))
 !
 !  All nodes have distinct pieces of the data and zero everywhere else.
 !  So the strategy here is for the master node to receive the data from
@@ -6074,6 +7536,12 @@
 !  partitions in the XI- and ETA-directions.
 !-----------------------------------------------------------------------
 !
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Asend)+                   &
+     &                                   SIZE(Aglobal)+                 &
+     &                                   SIZE(Arecv))*KIND(Asend),r8))
+!
 !  Number of nodes in the group.
 !
       Nnodes=NtileI(ng)*NtileJ(ng)-1
@@ -6280,6 +7748,12 @@
 !  Set horizontal starting and ending indices for parallel domain
 !  partitions in the XI- and ETA-directions.
 !-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Asend)+                   &
+     &                                   SIZE(Aglobal)+                 &
+     &                                   SIZE(Arecv))*KIND(Asend),r8))
 !
 !  Number of nodes in the group.
 !

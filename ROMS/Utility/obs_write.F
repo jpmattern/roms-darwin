@@ -2,9 +2,9 @@
 #if (defined FOUR_DVAR || defined VERIFICATION) && defined OBSERVATIONS
       SUBROUTINE obs_write (ng, tile, model)
 !
-!svn $Id: obs_write.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: obs_write.F 1035 2020-07-28 00:49:02Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -56,10 +56,14 @@
 # endif
       real(r8), parameter :: IniVal = 0.0_r8
 
+      real(r8) :: angle
 # ifdef BGQC
       real(r8) :: df1, df2, Thresh
 # endif
-      real(r8) :: misfit(Mobs)
+      real(r8) :: misfit(Mobs), uradial(Mobs), vradial(Mobs)
+# ifndef VERIFICATION
+      real(r8) :: uBgErr(Mobs), vBgErr(Mobs)
+# endif
 
       character (len=50) :: string
 
@@ -104,7 +108,7 @@
           ObsVetting(iobs)=IniVal
         END DO
 
-# ifndef IS4DVAR_SENSITIVITY
+# ifndef I4DVAR_ANA_SENSITIVITY
 !
 !  Some entries are not computed in the extraction routine.  Set values
 !  to zero to avoid problems when writing non initialized values.
@@ -116,8 +120,10 @@
         IF (wrtNLmod(ng)) THEN
           DO iobs=Mstr,Mend
             NLmodVal(iobs)=IniVal
-#  ifdef BGQC
+#  ifndef VERIFICATION
             BgErr(iobs)=IniVal
+            uBgErr(iobs)=IniVal
+            vBgErr(iobs)=IniVal
 #  endif
           END DO
 #  ifdef BGQC
@@ -148,7 +154,7 @@
           END IF
 #  endif
         END IF
-#  ifdef TLM_OBS
+#  if defined TLM_OBS && !defined SP4DVAR
         IF (wrtTLmod(ng).or.wrtRPmod(ng)) THEN
           DO iobs=Mstr,Mend
             TLmodVal(iobs)=IniVal
@@ -161,7 +167,7 @@
 !  Free-surface observations.
 !-----------------------------------------------------------------------
 !
-# ifndef IS4DVAR_SENSITIVITY
+# ifndef I4DVAR_ANA_SENSITIVITY
         IF (wrtNLmod(ng).and.                                           &
      &      (FOURDVAR(ng)%ObsCount(isFsur).gt.0)) THEN
           CALL extract_obs2d (ng, 0, Lm(ng)+1, 0, Mm(ng)+1,             &
@@ -178,7 +184,7 @@
      &                        GRID(ng)%rmask,                           &
 #  endif
      &                        NLmodVal)
-#  ifdef BGQC
+#  ifndef VERIFICATION
           CALL extract_obs2d (ng, 0, Lm(ng)+1, 0, Mm(ng)+1,             &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        ObsState2Type(isFsur),                    &
@@ -220,7 +226,7 @@
 !  Vertically integrated u-velocity observations.
 !-----------------------------------------------------------------------
 !
-# ifndef IS4DVAR_SENSITIVITY
+# ifndef I4DVAR_ANA_SENSITIVITY
         IF (wrtNLmod(ng).and.                                           &
      &      (FOURDVAR(ng)%ObsCount(isUbar).gt.0)) THEN
           CALL extract_obs2d (ng, 1, Lm(ng)+1, 0, Mm(ng)+1,             &
@@ -237,7 +243,7 @@
      &                        GRID(ng)%umask,                           &
 #  endif
      &                        NLmodVal)
-#  ifdef BGQC
+#  ifndef VERIFICATION
           CALL extract_obs2d (ng, 1, Lm(ng)+1, 0, Mm(ng)+1,             &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        ObsState2Type(isUbar),                    &
@@ -279,7 +285,7 @@
 !  Vertically integrated v-velocity observations.
 !-----------------------------------------------------------------------
 !
-# ifndef IS4DVAR_SENSITIVITY
+# ifndef I4DVAR_ANA_SENSITIVITY
         IF (wrtNLmod(ng).and.                                           &
      &      (FOURDVAR(ng)%ObsCount(isVbar).gt.0)) THEN
           CALL extract_obs2d (ng, 0, Lm(ng)+1, 1, Mm(ng)+1,             &
@@ -296,7 +302,7 @@
      &                        GRID(ng)%vmask,                           &
 #  endif
      &                        NLmodVal)
-#  ifdef BGQC
+#  ifndef VERIFICATION
           CALL extract_obs2d (ng, 0, Lm(ng)+1, 1, Mm(ng)+1,             &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        ObsState2Type(isVbar),                    &
@@ -340,7 +346,7 @@
 !  3D u-velocity observations.
 !-----------------------------------------------------------------------
 !
-#  ifndef IS4DVAR_SENSITIVITY
+#  ifndef I4DVAR_ANA_SENSITIVITY
         IF (wrtNLmod(ng).and.                                           &
      &      (FOURDVAR(ng)%ObsCount(isUvel).gt.0)) THEN
           DO k=1,N(ng)
@@ -366,7 +372,7 @@
      &                        GRID(ng)%umask,                           &
 #   endif
      &                        NLmodVal)
-#   ifdef BGQC
+#   ifndef VERIFICATION
           CALL extract_obs3d (ng, 1, Lm(ng)+1, 0, Mm(ng)+1,             &
      &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
      &                        ObsState2Type(isUvel),                    &
@@ -418,7 +424,7 @@
 !  3D v-velocity observations.
 !-----------------------------------------------------------------------
 !
-#  ifndef IS4DVAR_SENSITIVITY
+#  ifndef I4DVAR_ANA_SENSITIVITY
         IF (wrtNLmod(ng).and.                                           &
      &      (FOURDVAR(ng)%ObsCount(isVvel).gt.0)) THEN
           DO k=1,N(ng)
@@ -444,7 +450,7 @@
      &                        GRID(ng)%vmask,                           &
 #   endif
      &                        NLmodVal)
-#   ifdef BGQC
+#   ifndef VERIFICATION
           CALL extract_obs3d (ng, 0, Lm(ng)+1, 1, Mm(ng)+1,             &
      &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
      &                        ObsState2Type(isVvel),                    &
@@ -493,11 +499,291 @@
 #  endif
 !
 !-----------------------------------------------------------------------
+!  Radial Velocity. The observations are in terms of radial speed and
+!  angle (stored in obs_meta).  The observation angle converts the
+!  velocity components to geographical EAST and North components.
+#  ifdef RADIAL_ANGLE_CCW_EAST
+!  The radial velocity observations are processed as magnitude and
+!  heading angle (obs_meta; radians) in the math convention: an
+!  azimuth that is counterclockwise from TRUE East.
+!
+!  In curvilinear coordinates, the radial forward problem is:
+!
+!     radial = u * COS(obs_meta - angler) + v * SIN(obs_meta - angler)
+#  else
+!  By default, the radial velocity observations are processed as
+!  magnitude and heading angle (obs_meta; radians) in the navigation
+!  convention: an azimuth that is clockwise from TRUE North.
+!
+!  In curvilinear coordinates, the radial forward problem is:
+!
+!     radial = u * SIN(obs_meta + angler) + v * COS(obs_meta + angler)
+#  endif
+!-----------------------------------------------------------------------
+!
+#  ifndef I4DVAR_ANA_SENSITIVITY
+        IF (wrtNLmod(ng).and.                                           &
+     &      (FOURDVAR(ng)%ObsCount(isRadial).gt.0)) THEN
+          DO iobs=Mstr,Mend
+            uradial(iobs)=IniVal
+            vradial(iobs)=IniVal
+          END DO
+
+#   ifdef CURVGRID
+!
+!  If curvilinear coordinates, interpolate grid rotation angle (radians)
+!  for each observation location.
+!
+          CALL extract_obs2d (ng, 0, Lm(ng)+1, 0, Mm(ng)+1,             &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        ObsState2Type(isRadial),                  &
+     &                        Mobs, Mstr, Mend,                         &
+     &                        rXmin(ng), rXmax(ng),                     &
+     &                        rYmin(ng), rYmax(ng),                     &
+     &                        time(ng), dt(ng),                         &
+     &                        ObsType, ObsVetting,                      &
+     &                        Tobs, Xobs, Yobs,                         &
+     &                        GRID(ng)%angler,                          &
+#    ifdef MASKING
+     &                        GRID(ng)%rmask,                           &
+#    endif
+     &                        ObsAngler)
+#   endif
+!
+!  Radial NLM u-component.
+!
+          DO k=1,N(ng)
+            DO j=Jstr-1,Jend+1
+              DO i=IstrU-1,Iend+1
+                GRID(ng)%z_v(i,j,k)=0.5_r8*(GRID(ng)%z_r(i-1,j,k)+      &
+     &                                      GRID(ng)%z_r(i  ,j,k))
+              END DO
+            END DO
+          END DO
+          CALL extract_obs3d (ng, 1, Lm(ng)+1, 0, Mm(ng)+1,             &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        ObsState2Type(isRadial),                  &
+     &                        Mobs, Mstr, Mend,                         &
+     &                        uXmin(ng), uXmax(ng),                     &
+     &                        uYmin(ng), uYmax(ng),                     &
+     &                        time(ng), dt(ng),                         &
+     &                        ObsType,  ObsVetting,                     &
+     &                        Tobs, Xobs, Yobs, Zobs,                   &
+     &                        OCEAN(ng)%u(:,:,:,NOUT),                  &
+     &                        GRID(ng)%z_v,                             &
+#   ifdef MASKING
+     &                        GRID(ng)%umask,                           &
+#   endif
+     &                        uradial)
+#   ifndef VERIFICATION
+            CALL extract_obs3d (ng, 1, Lm(ng)+1, 0, Mm(ng)+1,           &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          ObsState2Type(isRadial),                &
+     &                          Mobs, Mstr, Mend,                       &
+     &                          uXmin(ng), uXmax(ng),                   &
+     &                          uYmin(ng), uYmax(ng),                   &
+     &                          time(ng), dt(ng),                       &
+     &                          ObsType, ObsVetting,                    &
+     &                          Tobs, Xobs, Yobs, Zobs,                 &
+     &                          OCEAN(ng)%e_u(:,:,:,1),                 &
+     &                          GRID(ng)%z_v,                           &
+#    ifdef MASKING
+     &                          GRID(ng)%umask,                         &
+#    endif
+     &                          uBgErr)
+#   endif
+!
+!  Radial NLM v-component.
+!
+          DO k=1,N(ng)
+            DO j=JstrV-1,Jend+1
+              DO i=Istr-1,Iend+1
+                GRID(ng)%z_v(i,j,k)=0.5_r8*(GRID(ng)%z_r(i,j-1,k)+      &
+     &                                      GRID(ng)%z_r(i,j  ,k))
+              END DO
+            END DO
+          END DO
+          CALL extract_obs3d (ng, 0, Lm(ng)+1, 1, Mm(ng)+1,             &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        ObsState2Type(isRadial),                  &
+     &                        Mobs, Mstr, Mend,                         &
+     &                        vXmin(ng), vXmax(ng),                     &
+     &                        vYmin(ng), vYmax(ng),                     &
+     &                        time(ng), dt(ng),                         &
+     &                        ObsType, ObsVetting,                      &
+     &                        Tobs, Xobs, Yobs, Zobs,                   &
+     &                        OCEAN(ng)%v(:,:,:,NOUT),                  &
+     &                        GRID(ng)%z_v,                             &
+#   ifdef MASKING
+     &                        GRID(ng)%vmask,                           &
+#   endif
+     &                        vradial)
+#   ifndef VERIFICATION
+          CALL extract_obs3d (ng, 0, Lm(ng)+1, 1, Mm(ng)+1,             &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        ObsState2Type(isRadial),                  &
+     &                        Mobs, Mstr, Mend,                         &
+     &                        vXmin(ng), vXmax(ng),                     &
+     &                        vYmin(ng), vYmax(ng),                     &
+     &                        time(ng), dt(ng),                         &
+     &                        ObsType, ObsVetting,                      &
+     &                        Tobs, Xobs, Yobs, Zobs,                   &
+     &                        OCEAN(ng)%e_v(:,:,:,1),                   &
+     &                        GRID(ng)%z_v,                             &
+#    ifdef MASKING
+     &                        GRID(ng)%vmask,                           &
+#    endif
+     &                        vBgErr)
+#   endif
+!
+!  Compute NLM radial velocity.
+!
+          DO iobs=Mstr,Mend
+            IF (ObsType(iobs).eq.ObsState2Type(isRadial)) THEN
+#   ifdef RADIAL_ANGLE_CCW_EAST
+#    ifdef CURVGRID
+              angle=ObsMeta(iobs)-ObsAngler(iobs)
+              NLmodVal(iobs)=uradial(iobs)*COS(angle)+                  &
+     &                       vradial(iobs)*SIN(angle)
+#    else
+              NLmodVal(iobs)=uradial(iobs)*COS(ObsMeta(iobs))+          &
+     &                       vradial(iobs)*SIN(ObsMeta(iobs))
+#    endif
+#   else
+#    ifdef CURVGRID
+              angle=ObsMeta(iobs)+ObsAngler(iobs)
+              NLmodVal(iobs)=uradial(iobs)*SIN(angle)+                  &
+     &                       vradial(iobs)*COS(angle)
+#    else
+              NLmodVal(iobs)=uradial(iobs)*SIN(ObsMeta(iobs))+          &
+     &                       vradial(iobs)*COS(ObsMeta(iobs))
+#    endif
+#   endif
+#   ifndef VERIFICATION
+              BgErr(iobs)=MAX(uBgErr(iobs), vBgErr(iobs))
+#   endif
+            END IF
+          END DO
+        END IF
+#  endif
+#  ifdef TLM_OBS
+!
+!  TLM or RPM radial velocities.
+!
+        IF ((wrtTLmod(ng).or.(wrtRPmod(ng))).and.                       &
+     &      (FOURDVAR(ng)%ObsCount(isRadial).gt.0)) THEN
+          DO iobs=Mstr,Mend
+            uradial(iobs)=IniVal
+            vradial(iobs)=IniVal
+          END DO
+
+#   ifdef CURVGRID
+!
+!  If curvilinear coordinates, interpolate grid rotation angle (radians)
+!  for each observation location.
+!
+          CALL extract_obs2d (ng, 0, Lm(ng)+1, 0, Mm(ng)+1,             &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        ObsState2Type(isRadial),                  &
+     &                        Mobs, Mstr, Mend,                         &
+     &                        rXmin(ng), rXmax(ng),                     &
+     &                        rYmin(ng), rYmax(ng),                     &
+     &                        time(ng), dt(ng),                         &
+     &                        ObsType, ObsVetting,                      &
+     &                        Tobs, Xobs, Yobs,                         &
+     &                        GRID(ng)%angler,                          &
+#    ifdef MASKING
+     &                        GRID(ng)%rmask,                           &
+#    endif
+     &                        ObsAngler)
+#   endif
+!
+!  TLM or RPM radial u-component.
+!
+          DO k=1,N(ng)
+            DO j=Jstr-1,Jend+1
+              DO i=IstrU-1,Iend+1
+                GRID(ng)%z_v(i,j,k)=0.5_r8*(GRID(ng)%z_r(i-1,j,k)+      &
+     &                                      GRID(ng)%z_r(i  ,j,k))
+              END DO
+            END DO
+          END DO
+          CALL extract_obs3d (ng, 1, Lm(ng)+1, 0, Mm(ng)+1,             &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        ObsState2Type(isRadial),                  &
+     &                        Mobs, Mstr, Mend,                         &
+     &                        uXmin(ng), uXmax(ng),                     &
+     &                        uYmin(ng), uYmax(ng),                     &
+     &                        time(ng), dt(ng),                         &
+     &                        ObsType,  ObsVetting,                     &
+     &                        Tobs, Xobs, Yobs, Zobs,                   &
+     &                        OCEAN(ng)%tl_u(:,:,:,NOUT),               &
+     &                        GRID(ng)%z_v,                             &
+#   ifdef MASKING
+     &                        GRID(ng)%umask,                           &
+#   endif
+     &                        uradial)
+!
+!  TLM or RPM radial v-component.
+!
+          DO k=1,N(ng)
+            DO j=JstrV-1,Jend+1
+              DO i=Istr-1,Iend+1
+                GRID(ng)%z_v(i,j,k)=0.5_r8*(GRID(ng)%z_r(i,j-1,k)+      &
+     &                                      GRID(ng)%z_r(i,j  ,k))
+              END DO
+            END DO
+          END DO
+          CALL extract_obs3d (ng, 0, Lm(ng)+1, 1, Mm(ng)+1,             &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        ObsState2Type(isRadial),                  &
+     &                        Mobs, Mstr, Mend,                         &
+     &                        vXmin(ng), vXmax(ng),                     &
+     &                        vYmin(ng), vYmax(ng),                     &
+     &                        time(ng), dt(ng),                         &
+     &                        ObsType, ObsVetting,                      &
+     &                        Tobs, Xobs, Yobs, Zobs,                   &
+     &                        OCEAN(ng)%tl_v(:,:,:,NOUT),               &
+     &                        GRID(ng)%z_v,                             &
+#   ifdef MASKING
+     &                        GRID(ng)%vmask,                           &
+#   endif
+     &                        vradial)
+!
+!  Compute TLM or RPM radial velocity.
+!
+          DO iobs=Mstr,Mend
+            IF (ObsType(iobs).eq.ObsState2Type(isRadial)) THEN
+#   ifdef RADIAL_ANGLE_CCW_EAST
+#    ifdef CURVGRID
+              angle=ObsMeta(iobs)-ObsAngler(iobs)
+              TLmodVal(iobs)=uradial(iobs)*COS(angle)+                  &
+     &                       vradial(iobs)*SIN(angle)
+#    else
+              TLmodVal(iobs)=uradial(iobs)*COS(ObsMeta(iobs))+          &
+     &                       vradial(iobs)*SIN(ObsMeta(iobs))
+#    endif
+#   else
+#    ifdef CURVGRID
+              angle=ObsMeta(iobs)+ObsAngler(iobs)
+              TLmodVal(iobs)=uradial(iobs)*SIN(angle)+                  &
+     &                       vradial(iobs)*COS(angle)
+#    else
+              TLmodVal(iobs)=uradial(iobs)*SIN(ObsMeta(iobs))+          &
+     &                       vradial(iobs)*COS(ObsMeta(iobs))
+#    endif
+#   endif
+            END IF
+          END DO
+        END IF
+#  endif
+!
+!-----------------------------------------------------------------------
 !  Tracer type observations.
 !-----------------------------------------------------------------------
 !
         DO itrc=1,NT(ng)
-#  ifndef IS4DVAR_SENSITIVITY
+#  ifndef I4DVAR_ANA_SENSITIVITY
           IF (wrtNLmod(ng).and.                                         &
      &        (FOURDVAR(ng)%ObsCount(isTvar(itrc)).gt.0)) THEN
             CALL extract_obs3d (ng, 0, Lm(ng)+1, 0, Mm(ng)+1,           &
@@ -515,7 +801,7 @@
      &                          GRID(ng)%rmask,                         &
 #   endif
      &                          NLmodVal)
-#   ifdef BGQC
+#   ifndef VERIFICATION
             CALL extract_obs3d (ng, 0, Lm(ng)+1, 0, Mm(ng)+1,           &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          ObsState2Type(isTvar(itrc)),            &
@@ -571,7 +857,7 @@
           END DO
         END IF
 
-# if defined BGQC && !defined IS4DVAR_SENSITIVITY
+# if defined BGQC && !defined I4DVAR_ANA_SENSITIVITY
 !
 !-----------------------------------------------------------------------
 !  Perform the background quality control: check and reject observations
@@ -582,11 +868,11 @@
         IF (wrtObsScale(ng).and.wrtNLmod(ng)) THEN
           DO iobs=Mstr,Mend
             IF (ObsScale(iobs).ne.IniVal) THEN
-#  if defined IS4DVAR
+#  if defined I4DVAR
               df1=(ObsVal(iobs)-NLmodVal(iobs))/BgErr(iobs)
               df2=(1.0_r8/ObsErr(iobs))/(BgErr(iobs)*BgErr(iobs))
 #  elif defined WEAK_CONSTRAINT
-#    ifdef W4DVAR
+#    ifdef R4DVAR
               df1=(ObsVal(iobs)-TLmodVal(iobs))/BgErr(iobs)
               df2=ObsErr(iobs)/(BgErr(iobs)*BgErr(iobs))
 #    else
@@ -665,7 +951,7 @@
 # ifdef TLM_OBS
         IF (wrtTLmod(ng).or.wrtRPmod(ng)) THEN
           DO iobs=Mstr,Mend
-#  ifdef IS4DVAR_SENSITIVITY
+#  ifdef I4DVAR_ANA_SENSITIVITY
             TLmodVal(iobs)=ObsScale(iobs)*TLmodVal(iobs)*ObsErr(iobs)
 #  else
             TLmodVal(iobs)=ObsScale(iobs)*TLmodVal(iobs)
@@ -679,7 +965,7 @@
 !  Collect extracted data.
 !-----------------------------------------------------------------------
 !
-#  ifndef IS4DVAR_SENSITIVITY
+#  ifndef I4DVAR_ANA_SENSITIVITY
 
         IF (wrtNLmod(ng)) THEN
           CALL mp_collect (ng, model, Ncollect, IniVal,                 &
@@ -689,8 +975,7 @@
      &                     NLmodVal)
 #   endif
         END IF
-
-#   ifdef BGQC
+#   ifndef VERIFICATION
         IF (wrtObsScale(ng).and.wrtNLmod(ng)) THEN
           CALL mp_collect (ng, model, Ncollect, IniVal,                 &
 #    if defined WEAK_CONSTRAINT
@@ -725,7 +1010,7 @@
 #  endif
 # endif
 
-# if defined FOUR_DVAR && !defined IS4DVAR_SENSITIVITY
+# if defined FOUR_DVAR && !defined I4DVAR_ANA_SENSITIVITY
 !
 !-----------------------------------------------------------------------
 !  Compute and write initial and final model-observation misfit
@@ -735,11 +1020,11 @@
 !
         IF (wrtMisfit(ng)) THEN
           DO iobs=Mstr,Mend
-#  if defined IS4DVAR
+#  if defined I4DVAR
             misfit(iobs)=ObsScale(iobs)*SQRT(ObsErr(iobs))*             &
      &                   (NLmodVal(iobs)-ObsVal(iobs))
 #  elif defined WEAK_CONSTRAINT
-#   ifdef W4DVAR
+#   ifdef R4DVAR
             misfit(iobs)=ObsScale(iobs)/SQRT(ObsErr(iobs))*             &
      &                   (TLmodVal(iobs)-ObsVal(iobs))
 #   else
@@ -774,15 +1059,9 @@
      &                     __FILE__)) RETURN
           END IF
         END IF
+
 #  ifdef BGQC
         IF (wrtObsScale(ng).and.wrtNLmod(ng)) THEN
-          CALL netcdf_put_fvar (ng, model, DAV(ng)%name,                &
-     &                          Vname(1,idBgEr), BgErr(Mstr:),          &
-     &                          (/NstrObs(ng)/), (/Nobs(ng)/),          &
-     &                          ncid = DAV(ng)%ncid,                    &
-     &                          varid = DAV(ng)%Vid(idBgEr))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
           CALL netcdf_put_fvar (ng, model, DAV(ng)%name,                &
      &                          Vname(1,idBgTh), BgThresh(Mstr:),       &
      &                          (/NstrObs(ng)/), (/Nobs(ng)/),          &
@@ -793,11 +1072,75 @@
         END IF
 #  endif
 # endif
+
+# if defined FOUR_DVAR && !defined I4DVAR_ANA_SENSITIVITY
+!
+!-----------------------------------------------------------------------
+!  Write out variables needed to compute Desroziers et al. (2005)
+!  statistics.
+!-----------------------------------------------------------------------
+!
+        IF (wrtNLmod(ng)) THEN
+!
+! 4D-Var background error standard deviation at observation locations.
+!
+          IF (wrtObsScale(ng)) THEN
+            CALL netcdf_put_fvar (ng, model, DAV(ng)%name,              &
+     &                            Vname(1,idBgEr), BgErr(Mstr:),        &
+     &                            (/NstrObs(ng)/), (/Nobs(ng)/),        &
+     &                            ncid = DAV(ng)%ncid,                  &
+     &                            varid = DAV(ng)%Vid(idBgEr))
+            IF (FoundError(exit_flag, NoError, __LINE__,                &
+     &                      __FILE__)) RETURN
+          END IF
+!
+!  4D-Var innovation vector: observation minus background. Save initial
+!  background in the NLincrement vector.
+!
+          IF (Nrun.eq.1) THEN
+            DO iobs=Mstr,Mend
+              innovation(iobs)=ObsVal(iobs)-NLmodVal(iobs)
+              NLincrement(iobs)=NLmodVal(iobs)
+            END DO
+            CALL netcdf_put_fvar (ng, model, DAV(ng)%name,              &
+     &                            Vname(1,idInno), innovation(Mstr:),   &
+     &                            (/NstrObs(ng)/), (/Nobs(ng)/),        &
+     &                            ncid = DAV(ng)%ncid,                  &
+     &                            varid = DAV(ng)%Vid(idInno))
+            IF (FoundError(exit_flag, NoError, __LINE__,                &
+     &                     __FILE__)) RETURN
+          END IF
+!
+!  4D-Var increment (analysis minus background) and residual
+!  (observation minus analysis).
+!
+          IF (outer.eq.Nouter) THEN
+            DO iobs=Mstr,Mend
+              NLincrement(iobs)=NLmodVal(iobs)-NLincrement(iobs)
+              residual(iobs)=ObsVal(iobs)-NLmodVal(iobs)
+            END DO
+            CALL netcdf_put_fvar (ng, model, DAV(ng)%name,              &
+     &                            Vname(1,idIncr), NLincrement(Mstr:),  &
+     &                            (/NstrObs(ng)/), (/Nobs(ng)/),        &
+     &                            ncid = DAV(ng)%ncid,                  &
+     &                            varid = DAV(ng)%Vid(idIncr))
+            IF (FoundError(exit_flag, NoError, __LINE__,                &
+     &                     __FILE__)) RETURN
+            CALL netcdf_put_fvar (ng, model, DAV(ng)%name,              &
+     &                            Vname(1,idResi), residual(Mstr:),     &
+     &                            (/NstrObs(ng)/), (/Nobs(ng)/),        &
+     &                            ncid = DAV(ng)%ncid,                  &
+     &                            varid = DAV(ng)%Vid(idResi))
+            IF (FoundError(exit_flag, NoError, __LINE__,                &
+     &                     __FILE__)) RETURN
+          END IF
+        END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Write out data into output 4DVAR NetCDF file.
 !-----------------------------------------------------------------------
-# if defined FOUR_DVAR && !defined IS4DVAR_SENSITIVITY
+# if defined FOUR_DVAR && !defined I4DVAR_ANA_SENSITIVITY
 !
 !  Current outer and inner loop.
 !
@@ -828,10 +1171,14 @@
      &                   __FILE__)) RETURN
         END IF
 
-# ifndef IS4DVAR_SENSITIVITY
+# ifndef I4DVAR_ANA_SENSITIVITY
 !
 !  Nonlinear model or first guess (background) state at observation
-!  locations.
+!  locations. If 4D-Var, the values are written for every outer loop.
+!  Also, the final value is written as individual variable to
+!  facilitate ERDDAP processing. Notice that it is always overwritten
+!  to avoid complicated logic with all the 4D-Var drivers. The last
+!  one written correspont to the final values.
 !
 #  ifdef VERIFICATION
         IF (wrtNLmod(ng)) THEN
@@ -853,6 +1200,14 @@
      &                          varid = DAV(ng)%Vid(idNLmo))
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
+!
+          CALL netcdf_put_fvar (ng, model, DAV(ng)%name,                &
+     &                          Vname(1,idNLmf), NLmodVal(Mstr:),       &
+     &                          (/NstrObs(ng)/), (/Nobs(ng)/),          &
+     &                          ncid = DAV(ng)%ncid,                    &
+     &                          varid = DAV(ng)%Vid(idNLmf))
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
           haveNLmod(ng)=.TRUE.
         END IF
 #  endif
@@ -871,7 +1226,7 @@
      &                   __FILE__)) RETURN
           haveTLmod(ng)=.TRUE.
         END IF
-#  ifdef IS4DVAR_SENSITIVITY
+#  ifdef I4DVAR_ANA_SENSITIVITY
 #   ifdef OBS_IMPACT
 !
 !  Write the total observation impact.
@@ -926,8 +1281,8 @@
 #   endif
 #  endif
 # endif
-# if defined TL_W4DVAR          || defined W4DVAR             || \
-     defined W4DVAR_SENSITIVITY
+# if defined R4DVAR    || defined R4DVAR_ANA_SENSITIVITY || \
+     defined TL_R4DVAR
 !
 !  Write initial representer model increments at observation locations.
 !
@@ -959,7 +1314,7 @@
 !  Write Z-location of observation in grid coordinates, if applicable.
 !  This values are needed elsewhere when using the interpolation
 !  weight matrix.  Recall that the depth of observations can be in
-!  meters or grid coordinates.  Recall that since the model levels
+!  meters or grid coordinates.  Notice that since the model levels
 !  evolve in time, the fractional level coordinate is unknow during
 !  the processing of the observations.
 !
@@ -993,7 +1348,7 @@
         IF (wrtZetaRef(ng).and.balance(isFsur)) THEN
           status=nf_fwrite2d(ng, model, DAV(ng)%ncid,                   &
      &                       DAV(ng)%Vid(idFsur), 0, r2dvar,            &
-     &                       LBi, UBi, LBj, UBj, 1.0_r8,                &
+     &                       LBi, UBi, LBj, UBj, 1.0_dp,                &
 #  ifdef MASKING
      &                       GRID(ng) % rmask,                          &
 #  endif
@@ -1045,6 +1400,9 @@
             ELSE IF (ObsType(iobs).eq.ObsState2Type(isVvel)) THEN
               FOURDVAR(ng)%ObsReject(isVvel)=                           &
      &                              FOURDVAR(ng)%ObsReject(isVvel)+1
+            ELSE IF (ObsType(iobs).eq.ObsState2Type(isRadial)) THEN
+              FOURDVAR(ng)%ObsReject(isRadial)=                         &
+     &                              FOURDVAR(ng)%ObsReject(isRadial)+1
             ELSE
               DO itrc=1,NT(ng)
                 IF (ObsType(iobs).eq.ObsState2Type(isTvar(itrc))) THEN
@@ -1099,7 +1457,7 @@
         ELSE IF (wrtRPmod(ng)) THEN
           string='Wrote RPM state at observation locations,         '
 #  else
-#   ifdef IS4DVAR_SENSITIVITY
+#   ifdef I4DVAR_ANA_SENSITIVITY
         ELSE IF (wrtTLmod(ng)) THEN
           string='Wrote 4DVAR observation sensitivity,              '
 #   else
@@ -1119,7 +1477,7 @@
   10  FORMAT (10x,a,t25,4(1x,i10))
   20  FORMAT (/,10x,'Total',t47,2(1x,i10),                              &
      &        /,10x,'Obs Tally',t47,2(1x,i10),/)
-  30  FORMAT (1x,a,' datum = ',i7.7,' - ',i7.7,/)
+  30  FORMAT (1x,a,' datum = ',i0,' - ',i0,/)
 
       RETURN
       END SUBROUTINE obs_write

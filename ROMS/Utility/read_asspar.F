@@ -2,9 +2,9 @@
 #if defined FOUR_DVAR || defined VERIFICATION
       SUBROUTINE read_AssPar (model, inp, out, Lwrite)
 !
-!svn $Id: read_asspar.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: read_asspar.F 1038 2020-09-29 01:54:25Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -23,6 +23,8 @@
       USE mod_ncparam
       USE mod_scalars
 !
+      USE inp_decode_mod
+!
       USE strings_mod, ONLY : FoundError
       USE strings_mod, ONLY : uppercase
 !
@@ -35,15 +37,12 @@
 !
 !  Local variable declarations.
 !
-      logical :: find_file
-      logical :: Lvalue(1)
+      logical :: Lvalue(4)
 
       integer :: Mval, Npts, Nval
       integer :: i, ib, igrid, itrc, k, ng, status
       integer :: Cdim, Clen, Rdim
       integer :: Ivalue(1)
-
-      integer :: decode_line, load_i, load_l, load_r, load_s1d
 
       integer :: Nfiles(Ngrids)
 # if defined FOUR_DVAR  || defined VERIFICATION || \
@@ -62,7 +61,7 @@
 #  endif
       real(r8), dimension(MT,Ngrids) :: Rtracer
 # endif
-      real(r8), dimension(100) :: Rval
+      real(dp), dimension(nRval) :: Rval
       real(r8) :: Rvalue(1)
 
       character (len=1 ), parameter :: blank = ' '
@@ -72,7 +71,7 @@
       character (len=40 ) :: KeyWord
       character (len=50 ) :: label
       character (len=256) :: fname, line
-      character (len=256), dimension(200) :: Cval
+      character (len=256), dimension(nCval) :: Cval
 !
 !-----------------------------------------------------------------------
 !  Initialize.
@@ -157,6 +156,16 @@
             CASE ('Nimpact')
               Npts=load_i(Nval, Rval, 1, Ivalue)
               Nimpact=Ivalue(1)
+#  if defined SPLIT_4DVAR
+            CASE ('OuterLoop')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              OuterLoop=Ivalue(1)
+            CASE ('Phase4DVAR')
+              DO i=1,LEN(Phase4DVAR)
+                Phase4DVAR(i:i)=blank
+              END DO
+              Phase4DVAR=TRIM(ADJUSTL(Cval(Nval)))
+#  endif
             CASE ('NextraObs')
               Npts=load_i(Nval, Rval, 1, Ivalue)
               NextraObs=Ivalue(1)
@@ -181,37 +190,40 @@
             CASE ('tl_M3diff')
               Npts=load_r(Nval, Rval, Ngrids, tl_M3diff)
             CASE ('tl_Tdiff')
-              Npts=load_r(Nval, Rval, MT*Ngrids, Rtracer)
+              Npts=load_r(Nval, Rval, MT, Ngrids, Rtracer)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   tl_Tdiff(itrc,ng)=Rtracer(itrc,ng)
                 END DO
               END DO
             CASE ('LdefNRM')
-              Npts=load_l(Nval, Cval, 4*Ngrids, LdefNRM)
+              Npts=load_l(Nval, Cval, 4, Ngrids, LdefNRM)
             CASE ('LwrtNRM')
-              Npts=load_l(Nval, Cval, 4*Ngrids, LwrtNRM)
+              Npts=load_l(Nval, Cval, 4, Ngrids, LwrtNRM)
             CASE ('CnormM(isFsur)')
               IF (isFsur.eq.0) THEN
                 IF (Master) WRITE (out,210) 'isFsur'
                 exit_flag=5
                 RETURN
               END IF
-              Npts=load_l(Nval, Cval, 1, Cnorm(2,isFsur))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(2,isFsur)=Lvalue(1)
             CASE ('CnormM(isUbar)')
               IF (isUbar.eq.0) THEN
                 IF (Master) WRITE (out,210) 'isUbar'
                 exit_flag=5
                 RETURN
               END IF
-              Npts=load_l(Nval, Cval, 1, Cnorm(2,isUbar))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(2,isUbar)=Lvalue(1)
             CASE ('CnormM(isVbar)')
               IF (isVbar.eq.0) THEN
                 IF (Master) WRITE (out,210) 'isVbar'
                 exit_flag=5
                 RETURN
               END IF
-              Npts=load_l(Nval, Cval, 1, Cnorm(2,isVbar))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(2,isVbar)=Lvalue(1)
 #  ifdef SOLVE3D
             CASE ('CnormM(isUvel)')
               IF (isUvel.eq.0) THEN
@@ -219,14 +231,16 @@
                 exit_flag=5
                 RETURN
               END IF
-              Npts=load_l(Nval, Cval, 1, Cnorm(2,isUvel))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(2,isUvel)=Lvalue(1)
             CASE ('CnormM(isVvel)')
               IF (isVvel.eq.0) THEN
                 IF (Master) WRITE (out,210) 'isVvel'
                 exit_flag=5
                 RETURN
               END IF
-              Npts=load_l(Nval, Cval, 1, Cnorm(2,isVvel))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(2,isVvel)=Lvalue(1)
             CASE ('CnormM(isTvar)')
               IF (MAXVAL(isTvar).eq.0) THEN
                 IF (Master) WRITE (out,210) 'isTvar'
@@ -240,16 +254,21 @@
               END DO
 #  endif
             CASE ('CnormI(isFsur)')
-              Npts=load_l(Nval, Cval, 1, Cnorm(1,isFsur))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(1,isFsur)=Lvalue(1)
             CASE ('CnormI(isUbar)')
-              Npts=load_l(Nval, Cval, 1, Cnorm(1,isUbar))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(1,isUbar)=Lvalue(1)
             CASE ('CnormI(isVbar)')
-              Npts=load_l(Nval, Cval, 1, Cnorm(1,isVbar))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(1,isVbar)=Lvalue(1)
 #  ifdef SOLVE3D
             CASE ('CnormI(isUvel)')
-              Npts=load_l(Nval, Cval, 1, Cnorm(1,isUvel))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(1,isUvel)=Lvalue(1)
             CASE ('CnormI(isVvel)')
-              Npts=load_l(Nval, Cval, 1, Cnorm(1,isVvel))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(1,isVvel)=Lvalue(1)
             CASE ('CnormI(isTvar)')
               Npts=load_l(Nval, Cval, MT, Ltracer)
               DO itrc=1,MT
@@ -259,18 +278,23 @@
 #  endif
 #  ifdef ADJUST_BOUNDARY
             CASE ('CnormB(isFsur)')
-              Npts=load_l(Nval, Cval, 4, CnormB(isFsur,:))
+              Npts=load_l(Nval, Cval, 4, Lvalue)
+              CnormB(isFsur,1:4)=Lvalue(1:4)
             CASE ('CnormB(isUbar)')
-              Npts=load_l(Nval, Cval, 4, CnormB(isUbar,:))
+              Npts=load_l(Nval, Cval, 4, Lvalue)
+              CnormB(isUbar,1:4)=Lvalue(1:4)
             CASE ('CnormB(isVbar)')
-              Npts=load_l(Nval, Cval, 4, CnormB(isVbar,:))
+              Npts=load_l(Nval, Cval, 4, Lvalue)
+              CnormB(isVbar,1:4)=Lvalue(1:4)
 #   ifdef SOLVE3D
             CASE ('CnormB(isUvel)')
-              Npts=load_l(Nval, Cval, 4, CnormB(isUvel,:))
+              Npts=load_l(Nval, Cval, 4, Lvalue)
+              CnormB(isUvel,1:4)=Lvalue(1:4)
             CASE ('CnormB(isVvel)')
-              Npts=load_l(Nval, Cval, 4, CnormB(isVvel,:))
+              Npts=load_l(Nval, Cval, 4, Lvalue)
+              CnormB(isVvel,1:4)=Lvalue(1:4)
             CASE ('CnormB(isTvar)')
-              Npts=load_l(Nval, Cval, MT*4, Lboundary)
+              Npts=load_l(Nval, Cval, MT, 4, Lboundary)
               DO ib=1,4
                 DO itrc=1,MT
                   i=isTvar(itrc)
@@ -286,14 +310,16 @@
                 exit_flag=5
                 RETURN
               END IF
-              Npts=load_l(Nval, Cval, 1, Cnorm(1,isUstr))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(1,isUstr)=Lvalue(1)
             CASE ('CnormF(isVstr)')
               IF (isVstr.eq.0) THEN
                 IF (Master) WRITE (out,210) 'isVstr'
                 exit_flag=5
                 RETURN
               END IF
-              Npts=load_l(Nval, Cval, 1, Cnorm(1,isVstr))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Cnorm(1,isVstr)=Lvalue(1)
 #  endif
 #  if defined ADJUST_STFLUX && defined SOLVE3D
             CASE ('CnormF(isTsur)')
@@ -308,14 +334,20 @@
                 Cnorm(1,i)=Ltracer(itrc)
               END DO
 #  endif
+#  ifdef SALINITY
             CASE ('balance(isSalt)')
-              Npts=load_l(Nval, Cval, 1, balance(isTvar(isalt)))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              balance(isTvar(isalt))=Lvalue(1)
+#  endif
             CASE ('balance(isFsur)')
-              Npts=load_l(Nval, Cval, 1, balance(isFsur))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              balance(isFsur)=Lvalue(1)
             CASE ('balance(isVbar)')
-              Npts=load_l(Nval, Cval, 1, balance(isVbar))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              balance(isVbar)=Lvalue(1)
             CASE ('balance(isVvel)')
-              Npts=load_l(Nval, Cval, 1, balance(isVvel))
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              balance(isVvel)=Lvalue(1)
             CASE ('Nmethod')
               Npts=load_i(Nval, Rval, Ngrids, Nmethod)
             CASE ('Rscheme')
@@ -341,7 +373,7 @@
             CASE ('HdecayM(isVvel)')
               Npts=load_r(Nval, Rval, Ngrids, Hdecay(2,isVvel,:))
             CASE ('HdecayM(isTvar)')
-              Npts=load_r(Nval, Rval, MT*Ngrids, Rtracer)
+              Npts=load_r(Nval, Rval, MT, Ngrids, Rtracer)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   Hdecay(2,isTvar(itrc),ng)=Rtracer(itrc,ng)
@@ -352,7 +384,7 @@
             CASE ('VdecayM(isVvel)')
               Npts=load_r(Nval, Rval, Ngrids, Vdecay(2,isVvel,:))
             CASE ('VdecayM(isTvar)')
-              Npts=load_r(Nval, Rval, MT*Ngrids, Rtracer)
+              Npts=load_r(Nval, Rval, MT, Ngrids, Rtracer)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   Vdecay(2,isTvar(itrc),ng)=Rtracer(itrc,ng)
@@ -371,7 +403,7 @@
             CASE ('TdecayM(isVvel)')
               Npts=load_r(Nval, Rval, Ngrids, Tdecay(isVvel,:))
             CASE ('TdecayM(isTvar)')
-              Npts=load_r(Nval, Rval, MT*Ngrids, Rtracer)
+              Npts=load_r(Nval, Rval, MT, Ngrids, Rtracer)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   Tdecay(isTvar(itrc),ng)=Rtracer(itrc,ng)
@@ -390,7 +422,7 @@
             CASE ('HdecayI(isVvel)')
               Npts=load_r(Nval, Rval, Ngrids, Hdecay(1,isVvel,:))
             CASE ('HdecayI(isTvar)')
-              Npts=load_r(Nval, Rval, MT*Ngrids, Rtracer)
+              Npts=load_r(Nval, Rval, MT, Ngrids, Rtracer)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   Hdecay(1,isTvar(itrc),ng)=Rtracer(itrc,ng)
@@ -401,7 +433,7 @@
             CASE ('VdecayI(isVvel)')
               Npts=load_r(Nval, Rval, Ngrids, Vdecay(1,isVvel,:))
             CASE ('VdecayI(isTvar)')
-              Npts=load_r(Nval, Rval, MT*Ngrids, Rtracer)
+              Npts=load_r(Nval, Rval, MT, Ngrids, Rtracer)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   Vdecay(1,isTvar(itrc),ng)=Rtracer(itrc,ng)
@@ -410,18 +442,18 @@
 #  endif
 #  ifdef ADJUST_BOUNDARY
             CASE ('HdecayB(isFsur)')
-              Npts=load_r(Nval, Rval, 4*Ngrids, HdecayB(isFsur,:,:))
+              Npts=load_r(Nval, Rval, 4, Ngrids, HdecayB(isFsur,:,:))
             CASE ('HdecayB(isUbar)')
-              Npts=load_r(Nval, Rval, 4*Ngrids, HdecayB(isUbar,:,:))
+              Npts=load_r(Nval, Rval, 4, Ngrids, HdecayB(isUbar,:,:))
             CASE ('HdecayB(isVbar)')
-              Npts=load_r(Nval, Rval, 4*Ngrids, HdecayB(isVbar,:,:))
+              Npts=load_r(Nval, Rval, 4, Ngrids, HdecayB(isVbar,:,:))
 #   ifdef SOLVE3D
             CASE ('HdecayB(isUvel)')
-              Npts=load_r(Nval, Rval, 4*Ngrids, HdecayB(isUvel,:,:))
+              Npts=load_r(Nval, Rval, 4, Ngrids, HdecayB(isUvel,:,:))
             CASE ('HdecayB(isVvel)')
-              Npts=load_r(Nval, Rval, 4*Ngrids, HdecayB(isVvel,:,:))
+              Npts=load_r(Nval, Rval, 4, Ngrids, HdecayB(isVvel,:,:))
             CASE ('HdecayB(isTvar)')
-              Npts=load_r(Nval, Rval, 4*MT*Ngrids, Rboundary)
+              Npts=load_r(Nval, Rval, 4, MT, Ngrids, Rboundary)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   DO ib=1,4
@@ -430,11 +462,11 @@
                 END DO
               END DO
             CASE ('VdecayB(isUvel)')
-              Npts=load_r(Nval, Rval, 4*Ngrids, VdecayB(isUvel,:,:))
+              Npts=load_r(Nval, Rval, 4, Ngrids, VdecayB(isUvel,:,:))
             CASE ('VdecayB(isVvel)')
-              Npts=load_r(Nval, Rval, 4*Ngrids, VdecayB(isVvel,:,:))
+              Npts=load_r(Nval, Rval, 4, Ngrids, VdecayB(isVvel,:,:))
             CASE ('VdecayB(isTvar)')
-              Npts=load_r(Nval, Rval, 4*MT*Ngrids, Rboundary)
+              Npts=load_r(Nval, Rval, 4, MT, Ngrids, Rboundary)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   DO ib=1,4
@@ -452,7 +484,7 @@
 #  endif
 #  if defined ADJUST_STFLUX && defined SOLVE3D
             CASE ('HdecayF(isTsur)')
-              Npts=load_r(Nval, Rval, MT*Ngrids, Rtracer)
+              Npts=load_r(Nval, Rval, MT, Ngrids, Rtracer)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   Hdecay(1,isTsur(itrc),ng)=Rtracer(itrc,ng)
@@ -473,7 +505,7 @@
             CASE ('S_bgqc(isVvel)')
               Npts=load_r(Nval, Rval, Ngrids, S_bgqc(isVvel,:))
             CASE ('S_bgqc(isTvar)')
-              Npts=load_r(Nval, Rval, MT*Ngrids, Rtracer)
+              Npts=load_r(Nval, Rval, MT, Ngrids, Rtracer)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   S_bgqc(isTvar(itrc),ng)=Rtracer(itrc,ng)
@@ -488,15 +520,15 @@
                 allocate ( P_bgqc(MAXVAL(Nprovenance),Ngrids))
               END IF
             CASE ('Iprovenance')
-              Mval=MAXVAL(Nprovenance)*Ngrids
-              Npts=load_i(Nval, Rval, Mval, Iprovenance)
+              Mval=MAXVAL(Nprovenance)
+              Npts=load_i(Nval, Rval, Mval, Ngrids, Iprovenance)
             CASE ('P_bgqc')
-              Mval=MAXVAL(Nprovenance)*Ngrids
-              Npts=load_r(Nval, Rval, Mval, P_bgqc)
+              Mval=MAXVAL(Nprovenance)
+              Npts=load_r(Nval, Rval, Mval, Ngrids, P_bgqc)
 #  endif
 #  if defined ADJUST_STFLUX && defined SOLVE3D
             CASE ('Lstflux')
-              Npts=load_l(Nval, Cval, MT*Ngrids, Ltsur)
+              Npts=load_l(Nval, Cval, MT, Ngrids, Ltsur)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   Lstflux(itrc,ng)=Ltsur(itrc,ng)
@@ -505,21 +537,21 @@
 #  endif
 #  ifdef ADJUST_BOUNDARY
             CASE ('Lobc(isFsur)')
-              Npts=load_l(Nval, Cval, 4*Ngrids, Lbry)
+              Npts=load_l(Nval, Cval, 4, Ngrids, Lbry)
               DO ng=1,Ngrids
                 DO ib=1,4
                   Lobc(ib,isFsur,ng)=Lbry(ib,ng)
                 END DO
               END DO
             CASE ('Lobc(isUbar)')
-              Npts=load_l(Nval, Cval, 4*Ngrids, Lbry)
+              Npts=load_l(Nval, Cval, 4, Ngrids, Lbry)
               DO ng=1,Ngrids
                 DO ib=1,4
                   Lobc(ib,isUbar,ng)=Lbry(ib,ng)
                 END DO
               END DO
             CASE ('Lobc(isVbar)')
-              Npts=load_l(Nval, Cval, 4*Ngrids, Lbry)
+              Npts=load_l(Nval, Cval, 4, Ngrids, Lbry)
               DO ng=1,Ngrids
                 DO ib=1,4
                   Lobc(ib,isVbar,ng)=Lbry(ib,ng)
@@ -527,21 +559,21 @@
               END DO
 #   ifdef SOLVE3D
             CASE ('Lobc(isUvel)')
-              Npts=load_l(Nval, Cval, 4*Ngrids, Lbry)
+              Npts=load_l(Nval, Cval, 4, Ngrids, Lbry)
               DO ng=1,Ngrids
                 DO ib=1,4
                   Lobc(ib,isUvel,ng)=Lbry(ib,ng)
                 END DO
               END DO
             CASE ('Lobc(isVvel)')
-              Npts=load_l(Nval, Cval, 4*Ngrids, Lbry)
+              Npts=load_l(Nval, Cval, 4, Ngrids, Lbry)
               DO ng=1,Ngrids
                 DO ib=1,4
                   Lobc(ib,isVvel,ng)=Lbry(ib,ng)
                 END DO
               END DO
             CASE ('Lobc(isTvar)')
-              Npts=load_l(Nval, Cval, 4*MT*Ngrids, Lbry_trc)
+              Npts=load_l(Nval, Cval, 4, MT, Ngrids, Lbry_trc)
               DO ng=1,Ngrids
                 DO itrc=1,NT(ng)
                   i=isTvar(itrc)
@@ -555,59 +587,87 @@
             CASE ('STDnameI')
               label='STD - initial conditions standard deviation'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, STD(1,:))
+     &                      Ngrids, Nfiles, 4, 1, STD)
             CASE ('STDnameM')
               label='STD - model error standard deviation'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, STD(2,:))
+     &                      Ngrids, Nfiles, 4, 2, STD)
             CASE ('STDnameB')
               label='STD - boundary conditions standard deviation'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, STD(3,:))
+     &                      Ngrids, Nfiles, 4, 3, STD)
             CASE ('STDnameF')
               label='STD - surface forcing standard deviation'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, STD(4,:))
+     &                      Ngrids, Nfiles, 4, 4, STD)
             CASE ('NRMnameI')
               label='NRM - initial conditions normalization'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, NRM(1,:))
+     &                      Ngrids, Nfiles, 4, 1, NRM)
             CASE ('NRMnameM')
               label='NRM - model error normalization'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, NRM(2,:))
+     &                      Ngrids, Nfiles, 4, 2, NRM)
             CASE ('NRMnameB')
               label='NRM - boundary conditions normalization'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, NRM(3,:))
+     &                      Ngrids, Nfiles, 4, 3, NRM)
             CASE ('NRMnameF')
               label='NRM - surface forcing normalization'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, NRM(4,:))
+     &                      Ngrids, Nfiles, 4, 4, NRM)
             CASE ('OBSname')
               label='OBS - data assimilation observations'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, OBS)
+     &                      Ngrids, Nfiles, OBS)
             CASE ('HSSname')
               label='HSS - Hessian eigenvectors'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, HSS)
+     &                      Ngrids, Nfiles, HSS)
             CASE ('LCZname')
               label='LCZ - Lanczos vectors'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, LCZ)
+     &                      Ngrids, Nfiles, LCZ)
             CASE ('LZEname')
               label='LZE - Time-evolved Lanczos vectors'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, LZE)
+     &                      Ngrids, Nfiles, LZE)
             CASE ('MODname')
               label='DAV - 4D-Var data assimilation variables'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, DAV)
+     &                      Ngrids, Nfiles, DAV)
             CASE ('ERRname')
               label='ERR - 4D-Var posterior error covariance'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Nfiles, ERR)
+     &                      Ngrids, Nfiles, ERR)
+#  ifdef SP4DVAR
+            CASE ('SPTname')
+              label='SPT - TLM Arnoldi vectors'
+              Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
+     &                      Ngrids, Nfiles, SPT)
+            CASE ('SPAname')
+              label='SPA - ADM Arnoldi vectors'
+              Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
+     &                      Ngrids, Nfiles, SPA)
+            CASE ('SCTname')
+              label='SCT - TLM Arnoldi vectors'
+              Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
+     &                      Ngrids, Nfiles, SCT)
+            CASE ('SCAname')
+              label='SCA - ADM Arnoldi vectors'
+              Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
+     &                      Ngrids, Nfiles, SCA)
+#  endif
+#  if defined RBL4DVAR_FCT_SENSITIVITY && defined OBS_SPACE
+            CASE ('OIFnameA')
+              label='OIFA - observartion impacts forecast, analysis'
+              Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
+     &                      Ngrids, Nfiles, OIFA)
+            CASE ('OIFnameB')
+              label='OIFB - observartion impacts forecast, background'
+              Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
+     &                      Ngrids, Nfiles, OIFB)
+#  endif
           END SELECT
         END IF
       END DO
@@ -665,7 +725,7 @@
 !  to Ninner.
 !
       IF ((Nvct.lt.1).or.(Nvct.gt.Ninner)) THEN
-        IF (Lwrite) THEN
+        IF (Master) THEN
           WRITE (out,55) 'Illegal parameter for array modes, Nvct = ',  &
      &                   Nvct, Ninner, '1 =< Nvct =< Ninner.'
         END IF
@@ -680,6 +740,7 @@
 !-----------------------------------------------------------------------
 !
 #   ifdef SOLVE3D
+#    ifdef SALINITY
       IF (.not.balance(isTvar(isalt)).and.balance(isFsur)) THEN
         balance(isTvar(isalt))=.TRUE.
       END IF
@@ -689,6 +750,7 @@
       IF (balance(isTvar(isalt))) THEN
         balance(isTvar(itemp))=.TRUE.
       END IF
+#    endif
       IF (balance(isVvel)) THEN
         balance(isUvel)=.TRUE.
       END IF
@@ -706,7 +768,7 @@
 !  Report input parameters.
 !-----------------------------------------------------------------------
 !
-      IF (Lwrite) THEN
+      IF (Master.and.Lwrite) THEN
         DO ng=1,Ngrids
 #  if defined FOUR_DVAR || defined VERIFICATION
           WRITE (out,60) ng
@@ -727,15 +789,15 @@
 #     endif
 #    endif
 #   endif
-#   ifndef IS4DVAR_SENSITIVITY
-#    ifdef IS4DVAR
+#   ifndef I4DVAR_ANA_SENSITIVITY
+#    ifdef I4DVAR
           WRITE (out,100) GradErr, 'GradErr',                           &
      &            'Upper bound on relative error of the gradient.'
-          WRITE (out,100) HevecErr, 'HevecErr',                         &
-     &            'Accuracy required for Hessian eigenvectors.'
           WRITE (out,70) LhessianEV, 'LhessianEV',                      &
      &            'Switch to compute Hessian eigenvectors.'
 #    endif
+          WRITE (out,100) HevecErr, 'HevecErr',                         &
+     &            'Accuracy required for eigenvectors.'
 #    ifdef WEAK_CONSTRAINT
           WRITE (out,70) LhotStart, 'LhotStart',                        &
      &            'Switch for hot start of subsequent outer loops.'
@@ -769,8 +831,10 @@
           WRITE (out,70) balance(isFsur), 'balance(isFsur)',            &
                   'Switch to include free-surface in balance operator.'
 #    ifdef SOLVE3D
+#     ifdef SALINITY
           WRITE (out,70) balance(isTvar(isalt)), 'balance(isSalt)',     &
                   'Switch to include salinity in balance operator.'
+#     endif
           WRITE (out,70) balance(isVvel), 'balance(isVvel)',            &
                   'Switch to include 3D momentum in balance operator.'
 #    else
@@ -791,20 +855,48 @@
           WRITE (out,80) NpostI, 'NpostI',                              &
      &            'Number of Lanczos iterations in posterior analysis.'
 #   endif
-#   if defined W4DPSAS_SENSITIVITY || defined W$DVAR_SENSITIVITY
-          WRITE (out,80) Nimpact, 'Nimpact',                             &
+#   if defined RBL4DVAR_ANA_SENSITIVITY || \
+       defined RBL4DVAR_FCT_SENSITIVITY || \
+       defined R4DVAR_ANA_SENSITIVITY
+          WRITE (out,80) Nimpact, 'Nimpact',                            &
      &            'Observations impact/sensitivity outer loop to use.'
           IF (Nimpact.gt.Nouter) THEN
             IF (Master) THEN
-              WRITE (out,240) 'Nimpact', Nimpact,                        &
+              WRITE (out,240) 'Nimpact', Nimpact,                       &
      &              'must be less or equal than Nouter'
             END IF
             exit_flag=5
             RETURN
           END IF
 #   endif
+#   if defined ARRAY_MODES
+          WRITE (out,80) Nimpact, 'Nimpact',                            &
+     &            'Array mode outer loop.'
+          IF (Nimpact.gt.Nouter) THEN
+            IF (Master) THEN
+              WRITE (out,240) 'Nimpact', Nimpact,                       &
+     &              'must be less or equal than Nouter'
+            END IF
+            exit_flag=5
+            RETURN
+          END IF
+#   endif
+#   if defined SPLIT_4DVAR
+          WRITE (out,80) OuterLoop, 'OuterLoop',                        &
+     &            'Current outer loop counter.'
+          IF (OuterLoop.gt.Nouter) THEN
+            IF (Master) THEN
+              WRITE (out,240) 'OuterLoop', OuterLoop,                   &
+     &              'must be less or equal than Nouter'
+            END IF
+            exit_flag=5
+            RETURN
+          END IF
+          WRITE (out,95) Phase4DVAR(1:10), 'Phase4DVAR',                &
+     &            'Current 4D-Var phase (first 10 characters).'
+#   endif
 #   ifndef TLM_CHECK
-#    ifndef IS4DVAR_SENSITIVITY
+#    ifndef I4DVAR_ANA_SENSITIVITY
           WRITE (out,170) LdefNRM(1:4,ng), 'LdefNRM',                   &
      &            'Switch to create a normalization NetCDF file.'
           WRITE (out,170) LwrtNRM(1:4,ng), 'LwrtNRM',                   &
@@ -822,9 +914,9 @@
      &            'Number of iterations for randomization.'
             END IF
           END IF
-#     if defined SENSITIVITY_4DVAR || \
-         defined TL_W4DPSAS        || defined TL_W4DVAR || \
-         defined W4DPSAS           || defined W4DVAR
+#     if defined RBL4DVAR           || defined R4DVAR    || \
+         defined SENSITIVITY_4DVAR  || defined SP4DVAR   || \
+         defined TL_RBL4DVAR        || defined TL_R4DVAR
           IF (ANY(LwrtNRM(:,ng))) THEN
             WRITE (out,70) Cnorm(2,isFsur), 'CnormM(isFsur)',           &
      &            'Compute model 2D RHO-normalization factors.'
@@ -929,9 +1021,9 @@
      &            'Vertical diffusion factor, boundary conditions.'
 #     endif
 #    endif
-#    if defined SENSITIVITY_4DVAR || \
-        defined TL_W4DPSAS        || defined TL_W4DVAR || \
-        defined W4DPSAS           || defined W4DVAR
+#    if defined RBL4DVAR           || defined R4DVAR    || \
+        defined SENSITIVITY_4DVAR  || defined SP4DVAR   || \
+        defined TL_RBL4DVAR        || defined TL_R4DVAR
          IF (nADJ(ng).lt.ntimes(ng)) THEN
             WRITE (out,120) Hdecay(2,isFsur,ng), 'HdecayM(isFsur)',     &
      &            'Model decorrelation H-scale (m), free-surface.'
@@ -1153,11 +1245,11 @@
 #   endif
 #  endif
           IF (NextraObs.gt.0) THEN
-            WRITE (out,80) NextraObs, 'NextraObs',                       &
+            WRITE (out,80) NextraObs, 'NextraObs',                      &
      &            'Number of extra-observations classes to process.'
             DO i=1,NextraObs
-              WRITE (out,85) ExtraIndex(i), 'ExtraIndex', i,             &
-     &            'Extra-observation type index for: '//                 &
+              WRITE (out,85) ExtraIndex(i), 'ExtraIndex', i,            &
+     &            'Extra-observation type index for: '//                &
      &            TRIM(ExtraName(i))
             END DO
           END IF
@@ -1168,52 +1260,55 @@
 !
           WRITE (out,150)
 #  ifdef VERIFICATION
-          WRITE (out,160) ' Verification Parameters File:  ',           &
+          WRITE (out,160) '     Verification Parameters File:  ',       &
      &                    TRIM(aparnam)
 #  else
-          WRITE (out,160) ' Assimilation Parameters File:  ',           &
+          WRITE (out,160) '     Assimilation Parameters File:  ',       &
      &                    TRIM(aparnam)
 #  endif
-#  if defined FOUR_DVAR || (defined HESSIAN_SV && defined BNORM)
-#   if defined IS4DVAR          || defined OBS_SENSITIVITY || \
-       defined OPT_OBSERVATIONS || defined WEAK_CONSTRAINT
-#    if defined SENSITIVITY_4DVAR || \
-        defined TL_W4DPSAS        || defined TL_W4DVAR || \
-        defined W4DPSAS           || defined W4DVAR
+#  if defined FOUR_DVAR           || \
+     (defined HESSIAN_SV          && defined BNORM)
+#   if defined I4DVAR             || defined OBS_SENSITIVITY || \
+       defined OPT_OBSERVATIONS   || defined WEAK_CONSTRAINT
+#    if defined RBL4DVAR          || defined R4DVAR          || \
+        defined SENSITIVITY_4DVAR || defined SP4DVAR         || \
+        defined TL_RBL4DVAR       || defined TL_R4DVAR
           fname=STD(2,ng)%name
-          IF (.not.find_file(ng, fname, 'STDnameM')) GO TO 30
-          WRITE (out,160) '               Model STD File:  ',           &
-     &                    TRIM(fname)
+          IF (NSA.eq.2) THEN
+            IF (.not.find_file(ng, fname, 'STDnameM')) GO TO 30
+            WRITE (out,160) '                   Model STD File:  ',     &
+     &                      TRIM(fname)
+          END IF
 #    endif
           fname=STD(1,ng)%name
           IF (.not.find_file(ng, fname, 'STDnameI')) GO TO 30
-          WRITE (out,160) '  Initial Conditions STD File:  ',           &
+          WRITE (out,160) '      Initial Conditions STD File:  ',       &
      &                    TRIM(fname)
 #    ifdef ADJUST_BOUNDARY
           fname=STD(3,ng)%name
           IF (.not.find_file(ng, fname, 'STDnameB')) GO TO 30
-          WRITE (out,160) ' Boundary Conditions STD File:  ',           &
+          WRITE (out,160) '     Boundary Conditions STD File:  ',       &
      &                    TRIM(fname)
 #    endif
 #    if defined ADJUST_WSTRESS || defined ADJUST_STFLUX
           fname=STD(4,ng)%name
           IF (.not.find_file(ng, fname, 'STDnameF')) GO TO 30
-          WRITE (out,160) '     Surface Forcing STD File:  ',           &
+          WRITE (out,160) '         Surface Forcing STD File:  ',       &
      &                    TRIM(fname)
 #    endif
 #   endif
-#   if defined SENSITIVITY_4DVAR || defined TL_W4DPSAS  || \
-       defined TL_W4DVAR         || defined W4DPSAS     || \
-       defined W4DVAR
+#   if defined RBL4DVAR          || defined R4DVAR    || \
+       defined SENSITIVITY_4DVAR || defined SP4DVAR   || \
+       defined TL_RBL4DVAR       || defined TL_R4DVAR
           fname=NRM(2,ng)%name
-          WRITE (out,160) '              Model Norm File:  ',           &
+          WRITE (out,160) '                  Model Norm File:  ',       &
      &                    TRIM(fname)
           IF (.not.LdefNRM(2,ng)) THEN
             IF (.not.find_file(ng, fname, 'NRMnameM')) GO TO 30
           END IF
 #   elif defined CORRELATION
           fname=NRM(2,ng)%name
-          WRITE (out,160) '              Model Norm File:  ',           &
+          WRITE (out,160) '                  Model Norm File:  ',       &
      &                    TRIM(fname)
           IF (.not.LdefNRM(2,ng).and.LwrtNRM(2,ng)) THEN
             IF (.not.find_file(ng, fname, 'NRMnameM')) GO TO 30
@@ -1221,14 +1316,14 @@
 #   endif
 #   if defined CORRELATION
           fname=NRM(1,ng)%name
-          WRITE (out,160) ' Initial Conditions Norm File:  ',           &
+          WRITE (out,160) '     Initial Conditions Norm File:  ',       &
      &                    TRIM(fname)
           IF (.not.LdefNRM(1,ng).and.LwrtNRM(1,ng)) THEN
             IF (.not.find_file(ng, fname, 'NRMnameI')) GO TO 30
           END IF
 #   else
           fname=NRM(1,ng)%name
-          WRITE (out,160) ' Initial Conditions Norm File:  ',           &
+          WRITE (out,160) '     Initial Conditions Norm File:  ',       &
      &                    TRIM(fname)
           IF (.not.LdefNRM(1,ng)) THEN
             IF (.not.find_file(ng, fname, 'NRMnameI')) GO TO 30
@@ -1237,14 +1332,14 @@
 #   ifdef ADJUST_BOUNDARY
 #    ifdef CORRELATION
           fname=NRM(3,ng)%name
-          WRITE (out,160) 'Boundary Conditions Norm File:  ',           &
+          WRITE (out,160) '    Boundary Conditions Norm File:  ',       &
      &                    TRIM(fname)
           IF (.not.LdefNRM(3,ng).and.LwrtNRM(3,ng)) THEN
             IF (.not.find_file(ng, fname, 'NRMnameB')) GO TO 30
           END IF
 #    else
           fname=NRM(3,ng)%name
-          WRITE (out,160) 'Boundary Conditions Norm File:  ',           &
+          WRITE (out,160) '    Boundary Conditions Norm File:  ',       &
      &                    TRIM(fname)
           IF (.not.LdefNRM(3,ng)) THEN
             IF (.not.find_file(ng, fname, 'NRMnameB')) GO TO 30
@@ -1254,14 +1349,14 @@
 #   if defined ADJUST_WSTRESS || defined ADJUST_STFLUX
 #    ifdef CORRELATION
           fname=NRM(4,ng)%name
-          WRITE (out,160) '    Surface Forcing Norm File:  ',           &
+          WRITE (out,160) '        Surface Forcing Norm File:  ',       &
      &                    TRIM(fname)
           IF (.not.LdefNRM(4,ng).and.LwrtNRM(4,ng)) THEN
             IF (.not.find_file(ng, fname, 'NRMnameF')) GO TO 30
           END IF
 #    else
           fname=NRM(4,ng)%name
-          WRITE (out,160) '    Surface Forcing Norm File:  ',           &
+          WRITE (out,160) '        Surface Forcing Norm File:  ',       &
      &                    TRIM(fname)
           IF (.not.LdefNRM(4,ng)) THEN
             IF (.not.find_file(ng, fname, 'NRMnameF')) GO TO 30
@@ -1271,36 +1366,61 @@
 #   if !(defined CORRELATION || defined OPT_OBSERVATIONS)
           fname=OBS(ng)%name
           IF (.not.find_file(ng, fname, 'OBSname')) GO TO 30
-          WRITE (out,160) '      Input observations File:  ',           &
+          WRITE (out,160) '          Input observations File:  ',       &
      &                    TRIM(fname)
 #   endif
-          WRITE (out,160) '    Input/Output Lanczos File:  ',           &
+#   if !defined CORRELATION
+          WRITE (out,160) '        Input/Output Lanczos File:  ',       &
      &                    TRIM(LCZ(ng)%name)
-#   ifndef IS4DVAR_SENSITIVITY
-          WRITE (out,160) '    Input/Output Hessian File:  ',           &
+#    ifndef I4DVAR_ANA_SENSITIVITY
+          WRITE (out,160) '        Input/Output Hessian File:  ',       &
      &                    TRIM(HSS(ng)%name)
-#   endif
-#   ifdef EVOLVED_LCZ
-          WRITE (out,160) '  Output evolved Lanczos File:  ',           &
+#    endif
+#    ifdef EVOLVED_LCZ
+          WRITE (out,160) '      Output evolved Lanczos File:  ',       &
      &                    TRIM(LZE(ng)%name)
+#    endif
 #   endif
 #  endif
-#  ifdef VERIFICATION
+#  if !defined CORRELATION
+#   ifdef VERIFICATION
           fname=OBS(ng)%name
           IF (.not.find_file(ng, fname, 'OBSname')) GO TO 30
-          WRITE (out,160) '      Input observations File:  ',           &
+          WRITE (out,160) '          Input observations File:  ',       &
      &                    TRIM(fname)
-          WRITE (out,160) '     Output verification File:  ',           &
+          WRITE (out,160) '         Output verification File:  ',       &
      &                    TRIM(DAV(ng)%name)
-#  else
-          WRITE (out,160) '            Output 4DVAR File:  ',           &
+#   else
+#    ifdef SP4DVAR
+          WRITE (out,160) '    Input/Output TLM Arnoldi File:  ',       &
+     &                    TRIM(SPT(ng)%name)
+          WRITE (out,160) '    Input/Output ADM Arnoldi File:  ',       &
+     &                    TRIM(SPA(ng)%name)
+          WRITE (out,160) '    Input/Output TLM Scratch File:  ',       &
+     &                    TRIM(SCT(ng)%name)
+          WRITE (out,160) '    Input/Output ADM Scratch File:  ',       &
+     &                    TRIM(SCA(ng)%name)
+#    endif
+          WRITE (out,160) '               Output 4D-Var File:  ',       &
      &                    TRIM(DAV(ng)%name)
+#   endif
 #  endif
 #  if defined WEAK_CONSTRAINT   && \
      (defined POSTERIOR_ERROR_F || defined POSTERIOR_ERROR_I)
-          WRITE (out,160) '  Output Posterior Error File:  ',           &
+          WRITE (out,160) '      Output Posterior Error File:  ',       &
      &                    TRIM(ERR(ng)%name)
 #  endif
+#  if defined RBL4DVAR_FCT_SENSITIVITY && defined OBS_SPACE
+          fname=OIFA(ng)%name
+!!        IF (.not.find_file(ng, fname, 'OIFnameA')) GO TO 30
+          WRITE (out,160) '  Input Obs Impacts Analysis File:  ',       &
+     &                    TRIM(fname)
+!
+          fname=OIFB(ng)%name
+!!        IF (.not.find_file(ng, fname, 'OIFnameB')) GO TO 30
+          WRITE (out,160) 'Input Obs Impacts Background File:  ',       &
+     &                    TRIM(fname)
+#   endif
           GO TO 40
   30      IF (Master) THEN
             IF (LEN_TRIM(fname).eq.0) THEN
@@ -1361,8 +1481,8 @@
   70  FORMAT (10x,l1,2x,a,t30,a)
   80  FORMAT (1x,i10,2x,a,t30,a)
   85  FORMAT (1x,i10,2x,a,'(',i2.2,')',t30,a)
-
   90  FORMAT (1x,i10,2x,a,t30,a,/,t32,a)
+  95  FORMAT (1x,a,2x,a,t30,a)
  100  FORMAT (1p,e11.4,2x,a,t30,a)
  110  FORMAT (10x,l1,2x,a,t30,a,i2.2,':',1x,a)
  120  FORMAT (f11.3,2x,a,t30,a)

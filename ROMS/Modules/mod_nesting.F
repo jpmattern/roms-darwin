@@ -3,9 +3,9 @@
 
 #ifdef NESTING
 !
-!svn $Id: mod_nesting.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: mod_nesting.F 1030 2020-07-13 01:01:08Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -110,6 +110,19 @@
       logical, allocatable :: Telescoping(:)        ! [Ngrids]
 !$OMP THREADPRIVATE (Telescoping)
 !
+!  Switch to compute depth-dependent, vertical interpolation weights.
+!  Currently, vertical weights are used in composite grids because
+!  their grids are not coincident. They are not needed in refinement
+!  grids because the donor and receiver grids have the same number of
+!  vertical levels and have matching bathymetry.  However, in the
+!  future, it is possible to have configurations that require vertical
+!  weights in refinement. The switch "get_Vweights" controls if such
+!  weights are computed or not. If false, it will accelerate the
+!  computations because of less distributed-memory communications.
+!
+      logical :: get_Vweights
+!$OMP THREADPRIVATE (get_Vweights)
+!
 !  If refinement, it contains the coarser donor grid number to finer
 !  receiver grid external contact points.  The donor grid is always
 !  coarser that receiver grid.  This variable is in terms of the
@@ -141,9 +154,10 @@
 !
       integer, allocatable :: RefineStepsCounter(:) ! [Ngrids]
 !
-!  Counter for two-way exchange between fine and coarse grids.
+!  Interval used in the two-way exchange between fine and coarse
+!  grids.
 !
-      integer, allocatable :: TwoWayCounter(:)      ! [Ngrids]
+      real(r8), allocatable :: TwoWayInterval(:)    ! [Ngrids]
 !
 !  Donor and reciver grids for each contact region. These paremeters
 !  are also duplicated in the T_NGC structure.
@@ -155,7 +169,7 @@
 !  of contact point data.
 !
       integer,  allocatable :: RollingIndex(:)      ! [Ncontact]
-      real(r8), allocatable :: RollingTime(:,:)     ! [Ncontact]
+      real(dp), allocatable :: RollingTime(:,:)     ! [Ncontact]
 !$OMP THREADPRIVATE (RollingIndex, RollingTime)
 !
 !  If refinement, donor grid (I,J) indices at PSI points used to extract
@@ -303,7 +317,9 @@
 
         integer, pointer :: C2Bindex(:)    ! contact to boundary index
 
+# ifdef NESTING_DEBUG
         real(r8), pointer :: Mflux(:)      ! perimeter mass flux
+# endif
 # ifdef SOLVE3D
         real(r8), pointer :: Tflux(:,:,:)  ! perimeter tracer flux
 # endif
@@ -460,21 +476,43 @@
           SELECT CASE (ibry)
             CASE (iwest, ieast)
               allocate ( BRY_CONTACT(ibry,cr) % Ib(LBj:UBj) )
+              Dmem(rg)=Dmem(rg)+REAL(UBj-LBj,r8)
+
               allocate ( BRY_CONTACT(ibry,cr) % Jb(LBj:UBj) )
+              Dmem(rg)=Dmem(rg)+REAL(UBj-LBj,r8)
+
               allocate ( BRY_CONTACT(ibry,cr) % C2Bindex(LBj:UBj) )
+              Dmem(rg)=Dmem(rg)+REAL(UBj-LBj,r8)
+
+# ifdef NESTING_DEBUG
               allocate ( BRY_CONTACT(ibry,cr) % Mflux(LBj:UBj) )
+              Dmem(rg)=Dmem(rg)+REAL(UBj-LBj,r8)
+# endif
+
 # ifdef SOLVE3D
               allocate ( BRY_CONTACT(ibry,cr) % Tflux(LBj:UBj,          &
      &                                                N(rg),NT(rg)) )
+              Dmem(rg)=Dmem(rg)+REAL((UBj-LBj)*N(rg)*NT(rg),r8)
 # endif
             CASE (isouth, inorth)
               allocate ( BRY_CONTACT(ibry,cr) % Ib(LBi:UBi) )
+              Dmem(rg)=Dmem(rg)+REAL(UBi-LBi,r8)
+
               allocate ( BRY_CONTACT(ibry,cr) % Jb(LBi:UBi) )
+              Dmem(rg)=Dmem(rg)+REAL(UBi-LBi,r8)
+
               allocate ( BRY_CONTACT(ibry,cr) % C2Bindex(LBi:UBi) )
+              Dmem(rg)=Dmem(rg)+REAL(UBi-LBi,r8)
+
+# ifdef NESTING_DEBUG
               allocate ( BRY_CONTACT(ibry,cr) % Mflux(LBi:UBi) )
+              Dmem(rg)=Dmem(rg)+REAL(UBi-LBi,r8)
+# endif
+
 # ifdef SOLVE3D
               allocate ( BRY_CONTACT(ibry,cr) % Tflux(LBi:UBi,          &
      &                                                N(rg),NT(rg)) )
+              Dmem(rg)=Dmem(rg)+REAL((UBi-LBi)*N(rg)*NT(rg),r8)
 # endif
           END SELECT
         END DO
@@ -487,18 +525,30 @@
 !
       IF (.not.allocated(Ibmin)) THEN
         allocate ( Ibmin(4,Ncontact) )
+        DO ng=1,Ngrids
+          Dmem(ng)=Dmem(ng)+4.0_r8*REAL(Ncontact,r8)
+        END DO
         Ibmin = -ispval
       END IF
       IF (.not.allocated(Ibmax)) THEN
         allocate ( Ibmax(4,Ncontact) )
+        DO ng=1,Ngrids
+          Dmem(ng)=Dmem(ng)+4.0_r8*REAL(Ncontact,r8)
+        END DO
         Ibmax = ispval
       END IF
       IF (.not.allocated(Jbmin)) THEN
         allocate ( Jbmin(4,Ncontact) )
+        DO ng=1,Ngrids
+          Dmem(ng)=Dmem(ng)+4.0_r8*REAL(Ncontact,r8)
+        END DO
         Jbmin = -ispval
       END IF
       IF (.not.allocated(Jbmax)) THEN
         allocate ( Jbmax(4,Ncontact) )
+        DO ng=1,Ngrids
+          Dmem(ng)=Dmem(ng)+4.0_r8*REAL(Ncontact,r8)
+        END DO
         Jbmax = ispval
       END IF
 !
@@ -508,7 +558,9 @@
           BRY_CONTACT(ibry,cr) % Ib = ispval
           BRY_CONTACT(ibry,cr) % Jb = ispval
           BRY_CONTACT(ibry,cr) % C2Bindex = ispval
+# ifdef NESTING_DEBUG
           BRY_CONTACT(ibry,cr) % Mflux = 0.0_r8
+# endif
 # ifdef SOLVE3D
           BRY_CONTACT(ibry,cr) % Tflux = 0.0_r8
 # endif

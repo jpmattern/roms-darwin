@@ -1,7 +1,7 @@
 /*
-** svn $Id: sed_toy.h 889 2018-02-10 03:32:52Z arango $
+** svn $Id: sed_toy.h 1001 2020-01-10 22:41:16Z arango $
 *******************************************************************************
-** Copyright (c) 2002-2018 The ROMS/TOMS Group                               **
+** Copyright (c) 2002-2020 The ROMS/TOMS Group                               **
 **   Licensed under a MIT/X style license                                    **
 **   See License_ROMS.txt                                                    **
 *******************************************************************************
@@ -9,16 +9,13 @@
 ** Options for One-Dimensional (vertical) Sediment Toy.
 **
 ** Application flag:   SED_TOY
-** Input scripts:      ocean_sed_toy.in
+** Input scripts:      roms_sed_toy.in
 **                     sediment_sed_toy.in
 */
 
 #undef  BODYFORCE
 #undef  LOG_PROFILE
 #define DJ_GRADPS
-#undef  TS_U3HADVECTION
-#undef  TS_C2VADVECTION
-#define TS_MPDATA
 #undef  SALINITY
 #define OUT_DOUBLE
 #define ANA_GRID

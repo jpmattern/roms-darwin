@@ -2,9 +2,9 @@
 #ifdef ADJOINT
       SUBROUTINE ad_output (ng)
 !
-!svn $Id: ad_output.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: ad_output.F 1036 2020-07-29 05:39:53Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -75,6 +75,7 @@
           END IF
           IF ((nrrec(ng).ne.0).and.(iic(ng).eq.ntstart(ng))) THEN
             IF ((iic(ng)-1).eq.idefADJ(ng)) THEN
+              ADM(ng)%load=0                  ! restart, reset counter
               Ldefine=.FALSE.                 ! finished file, delay
             ELSE                              ! creation of next file
               Ldefine=.TRUE.
@@ -92,16 +93,30 @@
             Ldefine=.FALSE.
           END IF
           IF (Ldefine) THEN                     ! create new file or
-            Fcount=ADM(ng)%Fcount               ! inquire existing file
+            IF (iic(ng).eq.ntstart(ng)) THEN    ! inquire existing file
+              ADM(ng)%load=0                    ! reset filename counter
+            END IF
+            ifile=(iic(ng)-1)/ndefADJ(ng)+1     ! next filename suffix
+            ADM(ng)%load=ADM(ng)%load+1
+            IF (ADM(ng)%load.gt.ADM(ng)%Nfiles) THEN
+              IF (Master) THEN
+                WRITE (stdout,10) 'TLM(ng)%load = ', ADM(ng)%load,      &
+     &                            ADM(ng)%Nfiles, TRIM(ADM(ng)%base),   &
+     &                            ifile
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
+            END IF
+            Fcount=ADM(ng)%load
             ADM(ng)%Nrec(Fcount)=0
-            ifile=(iic(ng)-1)/ndefADJ(ng)+1
             IF (Master) THEN
-              WRITE (ADM(ng)%name,10) TRIM(ADM(ng)%base), ifile
-  10          FORMAT (a,'_',i4.4,'.nc')
+              WRITE (ADM(ng)%name,20) TRIM(ADM(ng)%base), ifile
             END IF
 # ifdef DISTRIBUTE
             CALL mp_bcasts (ng, iADM, ADM(ng)%name)
 # endif
+            ADM(ng)%files(Fcount)=TRIM(ADM(ng)%name)
             IF (ADM(ng)%ncid.ne.-1) THEN
               CALL netcdf_close (ng, iADM, ADM(ng)%ncid)
             END IF
@@ -143,7 +158,10 @@
             wrtHIS=(iic(ng).ne.ntstart(ng)).and.                        &
      &             (MOD(iic(ng)-1,nADJ(ng)).eq.0) ! avoid ntstart rec
           ELSE
-#  ifdef WEAK_CONSTRAINT
+#  if defined WEAK_CONSTRAINT && !defined WEAK_NOINTERP
+#   ifdef SP4DVAR
+            wrtHIS=(MOD(iic(ng)-1,nADJ(ng)).eq.0)
+#   endif
             wrtHIS=(iic(ng).ne.ntstart(ng)).and.                        &
      &             (MOD(iic(ng)-1,nADJ(ng)).eq.0) ! avoid ntstart-1 rec
 #  else
@@ -198,19 +216,34 @@
             Ldefine=.FALSE.
           END IF
           IF (Ldefine) THEN
-            AVG(ng)%Nrec(Fcount)=0
-            IF (ndefAVG(ng).eq.nAVG(ng)) THEN
+            IF (iic(ng).eq.ntstart(ng)) THEN
+              AVG(ng)%load=0                  ! reset filename counter
+            END IF
+            IF (ndefAVG(ng).eq.nAVG(ng)) THEN ! next filename suffix
               ifile=(iic(ng)-1)/ndefAVG(ng)
             ELSE
               ifile=(iic(ng)-1)/ndefAVG(ng)+1
             END IF
+            AVG(ng)%load=AVG(ng)%load+1
+            IF (AVG(ng)%load.gt.AVG(ng)%Nfiles) THEN
+              IF (Master) THEN
+                WRITE (stdout,10) 'AVG(ng)%load = ', AVG(ng)%load,      &
+     &                            AVG(ng)%Nfiles, TRIM(AVG(ng)%base),   &
+     &                            ifile
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
+            END IF
+            Fcount=AVG(ng)%load
+            AVG(ng)%Nrec(Fcount)=0
             IF (Master) THEN
               WRITE (AVG(ng)%name,20) TRIM(AVG(ng)%base), ifile
-  20          FORMAT (a,'_',i4.4,'.nc')
             END IF
 #  ifdef DISTRIBUTE
             CALL mp_bcasts (ng, iADM, AVG(ng)%name)
 #  endif
+            AVG(ng)%files(Fcount)=TRIM(AVG(ng)%name)
             IF (AVG(ng)%ncid.ne.-1) THEN
               CALL netcdf_close (ng, iADM, AVG(ng)%ncid)
             END IF
@@ -250,6 +283,14 @@
 !
       CALL wclock_off (ng, iADM, 8, __LINE__, __FILE__)
 # endif
+!
+ 10   FORMAT (/,' AD_OUTPUT - multi-file counter ',a,i0,                &
+     &          ', is greater than Nfiles = ',i0,1x,'dimension',        &
+     &        /,13x,'in structure when creating next file: ',           &
+     &           a,'_',i4.4,'.nc',                                      &
+     &        /,13x,'Incorrect OutFiles logic in ''read_phypar''.')
+ 20   FORMAT (a,'_',i4.4,'.nc')
+!
       RETURN
       END SUBROUTINE ad_output
 #else

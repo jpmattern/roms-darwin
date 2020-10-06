@@ -1,10 +1,11 @@
 #include "cppdefs.h"
       MODULE step3d_uv_mod
+
 #if defined NONLINEAR && defined SOLVE3D
 !
-!svn $Id: step3d_uv.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: step3d_uv.F 1029 2020-07-11 02:11:09Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license           Hernan G. Arango   !
 !    See License_ROMS.txt                   Alexander F. Shchepetkin   !
 !==================================================== John C. Warner ===
@@ -99,7 +100,7 @@
 # ifdef PROFILE
       CALL wclock_off (ng, iNLM, 34, __LINE__, __FILE__)
 # endif
-
+!
       RETURN
       END SUBROUTINE step3d_uv
 !
@@ -145,8 +146,8 @@
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d, mp_exchange3d
 # endif
-      USE u3dbc_mod, ONLY : u3dbc_tile
-      USE v3dbc_mod, ONLY : v3dbc_tile
+      USE u3dbc_mod,       ONLY : u3dbc_tile
+      USE v3dbc_mod,       ONLY : v3dbc_tile
 !
 !  Imported variable declarations.
 !
@@ -256,9 +257,9 @@
 !  Local variable declarations.
 !
       integer :: i, idiag, is, j, k
-
+!
       real(r8) :: cff, cff1, cff2
-
+!
       real(r8), dimension(IminS:ImaxS,0:N(ng)) :: AK
       real(r8), dimension(IminS:ImaxS,0:N(ng)) :: BC
       real(r8), dimension(IminS:ImaxS,0:N(ng)) :: CF
@@ -1471,7 +1472,7 @@
      &                    ubar(:,:,1), vbar(:,:,1),                     &
      &                    ubar(:,:,2), vbar(:,:,2))
 # endif
-
+!
       RETURN
       END SUBROUTINE step3d_uv_tile
 #endif

@@ -2,9 +2,9 @@
 #ifdef ADJOINT
       SUBROUTINE ad_initial (ng)
 !
-!svn $Id: ad_initial.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: ad_initial.F 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -43,13 +43,12 @@
 # ifdef DISTRIBUTE
       USE distribute_mod,    ONLY : mp_bcasti
 # endif
-# if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
-     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR   || \
+# if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
+     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
      defined SO_SEMI
       USE adsen_initial_mod, ONLY : adsen_initial
 # endif
       USE ini_hmixcoef_mod,  ONLY : ini_hmixcoef
-      USE metrics_mod,       ONLY : metrics
 # ifdef SOLVE3D
       USE set_depth_mod,     ONLY : set_depth
       USE omega_mod,         ONLY : omega
@@ -85,18 +84,19 @@
       integer :: LBi, UBi, LBj, UBj
       integer :: Fcount, IniRec, Tindex
       integer :: thread, tile
+
+      real(dp) :: my_dstart
 !
 !=======================================================================
 !   Initialize model variables.
 !=======================================================================
 !
-!$OMP MASTER
       IF (Master) THEN
 # if defined PERTURBATION
         WRITE (stdout,10) Nrun
  10     FORMAT (/,' <<<< Ensemble/Perturbation Run: ',i5.5,' >>>>',/)
-# elif defined IS4DVAR || defined SENSITIVITY_4DVAR || \
-       defined W4DPSAS || defined W4DVAR
+# elif defined I4DVAR   || defined SENSITIVITY_4DVAR || \
+       defined RBL4DVAR || defined R4DVAR
         WRITE (stdout,10) outer, inner
  10     FORMAT (/,' <<<< 4D Variational Data Assimilation, ',           &
      &          'Outer = ',i3.3, ', Inner = ',i3.3,' >>>>',/)
@@ -105,7 +105,6 @@
      &                    'initializing adjoint model ...'
  20     FORMAT (/,1x,a,a,/)
       END IF
-!$OMP END MASTER
 !
 !-----------------------------------------------------------------------
 !  Initialize time stepping indices and counters.
@@ -135,14 +134,35 @@
       synchro_flag(ng)=.TRUE.
       first_time(ng)=0
       ad_ubar_xs=0.0_r8
+
+# ifdef GENERIC_DSTART
+!
+!  Rarely, the adjoint model is initialized from a NetCDF file, so we do
+!  not know its actual initialization time. Usually, it is computed from
+!  DSTART, implying that its value is correct in the ROMS input script.
+!  Therefore, the user needs to check and update its value to every time
+!  that ROMS is executed. Alternatively, if available, we can use the
+!  initialization time from the nonlinear model, INItime. This variable
+!  is assigned when computing or processing the basic state trajectory
+!  needed to linearize the adjoint model.
+!
+      IF (INItime(ng).lt.0.0_dp) THEN
+        my_dstart=dstart                    ! ROMS input script
+      ELSE
+        my_dstart=INItime(ng)/86400.0_dp    ! NLM IC time is known
+      END IF
+      tdays(ng)=my_dstart+dt(ng)*REAL(ntimes(ng),r8)*sec2day
+      time(ng)=tdays(ng)*day2sec
+      ntstart(ng)=INT((time(ng)-dstart*day2sec)/dt(ng))+1
+      ntend(ng)=ntstart(ng)-ntimes(ng)
+      ntfirst(ng)=ntend(ng)
+#else
       tdays(ng)=dstart+dt(ng)*REAL(ntimes(ng)-ntfirst(ng)+1,r8)*sec2day
       time(ng)=tdays(ng)*day2sec
-!$OMP MASTER
       ntstart(ng)=ntimes(ng)+1
       ntend(ng)=ntfirst(ng)
       ntfirst(ng)=ntend(ng)
-!$OMP END MASTER
-!$OMP BARRIER
+#endif
 
       CALL time_string (time(ng), time_code(ng))
 
@@ -153,6 +173,13 @@
       UBi=UBOUND(GRID(ng)%h,DIM=1)
       LBj=LBOUND(GRID(ng)%h,DIM=2)
       UBj=UBOUND(GRID(ng)%h,DIM=2)
+!
+!  Initialize global diagnostics variables.
+!
+      avgke=0.0_dp
+      avgpe=0.0_dp
+      avgkp=0.0_dp
+      volume=0.0_dp
 
 # ifdef PROFILE
 !
@@ -163,11 +190,10 @@
       DO thread=THREAD_RANGE
         CALL wclock_on (ng, iADM, 2, __LINE__, __FILE__)
       END DO
-!$OMP BARRIER
 # endif
 
-# if defined FOUR_DVAR            && \
-    !(defined IS4DVAR_SENSITIVITY || defined OPT_OBSERVATIONS)
+# if defined FOUR_DVAR               && \
+    !(defined I4DVAR_ANA_SENSITIVITY || defined OPT_OBSERVATIONS)
 !
 !-----------------------------------------------------------------------
 !  If variational data assimilation, reset several IO switches and
@@ -177,7 +203,6 @@
 !  Set switch to create adjoint NetCDF file or append to an existing
 !  adjoint NetCDF file.
 !
-!$OMP MASTER
       IF (Nrun.eq.ERstr) THEN
         LdefADJ(ng)=.TRUE.
       END IF
@@ -186,20 +211,6 @@
 !
       LwrtADJ(ng)=.TRUE.
 
-#  ifndef WEAK_CONSTRAINT
-!
-!  Insure that forward and history file names are the same. In 4DVar,
-!  the forward solution is computed by the nonlinear model and stored
-!  HISNAME NetCDF file.
-!
-#   ifdef TLM_CHECK
-      FWD(ng)%name=TRIM(HIS(ng)%base)//'.nc'
-      FWD(ng)%ncid=-1
-#   else
-      FWD(ng)%name=HIS(ng)%name
-      FWD(ng)%ncid=HIS(ng)%ncid
-#   endif
-#  endif
 #  ifdef ADJUST_BOUNDARY
 !
 !  Initialize open boundary counter for storage arrays.
@@ -212,118 +223,16 @@
 !
       SFcount(ng)=Nfrec(ng)+1
 #  endif
-!$OMP END MASTER
-!$OMP BARRIER
-# endif
-!
-!=======================================================================
-!  On first pass of ensemble/perturbation/iteration loop, initialize
-!  model configuration.
-!=======================================================================
-!
-      IF (Nrun.eq.ERstr) THEN
-!
-!-----------------------------------------------------------------------
-!  Set horizontal grid, bathymetry, and Land/Sea masking (if any).
-!  Use analytical functions or read in from a grid NetCDF.
-!-----------------------------------------------------------------------
-!
-# ifdef ANA_GRID
-        DO tile=first_tile(ng),last_tile(ng),+1
-          CALL ana_grid (ng, tile, iADM)
-#  ifdef MASKING
-          CALL ana_mask (ng, tile, iADM)
-#  endif
-#  if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
-      defined OPT_OBSERVATIONS || defined SO_SEMI             || \
-      defined SENSITIVITY_4DVAR
-          CALL ana_scope (ng, tile, iADM)
-#  endif
-        END DO
-!$OMP BARRIER
-# else
-!$OMP MASTER
-        CALL get_grid (ng, iADM)
-!$OMP END MASTER
-!$OMP BARRIER
-#  ifdef DISTRIBUTE
-        CALL mp_bcasti (ng, iADM, exit_flag)
-#  endif
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-# endif
-
-# ifdef SOLVE3D
-!
-!-----------------------------------------------------------------------
-!  Set vertical S-coordinate transformation function.
-!-----------------------------------------------------------------------
-!
-!$OMP MASTER
-        CALL set_scoord (ng)
-!$OMP END MASTER
-!$OMP BARRIER
-# endif
-
-# ifdef SOLVE3D
-!
-!-----------------------------------------------------------------------
-!  Set barotropic time-steps average weighting function.
-!-----------------------------------------------------------------------
-!
-!$OMP MASTER
-        CALL set_weights (ng)
-!$OMP END MASTER
-!$OMP BARRIER
 # endif
 !
 !-----------------------------------------------------------------------
-!  Compute various metric term combinations.
+!  Set application grid, metrics, and associated variables and
+!  parameters.
 !-----------------------------------------------------------------------
 !
-        DO tile=first_tile(ng),last_tile(ng),+1
-          CALL metrics (ng, tile, iADM)
-        END DO
-!$OMP BARRIER
-
-# if defined WTYPE_GRID && defined ANA_WTYPE     && \
-    (defined LMD_SKPP   || defined SOLAR_SOURCE)
-!
-!-----------------------------------------------------------------------
-!  Set spatially varying Jerlov water type.
-!-----------------------------------------------------------------------
-!
-        DO tile=first_tile(ng),last_tile(ng),+1
-          CALL ana_wtype (ng, tile, iADM)
-        END DO
-!$OMP BARRIER
-# endif
-!
-!-----------------------------------------------------------------------
-!  If appropriate, set spatially varying nudging coefficients time
-!  scales.
-!-----------------------------------------------------------------------
-!
-# ifdef ANA_NUDGCOEF
-        IF (Lnudging(ng)) THEN
-          DO tile=first_tile(ng),last_tile(ng),+1
-            CALL ana_nudgcoef (ng, tile, iADM)
-          END DO
-!$OMP BARRIER
-        END IF
-# else
-        IF (Lnudging(ng)) THEN
-!$OMP MASTER
-          CALL get_nudgcoef (ng, iADM)
-!$OMP END MASTER
-#  ifdef DISTRIBUTE
-          CALL mp_bcasti (ng, iADM, exit_flag)
-#  endif
-!$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
-        END IF
-# endif
+      IF (SetGridConfig(ng)) THEN
+        CALL set_grid (ng, iTLM)
+        SetGridConfig(ng)=.FALSE.
       END IF
 !
 !-----------------------------------------------------------------------
@@ -338,7 +247,6 @@
       DO tile=first_tile(ng),last_tile(ng),+1
         CALL ini_hmixcoef (ng, tile, iADM)
       END DO
-!$OMP BARRIER
 
 # ifdef ANA_SPONGE
 !
@@ -351,7 +259,6 @@
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL ana_sponge (ng, tile, iADM)
         END DO
-!$OMP BARRIER
       END IF
 # endif
 !
@@ -360,7 +267,7 @@
 !  executed for each ensemble/perturbation/iteration pass.
 !=======================================================================
 
-# if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+# if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
      defined OPT_OBSERVATIONS || defined SO_SEMI
 !
 !-----------------------------------------------------------------------
@@ -380,9 +287,8 @@
         CALL initialize_boundary (ng, tile, iADM)
 #  endif
       END DO
-!$OMF BARRIER
 
-# elif defined FOUR_DVAR && !defined IS4DVAR_SENSITIVITY
+# elif defined FOUR_DVAR && !defined I4DVAR_ANA_SENSITIVITY
 !
 !-----------------------------------------------------------------------
 !  Clear all adjoint variables.  In variational data assimilation the
@@ -392,6 +298,7 @@
 !
       DO tile=first_tile(ng),last_tile(ng),+1
         CALL initialize_ocean (ng, tile, iNLM)
+        CALL initialize_forces (ng, tile, iNLM)
         CALL initialize_ocean (ng, tile, iADM)
 #  if defined SOLVE3D
         CALL initialize_coupling (ng, tile, iADM)
@@ -403,7 +310,6 @@
         CALL initialize_boundary (ng, tile, iADM)
 #  endif
       END DO
-!$OMF BARRIER
 
 # else
 
@@ -417,7 +323,6 @@
       DO tile=first_tile(ng),last_tile(ng),+1
         CALL set_depth (ng, tile, iADM)
       END DO
-!$OMP BARRIER
 #  endif
 !
 !-----------------------------------------------------------------------
@@ -432,7 +337,6 @@
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL ana_initial (ng, tile, iADM)
         END DO
-!$OMP BARRIER
       END IF
 #  endif
 
@@ -444,7 +348,6 @@
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL ana_passive (ng, tile, iADM)
         END DO
-!$OMP BARRIER
       END IF
 #  endif
 
@@ -456,7 +359,6 @@
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL ana_biology (ng, tile, iADM)
         END DO
-!$OMP BARRIER
       END IF
 #  endif
 
@@ -468,17 +370,13 @@
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL ana_sediment (ng, tile, iADM)
         END DO
-!$OMP BARRIER
       END IF
 #  endif
 !
 !  Read in initial conditions for initial or restart NetCDF file.
 !
 #  ifdef INI_FILE
-!$OMP MASTER
       CALL get_state (ng, iADM, 1, IAD(ng)%name, IniRec, Tindex)
-!$OMP END MASTER
-!$OMP BARRIER
       time(ng)=io_time                       ! needed for shared-memory
 #   ifdef DISTRIBUTE
       CALL mp_bcasti (ng, iADM, exit_flag)
@@ -487,10 +385,7 @@
      &               __FILE__)) RETURN
 #  else
       IF (nrrec(ng).ne.0) THEN
-!$OMP MASTER
         CALL get_state (ng, iADM, 1, IAD(ng)%name, IniRec, Tindex)
-!$OMP END MASTER
-!$OMP BARRIER
         time(ng)=io_time                     ! needed for shared-memory
 #   ifdef DISTRIBUTE
         CALL mp_bcasti (ng, iADM, exit_flag)
@@ -510,20 +405,16 @@
 !  If restart, read in wet/dry masks.
 !
       IF (nrrec(ng).ne.0) THEN
-!$OMP MASTER
         CALL get_wetdry (ng, iADM, IniRec(ng))
-!$OMP END MASTER
 #  ifdef DISTRIBUTE
         CALL mp_bcasti (ng, iADM, exit_flag)
 #  endif
-!$OMP BARRIER
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
       ELSE
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL wetdry (ng, tile, Tindex(ng), .TRUE.)
         END DO
-!$OMP BARRIER
       END IF
 # endif
 
@@ -536,10 +427,19 @@
 !  the first "ObsTime" to process.
 !-----------------------------------------------------------------------
 !
-!$OMP MASTER
-      CALL obs_initial (ng, iADM, .TRUE.)
-!$OMP END MASTER
-!$OMP BARRIER
+# ifdef RBL4DVAR_FCT_SENSITIVITY
+      IF (.not.LsenPSAS(ng).and.LsenFCT(ng)) THEN
+#  ifdef OBS_SPACE
+        IF (Lobspace(ng)) THEN
+#  endif
+# endif
+          CALL obs_initial (ng, iADM, .TRUE.)
+# ifdef OBS_SPACE
+        END IF
+# endif
+# ifdef RBL4DVAR_FCT_SENSITIVITY
+      END IF
+# endif
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
 # endif
@@ -554,7 +454,6 @@
       DO tile=first_tile(ng),last_tile(ng),+1
         CALL ana_perturb (ng, tile, iADM)
       END DO
-!$OMP BARRIER
 # endif
 
 # ifdef SOLVE3D
@@ -566,7 +465,6 @@
 !!    DO tile=first_tile(ng),last_tile(ng),+1
 !!      CALL ad_set_depth (ng, tile, iADM)
 !!    END DO
-!!$OMP BARRIER
 !!
 !!----------------------------------------------------------------------
 !!  Compute initial horizontal mass fluxes, Hz*u/n and Hz*v/m.
@@ -575,7 +473,6 @@
 !!    DO tile=first_tile(ng),last_tile(ng),+1
 !!      CALL ad_set_massflux (ng, tile, iADM)
 !!    END DO
-!!$OMP BARRIER
 !!
 !!----------------------------------------------------------------------
 !!  Compute initial S-coordinates vertical velocity. Compute initial
@@ -588,7 +485,6 @@
 !!      CALL ad_omega (ng, tile, iADM)
 !!      CALL ad_rho_eos (ng, tile, iADM)
 !!    END DO
-!!!$OMP BARRIER
 # endif
 
 #ifdef ANA_PSOURCE
@@ -605,7 +501,6 @@
           CALL ana_psource (ng, tile, iADM)
         END DO
       END IF
-!$OMP BARRIER
 #endif
 !
 !-----------------------------------------------------------------------
@@ -617,14 +512,11 @@
 !  during initialization/restart.
 !-----------------------------------------------------------------------
 !
-!$OMP MASTER
       CALL close_inp (ng, iADM)
       CALL check_multifile (ng, iADM)
-!$OMP END MASTER
 # ifdef DISTRIBUTE
       CALL mp_bcasti (ng, iADM, exit_flag)
 # endif
-!$OMP BARRIER
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
 !
@@ -634,11 +526,8 @@
 !  the time-interpolation between snapshots.
 !-----------------------------------------------------------------------
 !
-!$OMP MASTER
       CALL ad_get_idata (ng)
       CALL ad_get_data (ng)
-!$OMP END MASTER
-!$OMP BARRIER
 # ifdef DISTRIBUTE
       CALL mp_bcasti (ng, iADM, exit_flag)
 # endif
@@ -654,11 +543,10 @@
       DO tile=first_tile(ng),last_tile(ng),+1
         CALL set_masks (ng, tile, iADM)
       END DO
-!$OMP BARRIER
 # endif
 
 # if defined PROPAGATOR || \
-    (defined MASKING    && (defined READ_WATER || defined WRITE_WATER ))
+    (defined MASKING    && (defined READ_WATER || defined WRITE_WATER) )
 !
 !-----------------------------------------------------------------------
 !  Set variables associated with the processing water points and/or
@@ -668,11 +556,10 @@
       DO tile=first_tile(ng),last_tile(ng),+1
         CALL wpoints (ng, tile, iADM)
       END DO
-!$OMP BARRIER
 # endif
 
-# if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
-     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR   || \
+# if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
+     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
      defined SO_SEMI
 !
 !-----------------------------------------------------------------------
@@ -687,7 +574,6 @@
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL adsen_initial (ng, tile)
         END DO
-!$OMP BARRIER
 #  endif
 #  ifdef SENSITIVITY_4DVAR
       END IF
@@ -704,7 +590,6 @@
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL ana_drag (ng, tile, iADM)
         END DO
-!$OMP BARRIER
       END IF
 # endif
 !
@@ -717,7 +602,6 @@
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL stiffness (ng, tile, iADM)
         END DO
-!$OMP BARRIER
       END IF
 
 # if defined FLOATS_NOT_YET || defined STATIONS
@@ -727,10 +611,7 @@
 !  coordinates.
 !-----------------------------------------------------------------------
 !
-!$OMP MASTER
       CALL grid_coords (ng, iADM)
-!$OMP END MASTER
-!$OMP BARRIER
 # endif
 
 # if defined WAV_COUPLING_NOT_YET && defined MCT_LIB
@@ -742,7 +623,6 @@
       DO tile=first_tile(ng),last_tile(ng),+1
         CALL ocn2wav_coupling (ng, tile)
       END DO
-!$OMP BARRIER
 # endif
 !
 !-----------------------------------------------------------------------
@@ -753,10 +633,7 @@
 !  in the main time-stepping routine.
 !
       iic(ng)=ntstart(ng)+1
-!$OMP MASTER
       time(ng)=time(ng)+dt(ng)
-!$OMP END MASTER
-!$OMP BARRIER
 
 # ifdef PROFILE
 !
@@ -767,7 +644,6 @@
       DO thread=THREAD_RANGE
         CALL wclock_off (ng, iADM, 2, __LINE__, __FILE__)
       END DO
-!$OMP BARRIER
 # endif
       RETURN
       END SUBROUTINE ad_initial

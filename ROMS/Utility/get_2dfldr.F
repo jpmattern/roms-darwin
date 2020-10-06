@@ -7,9 +7,9 @@
 # endif
      &                       Fout)
 !
-!svn $Id: get_2dfldr.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: get_2dfldr.F 1038 2020-09-29 01:54:25Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -59,13 +59,13 @@
 !  Imported variable declarations.
 !
       logical, intent(out) :: update
-
+!
       integer, intent(in) :: ng, model, ifield, nfiles, Iout, Irec
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(inout) :: ncid
-
+!
       TYPE(T_IO), intent(inout) :: S(nfiles)
-
+!
 # ifdef MASKING
       real(r8), intent(in) :: Fmask(LBi:UBi,LBj:UBj)
 # endif
@@ -75,15 +75,20 @@
 !
       logical :: Lgridded, Linquire, Liocycle, Lmulti, Lonerec, Lregrid
       logical :: special
-
+!
       integer :: Nrec, Tid, Tindex, Trec, Vid, Vtype
       integer :: gtype, job, lend, lstr, lvar, status
       integer :: Vsize(4)
+#ifdef CHECKSUM
+      integer(i8b) :: Fhash
+#endif
+!
+      real(r8) :: Fmax, Fmin, Fval
 
-      real(r8) :: Clength, Fmax, Fmin, Tdelta, Tend
-      real(r8) :: Tmax, Tmin, Tmono, Tscale, Tstr
-      real(r8) :: Fval, Tsec, Tval
-
+      real(dp) :: Clength, Tdelta, Tend
+      real(dp) :: Tmax, Tmin, Tmono, Tscale, Tstr
+      real(dp) :: Tsec, Tval
+!
       character (len= 1) :: Rswitch
       character (len=22) :: t_code
 !
@@ -189,8 +194,8 @@
 !  Read in time coordinate and scale it to day units.
 !
           IF (Tid.ge.0) THEN
-            CALL netcdf_get_fvar (ng, model, ncfile, Tname(ifield),     &
-     &                            Tval,                                 &
+            CALL netcdf_get_time (ng, model, ncfile, Tname(ifield),     &
+     &                            Rclock%DateNumber, Tval,              &
      &                            ncid = ncid,                          &
      &                            start = (/Trec/),                     &
      &                            total = (/1/))
@@ -230,7 +235,12 @@
 # ifdef MASKING
      &                            Fmask,                                &
 # endif
+#ifdef CHECKSUM
+     &                            Fout,                                 &
+     &                            checksum = Fhash)
+#else
      &                            Fout)
+#endif
               ELSE
                 status=nf_fread2d(ng, model, ncfile, ncid,              &
      &                            Vname(1,ifield), Vid,                 &
@@ -240,7 +250,11 @@
 # ifdef MASKING
      &                            Fmask,                                &
 # endif
-     &                            Fout(:,:,Tindex), Lregrid)
+     &                            Fout(:,:,Tindex),                     &
+# ifdef CHECKSUM
+     &                            checksum = Fhash,                     &
+# endif
+     &                            Lregrid = Lregrid)
               END IF
             ELSE
               CALL netcdf_get_fvar (ng, model, ncfile, Vname(1,ifield), &
@@ -266,7 +280,7 @@
               ELSE
                 lstr=SCAN(ncfile,'/',BACK=.TRUE.)+1
                 lend=LEN_TRIM(ncfile)
-                lvar=MIN(43,LEN_TRIM(Vname(2,ifield)))
+                lvar=MIN(46,LEN_TRIM(Vname(2,ifield)))
                 Tsec=Tval*day2sec
                 CALL time_string (Tsec, t_code)
                 IF (Lregrid) THEN
@@ -277,6 +291,9 @@
                 WRITE (stdout,60) Vname(2,ifield)(1:lvar), t_code,      &
      &                            ng, Trec, Tindex, ncfile(lstr:lend),  &
      &                            Tmin, Tmax, Tval, Fmin, Fmax, Rswitch
+#ifdef CHECKSUM
+                WRITE (stdout,70) Fhash
+#endif
               END IF
             END IF
             update=.TRUE.
@@ -310,13 +327,16 @@
   50  FORMAT (3x,' GET_2DFLDR  - ',a,/,19x,'(Grid = ',                  &
      &        ', Min = ',1p,e15.8,0p,' Max = ',1p,e15.8,0p,')')
   60  FORMAT (3x,' GET_2DFLDR  - ',a,',',t68,a,/,19x,                   &
-     &        '(Grid=',i2.2,', Rec=',i7.7,', Index=',i1,                &
+     &        '(Grid=',i2.2,', Rec=',i0,', Index=',i1,                  &
      &        ', File: ',a,')',/,19x,                                   &
      &        '(Tmin= ', f15.4, ' Tmax= ', f15.4,')',                   &
      &        t71, 't = ', f15.4 ,/, 19x,                               &
      &        '(Min = ', 1p,e15.8,0p,' Max = ',1p,e15.8,0p,')',         &
      &        t71, 'regrid = ',a)
-
+# ifdef CHECKSUM
+  70  FORMAT (19x,'(CheckSum = ',i0,')')
+# endif
+!
       RETURN
       END SUBROUTINE get_2dfldr
 #else

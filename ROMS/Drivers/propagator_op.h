@@ -1,8 +1,8 @@
       SUBROUTINE propagator (RunInterval, state, ad_state)
 !
-!svn $Id: propagator_op.h 889 2018-02-10 03:32:52Z arango $
+!svn $Id: propagator_op.h 995 2020-01-10 04:01:28Z arango $
 !************************************************** Hernan G. Arango ***
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !***********************************************************************
@@ -44,7 +44,7 @@
 !
 !  Imported variable declarations.
 !
-      real(r8), intent(in) :: RunInterval
+      real(dp), intent(in) :: RunInterval
 
       TYPE (T_GST), intent(in) :: state(Ngrids)
       TYPE (T_GST), intent(inout) :: ad_state(Ngrids)

@@ -3,9 +3,9 @@
 
 #if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
 !
-!svn $Id: tl_frc_adjust.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: tl_frc_adjust.F 1016 2020-04-27 02:06:37Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -146,7 +146,11 @@
         fac1=1.0_r8
         fac2=0.0_r8
       ELSE
+# ifdef GENERIC_DSTART
+        it1=MAX(0,(iic(ng)-ntstart(ng))/nSFF(ng))+1
+# else
         it1=MAX(0,(iic(ng)-1)/nSFF(ng))+1
+# endif
         it2=MIN(it1+1,Nfrec(ng))
         fac1=SF_time(it2,ng)-(time(ng)+dt(ng))
         fac2=(time(ng)+dt(ng))-SF_time(it1,ng)
@@ -197,6 +201,7 @@
 #  endif
       END IF
 
+#  ifdef SALINITY
       IF (Lstflux(isalt,ng)) THEN
         DO j=JstrR,JendR
           DO i=IstrR,IendR
@@ -206,6 +211,7 @@
           END DO
         END DO
       END IF
+#  endif
 
       DO itrc=NAT+1,NT(ng)
         IF (Lstflux(itrc,ng)) THEN

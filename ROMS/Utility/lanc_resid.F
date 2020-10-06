@@ -1,10 +1,11 @@
 #include "cppdefs.h"
       MODULE lanc_resid_mod
 
-#if defined IS4DVAR
+#if defined I4DVAR
 !
+!svn $Id: lanc_resid.F 1022 2020-05-13 03:03:15Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================

@@ -1,7 +1,7 @@
 /*
-** svn $Id: hypoxia_srm_var.h 889 2018-02-10 03:32:52Z arango $
+** svn $Id: hypoxia_srm_var.h 1022 2020-05-13 03:03:15Z arango $
 *************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2018 The ROMS/TOMS Group                        **
+** Copyright (c) 2002-2020 The ROMS/TOMS Group                        **
 **   Licensed under a MIT/X style license                             **
 **   See License_ROMS.txt                                             **
 ************************************************************************
@@ -26,8 +26,8 @@
             CASE ('idTvar(iOxyg)')
               idTvar(iOxyg)=varid
 
-#if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
-    defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR   || \
+#if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
+    defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
     defined SO_SEMI
 
 /*

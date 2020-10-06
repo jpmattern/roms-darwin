@@ -1,8 +1,8 @@
       SUBROUTINE ana_srflux (ng, tile, model)
 !
-!! svn $Id: ana_srflux.h 889 2018-02-10 03:32:52Z arango $
+!! svn $Id: ana_srflux.h 995 2020-01-10 04:01:28Z arango $
 !!======================================================================
-!! Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
 !!   See License_ROMS.txt                                              !
 !=======================================================================
@@ -32,6 +32,7 @@
      &                      FORCES(ng) % cloud,                         &
      &                      FORCES(ng) % Hair,                          &
      &                      FORCES(ng) % Tair,                          &
+     &                      FORCES(ng) % Pair,                          &
 #endif
      &                      FORCES(ng) % srflx)
 !
@@ -54,7 +55,7 @@
      &                            IminS, ImaxS, JminS, JmaxS,           &
      &                            lonr, latr,                           &
 #ifdef ALBEDO
-     &                            cloud, Hair, Tair,                    &
+     &                            cloud, Hair, Tair, Pair,              &
 #endif
      &                            srflx)
 !***********************************************************************
@@ -81,6 +82,7 @@
       real(r8), intent(in) :: cloud(LBi:,LBj:)
       real(r8), intent(in) :: Hair(LBi:,LBj:)
       real(r8), intent(in) :: Tair(LBi:,LBj:)
+      real(r8), intent(in) :: Pair(LBi:,LBj:)
 # endif
       real(r8), intent(out) :: srflx(LBi:,LBj:)
 #else
@@ -90,6 +92,7 @@
       real(r8), intent(in) :: cloud(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Hair(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Tair(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: Pair(LBi:UBi,LBj:UBj)
 # endif
       real(r8), intent(out) :: srflx(LBi:UBi,LBj:UBj)
 #endif
@@ -98,13 +101,16 @@
 !
       integer :: i, j
 #if defined ALBEDO || defined DIURNAL_SRFLUX
+      real(dp) :: hour, yday
       real(r8) :: Dangle, Hangle, LatRad
-      real(r8) :: cff1, cff2, hour, yday
+      real(r8) :: cff1, cff2
 # ifdef ALBEDO
       real(r8) :: Rsolar, e_sat, vap_p, zenith
 # endif
 #endif
       real(r8) :: cff
+
+      real(r8), parameter :: alb_w=0.06_r8
 
 #include "set_bounds.h"
 
@@ -137,11 +143,11 @@
 !
 !  Get time clock day-of-year and hour.
 !
-      CALL caldate (tdays(ng), yd_r8=yday, h_r8=hour)
+      CALL caldate (tdays(ng), yd_dp=yday, h_dp=hour)
 !
 !  Estimate solar declination angle (radians).
 !
-      Dangle=23.44_r8*COS((172.0_r8-yday)*2.0_r8*pi/365.25_r8)
+      Dangle=23.44_dp*COS((172.0_dp-yday)*2.0_dp*pi/365.2425_dp)
       Dangle=Dangle*deg2rad
 !
 !  Compute hour angle (radians).
@@ -154,9 +160,9 @@
       DO j=JstrT,JendT
         DO i=IstrT,IendT
 !
-!  Local daylight is a function of the declination (Dangle) and hour
-!  angle adjusted for the local meridian (Hangle-lonr(i,j)/15.0).
-!  The 15.0 factor is because the sun moves 15 degrees every hour.
+!  Local daylight, GMT time zone, is a function of the declination
+!  (Dangle) and hour angle adjusted for the local meridian
+!  (Hangle-lonr(i,j)*deg2rad).
 !
           LatRad=latr(i,j)*deg2rad
           cff1=SIN(LatRad)*SIN(Dangle)
@@ -165,14 +171,19 @@
 !
 !  Estimate variation in optical thickness of the atmosphere over
 !  the course of a day under cloudless skies (Zillman, 1972). To
-!  obtain net incoming shortwave radiation multiply by (1.0-0.6*c**3),
+!  obtain incoming shortwave radiation multiply by (1.0-0.6*c**3),
 !  where c is the fractional cloud cover.
 !
 !  The equation for saturation vapor pressure is from Gill (Atmosphere-
 !  Ocean Dynamics, pp 606).
+!!
+!! If specific humidity in kg/kg.
+!!
+!!        vap_p=Pair(i,j)*Hair(i,j)/(0.62197_r8+0.378_r8*Hair(i,j))
+!!
 !
           srflx(i,j)=0.0_r8
-          zenith=cff1+cff2*COS(Hangle-lonr(i,j)*deg2rad/15.0_r8)
+          zenith=cff1+cff2*COS(Hangle-lonr(i,j)*deg2rad)
           IF (zenith.gt.0.0_r8) THEN
             cff=(0.7859_r8+0.03477_r8*Tair(i,j))/                       &
      &          (1.0_r8+0.00412_r8*Tair(i,j))
@@ -183,6 +194,13 @@
      &                 ((zenith+2.7_r8)*vap_p*1.0E-3_r8+                &
      &                  1.085_r8*zenith+0.1_r8)
           END IF
+!
+!  Add correction for ocean albedo. Notice that the correction is not
+!  needed below because it is assumed that the input (>=24h-average)
+!  and 'srflx' is NET downward shortwave radiation.
+!
+          srflx(i,j)=(1.0_r8-alb_w)*srflx(i,j)
+
 # elif defined DIURNAL_SRFLUX
 !
 !  SRFLX is reset on each time step in subroutine SET_DATA which

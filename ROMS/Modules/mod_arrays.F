@@ -48,6 +48,10 @@
 #if defined SSH_TIDES || defined UV_TIDES
       USE mod_tides, ONLY : allocate_tides, initialize_tides
 #endif
+#if defined BIO_SEDIMENTVARIABLES
+      USE mod_biosedimentvars, ONLY: allocate_bio_sediment,             &
+    &   initialize_bio_sediment
+#endif
 #ifdef BBL_MODEL
       USE mod_bbl, ONLY : allocate_bbl, initialize_bbl
 #endif
@@ -140,6 +144,9 @@
 #if defined SSH_TIDES || defined UV_TIDES
           CALL allocate_tides (ng, LBi, UBi, LBj, UBj)
 #endif
+#if defined BIO_SEDIMENTVARIABLES
+          CALL allocate_bio_sediment (ng, LBi, UBi, LBj, UBj)
+#endif
           IF (LuvSrc(ng).or.LwSrc(ng).or.ANY(LtracerSrc(:,ng))) THEN
             CALL allocate_sources (ng)
           END IF
@@ -202,6 +209,9 @@
 #endif
 #if defined SSH_TIDES || defined UV_TIDES
           CALL initialize_tides (ng, tile)
+#endif
+#if defined BIO_SEDIMENTVARIABLES
+          CALL initialize_bio_sediment (ng, tile)
 #endif
         END DO
 !$OMP BARRIER

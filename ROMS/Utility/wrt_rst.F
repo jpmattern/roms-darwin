@@ -25,6 +25,9 @@
       USE mod_netcdf
       USE mod_ocean
       USE mod_scalars
+#if defined BIO_SEDIMENTVARIABLES
+      USE mod_biosedimentvars
+#endif
 #if defined SEDIMENT || defined BBL_MODEL
       USE mod_sedbed
       USE mod_sediment
@@ -864,6 +867,35 @@
         RETURN
       END IF
 #  endif
+# endif
+# if defined BIO_SEDIMENTVARIABLES
+!
+!  Write out bioloical sediment variables.
+!
+      DO itrc=1,Nsed
+        ! TODO verify thi is correct
+        scale=1.0_r8
+        gtype=gfactor*r2dvar
+        status=nf_fwrite2d(ng, iNLM, RST(ng)%ncid,                      &
+     &                     RST(ng)%Vid(idBSMa(itrc)),                   &
+     &                     RST(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, scale,                   &
+#  ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#  endif
+     &                     bio_sediment(ng) % mass(:,:,itrc))
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idBSMa(itrc))),              &
+     &                        RST(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END DO
+
 # endif
 # ifdef SEDIMENT
 #  ifdef BEDLOAD

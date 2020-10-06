@@ -530,6 +530,9 @@
 !
       integer :: NDbio2d                ! 2D fields
       integer :: NDbio3d                ! 3D fields
+# if defined DIAGNOSTICS_BIO_MAPPING
+      integer :: NDb3d_o                ! 3D fields with output
+# endif
 !
 !  Number of diagnostic 3D right-hand-side fields.
 !
@@ -715,6 +718,11 @@
       allocate ( Nbico(Ngrids) )
 #endif
 
+#if defined ADJUST_PARAMS
+      allocate ( nparameters(Ngrids) )
+      allocate ( nregions(Ngrids) )
+      allocate ( maptype(Ngrids) )
+#endif
       RETURN
       END SUBROUTINE allocate_param
 
@@ -1046,6 +1054,11 @@
           END DO
         END DO
       END IF
+#endif
+#if defined ADJUST_PARAMS_DISABLED
+      DO ng=1,Ngrids
+        maptype(ng)=1
+      END DO
 #endif
 
       RETURN

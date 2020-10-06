@@ -34,6 +34,9 @@
       USE mod_sedbed
       USE mod_sediment
 # endif
+#if defined DARWIN_CARBON_EXTRAOUT
+      USE mod_biology,     ONLY : iDIC
+#endif
 # if defined AVERAGES_DETIDE && (defined SSH_TIDES || defined UV_TIDES)
       USE mod_tides
 # endif
@@ -1017,6 +1020,77 @@
           RETURN
         END IF
       END IF
+#  if defined DARWIN_CARBON_EXTRAOUT
+!
+!  Write out air-sea CO2.
+!
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        scale=1.0_r8
+        gtype=gfactor*r2dvar
+        status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idCflx), &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, scale,                   &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgCO2flx)
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idCflx)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out pCO2.
+!
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        scale=1.0_r8
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idpCO2), &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgPCO2)
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idpCO2)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out pH.
+!
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        scale=1.0_r8
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idpH),   &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgPH)
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idpH)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#  endif
 #  ifdef LMD_SKPP
 !
 !  Write out depth of surface boundary layer.

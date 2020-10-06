@@ -550,9 +550,34 @@
 #if defined BIO_FENNEL  || defined ECOSIM      || \
     defined HYPOXIA_SRM || defined NEMURO      || \
     defined NPZD_FRANKS || defined NPZD_IRON   || \
-    defined NPZD_POWELL || defined RED_TIDE
+    defined NPZD_POWELL || defined RED_TIDE    || \
+    defined DARWIN
 # define BIOLOGY
 #endif
+
+/*
+** Darwin standard options.
+*/
+
+#if defined DARWIN
+# define DARWIN_ROMSSINKING
+# define POSITIVEDEF
+# if ! defined DARWIN_NOVERBOSE
+#  define DARWIN_VERBOSE
+# endif
+# if ! defined DARWIN_TEMP_VERSION
+#  define DARWIN_TEMP_VERSION=3
+# endif
+# if defined DARWIN_VERBOSE_LIGHT
+#  if ! defined DARWIN_VERBOSE_LIGHT_I
+#   define DARWIN_VERBOSE_LIGHT_I 30
+#  endif
+#  if ! defined DARWIN_VERBOSE_LIGHT_J
+#   define DARWIN_VERBOSE_LIGHT_J 30
+#  endif
+# endif
+# define DARWIN_INTERNAL_EXTRAATT 26
+#endif 
 
 /*
 ** Activate internal option for biological float behavior.
@@ -776,10 +801,6 @@
 # if defined DIAGNOSTICS_TS
 #   undef DIAGNOSTICS_TS
 # endif
-#endif
-#if defined DIAGNOSTICS_BIO && \
-  !(defined BIO_FENNEL      || defined HYPOXIA_SRM)
-#  undef DIAGNOSTICS_BIO
 #endif
 #if defined DIAGNOSTICS_BIO || defined DIAGNOSTICS_TS || \
     defined DIAGNOSTICS_UV

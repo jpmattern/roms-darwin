@@ -1,5 +1,12 @@
 #include "cppdefs.h"
 #ifdef DIAGNOSTICS
+# if defined DIAGNOSTICS_BIO
+#  if defined DIAGNOSTICS_BIO_MAPPING
+#   define SIZE_DB3D NDb3d_o
+#  else
+#   define SIZE_DB3D NDbio3d
+#  endif
+# endif
       SUBROUTINE set_diags (ng, tile)
 !
 !svn $Id: set_diags.F 889 2018-02-10 03:32:52Z arango $
@@ -458,7 +465,7 @@
           END DO
         END DO
 # endif
-# ifdef DIAGNOSTICS_BIO
+# if defined DIAGNOSTICS_BIO
 #  if defined BIO_FENNEL || defined HYPOXIA_SRM
         DO idiag=1,NDbio2d
           IF (idiag.ne.ipCO2) THEN
@@ -470,9 +477,28 @@
             END DO
           END IF
         END DO
-#  endif
-#  if defined BIO_FENNEL
-        DO idiag=1,NDbio3d
+#   if defined BIO_FENNEL
+        DO idiag=1,SIZE_DB3D
+          DO k=1,N(ng)
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
+                DIAGS(ng)%DiaBio3d(i,j,k,idiag)=rfac(i,j)*              &
+     &                    DIAGS(ng)%DiaBio3d(i,j,k,idiag)
+              END DO
+            END DO
+          END DO
+        END DO
+#   endif /*BIO_FENNEL*/
+#  else
+        DO idiag=1,NDbio2d
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DIAGS(ng)%DiaBio2d(i,j,idiag)=rfac(i,j)*                  &
+     &                  DIAGS(ng)%DiaBio2d(i,j,idiag)
+            END DO
+          END DO
+        END DO
+        DO idiag=1,SIZE_DB3D
           DO k=1,N(ng)
             DO j=JstrR,JendR
               DO i=IstrR,IendR
@@ -588,7 +614,6 @@
 #   endif
 #  endif
 #  ifdef DIAGNOSTICS_BIO
-#   if defined BIO_FENNEL || defined HYPOXIA_SRM
 !
 !  Biological terms 2D diagnostics.
 !
@@ -597,26 +622,25 @@
      &                      LBi, UBi, LBj, UBj,                         &
      &                      DIAGS(ng)%DiaBio2d(:,:,idiag))
         END DO
-#    ifdef DISTRIBUTE
+#   ifdef DISTRIBUTE
         CALL mp_exchange3d (ng, tile, iNLM, 1,                          &
      &                      LBi, UBi, LBj, UBj, 1, NDbio2d,             &
      &                      NghostPoints,                               &
      &                      EWperiodic(ng), NSperiodic(ng),             &
      &                      DIAGS(ng)%DiaBio2d)
-#    endif
 #   endif
-#   if defined BIO_FENNEL
+#   if ! defined HYPOXIA_SRM
 !
 !  Biological terms 3D diagnostics.
 !
-        DO idiag=1,NDbio3d
+        DO idiag=1,SIZE_DB3D
           CALL bc_r3d_tile (ng, tile,                                   &
      &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
      &                      DIAGS(ng)%DiaBio3d(:,:,:,idiag))
         END DO
 #    ifdef DISTRIBUTE
         CALL mp_exchange4d (ng, tile, iNLM, 1,                          &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng), 1, NDbio3d,   &
+     &                      LBi, UBi, LBj, UBj, 1, N(ng), 1, SIZE_DB3D,   &
      &                      NghostPoints,                               &
      &                      EWperiodic(ng), NSperiodic(ng),             &
      &                      DIAGS(ng)%DiaBio3d)

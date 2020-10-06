@@ -43,6 +43,37 @@
       USE mod_netcdf
       USE mod_ocean
       USE mod_scalars
+#if defined BIO_SEDIMENTVARIABLES
+      USE mod_biosedimentvars
+#endif
+#if defined DARWIN 
+# if defined DARWIN_REPORT_TRAITS
+      use mod_biology
+# elif defined DARWIN_READ_PALAT || defined DARWIN_READ_ASSEFF || defined DARWIN_READ_EXPORTFRACMORT || defined DARWIN_READ_EXPORTFRACMORT2 || defined DARWIN_READ_EXPORTFRACPREYPRED || defined DARWIN_READ_MORT2 || defined DARWIN_READ_GRAZEMAX
+      use mod_biology,        ONLY: nplank, iMinPred, iMaxPred, iMinPrey, iMaxPrey
+#  if defined DARWIN_READ_PALAT
+      use mod_biology,        ONLY: palat
+#  endif
+#  if defined DARWIN_READ_ASSEFF
+      use mod_biology,        ONLY: asseff
+#  endif
+#  if defined DARWIN_READ_EXPORTFRACMORT
+      use mod_biology,        ONLY: ExportFracMort
+#  endif
+#  if defined DARWIN_READ_EXPORTFRACMORT2
+      use mod_biology,        ONLY: ExportFracMort2
+#  endif
+#  if defined DARWIN_READ_GRAZEMAX
+      use mod_biology,        ONLY: grazemax
+#  endif
+#  if defined DARWIN_READ_EXPORTFRACPREYPRED
+      use mod_biology,        ONLY: ExportFracPreyPred 
+#  endif
+#  if defined DARWIN_READ_MORT2
+      use mod_biology,        ONLY: mort2 
+#  endif
+# endif /* DARWIN_REPORT_TRAITS */
+#endif
 #if defined SEDIMENT || defined BBL_MODEL
       USE mod_sedbed
       USE mod_sediment
@@ -93,6 +124,9 @@
       integer :: LBi, UBi, LBj, UBj
 #ifdef ADJUST_BOUNDARY
       integer :: IorJ, LBij, UBij
+#endif
+#if defined DARWIN && defined DARWIN_READ_PALAT
+      integer :: ic, is
 #endif
       integer :: IDmod, InpRec, gtype, i, ifield, itrc, lstr, lend
       integer :: Nrec, mySize, ncINPid, nvatts, nvdim, status, varid
@@ -489,6 +523,69 @@
             END IF
           END IF
         END IF
+# endif
+# if defined BIO_SEDIMENTVARIABLES
+!
+!  Read in biological sediment variables.
+!
+        DO itrc=1,Nsed
+          IF (get_var(idBSMa(itrc))) THEN
+            foundit=find_string(var_name, n_var,                        &
+     &                          TRIM(Vname(1,idBSMa(itrc))),            &
+     &                          varid)
+            IF (.not.foundit) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idBSMa(itrc))),  &
+     &                            InpRec,                               &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            END IF
+!            IF (Perfect2D) THEN
+!              gtype=var_flag(varid)*r3dvar
+!            ELSE
+              gtype=var_flag(varid)*r2dvar
+!            END IF
+!            IF (Perfect2D) THEN
+!              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+!     &                          Vname(1,idBSMa(itrc)), varid,           &
+!     &                          InpRec, gtype, Vsize,                   &
+!     &                          LBi, UBi, LBj, UBj, 1, 3,               &
+!     &                          Fscl, Fmin, Fmax,                       &
+!# ifdef MASKING
+!     &                          GRID(ng) % rmask,                       &
+!# endif
+!     &                          bio_sediment(ng) % mass)
+!            ELSE
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idBSMa(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
+# ifdef MASKING
+     &                          GRID(ng) % rmask,                       &
+# endif
+     &                          bio_sediment(ng) % mass(:,:,itrc))
+!            END IF
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idBSMa(itrc))),  &
+     &                            InpRec,                               &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+                WRITE (stdout,70) TRIM(Vname(2,idBSMa(itrc))),Fmin,Fmax
+              END IF
+            END IF
+          END IF
+        END DO
 # endif
 !
 !  Read in nonlinear free-surface (m).
@@ -1502,6 +1599,435 @@
 #  endif
 # endif
       END IF NLM_STATE
+# if defined DARWIN
+#  if defined DARWIN_READ_PALAT
+!
+!  Read in palat.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'palat',                                                      &
+     &    palat(:,:,ng),                                                &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1,1/),                                              &
+     &    total = (/nplank,nplank/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/3a)')                                      &
+              'GET_STATE - error while reading variable: palat',        &
+              'in input NetCDF file: ',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report palat.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'palat', MINVAL(palat), MAXVAL(palat)
+          !write(stdout,'(/18x,a)') 'palat:'
+          write(stdout,'(27x,a)') 'predator'
+          write(stdout,'(20x,a4,3x)',advance='no') 'prey'
+          ic=1
+          DO i=iMinPred,iMaxPred
+            write(stdout,'(i6)',advance='no') ic
+            ic=ic+1
+          END DO
+          write(stdout,*) ''
+          ic=1
+          DO is=iMinPrey,iMaxPrey
+            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                  &
+     &        palat(is,iMinPred:iMaxPred,ng)    
+            ic=ic+1
+          END DO
+        END IF
+        IF (Master) THEN
+          write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO is=1,nplank
+            DO i=1,nplank
+              IF (palat(i,is,ng).gt.0.0_r8) THEN
+                write(stdout,'(22x,a,i2,a,i2,a,f5.3)')                   & 
+     &           'palat(',i,',',is,') = ',palat(i,is,ng)
+              END IF
+            END DO
+          END DO
+        END IF
+!
+!  Check palat.
+!
+        DO i=1,nplank
+          DO is=1,nplank
+            IF ((i.lt.iMinPrey.or.i.gt.iMaxPrey.or.                     &
+     &           is.lt.iMinPred.or.is.gt.iMaxPred).and.                 &
+     &           palat(i,is,ng).ne.0.0_r8) THEN
+              IF(Master) WRITE(stdout,'(a,i0,a,i0,a,i0,a)')             &
+     &          'GET_STATE - error: grid', ng,                          &
+     &          ': non-zero palat at unused index (',i,',',is,').'
+              exit_flag=5
+              ioerror=status
+              RETURN
+            END IF
+          END DO
+        END DO
+#  endif /* DARWIN_READ_PALAT */
+#  if defined DARWIN_READ_ASSEFF
+!
+!  Read in asseff.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'asseff',                                                     &
+     &    asseff(:,:,ng),                                               &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1,1/),                                              &
+     &    total = (/nplank,nplank/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/3a)')                                      &
+              'GET_STATE - error while reading variable: asseff',       &
+              'in input NetCDF file: ',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report asseff.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'asseff', MINVAL(asseff), MAXVAL(asseff)
+          !write(stdout,'(/18x,a)') 'asseff:'
+          write(stdout,'(27x,a)') 'predator'
+          write(stdout,'(20x,a4,3x)',advance='no') 'prey'
+          ic=1
+          DO i=iMinPred,iMaxPred
+            write(stdout,'(i6)',advance='no') ic
+            ic=ic+1
+          END DO
+          write(stdout,*) ''
+          ic=1
+          DO is=iMinPrey,iMaxPrey
+            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                 &
+     &        asseff(is,iMinPred:iMaxPred,ng)    
+            ic=ic+1
+          END DO
+        END IF
+#  endif /* DARWIN_READ_ASSEFF */
+#  if defined DARWIN_READ_EXPORTFRACPREYPRED
+!
+!  Read in ExportFracPreyPred.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'ExportFracPreyPred',                                         &
+     &    ExportFracPreyPred(:,:,ng),                                   &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1,1/),                                              &
+     &    total = (/nplank,nplank/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/a,1x,a,1x,a,1x,a)')                        &
+              'GET_STATE - error while reading variable:',              &
+     &        'ExportFracPreyPred',                                     &
+     &        'in input NetCDF file:',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report ExportFracPreyPred.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'ExportFracPreyPred',                       &
+     &      MINVAL(ExportFracPreyPred), MAXVAL(ExportFracPreyPred)
+          write(stdout,'(27x,a)') 'predator'
+          write(stdout,'(20x,a4,3x)',advance='no') 'prey'
+          ic=1
+          DO i=iMinPred,iMaxPred
+            write(stdout,'(i6)',advance='no') ic
+            ic=ic+1
+          END DO
+          write(stdout,*) ''
+          ic=1
+          DO is=iMinPrey,iMaxPrey
+            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                 &
+     &        ExportFracPreyPred(is,iMinPred:iMaxPred,ng)    
+            ic=ic+1
+          END DO
+        END IF
+#  endif /* DARWIN_READ_EXPORTFRACPREYPRED */
+#  if defined DARWIN_READ_EXPORTFRACMORT
+!
+!  Read in ExportFracMort.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'ExportFracMort',                                             &
+     &    ExportFracMort(:,ng),                                         &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1/),                                                &
+     &    total = (/nplank/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/a,1x,a,1x,a,1x,a)')                        &
+     &        'GET_STATE - error while reading variable:',              &
+     &        'ExportFracMort',                                         &
+     &        'in input NetCDF file:',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report ExportFracMort.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'ExportFracMort',                           &
+     &      MINVAL(ExportFracMort(:,ng)),MAXVAL(ExportFracMort(:,ng))
+          !write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO i=1,nplank
+            write(stdout,'(22x,a,i2,a,f8.6)')                           &
+     &        'ExportFracMort(',i,') = ',ExportFracMort(i,ng)
+          END DO
+        END IF
+#  endif /* DARWIN_READ_EXPORTFRACMORT */
+#  if defined DARWIN_READ_EXPORTFRACMORT2
+!
+!  Read in ExportFracMort2.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'ExportFracMort2',                                            &
+     &    ExportFracMort2(:,ng),                                        &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1/),                                                &
+     &    total = (/nplank/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/a,1x,a,1x,a,1x,a)')                        &
+     &        'GET_STATE - error while reading variable:',              &
+     &        'ExportFracMort2',                                        &
+     &        'in input NetCDF file:',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report ExportFracMort2.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'ExportFracMort2',                          &
+     &      MINVAL(ExportFracMort2(:,ng)),MAXVAL(ExportFracMort2(:,ng))
+          !write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO i=1,nplank
+            write(stdout,'(22x,a,i2,a,f8.6)')                           &
+     &        'ExportFracMort2(',i,') = ',ExportFracMort2(i,ng)
+          END DO
+        END IF
+#  endif /* DARWIN_READ_EXPORTFRACMORT2 */
+#  if defined DARWIN_READ_GRAZEMAX
+!
+!  Read in grazemax.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'grazemax',                                                   &
+     &    grazemax(:,ng),                                               &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1/),                                                &
+     &    total = (/nplank/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/a,1x,a,1x,a,1x,a)')                        &
+     &        'GET_STATE - error while reading variable:',              &
+     &        'grazemax',                                               &
+     &        'in input NetCDF file:',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report grazemax.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'grazemax',                                 &
+     &      MINVAL(grazemax(:,ng)),MAXVAL(grazemax(:,ng))
+          !write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO i=1,nplank
+            write(stdout,'(22x,a,i2,a,f8.6)')                           &
+     &        'grazemax(',i,') = ',grazemax(i,ng)
+          END DO
+        END IF
+#  endif /* DARWIN_READ_GRAZEMAX */
+#  if defined DARWIN_READ_MORT2
+!
+!  Read in mort2.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'mort2',                                                      &
+     &    mort2(:,ng),                                                  &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1/),                                                &
+     &    total = (/nplank/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/a,1x,a,1x,a,1x,a)')                        &
+     &        'GET_STATE - error while reading variable:',              &
+     &        'mort2',                                                  &
+     &        'in input NetCDF file:',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report mort2.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'mort2',                                    &
+     &      MINVAL(mort2(:,ng)),MAXVAL(mort2(:,ng))
+          !write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO i=1,nplank
+            write(stdout,'(22x,a,i2,a,f8.6)')                           &
+     &        'mort2(',i,') = ',mort2(i,ng)
+          END DO
+        END IF
+#  endif /* DARWIN_READ_MORT2 */
+#  if defined DARWIN_REPORT_TRAITS
+#   define REPFRMT_F 200
+#   define REPFRMT_I 201
+#   define REPFRMT_L 202
+!
+!  Report generated trait parameters.
+!
+        IF (Master) THEN
+          write(stdout,'(/1x,a,i0,a)')                                     &
+     &      'Plankton traits (Grid ',ng,'):'
+          write(stdout,'(1x,a)')                                           &
+     &      '========================='
+          write(stdout,REPFRMT_L) 'isPhoto',isPhoto(:,ng)
+          write(stdout,REPFRMT_I) 'bactType',bactType(:,ng)
+          write(stdout,REPFRMT_L) 'isAerobic',isAerobic(:,ng)
+          write(stdout,REPFRMT_L) 'isDenit',isDenit(:,ng)
+          write(stdout,REPFRMT_L) 'hasSi',hasSi(:,ng)
+          write(stdout,REPFRMT_L) 'hasPIC',hasPIC(:,ng)
+          write(stdout,REPFRMT_L) 'diazo',diazo(:,ng)
+          write(stdout,REPFRMT_L) 'useNH4',useNH4(:,ng)
+          write(stdout,REPFRMT_L) 'useNO2',useNO2(:,ng)
+          write(stdout,REPFRMT_L) 'useNO3',useNO3(:,ng)
+          write(stdout,REPFRMT_L) 'combNO',combNO(:,ng)
+          write(stdout,REPFRMT_F) 'Xmin',Xmin(:,ng)
+          write(stdout,REPFRMT_F) 'amminhib',amminhib(:,ng)
+          write(stdout,REPFRMT_F) 'acclimtimescl',acclimtimescl(:,ng)
+          write(stdout,REPFRMT_F) 'mort',mort(:,ng)
+          write(stdout,REPFRMT_F) 'mort2',mort2(:,ng)
+          write(stdout,REPFRMT_I) 'tempMort',tempMort(:,ng)
+          write(stdout,REPFRMT_I) 'tempMort2',tempMort2(:,ng)
+          write(stdout,REPFRMT_F) 'ExportFracMort',ExportFracMort(:,ng)
+          write(stdout,REPFRMT_F) 'ExportFracMort2',ExportFracMort2(:,ng)
+          write(stdout,REPFRMT_F) 'ExportFrac',ExportFrac(:,ng)
+          write(stdout,REPFRMT_F) 'phytoTempCoeff',phytoTempCoeff(:,ng)
+          write(stdout,REPFRMT_F) 'phytoTempExp1',phytoTempExp1(:,ng)
+          write(stdout,REPFRMT_F) 'phytoTempExp2',phytoTempExp2(:,ng)
+          write(stdout,REPFRMT_F) 'phytoTempOptimum',phytoTempOptimum(:,ng)
+          write(stdout,REPFRMT_F) 'phytoDecayPower',phytoDecayPower(:,ng)
+          write(stdout,REPFRMT_F) 'R_NC',R_NC(:,ng)
+          write(stdout,REPFRMT_F) 'R_PC',R_PC(:,ng)
+          write(stdout,REPFRMT_F) 'R_SiC',R_SiC(:,ng)
+          write(stdout,REPFRMT_F) 'R_FeC',R_FeC(:,ng)
+          write(stdout,REPFRMT_F) 'R_ChlC',R_ChlC(:,ng)
+          write(stdout,REPFRMT_F) 'R_PICPOC',R_PICPOC(:,ng)
+          write(stdout,REPFRMT_F) 'wsink',wsink(:,ng)
+          write(stdout,REPFRMT_F) 'wswim',wswim(:,ng)
+          write(stdout,REPFRMT_F) 'respiration',respiration(:,ng)
+          write(stdout,REPFRMT_F) 'PCmax',PCmax(:,ng)
+          write(stdout,REPFRMT_F) 'Qnmax',Qnmax(:,ng)
+          write(stdout,REPFRMT_F) 'Qnmin',Qnmin(:,ng)
+          write(stdout,REPFRMT_F) 'Qpmax',Qpmax(:,ng)
+          write(stdout,REPFRMT_F) 'Qpmin',Qpmin(:,ng)
+          write(stdout,REPFRMT_F) 'Qsimax',Qsimax(:,ng)
+          write(stdout,REPFRMT_F) 'Qsimin',Qsimin(:,ng)
+          write(stdout,REPFRMT_F) 'Qfemax',Qfemax(:,ng)
+          write(stdout,REPFRMT_F) 'Qfemin',Qfemin(:,ng)
+          write(stdout,REPFRMT_F) 'Vmax_NH4',Vmax_NH4(:,ng)
+          write(stdout,REPFRMT_F) 'Vmax_NO2',Vmax_NO2(:,ng)
+          write(stdout,REPFRMT_F) 'Vmax_NO3',Vmax_NO3(:,ng)
+          write(stdout,REPFRMT_F) 'Vmax_N',Vmax_N(:,ng)
+          write(stdout,REPFRMT_F) 'Vmax_PO4',Vmax_PO4(:,ng)
+          write(stdout,REPFRMT_F) 'Vmax_SiO2',Vmax_SiO2(:,ng)
+          write(stdout,REPFRMT_F) 'Vmax_FeT',Vmax_FeT(:,ng)
+          write(stdout,REPFRMT_F) 'ksatNH4',ksatNH4(:,ng)
+          write(stdout,REPFRMT_F) 'ksatNO2',ksatNO2(:,ng)
+          write(stdout,REPFRMT_F) 'ksatNO3',ksatNO3(:,ng)
+          write(stdout,REPFRMT_F) 'ksatPO4',ksatPO4(:,ng)
+          write(stdout,REPFRMT_F) 'ksatSiO2',ksatSiO2(:,ng)
+          write(stdout,REPFRMT_F) 'ksatFeT',ksatFeT(:,ng)
+          write(stdout,REPFRMT_F) 'kexcC',kexcC(:,ng)
+          write(stdout,REPFRMT_F) 'kexcN',kexcN(:,ng)
+          write(stdout,REPFRMT_F) 'kexcP',kexcP(:,ng)
+          write(stdout,REPFRMT_F) 'kexcSi',kexcSi(:,ng)
+          write(stdout,REPFRMT_F) 'kexcFe',kexcFe(:,ng)
+#if defined DARWIN_GEIDER
+          write(stdout,REPFRMT_F) 'inhibcoef_geid',inhibcoef_geid(:,ng)
+#endif
+#if ! defined DARWIN_GEIDER
+          write(stdout,REPFRMT_F) 'ksatPAR',ksatPAR(:,ng)
+          write(stdout,REPFRMT_F) 'kinhPAR',kinhPAR(:,ng)
+#endif
+          write(stdout,REPFRMT_F) 'mQyield',mQyield(:,ng)
+          write(stdout,REPFRMT_F) 'chl2cmax',chl2cmax(:,ng)
+          write(stdout,REPFRMT_F) 'grazemax',grazemax(:,ng)
+          write(stdout,REPFRMT_F) 'kgrazesat',kgrazesat(:,ng)
+          write(stdout,REPFRMT_F) 'palat',palat(:,:,ng)
+          write(stdout,REPFRMT_F) 'asseff',asseff(:,:,ng)
+          write(stdout,REPFRMT_F) 'ExportFracPreyPred',ExportFracPreyPred(:,:,ng)
+          write(stdout,REPFRMT_F) 'yield',yield(:,ng)
+          write(stdout,REPFRMT_F) 'yieldO2',yieldO2(:,ng)
+          write(stdout,REPFRMT_F) 'yieldNO3',yieldNO3(:,ng)
+          write(stdout,REPFRMT_F) 'ksatPON',ksatPON(:,ng)
+          write(stdout,REPFRMT_F) 'ksatPOC',ksatPOC(:,ng)
+          write(stdout,REPFRMT_F) 'ksatPOP',ksatPOP(:,ng)
+          write(stdout,REPFRMT_F) 'ksatPOFe',ksatPOFe(:,ng)
+          write(stdout,REPFRMT_F) 'ksatDON',ksatDON(:,ng)
+          write(stdout,REPFRMT_F) 'ksatDOC',ksatDOC(:,ng)
+          write(stdout,REPFRMT_F) 'ksatDOP',ksatDOP(:,ng)
+          write(stdout,REPFRMT_F) 'ksatDOFe',ksatDOFe(:,ng)
+#if defined DARWIN_RADTRANS
+          write(stdout,REPFRMT_F) 'aphy_chl',aphy_chl(:,:,ng)
+          write(stdout,REPFRMT_F) 'aphy_chl_ps',aphy_chl_ps(:,:,ng)
+          write(stdout,REPFRMT_F) 'bphy_mgC',bphy_mgC(:,:,ng)
+          write(stdout,REPFRMT_F) 'bbphy_mgC',bbphy_mgC(:,:,ng)
+#endif
+#if ! defined DARWIN_GEIDER
+          write(stdout,REPFRMT_F) 'normI',normI(:,ng)
+#endif
+          write(stdout,'(/1x,a,i0,a)')                                     &
+     &      'Plankton dependent traits (Grid ',ng,'):'
+          write(stdout,'(1x,a)')                                           &
+     &      '==================================='
+#if defined DARWIN_RADTRANS
+          write(stdout,REPFRMT_I) 'ap_type',ap_type(:,ng)
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS
+          write(stdout,REPFRMT_F) 'biovol',biovol(:,ng)
+#endif
+          write(stdout,REPFRMT_I) 'group',group(:,ng)
+#if ! defined DARWIN_RANDOM_TRAITS
+          write(stdout,REPFRMT_F) 'biovol_bygroup',biovol_bygroup(:,:,ng)
+#endif
+          write(stdout,REPFRMT_F) 'alphachl',alphachl(:,:,ng)
+          write(stdout,REPFRMT_F) 'alpha_mean',alpha_mean(:,ng)
+          write(stdout,REPFRMT_F) 'chl2cmin',chl2cmin(:,ng)
+          write(stdout,REPFRMT_F) 'mortTempFuncMin',mortTempFuncMin(:,ng)
+          write(stdout,REPFRMT_F) 'mort2TempFuncMin',mort2TempFuncMin(:,ng)
+        END IF
+#endif /* DARWIN_REPORT_TRAITS */
+# endif /* DARWIN */
 #endif
 
 #if defined TANGENT || defined TL_IOMS
@@ -4761,6 +5287,11 @@
      &        'at time record = ',i3,/,18x,'in input NetCDF file: ',a)
   70  FORMAT (16x,'- ',a,/,19x,'(Min = ',1p,e15.8,                      &
      &        ' Max = ',1p,e15.8,')')
+#if defined DARWIN_REPORT_TRAITS
+ 200  FORMAT (1x,a30,' = ',e21.15,99(', ',e21.15))
+ 201  FORMAT (1x,a30,' = ',i0,99(', ',i0))
+ 202  FORMAT (1x,a30,' = ',l1,99(', ',l1))
+#endif
 
       RETURN
       END SUBROUTINE get_state

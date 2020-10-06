@@ -81,7 +81,11 @@
       character (len=   8) :: B(4)
       character (len=  40) :: BryVar1, BryVar2
       character (len=  70) :: Bstring, line
+#if defined LBC_ATT_LEN
+      character (len=LBC_ATT_LEN) :: lbc_att
+#else
       character (len=2816) :: lbc_att
+#endif
 !
 !-----------------------------------------------------------------------
 !  If restart, read and check lateral boundary conditions global
@@ -383,7 +387,11 @@
       character (len=   7) :: string(4)
       character (len=  21) :: frmt
       character (len=  70) :: line
+#if defined LBC_ATT_LEN
+      character (len=LBC_ATT_LEN) :: lbc_att
+#else
       character (len=2816) :: lbc_att
+#endif
 !
 !-----------------------------------------------------------------------
 !  Write lateral boundary conditions global attribute.

@@ -51,6 +51,9 @@
 !                    Vinfo(23) =>  Variable "formula_terms" attribute  !
 !                    Vinfo(24) =>  Variable "_FillValue" attribute     !
 !                    Vinfo(25) =>  Variable "positive" attribute       !
+#if defined DARWIN_INTERNAL_EXTRAATT
+!                    Vinfo(26) =>  Variable "plankton_type" attribute  !
+#endif
 !     ncname       NetCDF file name.                                   !
 !     SetFillVal   Logical switch to set fill value in land areas      !
 !                    (optional).                                       !
@@ -102,7 +105,11 @@
       real(r8), dimension(:), intent(inout) :: Aval
 
       character (len=*), intent(in) :: ncname
+#if defined DARWIN_INTERNAL_EXTRAATT
+      character (len=*), intent(inout) :: Vinfo(DARWIN_INTERNAL_EXTRAATT)
+#else
       character (len=*), intent(inout) :: Vinfo(25)
+#endif
 !
 !  Local variable declarations.
 !
@@ -610,6 +617,26 @@
             END IF
           END IF
         END IF
+#if defined DARWIN_INTERNAL_EXTRAATT
+!
+!  If applicable, define "plankton_type" attribute.
+!
+        IF (exit_flag.eq.NoError) THEN
+          latt=LEN_TRIM(Vinfo(26))
+          IF (latt.gt.0) THEN
+            status=nf90_put_att(ncid, Vid, 'plankton_type',             &
+     &                          Vinfo(26)(1:latt))
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) WRITE (stdout,30) 'plankton_type',            &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+          END IF
+        END IF
+#endif
 !
 !  If applicable, define "cycle" attribute.
 !

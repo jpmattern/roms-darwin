@@ -128,6 +128,9 @@
       USE mod_sedbed
       USE mod_sediment
 # endif
+# if defined DARWIN_CARBON_EXTRAOUT 
+      USE mod_biology
+# endif
 !
       USE exchange_2d_mod
 # ifdef SOLVE3D
@@ -422,6 +425,19 @@
           END IF
         END DO
 
+#  if defined DARWIN_CARBON_EXTRAOUT
+        IF (Aout(idTvar(iTIC_),ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgCO2flx(i,j)=OCEAN(ng)%CO2flx(i,j)
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPCO2(i,j,k)=OCEAN(ng)%pCO2(i,j,k)
+                AVERAGE(ng)%avgPH(i,j,k)=OCEAN(ng)%pH(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+#  endif
 #  if defined SEDIMENT && defined BEDLOAD
         DO it=1,NST
           IF (Aout(idUbld(it),ng)) THEN
@@ -1428,6 +1444,22 @@
           END IF
         END DO
 
+#  if defined DARWIN_CARBON_EXTRAOUT
+        IF (Aout(idTvar(iTIC_),ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgCO2flx(i,j)=                               &
+     &        AVERAGE(ng)%avgCO2flx(i,j)+OCEAN(ng)%CO2flx(i,j)
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPCO2(i,j,k)=                             &
+     &          AVERAGE(ng)%avgPCO2(i,j,k)+OCEAN(ng)%pCO2(i,j,k)
+                AVERAGE(ng)%avgPH(i,j,k)=                               &
+     &          AVERAGE(ng)%avgPH(i,j,k)+OCEAN(ng)%pH(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+#  endif
 #  if defined SEDIMENT && defined BEDLOAD
         DO it=1,NST
           IF (Aout(idUbld(it),ng)) THEN
@@ -2549,6 +2581,22 @@
           END IF
         END DO
 
+#  if defined DARWIN_CARBON_EXTRAOUT
+        IF (Aout(idTvar(iTIC_),ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgCO2flx(i,j)=rfac(i,j)*                     &
+     &                       AVERAGE(ng)%avgCO2flx(i,j)
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPCO2(i,j,k)=rfac(i,j)*                   &
+     &                         AVERAGE(ng)%avgPCO2(i,j,k)
+                AVERAGE(ng)%avgPH(i,j,k)=rfac(i,j)*                     &
+     &                       AVERAGE(ng)%avgPH(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+#  endif
 #  if defined SEDIMENT && defined BEDLOAD
         DO it=1,NST
           IF (Aout(idUbld(it),ng)) THEN

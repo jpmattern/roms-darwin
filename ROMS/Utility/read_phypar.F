@@ -3381,6 +3381,9 @@
      &                 TRIM(svn_url), TRIM(svn_rev), TRIM(Rdir),        &
      &                 TRIM(Hdir), TRIM(Hfile), TRIM(Adir)
 #endif
+#if defined GIT_VERSION
+        WRITE(out,'(/1x,2a)') 'Git Version   : ', GIT_VERSION
+#endif
 
         DO ng=1,Ngrids
 !

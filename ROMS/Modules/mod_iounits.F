@@ -55,6 +55,9 @@
 !                STD(2,ng)  model error                                !
 !                STD(3,ng)  lateral open boundary conditions           !
 !                STD(4,ng)  surface forcing                            !
+#if defined DARWIN_RADTRANS_IO
+!    DRT       Darwin radiative transfer                               !
+#endif
 !                                                                      !
 !  Standard input files:                                               !
 !                                                                      !
@@ -132,6 +135,9 @@
       TYPE(T_IO), allocatable :: TIDE(:)    ! tidal forcing
       TYPE(T_IO), allocatable :: TLF(:)     ! TLM impulse fields
       TYPE(T_IO), allocatable :: TLM(:)     ! TLM history fields
+#if defined DARWIN_RADTRANS_IO
+      TYPE(T_IO), allocatable :: DRT(:)     ! DRT fields
+#endif
 !
 !  Input forcing data.
 !
@@ -227,6 +233,9 @@
       allocate ( TIDE(Ngrids) )
       allocate ( TLF(Ngrids) )
       allocate ( TLM(Ngrids) )
+#if defined DARWIN_RADTRANS_IO
+      allocate ( DRT(Ngrids) )
+#endif
 
       allocate ( NRM(4,Ngrids) )
       allocate ( STD(4,Ngrids) )
@@ -275,6 +284,9 @@
         TLM(ng)%ncid=-1
 
         TIDE(ng)%ncid=-1
+#if defined DARWIN_RADTRANS_IO
+        DRT(ng)%ncid=-1
+#endif
 
         NRM(1:4,ng)%ncid=-1
         STD(1:4,ng)%ncid=-1
@@ -382,6 +394,10 @@
 
           TIDE(ng)%base(i:i)=blank
           TIDE(ng)%name(i:i)=blank
+#if defined DARWIN_RADTRANS_IO
+          DRT(ng)%base(i:i)=blank
+          DRT(ng)%name(i:i)=blank
+#endif
 
           NRM(1:4,ng)%base(i:i)=blank
           NRM(1:4,ng)%name(i:i)=blank

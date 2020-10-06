@@ -109,6 +109,11 @@
           real(r8), pointer :: respirationG(:,:,:,:)
 #  endif
 # endif
+# if defined DARWIN_CARBON_EXTRAOUT 
+          real(r8), pointer :: pH(:,:,:)
+          real(r8), pointer :: CO2flx(:,:)
+          real(r8), pointer :: pCO2(:,:,:)
+# endif
 #endif
 
 #if defined TANGENT || defined TL_IOMS
@@ -368,6 +373,11 @@
 #  ifndef ANA_RESPIRATION
       allocate ( OCEAN(ng) % respirationG(LBi:UBi,LBj:UBj,N(ng),2) )
 #  endif
+# endif
+# if defined DARWIN_CARBON_EXTRAOUT
+      allocate ( OCEAN(ng) % CO2flx(LBi:UBi,LBj:UBj) )
+      allocate ( OCEAN(ng) % pCO2(LBi:UBi,LBj:UBj,N(ng)) )
+      allocate ( OCEAN(ng) % pH(LBi:UBi,LBj:UBj,N(ng)) )
 # endif
 #endif
 
@@ -671,6 +681,13 @@
 # endif
 # ifdef RED_TIDE
             OCEAN(ng) % CystIni(i,j) = IniVal
+# endif
+# if defined DARWIN_CARBON_EXTRAOUT
+            OCEAN(ng) % CO2flx(i,j) = 0.0_r8
+            DO k=1,N(ng)
+              OCEAN(ng) % pCO2(i,j,k) = 0.0_r8
+              OCEAN(ng) % pH(i,j,k) = 8.0_r8
+            END DO
 # endif
           END DO
 #ifdef SOLVE3D

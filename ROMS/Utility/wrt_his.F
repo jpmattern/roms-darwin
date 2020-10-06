@@ -36,6 +36,12 @@
       USE mod_netcdf
       USE mod_ocean
       USE mod_scalars
+#if defined BIO_SEDIMENTVARIABLES
+      USE mod_biosedimentvars
+#endif
+#if defined DARWIN_CARBON_EXTRAOUT
+      USE mod_biology,         ONLY : iDIC
+#endif
 #if defined SEDIMENT || defined BBL_MODEL
       USE mod_sedbed
       USE mod_sediment
@@ -1058,6 +1064,77 @@
           RETURN
         END IF
       END IF
+#  if defined DARWIN_CARBON_EXTRAOUT
+!
+!  Write out air-sea CO2 flux.
+!
+      IF (Hout(idTvar(iDIC),ng)) THEN
+        scale=1.0_r8
+        gtype=gfactor*r2dvar
+        status=nf_fwrite2d(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idCflx), &
+     &                     HIS(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, scale,                   &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     OCEAN(ng) % CO2flx)
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idCflx)), HIS(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out pCO2.
+!
+      IF (Hout(idTvar(iDIC),ng)) THEN
+        scale=1.0_r8
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idpCO2), &
+     &                     HIS(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     OCEAN(ng) % pCO2)
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idpCO2)), HIS(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out pH.
+!
+      IF (Hout(idTvar(iDIC),ng)) THEN
+        scale=1.0_r8
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idpH),   &
+     &                     HIS(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     OCEAN(ng) % pH)
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idpH)), HIS(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+# endif
 # ifdef LMD_SKPP
 !
 !  Write out depth surface boundary layer.
@@ -1427,6 +1504,37 @@
         END IF
       END DO
 
+# if defined BIO_SEDIMENTVARIABLES
+!
+!  Write out bioloical sediment variables.
+!
+      DO itrc=1,Nsed
+        IF (Hout(idBSMa(itrc),ng)) THEN
+          ! TODO verify thi is correct
+          scale=1.0_r8
+          gtype=gfactor*r2dvar
+          status=nf_fwrite2d(ng, iNLM, HIS(ng)%ncid,                    &
+     &                       HIS(ng)%Vid(idBSMa(itrc)),                 &
+     &                       HIS(ng)%Rindex, gtype,                     &
+     &                       LBi, UBi, LBj, UBj, scale,                 &
+#  ifdef MASKING
+     &                       GRID(ng) % rmask,                          &
+#  endif
+     &                       bio_sediment(ng) % mass(:,:,itrc))
+          IF (FoundError(status, nf90_noerr, __LINE__,                  &
+     &                   __FILE__)) THEN
+            IF (Master) THEN
+              WRITE (stdout,10) TRIM(Vname(1,idBSMa(itrc))),            &
+     &                          HIS(ng)%Rindex
+            END IF
+            exit_flag=3
+            ioerror=status
+            RETURN
+          END IF
+        END IF
+      END DO
+
+# endif
 # ifdef BULK_FLUXES
 !
 !  Write out latent heat flux.

@@ -22,6 +22,7 @@
 **                                                                    **
 **         ecosim.h           ECOSIM                                  **
 **         fennel.h           BIO_FENNEL                              **
+**         darwin.h           DARWIN                                  **
 **         hypoxia_srm.h      HYPOXIA_SRM                             **
 **         nemuro.h           NEMURO                                  **
 **         npzd_Franks.h      NPZD_FRANKS                             **
@@ -115,6 +116,8 @@
 
 # if defined BIO_FENNEL
 #  include <fennel.h>
+# elif defined DARWIN
+#  include <darwin.h>
 # elif defined ECOSIM
 #  include <ecosim.h>
 # elif defined HYPOXIA_SRM

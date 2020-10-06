@@ -1,5 +1,12 @@
 #include "cppdefs.h"
 #ifdef DIAGNOSTICS
+# if defined DIAGNOSTICS_BIO
+#  if defined DIAGNOSTICS_BIO_MAPPING
+#   define SIZE_DB3D NDb3d_o 
+#  else
+#   define SIZE_DB3D NDbio3d
+#  endif
+# endif
       SUBROUTINE wrt_diags (ng)
 !
 !svn $Id: wrt_diags.F 889 2018-02-10 03:32:52Z arango $
@@ -228,29 +235,36 @@
         END DO
       END DO
 # endif
-# ifdef DIAGNOSTICS_BIO
-#  if defined BIO_FENNEL || defined HYPOXIA_SRM
+# if defined DIAGNOSTICS_BIO
 !
 !  Write out 2D biological diagnostic fields.
 !
+#  if defined DARWIN
+      dtBIO=dt(ng)*sec2day
+#  else
       dtBIO=dt(ng)*sec2day/REAL(BioIter(ng),r8)
+#  endif
 
       DO ivar=1,NDbio2d
         ifield=iDbio2(ivar)
         IF (Dout(ifield,ng)) THEN
+#  if defined BIO_FENNEL || defined HYPOXIA_SRM
           IF (ivar.eq.ipCO2) THEN
             scale=1.0_r8
           ELSE
             scale=1.0_r8/dtBIO                       ! mmole m-2 day-1
           END IF
+#  else
+          scale=1.0_r8/dtBIO                         ! mmole m-2 day-1
+#  endif
           gtype=gfactor*r2dvar
           status=nf_fwrite2d(ng, iNLM, DIA(ng)%ncid,                    &
      &                       DIA(ng)%Vid(ifield),                       &
      &                       DIA(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
-#   ifdef MASKING
+#  ifdef MASKING
      &                       GRID(ng) % rmask,                          &
-#   endif
+#  endif
      &                       DIAGS(ng) % DiaBio2d(:,:,ivar),            &
      &                       SetFillVal = .FALSE.)
           IF (FoundError(status, nf90_noerr, __LINE__,                  &
@@ -264,12 +278,10 @@
           END IF
         END IF
       END DO
-#  endif
-#  if defined BIO_FENNEL
 !
 !  Write out 3D biological diagnostic fields.
 !
-      DO ivar=1,NDbio3d
+      DO ivar=1,SIZE_DB3D
         ifield=iDbio3(ivar)
         IF (Dout(ifield,ng)) THEN
           scale=1.0_r8/dtBIO                         ! mmole m-3 day-1
@@ -278,9 +290,9 @@
      &                       DIA(ng)%Vid(ifield),                       &
      &                       DIA(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
-#   ifdef MASKING
+#  ifdef MASKING
      &                       GRID(ng) % rmask,                          &
-#   endif
+#  endif
      &                       DIAGS(ng) % DiaBio3d(:,:,:,ivar),          &
      &                       SetFillVal = .FALSE.)
           IF (FoundError(status, nf90_noerr, __LINE__,                  &
@@ -294,7 +306,6 @@
           END IF
         END IF
       END DO
-#  endif
 # endif
 !
 !  Synchronize time-average NetCDF file to disk to allow other processes

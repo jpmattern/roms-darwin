@@ -108,6 +108,8 @@
 #ifdef BIOLOGY
 # if defined BIO_FENNEL
 #  include <fennel_mod.h>
+# elif defined DARWIN
+#  include <darwin_mod.h>
 # elif defined ECOSIM
 #  include <ecosim_mod.h>
 # elif defined HYPOXIA_SRM

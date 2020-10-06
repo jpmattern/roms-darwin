@@ -44,7 +44,11 @@
 !
       logical :: got_var(NV)
 
+#if defined DARWIN_INTERNAL_EXTRAATT
+      integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
+#else
       integer, parameter :: Natt = 25
+#endif
 
       integer :: i, j, ifield, itrc, nvd3, nvd4, varid
       integer :: recdim, status
@@ -258,6 +262,31 @@
      &                 Nfec, DimIDs(28))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
+# elif defined DARWIN 
+        status=def_dim(ng, iNLM, HIS(ng)%ncid, ncname, 'nplank',        &
+     &                 nplank, DimIDs(25))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, HIS(ng)%ncid, ncname, 'nchl',          &
+     &                 nChl, DimIDs(26))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, HIS(ng)%ncid, ncname, 'nlam',          &
+     &                 nlam, DimIDs(27))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, HIS(ng)%ncid, ncname, 'ngroup',        &
+     &                 nGroup, DimIDs(28))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+        
+!        status=def_dim(ng, iNLM, HIS(ng)%ncid, ncname, 'nlampone',      &
+!     &                 nlam+1, DimIDs(33))
+!        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+!     &                 __FILE__)) RETURN
 # endif
 #endif
 
@@ -1156,6 +1185,13 @@
             Vinfo(20)='mask_rho'
 # endif
             Vinfo(22)='coordinates'
+# if defined DARWIN_INTERNAL_EXTRAATT
+            DO i=1,nplank
+              IF (itrc.eq.i+ic_-1) THEN 
+                Vinfo(26)=trim(grp_names(group(i,ng)))
+              END IF
+            END DO
+# endif
             Aval(5)=REAL(r3dvar,r8)
             status=def_var(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Tid(itrc),   &
      &                     NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
@@ -1210,6 +1246,65 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
         END IF
+# if defined DARWIN_CARBON_EXTRAOUT
+!
+!  Define air-sea CO2 flux.
+!
+        IF (Hout(idTvar(iDIC),ng)) THEN
+          Vinfo( 1)=Vname(1,idCflx)
+          Vinfo( 2)=Vname(2,idCflx)
+          Vinfo( 3)=Vname(3,idCflx)
+          Vinfo(14)=Vname(4,idCflx)
+          Vinfo(16)=Vname(1,idtime)
+#  if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#  endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idCflx,ng),r8)
+          status=def_var(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idCflx),   &
+     &                   NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+!
+!  Define pCO2.
+!
+        IF (Hout(idTvar(iDIC),ng)) THEN
+          Vinfo( 1)=Vname(1,idpCO2)
+          Vinfo( 2)=Vname(2,idpCO2)
+          Vinfo( 3)=Vname(3,idpCO2)
+          Vinfo(14)=Vname(4,idpCO2)
+          Vinfo(16)=Vname(1,idtime)
+#  if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#  endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idpCO2,ng),r8)
+          status=def_var(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idpCO2),   &
+     &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+!
+!  Define pH.
+!
+        IF (Hout(idTvar(iDIC),ng)) THEN
+          Vinfo( 1)=Vname(1,idpH)
+          Vinfo( 2)=Vname(2,idpH)
+          Vinfo( 3)=Vname(3,idpH)
+          Vinfo(14)=Vname(4,idpH)
+          Vinfo(16)=Vname(1,idtime)
+#  if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#  endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idpH,ng),r8)
+          status=def_var(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idpH),     &
+     &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+# endif
 # ifdef LMD_SKPP
 !
 !  Define depth of surface boundary layer.
@@ -1517,6 +1612,31 @@
           END IF
         END DO
 
+# if defined BIO_SEDIMENTVARIABLES
+!
+!  Define biological sediment variables.
+!
+        DO itrc=1,Nsed
+          IF (Hout(idBSMa(itrc),ng)) THEN
+            Vinfo( 1)=Vname(1,idBSMa(itrc))
+            Vinfo( 2)=Vname(2,idBSMa(itrc))
+            Vinfo( 3)=Vname(3,idBSMa(itrc))
+            Vinfo(14)=Vname(4,idBSMa(itrc))
+            Vinfo(16)=Vname(1,idtime)
+#  if defined WRITE_WATER && defined MASKING
+            Vinfo(20)='mask_rho'
+#  endif
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idBSMa(itrc),ng),r8)
+            status=def_var(ng, iNLM, HIS(ng)%ncid,                      &
+     &                     HIS(ng)%Vid(idBSMa(itrc)), NF_FOUT,          &
+     &                     nvd3, t2dgrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__,                &
+     &                     __FILE__)) RETURN
+          END IF
+        END DO
+
+# endif
 # ifdef BULK_FLUXES
 !
 !  Define latent heat flux.
@@ -2758,6 +2878,17 @@
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idDano))) THEN
             got_var(idDano)=.TRUE.
             HIS(ng)%Vid(idDano)=var_id(i)
+# if defined DARWIN_CARBON_EXTRAOUT
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idCflx))) THEN
+            got_var(idCflx)=.TRUE.
+            HIS(ng)%Vid(idCflx)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idpCO2))) THEN
+            got_var(idpCO2)=.TRUE.
+            HIS(ng)%Vid(idpCO2)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idpH))) THEN
+            got_var(idpH)=.TRUE.
+            HIS(ng)%Vid(idpH)=var_id(i)
+# endif
 # ifdef LMD_SKPP
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idHsbl))) THEN
             got_var(idHsbl)=.TRUE.
@@ -2990,6 +3121,14 @@
 # endif
             END IF
           END DO
+# if defined BIO_SEDIMENTVARIABLES
+          DO itrc=1,Nsed
+            IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idBSMa(itrc)))) THEN
+              got_var(idBSMa(itrc))=.TRUE.
+              HIS(ng)%Vid(idBSMa(itrc))=var_id(i)
+            END IF
+          END DO
+# endif
 # ifdef SEDIMENT
           DO itrc=1,NST
             IF (TRIM(var_name(i)).eq.                                   &
@@ -3205,6 +3344,26 @@
           exit_flag=3
           RETURN
         END IF
+# if defined DARWIN_CARBON_EXTRAOUT
+        IF (.not.got_var(idCflx).and.Hout(idTvar(iDIC),ng)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idCflx)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idpCO2).and.Hout(idTvar(iDIC),ng)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idpCO2)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idpH).and.Hout(idTvar(iDIC),ng)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idpH)),            &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+# endif
 # ifdef LMD_SKPP
         IF (.not.got_var(idHsbl).and.Hout(idHsbl,ng)) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idHsbl)),          &
@@ -3612,6 +3771,16 @@
           END IF
 # endif
         END DO
+# if defined BIO_SEDIMENTVARIABLES
+        DO itrc=1,Nsed
+          IF (.not.got_var(idBSMa(itrc)).and.Hout(idBSMa(itrc),ng)) THEN
+            IF (Master) WRITE (stdout,70) TRIM(Vname(1,idBSMa(itrc))),  &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            RETURN
+          END IF
+        END DO
+# endif
 # ifdef SEDIMENT
         DO i=1,NST
           IF (.not.got_var(idfrac(i)).and.Hout(idfrac(i),ng)) THEN

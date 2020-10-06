@@ -1113,6 +1113,7 @@
 #endif
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
+#if ! defined DARWIN_RANDOM_TRAITS
 !
 !-----------------------------------------------------------------------
 !  Initialize random number sequence so we can get identical results
@@ -1121,6 +1122,7 @@
 !
       sequence=759
       CALL ran_seed (sequence)
+#endif
 
       RETURN
       END SUBROUTINE inp_par

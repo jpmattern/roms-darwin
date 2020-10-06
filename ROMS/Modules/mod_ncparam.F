@@ -69,6 +69,9 @@
 !=======================================================================
 !
         USE mod_param
+#if defined BIO_SEDIMENTVARIABLES
+        USE mod_biology, ONLY: Nsed
+#endif
 !
         implicit none
 !
@@ -368,6 +371,11 @@
         integer  :: id2dRV        ! 2D relative vorticity
         integer  :: id3dPV        ! 3D potential vorticity
         integer  :: id3dRV        ! 3D relative vorticity
+#if defined DARWIN_CARBON_EXTRAOUT
+        integer  :: idCflx        ! Air-sea CO2 flux
+        integer  :: idpCO2        ! pCO2
+        integer  :: idpH          ! pH
+#endif
 !
 !  Last used variable ID counter.
 !
@@ -420,6 +428,12 @@
         integer, allocatable :: idDv2d(:)     ! 2D v-momentum terms
         integer, allocatable :: idDu3d(:)     ! 3D u-momentum terms
         integer, allocatable :: idDv3d(:)     ! 3D v-momentum terms
+#endif
+#if defined BIO_SEDIMENTVARIABLES
+!
+!  Biologial Tracer Sediment Variables.
+!
+        integer, allocatable :: idBSMa(:)     ! Sediment mass
 #endif
 !
 !  State variables indices (order is important). Notice that current
@@ -605,6 +619,10 @@
       allocate ( idDv2d(NDM2d) )
       allocate ( idDu3d(NDM3d) )
       allocate ( idDv3d(NDM3d) )
+#endif
+#if defined BIO_SEDIMENTVARIABLES
+
+      allocate ( idBSMa(Nsed) )
 #endif
 
       allocate ( isTsur(MT) )
@@ -1605,6 +1623,52 @@
 #ifdef BIOLOGY
 # if defined BIO_FENNEL
 #  include <fennel_var.h>
+# elif defined DARWIN
+#  include <darwin_var.h>
+#  if defined BIO_SEDIMENTVARIABLES
+            CASE ('idBSMa(iPOC)')
+              idBSMa(1)=varid
+            CASE ('idBSMa(iPON)')
+              idBSMa(2)=varid
+            CASE ('idBSMa(iPOP)')
+              idBSMa(3)=varid
+            CASE ('idBSMa(iPOSi)')
+              idBSMa(4)=varid
+            CASE ('idBSMa(iPOFe)')
+              idBSMa(5)=varid
+            CASE ('idBSMa(iPIC)')
+              idBSMa(6)=varid
+            CASE ('idBSMa(isedc)')
+              idBSMa(isedc)=varid
+#   if defined DARWIN_NQUOTA
+            CASE ('idBSMa(isedn)')
+              idBSMa(isedn)=varid
+#   endif
+#   if defined DARWIN_PQUOTA
+            CASE ('idBSMa(isedp)')
+              idBSMa(isedp)=varid
+#   endif
+#   if defined DARWIN_SIQUOTA
+            CASE ('idBSMa(isedsi)')
+              idBSMa(isedsi)=varid
+#   endif
+#   if defined DARWIN_FEQUOTA
+            CASE ('idBSMa(isedfe)')
+              idBSMa(isedfe)=varid
+#   endif
+#   if defined DARWIN_CHLQUOTA
+            CASE ('idBSMa(isedchl)')
+              idBSMa(isedchl)=varid
+#   endif
+#  endif /* BIO_SEDIMENTVARIABLES */
+#  if defined DARWIN_CARBON_EXTRAOUT
+            CASE ('idCflx')
+              idCflx=varid
+            CASE ('idpCO2')
+              idpCO2=varid
+            CASE ('idpH')
+              idpH=varid
+#  endif
 # elif defined ECOSIM
 #  include <ecosim_var.h>
 # elif defined HYPOXIA_SRM
@@ -1646,6 +1710,11 @@
               Fscale(varid,ng)=scale
             END DO
 
+#ifdef BIOLOGY
+# if defined DARWIN
+#  include <darwin_var_load.h>
+# endif
+#endif
 #ifdef T_PASSIVE
 !
 !  Adjust information for all inert passive tracers.
@@ -2249,6 +2318,11 @@
           Fscale(varid,ng)=1.0_r8
           Iinfo(1,varid,ng)=r2dvar
         END DO
+#if defined DARWIN_VERBOSE
+        if (Master) then
+          write(stdout,'(a4,i2,a,i2,a,i3,i4,2x,a20,10i4)') '>>>',i,'/',MT,' NBT=',NBT,varid,Vname(1,idTvar(i)), ic_, in_, ip_, ife, isi, iChl, echl ! TODO remove
+        end if
+#endif
         WRITE (Vname(1,varid),'(a,a)')                                  &
      &        TRIM(ADJUSTL(Vname(1,idTvar(i)))), '_sflux'
         WRITE (Vname(2,varid),'(a,a)')                                  &

@@ -34,6 +34,9 @@
 # ifdef BIOLOGY
       USE biology_mod,          ONLY : biology
 # endif
+# ifdef POSITIVEDEF
+      USE positive_mod,         ONLY : positive
+# endif
 # ifdef BBL_MODEL
       USE bbl_mod,              ONLY : bblm
 # endif
@@ -877,6 +880,40 @@
                 nfm3(ng)=MOD(nfm3(ng)+1,NFT+1)
               END IF
             END DO
+# endif
+# ifdef POSITIVEDEF
+!-- Hajoon
+!-----------------------------------------------------------------------
+!  Apply positive definite to NPZD again.
+!-----------------------------------------------------------------------
+!
+! PM: old version
+!        DO ng=1,Ngrids
+!!$OMP PARALLEL DO PRIVATE(thread,subs,tile) SHARED(nnew,numthreads)
+!          DO thread=0,numthreads-1
+!            subs=NtileX(ng)*NtileE(ng)/numthreads
+!            DO tile=subs*thread,subs*(thread+1)-1,+1
+!              CALL positive (ng, TILE)
+!            END DO
+!          END DO
+!!$OMP END PARALLEL DO
+!        END DO
+!#   ifdef NESTING
+!        CALL nesting (17)
+!#   endif
+!# endif
+! PM: new version ($OMP code may be incorrect) (good example: Time-step tracer equations.)
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL positive (ng, tile)
+          END DO
+!$OMP BARRIER
+        END DO
+#  ifdef NESTING
+#   error("POSITIVEDEF NESTING CODE NOT READY.")
+#  endif
+!-- Hajoon
 # endif
 
           END DO STEP_LOOP

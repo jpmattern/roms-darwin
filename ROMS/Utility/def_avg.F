@@ -48,7 +48,11 @@
 !
       logical :: got_var(NV)
 
+#if defined DARWIN_INTERNAL_EXTRAATT
+      integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
+#else
       integer, parameter :: Natt = 25
+#endif
 
       integer :: i, ifield, itrc, j, model, nvd3, nvd4
 # if defined WRITE_WATER && defined MASKING
@@ -264,6 +268,31 @@
      &                 Nfec, DimIDs(28))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
+# elif defined DARWIN 
+        status=def_dim(ng, model, AVG(ng)%ncid, ncname, 'nplank',       &
+     &                 nplank, DimIDs(25))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, model, AVG(ng)%ncid, ncname, 'nchl',         &
+     &                 nChl, DimIDs(26))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, model, AVG(ng)%ncid, ncname, 'nlam',         &
+     &                 nlam, DimIDs(27))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, model, AVG(ng)%ncid, ncname, 'ngroup',       &
+     &                 nGroup, DimIDs(28))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+        
+!        status=def_dim(ng, model, AVG(ng)%ncid, ncname, 'nlampone',     &
+!     &                 nlam+1, DimIDs(33))
+!        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+!     &                 __FILE__)) RETURN
 #  endif
 # endif
 
@@ -928,6 +957,63 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
         END IF
+#  if defined DARWIN_CARBON_EXTRAOUT
+!
+!  Define air-sea CO2 flux
+!
+        IF (Aout(idTvar(iDIC),ng)) THEN
+          Vinfo( 1)=Vname(1,idCflx)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idCflx))
+          Vinfo( 3)=Vname(3,idCflx)
+          Vinfo(14)=Vname(4,idCflx)
+          Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#   endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idCflx,ng),r8)
+          status=def_var(ng, model, AVG(ng)%ncid, AVG(ng)%Vid(idCflx),  &
+     &                   NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+!
+!  Define pCO2
+!
+        IF (Aout(idTvar(iDIC),ng)) THEN
+          Vinfo( 1)=Vname(1,idpCO2)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idpCO2))
+          Vinfo( 3)=Vname(3,idpCO2)
+          Vinfo(14)=Vname(4,idpCO2)
+          Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#   endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idpCO2,ng),r8)
+          status=def_var(ng, model, AVG(ng)%ncid, AVG(ng)%Vid(idpCO2),  &
+     &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+!
+!  Define pH
+!
+        IF (Aout(idTvar(iDIC),ng)) THEN
+          Vinfo( 1)=Vname(1,idpH)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idpH))
+          Vinfo( 3)=Vname(3,idpH)
+          Vinfo(14)=Vname(4,idpH)
+          Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#   endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idpH,ng),r8)
+          status=def_var(ng, model, AVG(ng)%ncid, AVG(ng)%Vid(idpH),    &
+     &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+#  endif
 #  ifdef LMD_SKPP
 !
 !  Define depth of surface boundary layer.
@@ -2161,6 +2247,17 @@
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idDano))) THEN
             got_var(idDano)=.TRUE.
             AVG(ng)%Vid(idDano)=var_id(i)
+#  if defined DARWIN_CARBON_EXTRAOUT
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idCflx))) THEN
+            got_var(idCflx)=.TRUE.
+            AVG(ng)%Vid(idCflx)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idpCO2))) THEN
+            got_var(idpCO2)=.TRUE.
+            AVG(ng)%Vid(idpCO2)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idpH))) THEN
+            got_var(idpH)=.TRUE.
+            AVG(ng)%Vid(idpH)=var_id(i)
+#  endif
 #  ifdef LMD_SKPP
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idHsbl))) THEN
             got_var(idHsbl)=.TRUE.
@@ -2531,6 +2628,26 @@
           exit_flag=3
           RETURN
         END IF
+#  if defined DARWIN_CARBON_EXTRAOUT
+        IF (.not.got_var(idCflx).and.Aout(idTvar(iDIC),ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idCflx)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idpCO2).and.Aout(idTvar(iDIC),ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idpCO2)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idpH).and.Aout(idTvar(iDIC),ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idpH)),            &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+#  endif
 #  ifdef LMD_SKPP
         IF (.not.got_var(idHsbl).and.Aout(idHsbl,ng)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idHsbl)),          &

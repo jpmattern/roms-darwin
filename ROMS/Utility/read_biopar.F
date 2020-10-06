@@ -15,6 +15,8 @@
 !!
 # if defined BIO_FENNEL
 #  include <fennel_inp.h>
+# elif defined DARWIN
+#  include <darwin_inp.h>
 # elif defined ECOSIM
 #  include <ecosim_inp.h>
 # elif defined HYPOXIA_SRM

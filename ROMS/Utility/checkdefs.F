@@ -48,6 +48,11 @@
       IF (Master) WRITE (stdout,10)
   10  FORMAT (/,' Activated C-preprocessing Options:',/)
   20  FORMAT (1x,a,t22,a)
+#if defined DARWIN
+! introduced to allow values set by precompiler
+  21  FORMAT (1x,a,t22,a,i0,a)
+  22  FORMAT (1x,a,t22,a,e,a)
+#endif
 !
       IF (Master) THEN
         WRITE (stdout,20) TRIM(ADJUSTL(MyAppCPP)), TRIM(ADJUSTL(title))
@@ -610,6 +615,15 @@
      &   'Momentum stresses as body-forces.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+11)=' BODYFORCE,'
+#endif
+#if defined DARWIN
+!
+      IF (Master) WRITE (stdout,20) 'DARWIN',                           &
+     &   'Darwin Ecosystem Model.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+8)=' DARWIN,'
+      ibiology=ibiology+1
+# include <darwin_cppdefs.h>
 #endif
 #ifdef DISTRIBUTE
 # if defined BOUNDARY_ALLGATHER
@@ -1706,6 +1720,13 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+15)=' POSITIVE_ZERO,'
 #endif
+#ifdef POSITIVEDEF
+!
+      IF (Master) WRITE (stdout,20) 'POSITIVEDEF',                     &
+     &   'Positive definite check for biology after step3d_t.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+13)=' POSITIVEDEF,'
+#endif
 #if defined POSTERIOR_EOFS && defined WEAK_CONSTRAINT
 !
       IF (Master) WRITE (stdout,20) 'POSTERIOR_EOFS',                   &
@@ -2791,7 +2812,7 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+9)=' WET_DRY,'
 #endif
-#ifdef WIND_MINUS_CURRENT && defined BULK_FLUXES && defined SOLVE3D
+#if defined WIND_MINUS_CURRENT && defined BULK_FLUXES && defined SOLVE3D
 !
       IF (Master) WRITE (stdout,20) 'WIND_MINUS_CURRENT',               &
      &   'Compute effective wind by removing surface ocean current.'

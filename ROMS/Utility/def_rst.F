@@ -47,7 +47,11 @@
 !
       logical :: Ldefine, got_var(NV)
 
+#if defined DARWIN_INTERNAL_EXTRAATT
+      integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
+#else
       integer, parameter :: Natt = 25
+#endif
 
       integer :: i, j, nvd3, nvd4, nvd5
       integer :: recdim, status, varid
@@ -249,6 +253,31 @@
      &                 Nfec, DimIDs(28))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
+# elif defined DARWIN 
+        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'nplank',        &
+     &                 nplank, DimIDs(25))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'nchl',          &
+     &                 nChl, DimIDs(26))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'nlam',          &
+     &                 nlam, DimIDs(27))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'ngroup',        &
+     &                 nGroup, DimIDs(28))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+        
+!        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'nlampone',      &
+!     &                 nlam+1, DimIDs(33))
+!        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+!     &                 __FILE__)) RETURN
 # endif
 #endif
 
@@ -704,6 +733,31 @@
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
 #endif
+# if defined BIO_SEDIMENTVARIABLES
+!
+!  Define biological sediment variables.
+!
+        DO itrc=1,Nsed
+          IF (Hout(idBSMa(itrc),ng)) THEN
+            Vinfo( 1)=Vname(1,idBSMa(itrc))
+            Vinfo( 2)=Vname(2,idBSMa(itrc))
+            Vinfo( 3)=Vname(3,idBSMa(itrc))
+            Vinfo(14)=Vname(4,idBSMa(itrc))
+            Vinfo(16)=Vname(1,idtime)
+#  if defined WRITE_WATER && defined MASKING
+            Vinfo(20)='mask_rho'
+#  endif
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idBSMa(itrc),ng),r8)
+            status=def_var(ng, iNLM, RST(ng)%ncid,                      &
+     &                     RST(ng)%Vid(idBSMa(itrc)), NF_FOUT,          &
+     &                     nvd3, t2dgrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__,                &
+     &                     __FILE__)) RETURN
+          END IF
+        END DO
+
+# endif
 #if defined SEDIMENT && defined SED_MORPH
 !
 !  Define time-varying bathymetry.
@@ -1735,6 +1789,14 @@
               RST(ng)%Tid(itrc)=var_id(i)
             END IF
           END DO
+# if defined BIO_SEDIMENTVARIABLES
+          DO itrc=1,Nsed
+            IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idBSMa(itrc)))) THEN
+              got_var(idBSMa(itrc))=.TRUE.
+              RST(ng)%Vid(idBSMa(itrc))=var_id(i)
+            END IF
+          END DO
+# endif
 # ifdef SEDIMENT
           DO itrc=1,NST
             IF (TRIM(var_name(i)).eq.                                   &
@@ -1968,6 +2030,16 @@
             RETURN
           END IF
         END DO
+# if defined BIO_SEDIMENTVARIABLES
+        DO itrc=1,Nsed
+          IF (.not.got_var(idBSMa(itrc)).and.Hout(idBSMa(itrc),ng)) THEN
+            IF (Master) WRITE (stdout,40) TRIM(Vname(1,idBSMa(itrc))),  &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            RETURN
+          END IF
+        END DO
+# endif
 # ifdef SEDIMENT
         DO i=1,NST
           IF (.not.got_var(idfrac(i))) THEN

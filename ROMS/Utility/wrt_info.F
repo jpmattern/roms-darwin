@@ -1415,6 +1415,8 @@
 #if defined BIOLOGY && defined SOLVE3D
 # if defined BIO_FENNEL
 #  include <fennel_wrt.h>
+# elif defined DARWIN
+#  include <darwin_wrt.h>
 # elif defined ECOSIM
 #  include <ecosim_wrt.h>
 # elif defined HYPOXIA_SRM

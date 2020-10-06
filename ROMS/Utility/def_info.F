@@ -41,14 +41,24 @@
 !                DimIDs(21) => Dimension 3D water U-points.            !
 !                DimIDs(23) => Dimension 3D water W-points.            !
 !                DimIDs(24) => Dimension sediment bed water points.    !
+#if defined BIOLOGY && defined ECOSIM
 !                DimIDs(25) => Number of EcoSim phytoplankton groups.  !
 !                DimIDs(26) => Number of EcoSim bateria groups.        !
 !                DimIDs(27) => Number of EcoSim DOM groups.            !
 !                DimIDs(28) => Number of EcoSim fecal groups.          !
+#elif defined DARWIN
+!                DimIDs(25) => Number of Darwin plankton variables.    !
+!                DimIDs(26) => Number of Darwin chlorophyll variables. !
+!                DimIDs(27) => Number of Darwin wavelengths.           !
+!                DimIDs(28) => Number of Darwin groups.                !
+#endif
 !                DimIDs(29) => Number of state variables.              !
 !                DimIDs(30) => Number of 3D variables time levels (2). !
 !                DimIDs(31) => Number of 2D variables time levels (3). !
 !                DimIDs(32) => Number of sediment tracers.             !
+#if defined DARWIN
+!                DimIDs(33) => Number of Darwin wavelengths plus one.  !
+#endif
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -85,7 +95,11 @@
 !
 !  Local variable declarations.
 !
+#if defined DARWIN_INTERNAL_EXTRAATT
+      integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
+#else
       integer, parameter :: Natt = 25
+#endif
 
       integer :: brydim, i, ie, is, j, lstr, varid
       integer :: srdim, stadim, status, swdim, trcdim, usrdim
@@ -99,6 +113,12 @@
       integer :: bacdim, domdim, fecdim, phydim
 
       integer :: biodim(2)
+#elif defined DARWIN
+      integer :: plankdim
+      integer :: chldim
+      integer :: lamdim
+      !integer :: lamdimplus 
+      integer :: groupdim
 #endif
 #if !defined PARALLEL_IO  && defined DISTRIBUTE
       integer :: ibuffer(2)
@@ -154,6 +174,12 @@
       fecdim=DimIDs(28)
       biodim(1)=phydim
       biodim(2)=fecdim
+#elif defined DARWIN
+      plankdim=DimIDs(25)
+      chldim=DimIDs(26)
+      lamdim=DimIDs(27)
+      groupdim=DimIDs(28)
+      !lamdimplus=DimIDs(33)
 #endif
 !
 !  Set dimension for generic user parameters.
@@ -2856,6 +2882,8 @@
 #if defined BIOLOGY && defined SOLVE3D
 # if defined BIO_FENNEL
 #  include <fennel_def.h>
+# elif defined DARWIN
+#  include <darwin_def.h>
 # elif defined ECOSIM
 #  include <ecosim_def.h>
 # elif defined HYPOXIA_SRM

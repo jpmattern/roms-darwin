@@ -325,7 +325,7 @@
 #  endif
 # endif
 
-# ifdef ECOSIM
+# if defined ECOSIM || defined DARWIN_CONSTRUCTION
           real(r8), pointer :: SpecIr(:,:,:)
           real(r8), pointer :: avcos(:,:,:)
 # endif
@@ -645,9 +645,12 @@
 #  endif
 # endif
 
-# ifdef ECOSIM
+# if defined ECOSIM 
       allocate ( FORCES(ng) % SpecIr(LBi:UBi,LBj:UBj,NBands) )
       allocate ( FORCES(ng) % avcos(LBi:UBi,LBj:UBj,NBands) )
+# elif defined DARWIN_CONSTRUCTION
+      allocate ( FORCES(ng) % SpecIr(LBi:UBi,LBj:UBj,nlam) )
+      allocate ( FORCES(ng) % avcos(LBi:UBi,LBj:UBj,nlam) )
 # endif
 
 #endif
@@ -1015,8 +1018,13 @@
               FORCES(ng) % btflxG(i,j,2,itrc) = IniVal
 # endif
             END DO
-# ifdef ECOSIM
+# if defined ECOSIM
             DO itrc=1,NBands
+              FORCES(ng) % SpecIr(i,j,itrc) = IniVal
+              FORCES(ng) % avcos(i,j,itrc) = IniVal
+            END DO
+# elif defined DARWIN_CONSTRUCTION
+            DO itrc=1,nlam
               FORCES(ng) % SpecIr(i,j,itrc) = IniVal
               FORCES(ng) % avcos(i,j,itrc) = IniVal
             END DO

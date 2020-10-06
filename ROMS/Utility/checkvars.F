@@ -163,6 +163,19 @@
         END DO
 #  endif
 # endif
+# if defined BIO_SEDIMENTVARIABLES
+#  if defined BIO_SEDIMENTVARIABLES_STARTZERO
+        IF (nrrec(ng).ne.0) THEN
+          DO itrc=1,Nsed
+            get_var(idBSMa(itrc))=.TRUE.
+          END DO
+        END IF
+#  else
+        DO itrc=1,Nsed
+          get_var(idBSMa(itrc))=.TRUE.
+        END DO
+#  endif
+# endif
 # ifdef SEDIMENT
 #  ifdef ANA_SEDIMENT
         IF (nrrec(ng).ne.0) THEN

@@ -273,6 +273,19 @@
         END DO
 #endif
 
+#if defined BIOLOGY && defined DARWIN_RADTRANS_IO
+        DO ng=1,Ngrids
+!$OMP MASTER
+          CALL get_drt (ng, iNLM)
+!$OMP END MASTER
+# ifdef DISTRIBUTE
+          CALL mp_bcasti (ng, iNLM, exit_flag)
+# endif
+!$OMP BARRIER
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END DO
+#endif
 #ifdef SOLVE3D
 !
 !-----------------------------------------------------------------------

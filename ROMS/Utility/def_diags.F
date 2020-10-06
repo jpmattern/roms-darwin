@@ -45,7 +45,11 @@
 !
       logical :: got_var(NV)
 
+#if defined DIAGNOSTICS_UV && defined DARWIN_INTERNAL_EXTRAATT
+      integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
+#else
       integer, parameter :: Natt = 25
+#endif
 
       integer :: i, ifield, itrc, ivar, j, nvd3, nvd4
       integer :: recdim, status
@@ -249,6 +253,31 @@
      &                 Nfec, DimIDs(28))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
+#  elif defined DARWIN 
+        status=def_dim(ng, iNLM, DIA(ng)%ncid, ncname, 'nplank',        &
+     &                 nplank, DimIDs(25))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, DIA(ng)%ncid, ncname, 'nchl',          &
+     &                 nChl, DimIDs(26))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, DIA(ng)%ncid, ncname, 'nlam',          &
+     &                 nlam, DimIDs(27))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        status=def_dim(ng, iNLM, DIA(ng)%ncid, ncname, 'ngroup',        &
+     &                 nGroup, DimIDs(28))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+        
+!        status=def_dim(ng, iNLM, DIA(ng)%ncid, ncname, 'nlampone',      &
+!     &                 nlam+1, DimIDs(33))
+!        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+!     &                 __FILE__)) RETURN
 #  endif
 # endif
 
@@ -524,8 +553,7 @@
         END DO
 # endif
 
-# ifdef DIAGNOSTICS_BIO
-#  if defined BIO_FENNEL || defined HYPOXIA_SRM
+# if defined DIAGNOSTICS_BIO
 !
 !  Define 2D biological diagnostic fields.
 !
@@ -549,8 +577,7 @@
      &                     __FILE__)) RETURN
           END IF
         END DO
-#  endif
-#  if defined BIO_FENNEL
+#  if ! defined HYPOXIA_SRM
 !
 !  Define 3D biological diagnostic fields.
 !
@@ -677,7 +704,6 @@
           END DO
 # endif
 # ifdef DIAGNOSTICS_BIO
-#  if defined BIO_FENNEL || defined HYPOXIA_SRM
           DO ivar=1,NDbio2d
             ifield=iDbio2(ivar)
             IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
@@ -685,8 +711,7 @@
               DIA(ng)%Vid(ifield)=var_id(i)
             END IF
           END DO
-#  endif
-#  if defined BIO_FENNEL
+#  if ! defined HYPOXIA_SRM
           DO ivar=1,NDbio3d
             ifield=iDbio3(ivar)
             IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
@@ -756,7 +781,6 @@
         END DO
 # endif
 # ifdef DIAGNOSTICS_BIO
-#  if defined BIO_FENNEL || defined HYPOXIA_SRM
         DO ivar=1,NDbio2d
           ifield=iDbio2(ivar)
           IF (.not.got_var(ifield).and.Dout(ifield,ng)) THEN
@@ -766,8 +790,7 @@
             RETURN
           END IF
         END DO
-#  endif
-#  if defined BIO_FENNEL
+#  if ! defined HYPOXIA_SRM
         DO ivar=1,NDbio3d
           ifield=iDbio3(ivar)
           IF (.not.got_var(ifield).and.Dout(ifield,ng)) THEN

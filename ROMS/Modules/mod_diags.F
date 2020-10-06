@@ -1,6 +1,13 @@
 #include "cppdefs.h"
       MODULE mod_diags
 #ifdef DIAGNOSTICS
+# if defined DIAGNOSTICS_BIO
+#  if defined DIAGNOSTICS_BIO_MAPPING
+#   define SIZE_DB3D NDb3d_o 
+#  else
+#   define SIZE_DB3D NDbio3d
+#  endif
+# endif
 !
 !svn $Id: mod_diags.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
@@ -45,7 +52,7 @@
 
         TYPE T_DIAGS
 
-# if defined DIAGNOSTICS_BIO && defined BIO_FENNEL
+# if defined DIAGNOSTICS_BIO 
           real(r8), pointer :: DiaBio2d(:,:,:)
           real(r8), pointer :: DiaBio3d(:,:,:,:)
 # endif
@@ -104,12 +111,12 @@
 !
       IF (ng.eq.1 ) allocate ( DIAGS(Ngrids) )
 !
-# if defined DIAGNOSTICS_BIO && defined BIO_FENNEL
+# if defined DIAGNOSTICS_BIO 
       IF (NDbio2d.gt.0) THEN
         allocate ( DIAGS(ng) % DiaBio2d(LBi:UBi,LBj:UBj,NDbio2d) )
       END IF
-      IF (NDbio3d.gt.0) THEN
-        allocate ( DIAGS(ng) % DiaBio3d(LBi:UBi,LBj:UBj,N(ng),NDbio3d) )
+      IF (SIZE_DB3D.gt.0) THEN
+        allocate ( DIAGS(ng) % DiaBio3d(LBi:UBi,LBj:UBj,N(ng),SIZE_DB3D) )
       END IF
 # endif
 
@@ -209,7 +216,7 @@
 !-----------------------------------------------------------------------
 !
       DO j=Jmin,Jmax
-# if defined DIAGNOSTICS_BIO && defined BIO_FENNEL
+# if defined DIAGNOSTICS_BIO 
         IF (NDbio2d.gt.0) THEN
           DO idiag=1,NDbio2d
             DO i=Imin,Imax
@@ -217,8 +224,8 @@
             END DO
           END DO
         END IF
-        IF (NDbio3d.gt.0) THEN
-          DO idiag=1,NDbio3d
+        IF (SIZE_DB3D.gt.0) THEN
+          DO idiag=1,SIZE_DB3D
             DO k=1,N(ng)
               DO i=Imin,Imax
                 DIAGS(ng) % DiaBio3d(i,j,k,idiag) = IniVal

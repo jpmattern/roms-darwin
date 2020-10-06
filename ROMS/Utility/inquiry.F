@@ -2,9 +2,9 @@
       SUBROUTINE inquiry (ng, model, job, Iout, Irec, Mrec, ifield,     &
      &                    ncid, Lmulti, nfiles, S)
 !
-!svn $Id: inquiry.F 896 2018-02-13 03:26:53Z arango $
+!svn $Id: inquiry.F 1018 2020-04-30 01:07:09Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -48,7 +48,7 @@
       USE mod_netcdf
       USE mod_scalars
 !
-      USE strings_mod, ONLY : FoundError
+      USE strings_mod, ONLY : FoundError, lowercase
 !
       implicit none
 !
@@ -71,8 +71,8 @@
       integer :: i, ifile, lstr, my_ncid, nvatt, nvdim
       integer :: Vsize(4)
 
-      real(r8) :: Clength, Tend, Tmax, Tmin, Tmono, Tscale, Tstr, Tval
-      real(r8) :: scale
+      real(dp) :: Clength, Tend, Tmax, Tmin, Tmono, Tscale, Tstr, Tval
+      real(dp) :: scale
 
       character (len=1  ), parameter :: blank = ' '
       character (len=3  ) :: label
@@ -125,13 +125,19 @@
             END IF
             S(ifile)%Fcount=Fcount
             S(ifile)%name=TRIM(S(ifile)%files(Fcount))
-            lstr=LEN_TRIM(S(ifile)%name)
-            S(ifile)%base=S(ifile)%name(1:lstr-3)
             CALL netcdf_close (ng, model, ncid)
             IF (FoundError(exit_flag, NoError, __LINE__,                &
      &                     __FILE__)) RETURN
             IF (label(1:3).eq.'FRC') THEN
               FRCids(ifile,ng)=-1
+              S(ifile)%ncid=-1
+            END IF
+            IF (label(1:3).eq.'BRY') THEN
+              BRYids(ifile,ng)=-1
+              S(ifile)%ncid=-1
+            END IF
+            IF (label(1:3).eq.'CLM') THEN
+              CLMids(ifile,ng)=-1
               S(ifile)%ncid=-1
             END IF
             EXIT
@@ -285,7 +291,7 @@
 !
           IF (got_time.and.(Nrec.eq.0)) THEN
             DO i=1,n_vdim
-              IF (INDEX(TRIM(var_Dname(i)),'time').ne.0) THEN
+              IF (INDEX(TRIM(lowercase(var_Dname(i))),'time').ne.0) THEN
                 Nrec=var_Dsize(i)
               END IF
             END DO
@@ -318,12 +324,14 @@
      &                    Tstr, Tend, Tmin, Tmax,  Tscale)
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
+          SourceFile=__FILE__
         END IF
 !
 !  Store variable information into global information arrays.  Also
 !  fill some structure values.
 !
         IF (foundit) THEN
+          ncid=my_ncid
           Linfo( 1,ifield,ng)=Lgridded
           Linfo( 2,ifield,ng)=Liocycle
           Iinfo( 2,ifield,ng)=Vid
@@ -366,6 +374,20 @@
               WRITE (stdout,'(15x,a)') TRIM(S(i)%name)
             END DO
           END IF
+        ELSE IF ((nfiles.gt.1).and.(label(1:3).eq.'BRY')) THEN
+          IF (Master) THEN
+            WRITE (stdout,50) TRIM(Vname(1,ifield)), 'files:'
+            DO i=1,nfiles
+              WRITE (stdout,'(15x,a)') TRIM(S(i)%name)
+            END DO
+          END IF
+        ELSE IF ((nfiles.gt.1).and.(label(1:3).eq.'CLM')) THEN
+          IF (Master) THEN
+            WRITE (stdout,50) TRIM(Vname(1,ifield)), 'files:'
+            DO i=1,nfiles
+              WRITE (stdout,'(15x,a)') TRIM(S(i)%name)
+            END DO
+          END IF
         ELSE
           lstr=LEN_TRIM(ncfile)
           IF (Master) THEN
@@ -384,6 +406,20 @@
       END IF
       IF (.not.got_time) THEN
         IF ((nfiles.gt.1).and.(label(1:3).eq.'FRC')) THEN
+          IF (Master) THEN
+            WRITE (stdout,50) TRIM(Tname(ifield)), 'files:'
+            DO i=1,nfiles
+              WRITE (stdout,'(15x,a)') TRIM(S(i)%name)
+            END DO
+          END IF
+        ELSE IF ((nfiles.gt.1).and.(label(1:3).eq.'BRY')) THEN
+          IF (Master) THEN
+            WRITE (stdout,50) TRIM(Tname(ifield)), 'files:'
+            DO i=1,nfiles
+              WRITE (stdout,'(15x,a)') TRIM(S(i)%name)
+            END DO
+          END IF
+        ELSE IF ((nfiles.gt.1).and.(label(1:3).eq.'CLM')) THEN
           IF (Master) THEN
             WRITE (stdout,50) TRIM(Tname(ifield)), 'files:'
             DO i=1,nfiles
@@ -414,14 +450,37 @@
       IF (label(1:3).eq.'FRC') THEN
         DO ifile=1,nfiles
           IF ((TRIM(ncfile).eq.TRIM(S(ifile)%name)).and.                &
+     &        (FRCids(ifile,ng).ne.-1).and.                             &
      &        (ncid.ne.FRCids(ifile,ng))) THEN
             ncid=FRCids(ifile,ng)
             EXIT
           END IF
         END DO
       END IF
+      IF (label(1:3).eq.'BRY') THEN
+        DO ifile=1,nfiles
+          IF ((TRIM(ncfile).eq.TRIM(S(ifile)%name)).and.                &
+     &        (BRYids(ifile,ng).ne.-1).and.                             &
+     &        (ncid.ne.BRYids(ifile,ng))) THEN
+            ncid=BRYids(ifile,ng)
+            EXIT
+          END IF
+        END DO
+      END IF
+      IF (label(1:3).eq.'CLM') THEN
+        DO ifile=1,nfiles
+          IF ((TRIM(ncfile).eq.TRIM(S(ifile)%name)).and.                &
+     &        (CLMids(ifile,ng).ne.-1).and.                             &
+     &        (ncid.ne.CLMids(ifile,ng))) THEN
+            ncid=CLMids(ifile,ng)
+            EXIT
+          END IF
+        END DO
+      END IF
 !
 !  If appropriate, open input NetCDF file for reading.
+!  (HGA: it is not needed since file was already open and
+!        ncid=my_ncid was assigned above.
 !
       IF (ncid.eq.-1) THEN
         CALL netcdf_open (ng, model, ncfile, 0, ncid)
@@ -430,20 +489,36 @@
            IF (Master) WRITE (stdout,60) TRIM(ncfile)
           RETURN
         END IF
+      END IF
 !
 !  If processing model forcing, load ID into association table (FRCids).
 !
-        IF (label(1:3).eq.'FRC') THEN
-          DO ifile=1,nfiles
-            IF (TRIM(ncfile).eq.TRIM(S(ifile)%name)) THEN
-              FRCids(ifile,ng)=ncid
-              S(ifile)%ncid=ncid
-              EXIT
-            END IF
-          END DO
-        ELSE
-          S(1)%ncid=ncid
-        END IF
+      IF (label(1:3).eq.'FRC') THEN
+        DO ifile=1,nfiles
+          IF (TRIM(ncfile).eq.TRIM(S(ifile)%name)) THEN
+            FRCids(ifile,ng)=ncid
+            S(ifile)%ncid=ncid
+            EXIT
+          END IF
+        END DO
+      ELSE IF (label(1:3).eq.'BRY') THEN
+        DO ifile=1,nfiles
+          IF (TRIM(ncfile).eq.TRIM(S(ifile)%name)) THEN
+            BRYids(ifile,ng)=ncid
+            S(ifile)%ncid=ncid
+            EXIT
+          END IF
+        END DO
+      ELSE IF (label(1:3).eq.'CLM') THEN
+        DO ifile=1,nfiles
+          IF (TRIM(ncfile).eq.TRIM(S(ifile)%name)) THEN
+            CLMids(ifile,ng)=ncid
+            S(ifile)%ncid=ncid
+            EXIT
+          END IF
+        END DO
+      ELSE
+        S(1)%ncid=ncid
       END IF
       Cinfo(ifield,ng)=TRIM(ncfile)
 !
@@ -479,8 +554,8 @@
           ELSE
             Tmono=Tend
             Trec=Trec+1
-            CALL netcdf_get_fvar (ng, model, ncfile, Tname(ifield),     &
-     &                            Tval,                                 &
+            CALL netcdf_get_time (ng, model, ncfile, Tname(ifield),     &
+     &                            Rclock%DateNumber, Tval,              &
      &                            ncid = ncid,                          &
      &                            start = (/Trec-1/),                   &
      &                            total = (/1/))

@@ -4,9 +4,9 @@
      &                      Tid, Lcycle, clength, Tindex,               &
      &                      Tstr, Tend, Tmin, Tmax, Tscale)
 !
-!svn $Id: get_cycle.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: get_cycle.F 995 2020-01-10 04:01:28Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -80,9 +80,9 @@
 
       integer, intent(out) :: Tindex, Tid
 
-      real(r8), intent(in) :: smday
+      real(dp), intent(in) :: smday
 
-      real(r8), intent(out) :: Tmax, Tmin, Tend, Tscale, Tstr, clength
+      real(dp), intent(out) :: Tmax, Tmin, Tend, Tscale, Tstr, clength
 
       character (len=*), intent(in) :: ncname
       character (len=*), intent(in) :: TvarName
@@ -94,8 +94,8 @@
 
       integer :: i, nvatt, nvdim
 
-      real(r8) :: mday, tstart
-      real(r8) :: Tval(ntime)
+      real(dp) :: mday, tstart
+      real(dp) :: Tval(ntime)
 
       character (len=40) :: tunits
 !
@@ -166,8 +166,8 @@
 !
 !  Read in time variable values.
 !
-      CALL netcdf_get_fvar (ng, model, ncname, TvarName,                &
-     &                      Tval,                                       &
+      CALL netcdf_get_time (ng, model, ncname, TvarName,                &
+     &                      Rclock%DateNumber, Tval,                    &
      &                      ncid = ncid,                                &
      &                      start = (/1/),                              &
      &                      total = (/ntime/),                          &
@@ -239,14 +239,19 @@
         IF (job.gt.0) THEN     ! forward:   Tval(i) =< mday =< Tval(i+1)
           IF (Linside) THEN
             tstart=Tmin
-            DO i=2,ntime
-              IF ((tstart.le.mday).and.(mday.le.Tval(i))) THEN
-                Tstr=tstart
-                Tindex=i-1     ! one is added when processing
-                EXIT
-              END IF
-              tstart=Tval(i)
-            END DO
+            IF (ntime.eq.1) THEN
+              Tstr=Tmin
+              Tindex=1
+            ELSE
+              DO i=2,ntime
+                IF ((tstart.le.mday).and.(mday.le.Tval(i))) THEN
+                  Tstr=tstart
+                  Tindex=i-1   ! one is added when processing
+                  EXIT
+                END IF
+                tstart=Tval(i)
+              END DO
+            END IF
           ELSE
             Tstr=Tmax          ! LowerBound for next multifile or
             Tindex=ntime       ! time cycling
@@ -254,14 +259,19 @@
         ELSE                   ! backward:  Tval(i) =< mday =< Tval(i+1)
           IF (Linside) THEN
             tstart=Tmin
-            DO i=2,ntime
-              IF ((tstart.le.mday).and.(mday.le.Tval(i))) THEN
-                Tstr=Tval(i)
-                Tindex=i
-                EXIT
-              END IF
-              tstart=Tval(i)
-            END DO
+            IF (ntime.eq.1) THEN
+              Tstr=Tmin
+              Tindex=1
+            ELSE
+              DO i=2,ntime
+                IF ((tstart.le.mday).and.(mday.le.Tval(i))) THEN
+                  Tstr=Tval(i)
+                  Tindex=i
+                  EXIT
+                END IF
+                tstart=Tval(i)
+              END DO
+            END IF
           ELSE IF (LowerBound) THEN
             Tstr=Tmax
             Tindex=ntime

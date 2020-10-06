@@ -9,9 +9,9 @@
 # endif
       SUBROUTINE wrt_diags (ng)
 !
-!svn $Id: wrt_diags.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: wrt_diags.F 1028 2020-06-01 00:24:59Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -36,6 +36,9 @@
       USE nf_fwrite2d_mod, ONLY : nf_fwrite2d
 # ifdef SOLVE3D
       USE nf_fwrite3d_mod, ONLY : nf_fwrite3d
+#  ifdef ECOSIM
+      USE nf_fwrite4d_mod, ONLY : nf_fwrite4d
+#  endif
 # endif
       USE strings_mod,     ONLY : FoundError
 !
@@ -49,8 +52,8 @@
 !
       integer :: LBi, UBi, LBj, UBj
       integer :: Fcount, gfactor, gtype, ifield, itrc, ivar, status
-
-      real(r8) :: scale
+!
+      real(dp) :: scale
 # ifdef BIOLOGY
       real(r8) :: dtBIO
 # endif
@@ -81,13 +84,13 @@
 !  Set time and time-record index.
 !
       DIA(ng)%Rindex=DIA(ng)%Rindex+1
-      Fcount=DIA(ng)%Fcount
+      Fcount=DIA(ng)%load
       DIA(ng)%Nrec(Fcount)=DIA(ng)%Nrec(Fcount)+1
 !
 !  Write out averaged time.
 !
       CALL netcdf_put_fvar (ng, iNLM, DIA(ng)%name,                     &
-     &                      TRIM(Vname(idtime,ng)), DIAtime(ng:),       &
+     &                      TRIM(Vname(1,idtime)), DIAtime(ng:),        &
      &                      (/DIA(ng)%Rindex/), (/1/),                  &
      &                      ncid = DIA(ng)%ncid,                        &
      &                      varid = DIA(ng)%Vid(idtime))
@@ -101,7 +104,7 @@
       DO ivar=1,NDM2d
         ifield=idDu2d(ivar)
         IF (Dout(ifield,ng)) THEN
-          scale=1.0_r8/dt(ng)
+          scale=1.0_dp/dt(ng)
           gtype=gfactor*u2dvar
           status=nf_fwrite2d(ng, iNLM, DIA(ng)%ncid,                    &
      &                       DIA(ng)%Vid(ifield),                       &
@@ -125,7 +128,7 @@
 !
         ifield=idDv2d(ivar)
         IF (Dout(ifield,ng)) THEN
-          scale=1.0_r8/dt(ng)
+          scale=1.0_dp/dt(ng)
           gtype=gfactor*v2dvar
           status=nf_fwrite2d(ng, iNLM, DIA(ng)%ncid,                    &
      &                       DIA(ng)%Vid(ifield),                       &
@@ -155,7 +158,7 @@
       DO ivar=1,NDM3d
         ifield=idDu3d(ivar)
         IF (Dout(ifield,ng)) THEN
-          scale=1.0_r8/dt(ng)
+          scale=1.0_dp/dt(ng)
           gtype=gfactor*u3dvar
           status=nf_fwrite3d(ng, iNLM, DIA(ng)%ncid,                    &
      &                       DIA(ng)%Vid(ifield),                       &
@@ -179,7 +182,7 @@
 !
         ifield=idDv3d(ivar)
         IF (Dout(ifield,ng)) THEN
-          scale=1.0_r8/dt(ng)
+          scale=1.0_dp/dt(ng)
           gtype=gfactor*v3dvar
           status=nf_fwrite3d(ng, iNLM, DIA(ng)%ncid,                    &
      &                       DIA(ng)%Vid(ifield),                       &
@@ -211,7 +214,7 @@
         DO ivar=1,NDT
           ifield=idDtrc(itrc,ivar)
           IF (Dout(ifield,ng)) THEN
-            scale=1.0_r8/dt(ng)
+            scale=1.0_dp/dt(ng)
             gtype=gfactor*r3dvar
             status=nf_fwrite3d(ng, iNLM, DIA(ng)%ncid,                  &
      &                         DIA(ng)%Vid(ifield),                     &
@@ -250,9 +253,9 @@
         IF (Dout(ifield,ng)) THEN
 #  if defined BIO_FENNEL || defined HYPOXIA_SRM
           IF (ivar.eq.ipCO2) THEN
-            scale=1.0_r8
+            scale=1.0_dp
           ELSE
-            scale=1.0_r8/dtBIO                       ! mmole m-2 day-1
+            scale=1.0_dp/dtBIO                       ! mmole m-2 day-1
           END IF
 #  else
           scale=1.0_r8/dtBIO                         ! mmole m-2 day-1
@@ -284,7 +287,7 @@
       DO ivar=1,SIZE_DB3D
         ifield=iDbio3(ivar)
         IF (Dout(ifield,ng)) THEN
-          scale=1.0_r8/dtBIO                         ! mmole m-3 day-1
+          scale=1.0_dp/dtBIO                         ! mmole m-3 day-1
           gtype=gfactor*r3dvar
           status=nf_fwrite3d(ng, iNLM, DIA(ng)%ncid,                    &
      &                       DIA(ng)%Vid(ifield),                       &
@@ -322,12 +325,12 @@
 # endif
 !
   10  FORMAT (/,' WRT_DIAGS - error while writing variable: ',a,/,13x,  &
-     &        'into diagnostics NetCDF file for time record: ',i4)
+     &        'into diagnostics NetCDF file for time record: ',i0)
   20  FORMAT (6x,'WRT_DIAGS   - wrote diagnostics fields',t58,          &
 # ifdef NESTING
-     &        'in record = ',i7.7,t92,i2.2)
+     &        'in record = ',i0,t92,i2.2)
 # else
-     &        'in record = ',i7.7)
+     &        'in record = ',i0)
 # endif
 #else
       SUBROUTINE wrt_diags

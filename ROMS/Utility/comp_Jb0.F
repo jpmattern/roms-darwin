@@ -3,8 +3,9 @@
 
 #ifdef RPCG
 !
+!svn $Id: comp_Jb0.F 1038 2020-09-29 01:54:25Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -160,15 +161,15 @@
       USE mod_param
       USE mod_ncparam
       USE mod_fourdvar
-# if defined ADJUST_STFLUX   || defined ADJUST_WSTRESS || \
-     defined ADJUST_BOUNDARY
+      USE mod_iounits
+      USE mod_netcdf
       USE mod_scalars
-# endif
 # ifdef ADJUST_BOUNDARY
       USE mod_boundary
 # endif
 !
       USE state_dotprod_mod, ONLY : state_dotprod
+      USE strings_mod,       ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -279,7 +280,6 @@
 !
 !  Local variable declarations.
 !
-
       real(r8), dimension(0:NstateVar(ng)) :: dot
 
 # include "set_bounds.h"
@@ -326,9 +326,21 @@
      &                    ad_vbar(:,:,LADJ), tl_vbar(:,:,LTLM),         &
 # endif
      &                    ad_zeta(:,:,LADJ), tl_zeta(:,:,LTLM))
-
+!
+!  Compute outer loop background cost function.
+!
       Jb0(outLoop)=Jb0(outLoop)+dot(0)
-
+!
+!  Write out outer loop background cost function into 4D-Var NetCDF
+!  (DAV struc) file.  Recall that Jb0(0:Nouter)
+!
+      CALL netcdf_put_fvar (ng, model, DAV(ng)%name,                    &
+     &                      'Jb0', Jb0(0:),                             &
+     &                      (/1/), (/Nouter+1/),                        &
+     &                      ncid = DAV(ng)%ncid)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+!
       RETURN
       END SUBROUTINE comp_Jb0_tile
 !

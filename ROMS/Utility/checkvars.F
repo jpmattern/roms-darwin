@@ -2,9 +2,9 @@
       SUBROUTINE checkvars (ng, model, ncname, ncid, string, Nrec,      &
      &                      Nvar,tvarnam, get_var, have_var)
 !
-!svn $Id: checkvars.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: checkvars.F 1016 2020-04-27 02:06:37Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -126,8 +126,10 @@
         END IF
 #else
         get_var(idFsur)=.TRUE.
-        get_var(idUbar)=.TRUE.
-        get_var(idVbar)=.TRUE.
+        IF (model.ne.7) THEN        ! not needed by impulse forcing
+          get_var(idUbar)=.TRUE.
+          get_var(idVbar)=.TRUE.
+        END IF
 # ifdef SOLVE3D
         get_var(idUvel)=.TRUE.
         get_var(idVvel)=.TRUE.
@@ -360,8 +362,10 @@
 #  ifdef LMD_NONLOCAL
         ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idGhat(itemp)))) THEN
           have_var(idGhat(itemp))=.TRUE.
+#   ifdef SALINITY
         ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idGhat(isalt)))) THEN
           have_var(idGhat(isalt))=.TRUE.
+#   endif
 #  endif
 # endif
 # if defined GLS_MIXING || defined MY25_MIXING

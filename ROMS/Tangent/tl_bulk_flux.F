@@ -2,9 +2,9 @@
       MODULE tl_bulk_flux_mod
 #if (defined TANGENT || defined TL_IOMS) && defined BULK_FLUXES
 !
-!svn $Id: tl_bulk_flux.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: tl_bulk_flux.F 995 2020-01-10 04:01:28Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -1322,7 +1322,8 @@
 !
 !  Imported variable declarations.
 !
-      real(r8), intent(in) :: tl_ZoL, ZoL, pi
+      real(r8), intent(in) :: tl_ZoL, ZoL
+      real(dp), intent(in) :: pi
 !
 !  Local variable declarations.
 !
@@ -1404,7 +1405,8 @@
 !
 !  Imported variable declarations.
 !
-      real(r8), intent(in) :: tl_ZoL, ZoL, pi
+      real(r8), intent(in) :: tl_ZoL, ZoL
+      real(dp), intent(in) :: pi
 !
 !  Local variable declarations.
 !

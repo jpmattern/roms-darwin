@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE checkadj
 !
-!svn $Id: checkadj.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: checkadj.F 1022 2020-05-13 03:03:15Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -49,7 +49,7 @@
      &                               'stability problems, WARNING'
       END IF
 
-      string=uppercase('ts_u3adv_split')
+      string=uppercase('split_u3')
       ifound=INDEX(TRIM(Coptions), TRIM(string))
       IF (ifound.ne.0) THEN
         IF (Master) WRITE(stdout,10) TRIM(string),                      &
@@ -69,6 +69,62 @@
         IF (Master) WRITE(stdout,10) TRIM(string),                      &
      &                               'stability problems, WARNING'
       END IF
+
+#ifdef IS4DVAR
+      string=uppercase('is4dvar')
+      IF (Master) WRITE(stdout,10) TRIM(string),                        &
+     &                             'deprecated option, use ' //         &
+     &                             uppercase('i4dvar') //               &
+     &                             ' instead, WARNING'
+#endif
+
+#ifdef IS4DVAR_SENSITIVITY
+      string=uppercase('is4dvar_sensitivity')
+      IF (Master) WRITE(stdout,10) TRIM(string),                        &
+     &                             'deprecated option, use ' //         &
+     &                         uppercase('i4dvar_ana_sensitivity') //   &
+     &                             ' instead, WARNING'
+#endif
+
+#ifdef W4DPSAS
+      string=uppercase('w4dpsas')
+      IF (Master) WRITE(stdout,10) TRIM(string),                        &
+     &                             'deprecated option, use ' //         &
+     &                             uppercase('rbl4dvar') //             &
+     &                             ' instead, WARNING'
+#endif
+
+#ifdef W4DPSAS_SENSITIVITY
+      string=uppercase('w4dpsas_sensitivity')
+      IF (Master) WRITE(stdout,10) TRIM(string),                        &
+     &                             'deprecated option, use ' //         &
+     &                         uppercase('rbl4dvar_ana_sensitivity') // &
+     &                             ' instead, WARNING'
+#endif
+
+#ifdef W4DPSAS_FCT_SENSITIVITY
+      string=uppercase('w4dpsas_fct_sensitivity')
+      IF (Master) WRITE(stdout,10) TRIM(string),                        &
+     &                             'deprecated option, use ' //         &
+     &                         uppercase('rbl4dvar_fct_sensitivity') // &
+     &                             ' instead, WARNING'
+#endif
+
+#ifdef W4DVAR
+      string=uppercase('w4dvar')
+      IF (Master) WRITE(stdout,10) TRIM(string),                        &
+     &                             'deprecated option, use ' //         &
+     &                             uppercase('r4dvar') //               &
+     &                             ' instead, WARNING'
+#endif
+
+#ifdef W4DVAR_SENSITIVITY
+      string=uppercase('w4dvar_sensitivity')
+      IF (Master) WRITE(stdout,10) TRIM(string),                        &
+     &                             'deprecated option, use ' //         &
+     &                         uppercase('r4dvar_ana_sensitivity') //   &
+     &                             ' instead, WARNING'
+#endif
 
 #if defined TANGENT || defined TL_IOMS || defined ADJOINT
 !
@@ -464,15 +520,38 @@
      &                               'not allowed, FATAL ERROR'
       END IF
 
-# if !(defined TS_HADVECTION_TL && defined TS_VADVECTION_TL)
-      string=uppercase('ts_mpdata')
-      ifound=INDEX(TRIM(Coptions), TRIM(string))
-      IF (ifound.ne.0) THEN
-        ic=ic+1
-        IF (Master) WRITE(stdout,20) TRIM(string),                      &
-     &                               'not coded, FATAL ERROR'
+      IF (ANY(tl_Hadvection(:,:)%MPDATA).or.                            &
+     &    ANY(tl_Vadvection(:,:)%MPDATA)) THEN
+        string=uppercase('mpdata')
+        ifound=INDEX(TRIM(Coptions), TRIM(string))
+        IF (ifound.ne.0) THEN
+          ic=ic+1
+          IF (Master) WRITE(stdout,20) TRIM(string),                    &
+     &                                 'not coded, FATAL ERROR'
+        END IF
       END IF
-# endif
+
+      IF (ANY(tl_Hadvection(:,:)%HSIMT).or.                             &
+     &    ANY(tl_Vadvection(:,:)%HSIMT)) THEN
+        string=uppercase('hsimt')
+        ifound=INDEX(TRIM(Coptions), TRIM(string))
+        IF (ifound.ne.0) THEN
+          ic=ic+1
+          IF (Master) WRITE(stdout,20) TRIM(string),                    &
+     &                                 'not coded, FATAL ERROR'
+        END IF
+      END IF
+
+      IF (ANY(tl_Hadvection(:,:)%SPLIT_U3).or.                          &
+     &    ANY(tl_Vadvection(:,:)%SPLIT_U3)) THEN
+        string=uppercase('split_u3')
+        ifound=INDEX(TRIM(Coptions), TRIM(string))
+        IF (ifound.ne.0) THEN
+          ic=ic+1
+          IF (Master) WRITE(stdout,20) TRIM(string),                    &
+     &                                 'not coded, FATAL ERROR'
+        END IF
+      END IF
 
       string=uppercase('ts_smagorinsky')
       ifound=INDEX(TRIM(Coptions), TRIM(string))
@@ -481,16 +560,6 @@
         IF (Master) WRITE(stdout,20) TRIM(string),                      &
      &                               'not coded, FATAL ERROR'
       END IF
-
-# if !defined TS_HADVECTION_TL
-      string=uppercase('ts_u3adv_split')
-      ifound=INDEX(TRIM(Coptions), TRIM(string))
-      IF (ifound.ne.0) THEN
-        ic=ic+1
-        IF (Master) WRITE(stdout,20) TRIM(string),                      &
-     &                               'not coded, FATAL ERROR'
-      END IF
-# endif
 
       string=uppercase('uv_smagorinsky')
       ifound=INDEX(TRIM(Coptions), TRIM(string))

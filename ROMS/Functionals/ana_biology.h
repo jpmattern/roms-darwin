@@ -1,8 +1,8 @@
       SUBROUTINE ana_biology (ng, tile, model)
 !
-!! svn $Id: ana_biology.h 889 2018-02-10 03:32:52Z arango $
+!! svn $Id: ana_biology.h 1016 2020-04-27 02:06:37Z arango $
 !!======================================================================
-!! Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
 !!   See License_ROMS.txt                                              !
 !=======================================================================
@@ -256,7 +256,9 @@
 !
             sftm=t(i,j,N(ng),1,itemp)
             temp=t(i,j,k,1,itemp)
+# ifdef SALINITY
             salt=t(i,j,k,1,isalt)
+# endif
             cff1=-0.0827_r8*sftm+2.6386_r8
             cff2=MAX(0.00001_r8,cff1*(1.0_r8-(sftm-temp)*cff3))
 !
@@ -356,7 +358,11 @@
 !
 ! DOC initialization.
 !
+# ifdef SALINITY
             cff6=MAX(0.001_r8,-0.9833_r8*salt+33.411_r8)
+# else
+            cff6=0.0_r8
+# endif
             t(i,j,k,1,iDOMC(1))=0.1_r8
             t(i,j,k,1,iDOMN(1))=t(i,j,k,1,iDOMC(1))*cff8
             t(i,j,k,1,iDOMP(1))=t(i,j,k,1,iDOMN(1))*cff9

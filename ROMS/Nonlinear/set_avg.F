@@ -2,9 +2,9 @@
       MODULE set_avg_mod
 #ifdef AVERAGES
 !
-!svn $Id: set_avg.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: set_avg.F 1016 2020-04-27 02:06:37Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -493,19 +493,21 @@
             END DO
           END DO
         END IF
+#   ifdef SALINITY
         IF (Aout(idSdif,ng)) THEN
           DO k=0,N(ng)
             DO j=JstrR,JendR
               DO i=IstrR,IendR
                 AVERAGE(ng)%avgAKs(i,j,k)=MIXING(ng)%Akt(i,j,k,isalt)
-#   ifdef WET_DRY
+#    ifdef WET_DRY
                 AVERAGE(ng)%avgAKs(i,j,k)=AVERAGE(ng)%avgAKs(i,j,k)*    &
      &                                    GRID(ng)%rmask_full(i,j)
-#   endif
+#    endif
               END DO
             END DO
           END DO
         END IF
+#   endif
 #  endif
 #  ifdef LMD_SKPP
         IF (Aout(idHsbl,ng)) THEN
@@ -648,6 +650,19 @@
           END DO
         END IF
 #  endif
+#  if defined BULK_FLUXES
+        IF (Aout(idTair,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgTair(i,j)=FORCES(ng)%Tair(i,j)
+#   ifdef WET_DRY
+              AVERAGE(ng)%avgTair(i,j)=AVERAGE(ng)%avgTair(i,j)*        &
+     &                                 GRID(ng)%rmask_full(i,j)
+#   endif
+            END DO
+          END DO
+        END IF
+#  endif
 #  if defined BULK_FLUXES || defined ECOSIM
         IF (Aout(idUair,ng)) THEN
           DO j=JstrR,JendR
@@ -685,17 +700,19 @@
             END DO
           END DO
         END IF
+#  ifdef SALINITY
         IF (Aout(idTsur(isalt),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgswf(i,j)=FORCES(ng)%stflx(i,j,isalt)
-#  ifdef WET_DRY
+#   ifdef WET_DRY
               AVERAGE(ng)%avgswf(i,j)=AVERAGE(ng)%avgswf(i,j)*          &
      &                                GRID(ng)%rmask_full(i,j)
-#  endif
+#   endif
             END DO
           END DO
         END IF
+#  endif
 #  ifdef SHORTWAVE
         IF (Aout(idSrad,ng)) THEN
           DO j=JstrR,JendR
@@ -1517,19 +1534,21 @@
             END DO
           END DO
         END IF
+#   ifdef SALINITY
         IF (Aout(idSdif,ng)) THEN
           DO k=0,N(ng)
             DO j=JstrR,JendR
               DO i=IstrR,IendR
                 AVERAGE(ng)%avgAKs(i,j,k)=AVERAGE(ng)%avgAKs(i,j,k)+    &
-#   ifdef WET_DRY
+#    ifdef WET_DRY
      &                                    GRID(ng)%rmask_full(i,j)*     &
-#   endif
+#    endif
      &                                    MIXING(ng)%Akt(i,j,k,isalt)
               END DO
             END DO
           END DO
         END IF
+#   endif
 #  endif
 #  ifdef LMD_SKPP
         IF (Aout(idHsbl,ng)) THEN
@@ -1673,6 +1692,19 @@
           END DO
         END IF
 #  endif
+#  if defined BULK_FLUXES
+        IF (Aout(idTair,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgTair(i,j)=AVERAGE(ng)%avgTair(i,j)+        &
+#   ifdef WET_DRY
+     &                                 GRID(ng)%rmask_full(i,j)*        &
+#   endif
+     &                                 FORCES(ng)%Tair(i,j)
+            END DO
+          END DO
+        END IF
+#  endif
 #  if defined BULK_FLUXES || defined ECOSIM
         IF (Aout(idUair,ng)) THEN
           DO j=JstrR,JendR
@@ -1710,17 +1742,19 @@
             END DO
           END DO
         END IF
+#  ifdef SALINITY
         IF (Aout(idTsur(isalt),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgswf(i,j)=AVERAGE(ng)%avgswf(i,j)+          &
-#  ifdef WET_DRY
+#   ifdef WET_DRY
      &                                GRID(ng)%rmask_full(i,j)*         &
-#  endif
+#   endif
      &                                FORCES(ng)%stflx(i,j,isalt)
             END DO
           END DO
         END IF
+#  endif
 #  ifdef SHORTWAVE
         IF (Aout(idSrad,ng)) THEN
           DO j=JstrR,JendR
@@ -2962,6 +2996,29 @@
         END IF
 #  endif
 
+#  if defined BULK_FLUXES
+        IF (Aout(idTair,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgTair(i,j)=rfac(i,j)*                       &
+     &                                 AVERAGE(ng)%avgTair(i,j)
+            END DO
+          END DO
+          IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+            CALL exchange_r2d_tile (ng, tile,                           &
+     &                              LBi, UBi, LBj, UBj,                 &
+     &                              AVERAGE(ng)%avgTair)
+#   ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          AVERAGE(ng)%avgTair)
+#   endif
+          END IF
+        END IF
+#  endif
+
 #  if defined BULK_FLUXES || defined ECOSIM
         IF (Aout(idUair,ng)) THEN
           DO j=JstrR,JendR
@@ -3027,6 +3084,7 @@
           END IF
         END IF
 
+#  ifdef SALINITY
         IF (Aout(idTsur(isalt),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -3038,15 +3096,16 @@
             CALL exchange_r2d_tile (ng, tile,                           &
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgswf)
-#  ifdef DISTRIBUTE
+#   ifdef DISTRIBUTE
             CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          AVERAGE(ng)%avgswf)
-#  endif
+#   endif
           END IF
         END IF
+#  endif
 
 #  ifdef SHORTWAVE
         IF (Aout(idSrad,ng)) THEN

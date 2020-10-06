@@ -5,9 +5,9 @@
    (defined POSTERIOR_EOFS    || defined POSTERIOR_ERROR_I || \
     defined POSTERIOR_ERROR_F)
 !
-!svn $Id: posterior.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: posterior.F 1022 2020-05-13 03:03:15Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -54,7 +54,8 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 45, __LINE__, __FILE__)
+      CALL wclock_on (ng, model, 83, __LINE__,                          &
+     &                __FILE__)
 # endif
 !
       CALL posterior_tile (ng, tile, model,                             &
@@ -188,7 +189,8 @@
 # endif
      &                     OCEAN(ng) % ad_zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 45, __LINE__, __FILE__)
+      CALL wclock_off (ng, model, 83, __LINE__,                         &
+     &                 __FILE__)
 # endif
       RETURN
       END SUBROUTINE posterior
@@ -853,9 +855,9 @@
           RETURN
         END IF
         IF (ae_delta(innLoop,outLoop).le.0.0_r8) THEN
-          PRINT *, ' AE_DELTA not positive.'
-          PRINT *, ' AE_DELTA = ', ae_delta(innLoop,outLoop),           &
-     &             ', outer = ', outLoop, ', inner = ', innLoop
+          WRITE (stdout,*) ' AE_DELTA not positive.'
+          WRITE (stdout,*) ' AE_DELTA = ', ae_delta(innLoop,outLoop),   &
+     &                     ', outer = ', outLoop, ', inner = ', innLoop
           exit_flag=8
           RETURN
         END IF
@@ -993,7 +995,7 @@
         CALL mp_bcasti (ng, model, info)
 # endif
         IF (info.ne.0) THEN
-          PRINT *, ' Error in DSTEQR: info=', info
+          WRITE (stdout,*) ' Error in DSTEQR: info = ', info
           exit_flag=8
           RETURN
         END IF
@@ -1013,7 +1015,7 @@
 !
         DO i=1,innLoop
           IF (ae_Ritz(i,outLoop).lt.0.0_r8) THEN
-            PRINT *, ' Negative Ritz value found.'
+            WRITE (stdout,*) ' Negative Ritz value found.'
             exit_flag=8
             RETURN
           END IF
@@ -1098,7 +1100,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master.and.(nConvRitz.eq.0)) THEN
-            PRINT *, ' No converged Hesssian eigenvectors found.'
+            WRITE(stdout,*) ' No converged Hesssian eigenvectors found.'
           END IF
         END IF
       END IF
@@ -2117,7 +2119,8 @@
 
       integer, dimension(4) :: Vsize
 
-      real(r8) :: Fmin, Fmax, scale
+      real(dp) :: scale
+      real(r8) :: Fmin, Fmax
 
 # include "set_bounds.h"
 !
@@ -2149,7 +2152,7 @@
 !  Read in free-surface.
 !
       gtype=r2dvar
-      scale=1.0_r8
+      scale=1.0_dp
       CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idFsur),        &
      &                       ncid, varid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -2181,7 +2184,7 @@
       IF (ANY(Lobc(:,isFsur,ng))) THEN
         ifield=idSbry(isFsur)
         gtype=r2dvar
-        scale=1.0_r8
+        scale=1.0_dp
         CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
      &                         ncid, varid)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -2209,7 +2212,7 @@
 !  Read in 2D U-momentum component.
 !
       gtype=u2dvar
-      scale=1.0_r8
+      scale=1.0_dp
       CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idUbar),        &
      &                       ncid, varid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -2237,7 +2240,7 @@
 !  Read in 2D V-momentum component.
 !
       gtype=v2dvar
-      scale=1.0_r8
+      scale=1.0_dp
       CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idVbar),        &
      &                       ncid, varid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -2269,7 +2272,7 @@
       IF (ANY(Lobc(:,isUbar,ng))) THEN
         ifield=idSbry(isUbar)
         gtype=u2dvar
-        scale=1.0_r8
+        scale=1.0_dp
         CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
      &                         ncid, varid)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -2297,7 +2300,7 @@
       IF (ANY(Lobc(:,isVbar,ng))) THEN
         ifield=idSbry(isVbar)
         gtype=u2dvar
-        scale=1.0_r8
+        scale=1.0_dp
         CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
      &                         ncid, varid)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -2325,7 +2328,7 @@
 !  Read surface momentum stress.
 !
       gtype=u3dvar
-      scale=1.0_r8
+      scale=1.0_dp
       CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idUsms),        &
      &                       ncid, varid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -2351,7 +2354,7 @@
       END IF
 
       gtype=v3dvar
-      scale=1.0_r8
+      scale=1.0_dp
       CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idVsms),        &
      &                       ncid, varid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -2382,7 +2385,7 @@
 !  Read in 3D U-momentum component.
 !
       gtype=u3dvar
-      scale=1.0_r8
+      scale=1.0_dp
       CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idUvel),        &
      &                       ncid, varid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -2414,7 +2417,7 @@
       IF (ANY(Lobc(:,isUvel,ng))) THEN
         ifield=idSbry(isUvel)
         gtype=u3dvar
-        scale=1.0_r8
+        scale=1.0_dp
         CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
      &                         ncid, varid)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -2441,7 +2444,7 @@
 !  Read in 3D U-momentum component.
 !
       gtype=v3dvar
-      scale=1.0_r8
+      scale=1.0_dp
       CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idVvel),        &
      &                       ncid, varid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -2473,7 +2476,7 @@
       IF (ANY(Lobc(:,isVvel,ng))) THEN
         ifield=idSbry(isVvel)
         gtype=u3dvar
-        scale=1.0_r8
+        scale=1.0_dp
         CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
      &                         ncid, varid)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -2500,7 +2503,7 @@
 !  Read in tracers.
 !
       gtype=r3dvar
-      scale=1.0_r8
+      scale=1.0_dp
       DO it=1,NT(ng)
         CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idTvar(it)),  &
      &                         ncid, varid)
@@ -2536,7 +2539,7 @@
         IF (ANY(Lobc(:,isTvar(it),ng))) THEN
           ifield=idSbry(isTvar(it))
           gtype=r3dvar
-          scale=1.0_r8
+          scale=1.0_dp
           CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),    &
      &                           ncid, varid)
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
@@ -2565,7 +2568,7 @@
 !  Read in surface tracers flux.
 !
       gtype=r3dvar
-      scale=1.0_r8
+      scale=1.0_dp
       DO it=1,NT(ng)
         IF (Lstflux(it,ng)) THEN
           CALL netcdf_inq_varid (ng, model, ncname,                     &

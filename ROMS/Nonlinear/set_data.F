@@ -2,9 +2,9 @@
 #ifdef NONLINEAR
       SUBROUTINE set_data (ng, tile)
 !
-!svn $Id: set_data.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: set_data.F 1022 2020-05-13 03:03:15Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -44,9 +44,9 @@
 !***********************************************************************
 !
       USE mod_param
-#if defined HYPOXIA_SRM || defined RED_TIDE
+# if defined HYPOXIA_SRM || defined RED_TIDE
       USE mod_biology
-#endif
+# endif
       USE mod_boundary
       USE mod_clima
       USE mod_forces
@@ -120,8 +120,8 @@
 !
 #   ifdef ANA_CLOUD
       CALL ana_cloud (ng, tile, iNLM)
-#   elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-         !defined ATM_COUPLING
+#   elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
       CALL set_2dfld_tile (ng, tile, iNLM, idCfra,                      &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%cloudG,                           &
@@ -141,8 +141,8 @@
 !
 #   ifdef ANA_TAIR
       CALL ana_tair (ng, tile, iNLM)
-#   elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-         !defined ATM_COUPLING
+#   elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
       CALL set_2dfld_tile (ng, tile, iNLM, idTair,                      &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%TairG,                            &
@@ -162,8 +162,8 @@
 !
 #   ifdef ANA_HUMIDITY
       CALL ana_humid (ng, tile, iNLM)
-#   elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-         !defined ATM_COUPLING
+#   elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
       CALL set_2dfld_tile (ng, tile, iNLM, idQair,                      &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%HairG,                            &
@@ -182,8 +182,8 @@
 !
 #   ifdef ANA_SRFLUX
       CALL ana_srflux (ng, tile, iNLM)
-#   elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-         !defined ATM_COUPLING
+#   elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
       CALL set_2dfld_tile (ng, tile, iNLM, idSrad,                      &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%srflxG,                           &
@@ -219,9 +219,9 @@
 #  endif
 
 #  if defined BULK_FLUXES     && \
-    !(defined LONGWAVE        || defined LONGWAVE_OUT)    && \
-     ( (defined ATM_COUPLING  && defined COUPLING_INTERP) || \
-       !defined ATM_COUPLING )
+    !(defined LONGWAVE        || defined LONGWAVE_OUT) && \
+     ( (defined FRC_COUPLING  && defined TIME_INTERP)  || \
+       !defined FRC_COUPLING )
 !
 !-----------------------------------------------------------------------
 !  Surface net longwave radiation (degC m/s).
@@ -236,9 +236,9 @@
      &               __FILE__)) RETURN
 #  endif
 
-#  if defined LONGWAVE_OUT   && defined BULK_FLUXES      && \
-     ( (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-       !defined ATM_COUPLING )
+#  if defined LONGWAVE_OUT   && defined BULK_FLUXES  && \
+     ( (defined FRC_COUPLING && defined TIME_INTERP) || \
+       !defined FRC_COUPLING )
 !
 !-----------------------------------------------------------------------
 !  Surface downwelling longwave radiation (degC m/s).
@@ -261,8 +261,8 @@
 !
 #   ifdef ANA_WINDS
       CALL ana_winds (ng, tile, iNLM)
-#   elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-         !defined ATM_COUPLING
+#   elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
       CALL set_2dfld_tile (ng, tile, iNLM, idUair,                      &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%UwindG,                           &
@@ -328,8 +328,8 @@
 !
 #   ifdef ANA_RAIN
       CALL ana_rain (ng, tile, iNLM)
-#   elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-         !defined ATM_COUPLING
+#   elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
       CALL set_2dfld_tile (ng, tile, iNLM, idrain,                      &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%rainG,                            &
@@ -348,8 +348,8 @@
 !
 #   ifdef ANA_STFLUX
       CALL ana_stflux (ng, tile, iNLM, itemp)
-#   elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-         !defined ATM_COUPLING
+#   elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
       CALL set_2dfld_tile (ng, tile, iNLM, idTsur(itemp),               &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%stflxG(:,:,:,itemp),              &
@@ -454,9 +454,9 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
 
-#    elif !(defined EMINUSP      || defined SRELAXATION)     && \
-         ( (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-           !defined ATM_COUPLING )
+#    elif !(defined EMINUSP      || defined SRELAXATION) && \
+         ( (defined FRC_COUPLING && defined TIME_INTERP) || \
+           !defined FRC_COUPLING )
 
       CALL set_2dfld_tile (ng, tile, iNLM, idsfwf,                      &
      &                     LBi, UBi, LBj, UBj,                          &
@@ -558,8 +558,8 @@
 !
 #  ifdef ANA_SMFLUX
       CALL ana_smflux (ng, tile, iNLM)
-#  elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-        !defined ATM_COUPLING
+#  elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+        !defined FRC_COUPLING
       CALL set_2dfld_tile (ng, tile, iNLM, idUsms,                      &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%sustrG,                           &
@@ -617,7 +617,7 @@
 #  endif
 # endif
 
-# if !defined ATM_COUPLING && defined FOUR_DVAR      && \
+# if !defined FRC_COUPLING && defined FOUR_DVAR      && \
       defined BULK_FLUXES  && defined NL_BULK_FLUXES
 !
 !-----------------------------------------------------------------------
@@ -652,8 +652,8 @@
 !
 #  ifdef ANA_PAIR
       CALL ana_pair (ng, tile, iNLM)
-#  elif (defined ATM_COUPLING && defined COUPLING_INTERP) || \
-        !defined ATM_COUPLING
+#  elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+        !defined FRC_COUPLING
       SetBC=.TRUE.
 !     SetBC=.FALSE.
       CALL set_2dfld_tile (ng, tile, iNLM, idPair,                      &
@@ -1349,8 +1349,11 @@
 #  endif
 # endif
 
-# if defined W4DPSAS || defined NLM_OUTER || \
-     defined W4DPSAS_SENSITIVITY
+# if defined NLM_OUTER                || \
+     defined RBL4DVAR                 || \
+     defined RBL4DVAR_ANA_SENSITIVITY || \
+     defined RBL4DVAR_FCT_SENSITIVITY || \
+     defined SP4DVAR
 !
 !-----------------------------------------------------------------------
 !  Set weak contraint forcing.
@@ -1367,6 +1370,8 @@
      &                       update)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
+
+#  ifndef SOLVE3D
 !
 !  Set 2D momentum forcing.
 !
@@ -1386,7 +1391,7 @@
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
 
-#  ifdef SOLVE3D
+#  else
 !
 !  Set 3D momentum.
 !

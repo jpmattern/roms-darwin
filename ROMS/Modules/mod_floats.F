@@ -2,9 +2,9 @@
       MODULE mod_floats
 #ifdef FLOATS
 !
-!svn $Id: mod_floats.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: mod_floats.F 995 2020-01-10 04:01:28Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -170,28 +170,38 @@
 !
         DO ng=1,Ngrids
           allocate ( DRIFTER(ng) % bounded(Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(Nfloats(ng),r8)
 
 # if defined SOLVE3D && defined FLOAT_STICKY
           allocate ( DRIFTER(ng) % stuck(Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(Nfloats(ng),r8)
 # endif
 
           allocate ( DRIFTER(ng) % Findex(0:Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(Nfloats(ng)+1,r8)
 
           allocate ( DRIFTER(ng) % Ftype(Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(Nfloats(ng),r8)
 
           allocate ( DRIFTER(ng) % Flon(Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(Nfloats(ng),r8)
 
           allocate ( DRIFTER(ng) % Flat(Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(Nfloats(ng),r8)
 
           allocate ( DRIFTER(ng) % Fz0(Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(Nfloats(ng),r8)
 
           allocate ( DRIFTER(ng) % Tinfo(0:izrhs,Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL((izrhs+1)*Nfloats(ng),r8)
 
 # if defined SOLVE3D && defined FLOAT_VWALK
           allocate ( DRIFTER(ng) % rwalk(Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(Nfloats(ng),r8)
 # endif
 
           allocate ( DRIFTER(ng) % track(NFV(ng),0:NFT,Nfloats(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(NFV(ng)*(NFT+1)*Nfloats(ng),r8)
         END DO
       END IF
 !

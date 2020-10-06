@@ -2,9 +2,9 @@
 #ifdef STATIONS
       SUBROUTINE def_station (ng, ldef)
 !
-!svn $Id: def_station.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: def_station.F 1016 2020-04-27 02:06:37Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -50,8 +50,7 @@
       integer :: i, j, recdim, stadim
       integer :: status
 
-      integer :: DimIDs(32), pgrd(2)
-      integer :: Vsize(4)
+      integer :: DimIDs(nDimID), pgrd(2)
 
       integer :: def_dim
 
@@ -131,6 +130,11 @@
 #  endif
 
 #  ifdef ECOSIM
+        status=def_dim(ng, iNLM, STA(ng)%ncid, ncname, 'Nbands',        &
+     &                 NBands, DimIDs(33))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
         status=def_dim(ng, iNLM, STA(ng)%ncid, ncname, 'Nphy',          &
      &                 Nphy, DimIDs(25))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -239,7 +243,7 @@
         Vinfo( 4)=TRIM(Rclock%calendar)
         Vinfo(14)=Vname(4,idtime)
         status=def_var(ng, iNLM, STA(ng)%ncid, STA(ng)%Vid(idtime),     &
-     &                 NF_TYPE, 1, (/recdim/), Aval, Vinfo, ncname,     &
+     &                 NF_TOUT, 1, (/recdim/), Aval, Vinfo, ncname,     &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
@@ -676,6 +680,8 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
         END IF
+
+#  ifdef SALINITY
 !
 !  Define surface net salt flux.
 !
@@ -695,6 +701,8 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
         END IF
+#  endif
+
 #  ifdef BULK_FLUXES
 !
 !  Define latent heat flux.

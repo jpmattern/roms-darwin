@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE stiffness_mod
 !
-!svn $Id: stiffness.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: stiffness.F 1031 2020-07-14 01:39:55Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -285,7 +285,7 @@
         rx1(ng)=buffer(5)
 # endif
 #endif
-        IF (Master) THEN
+        IF (Master.and.LwrtInfo(ng)) THEN
           WRITE (stdout,10) ng
   10      FORMAT (/,' Basin information for Grid ',i2.2,':',/)
 #ifdef SOLVE3D
@@ -304,7 +304,7 @@
   30      FORMAT (/,' Initial domain volumes:  TotVolume = ',1p,e17.10, &
      &            0p,' m3',/,t26,'MinCellVol = ',1p,e17.10,0p,' m3',    &
      &            /,t26, 'MaxCellVol = ',1p,e17.10,0p,' m3',            &
-     &            /,t26, '   Max/Min = ',1p,e17.10,0p)
+     &            /,t26, '   Max/Min = ',1p,e17.10,0p,/)
         END IF
       END IF
 !$OMP END CRITICAL (R_FACTOR)

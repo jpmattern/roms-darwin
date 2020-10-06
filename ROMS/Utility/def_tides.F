@@ -3,9 +3,9 @@
    (defined SSH_TIDES || defined UV_TIDES)
       SUBROUTINE def_tides (ng, ldef)
 !
-!svn $Id: def_tides.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: def_tides.F 995 2020-01-10 04:01:28Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -46,11 +46,11 @@
       integer :: i, itrc, j, nvd3, nvd4
       integer :: status, varid
 
-      integer :: DimIDs(32), tharm(2), t2dgrd(3), u2dgrd(3), v2dgrd(3)
+      integer :: DimIDs(nDimID)
+      integer :: tharm(2), t2dgrd(3), u2dgrd(3), v2dgrd(3)
 # ifdef SOLVE3D
       integer :: t3dgrd(4), u3dgrd(4), v3dgrd(4)
 # endif
-      integer :: Vsize(4)
 
       integer :: def_dim
 
@@ -164,6 +164,11 @@
 #  endif
 
 #  ifdef ECOSIM
+        status=def_dim(ng, iNLM, HAR(ng)%ncid, ncname, 'Nbands',        &
+     &                 NBands, DimIDs(33))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
         status=def_dim(ng, iNLM, HAR(ng)%ncid, ncname, 'Nphy',          &
      &                 Nphy, DimIDs(25))
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -289,7 +294,7 @@
         WRITE (Vinfo( 3),'(a,a)') 'seconds since ', TRIM(Rclock%string)
         Vinfo( 4)=TRIM(Rclock%calendar)
         status=def_var(ng, iNLM, HAR(ng)%ncid, HAR(ng)%Vid(idtime),     &
-     &                 NF_FRST, 1, (/0/), Aval, Vinfo, ncname,          &
+     &                 NF_TOUT, 1, (/0/), Aval, Vinfo, ncname,          &
      &                 SetParAccess = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
@@ -300,7 +305,7 @@
         Vinfo( 2)=Vname(2,idTper)
         Vinfo( 3)=Vname(3,idTper)
         status=def_var(ng, iNLM, HAR(ng)%ncid, HAR(ng)%Vid(idTper),     &
-     &                 NF_FRST, 1, (/tharm(1)/), Aval, Vinfo, ncname,   &
+     &                 NF_TOUT, 1, (/tharm(1)/), Aval, Vinfo, ncname,   &
      &                 SetParAccess = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
@@ -311,7 +316,7 @@
         Vinfo( 2)=Vname(2,idCosW)
         Vinfo( 3)=Vname(3,idCosW)
         status=def_var(ng, iNLM, HAR(ng)%ncid, HAR(ng)%Vid(idCosW),     &
-     &                 NF_FRST, 1, (/tharm(1)/), Aval, Vinfo, ncname,   &
+     &                 NF_TOUT, 1, (/tharm(1)/), Aval, Vinfo, ncname,   &
      &                 SetParAccess = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
@@ -322,7 +327,7 @@
         Vinfo( 2)=Vname(2,idSinW)
         Vinfo( 3)=Vname(3,idSinW)
         status=def_var(ng, iNLM, HAR(ng)%ncid, HAR(ng)%Vid(idSinW),     &
-     &                 NF_FRST, 1, (/tharm(1)/), Aval, Vinfo, ncname,   &
+     &                 NF_TOUT, 1, (/tharm(1)/), Aval, Vinfo, ncname,   &
      &                 SetParAccess = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                   __FILE__)) RETURN
@@ -333,7 +338,7 @@
         Vinfo( 2)=Vname(2,idCos2)
         Vinfo( 3)=Vname(3,idCos2)
         status=def_var(ng, iNLM, HAR(ng)%ncid, HAR(ng)%Vid(idCos2),     &
-     &                 NF_FRST, 2, tharm, Aval, Vinfo, ncname,          &
+     &                 NF_TOUT, 2, tharm, Aval, Vinfo, ncname,          &
      &                 SetParAccess = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
@@ -344,7 +349,7 @@
         Vinfo( 2)=Vname(2,idSin2)
         Vinfo( 3)=Vname(3,idSin2)
         status=def_var(ng, iNLM, HAR(ng)%ncid, HAR(ng)%Vid(idSin2),     &
-     &                 NF_FRST, 2, tharm, Aval, Vinfo, ncname,          &
+     &                 NF_TOUT, 2, tharm, Aval, Vinfo, ncname,          &
      &                 SetParAccess = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
@@ -355,7 +360,7 @@
         Vinfo( 2)=Vname(2,idSWCW)
         Vinfo( 3)=Vname(3,idSWCW)
         status=def_var(ng, iNLM, HAR(ng)%ncid, HAR(ng)%Vid(idSWCW),     &
-     &                 NF_FRST, 2, tharm, Aval, Vinfo, ncname,          &
+     &                 NF_TOUT, 2, tharm, Aval, Vinfo, ncname,          &
      &                 SetParAccess = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN

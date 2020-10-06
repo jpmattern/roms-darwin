@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE diag_mod
 !
-!svn $Id: diag.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: diag.F 1007 2020-02-25 22:29:41Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -175,7 +175,7 @@
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: ke2d
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: pe2d
 
-      character (len=8 ) :: kechar, pechar
+      character (len=8 ) :: kechar, pechar, maxvalchar
       character (len=60) :: frmt
 
 #include "set_bounds.h"
@@ -490,6 +490,7 @@
      &          (kechar(i:i).eq.'n').or.(pechar(i:i).eq.'n').or.        &
      &          (kechar(i:i).eq.'*').or.(pechar(i:i).eq.'*')) THEN
               exit_flag=1
+              blowup_string='KEchar = '//kechar//', PEchar = '//pechar
             END IF
           END DO
 !
@@ -498,6 +499,8 @@
 !
           IF (maxspeed(ng).gt.max_speed) THEN
             exit_flag=1
+            WRITE (maxvalchar,'(1pe8.1)') maxspeed(ng)
+            blowup_string='MaxSpeed = '//maxvalchar
           END IF
 #ifdef SOLVE3D
 !
@@ -508,6 +511,8 @@
 !
           IF (maxrho(ng).gt.max_rho) THEN
             exit_flag=1
+            WRITE (maxvalchar,'(1pe8.1)') maxrho(ng)
+            blowup_string='MaxDensity = '//maxvalchar
           END IF
 #endif
 !

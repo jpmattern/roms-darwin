@@ -3,9 +3,9 @@
 
 #ifdef NESTING
 !
-!svn $Id: nesting.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: nesting.F 1037 2020-08-15 01:56:27Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license           Hernan G. Arango   !
 !    See License_ROMS.txt                             John C. Warner   !
 !=======================================================================
@@ -46,9 +46,11 @@
 !                                                                      !
 !  bry_fluxes       Extracts horizontat advective fluxes the contact   !
 !                     boundary of donor and receiver grids.            !
+# ifdef NESTING_DEBUG
 !  check_massflux   If refinement, check mass fluxes between coarse    !
 !                     and fine grids for volume conservation. It is    !
 !                     use only for debugging and diagnostics.          !
+# endif
 !  correct_tracer   Correct coarse grid tracer at the refinement grid  !
 !                     boundary with the refined accumulated fluxes     !
 !  do_twoway        Logical function to determine at which time-step   !
@@ -101,33 +103,35 @@
       PUBLIC  :: do_twoway
 # endif
       PUBLIC  :: fill_contact
-      PRIVATE :: check_massflux
+# ifdef NESTING_DEBUG
+      PUBLIC  :: check_massflux
+# endif
 # ifdef SOLVE3D
       PRIVATE :: correct_tracer
       PRIVATE :: correct_tracer_tile
 # endif
       PRIVATE :: fine2coarse
-      PRIVATE :: fine2coarse2d
+      PUBLIC  :: fine2coarse2d
 # ifdef SOLVE3D
-      PRIVATE :: fine2coarse3d
+      PUBLIC  :: fine2coarse3d
 # endif
-      PRIVATE :: get_contact2d
+      PUBLIC  :: get_contact2d
 # ifdef SOLVE3D
-      PRIVATE :: get_contact3d
+      PUBLIC  :: get_contact3d
 # endif
       PRIVATE :: get_composite
-      PRIVATE :: get_metrics
-      PRIVATE :: get_persisted2d
+      PUBLIC  :: get_metrics
+      PUBLIC  :: get_persisted2d
       PRIVATE :: get_refine
 # if defined MASKING || defined WET_DRY
-      PRIVATE :: mask_hweights
+      PUBLIC  :: mask_hweights
 # endif
       PRIVATE :: put_composite
       PRIVATE :: put_refine
       PRIVATE :: put_refine2d
 # ifdef SOLVE3D
       PRIVATE :: put_refine3d
-      PRIVATE :: z_weights
+      PUBLIC  :: z_weights
 # endif
 !
       CONTAINS
@@ -183,10 +187,17 @@
 !
 !-----------------------------------------------------------------------
 !  Process vertical indices and interpolation weigths associated with
-!  depth.
+!  depth. Currently, vertical weights are used in composite grids
+!  because their grids are not coincident. They are not needed in
+!  refinement grids because the donor and receiver grids have the same
+!  number of vertical levels and matching bathymetry.  However, in
+!  the future, it is possible to have configurations that require
+!  vertical weights in refinement. The switch "get_Vweights" controls
+!  if such weights are computed or not.  If false, it will accelerate
+!  computations because of less distributed-memory communications.
 !-----------------------------------------------------------------------
 !
-      IF (isection.eq.nzwgt) THEN
+      IF ((isection.eq.nzwgt).and.get_Vweights) THEN
         DO tile=last_tile(ng),first_tile(ng),-1
           CALL z_weights (ng, model, tile)
         END DO
@@ -254,6 +265,8 @@
             CALL put_refine (ng, model, tile, LputFsur)
           END DO
 !$OMP BARRIER
+
+# ifdef NESTING_DEBUG
 !
 !  If refinement, check mass flux conservation between coarser and
 !  finer grids.
@@ -262,6 +275,7 @@
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL check_massflux (ng, model, tile)
           END DO
+# endif
 
 # ifndef ONE_WAY
 !
@@ -415,7 +429,7 @@
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
       integer, intent(in) :: ILB, IUB, JLB, JUB
 
-      real(r8), intent(in) :: scale
+      real(dp), intent(in) :: scale
 !
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in) :: FX(IminS:,JminS:)
@@ -578,6 +592,8 @@
 
       RETURN
       END SUBROUTINE bry_fluxes
+
+# ifdef NESTING_DEBUG
 !
       SUBROUTINE check_massflux (ngf, model, tile)
 !
@@ -604,10 +620,10 @@
       USE mod_nesting
       USE mod_scalars
 
-# ifdef DISTRIBUTE
+#  ifdef DISTRIBUTE
 !
       USE distribute_mod, ONLY : mp_assemble
-# endif
+#  endif
 !
 !  Imported variable declarations.
 !
@@ -615,22 +631,20 @@
 !
 !  Local variable declarations.
 !
-# ifdef DISTRIBUTE
+#  ifdef DISTRIBUTE
       integer :: ILB, IUB, JLB, JUB, NptsSN, NptsWE, my_tile
-# endif
+#  endif
       integer :: Iedge, Ibc, Ibc_min, Ibc_max, Ibf, Io
       integer :: Jedge, Jbc, Jbc_min, Jbc_max, Jbf, Jo
       integer :: Istr, Iend, Jstr, Jend
       integer :: cjcr, cr, dg, half, icr, isum, jsum, m, rg
       integer :: tnew, told
 
-# ifdef DISTRIBUTE
+#  ifdef DISTRIBUTE
       real(r8), parameter :: spv = 0.0_r8
-# endif
+#  endif
       real(r8) :: EastSum, NorthSum, SouthSum, WestSum
-# ifdef NESTING_DEBUG
       real(r8) :: MFratio
-# endif
 !
 !-----------------------------------------------------------------------
 !  Check mass and volume conservation during refinement between coarse
@@ -669,7 +683,7 @@
             END IF
           END DO
 
-# ifdef DISTRIBUTE
+#  ifdef DISTRIBUTE
 !
 !  Set global size of boundary edges for coarse grid (donor index).
 !
@@ -689,7 +703,7 @@
           BRY_CONTACT(ieast ,cjcr)%Mflux=spv
           BRY_CONTACT(isouth,cjcr)%Mflux=spv
           BRY_CONTACT(inorth,cjcr)%Mflux=spv
-# endif
+#  endif
 !
 !  Set finer grid center (half) and offset indices (Io and Jo) for
 !  coarser grid (I,J) coordinates.
@@ -707,7 +721,6 @@
           Jbc_min=J_bottom(ngf)
           Jbc_max=J_top(ngf)-1            ! interior points, no top
 !                                           left corner
-# ifdef NESTING_DEBUG
           IF (DOMAIN(ngf)%SouthWest_Test(tile)) THEN
             IF (Master) THEN
               WRITE (300,10) 'Western Boundary Mass Fluxes: ',          &
@@ -716,7 +729,6 @@
             END IF
           END IF
 !
-# endif
           DO Jbc=Jstr,Jend
             IF (((Istr.le.Ibc).and.(Ibc.le.Iend)).and.                  &
      &          ((Jbc_min.le.Jbc).and.(Jbc.le.Jbc_max))) THEN
@@ -737,8 +749,6 @@
 !  and finer grid is conserved.
 !
               BRY_CONTACT(iwest,cjcr)%Mflux(Jbc)=WestSum
-
-# ifdef NESTING_DEBUG
               IF (WestSum.ne.0) THEN
                 MFratio=REFINED(cr)%DU_avg2(1,m,tnew)/WestSum
               ELSE
@@ -747,7 +757,7 @@
               WRITE (300,30) Jbc, REFINED(cr)%DU_avg2(1,m,tnew),        &
      &                       WestSum, MFratio
               CALL my_flush (300)
-# endif
+
             END IF
           END DO
 !
@@ -760,7 +770,6 @@
           Jbc_min=J_bottom(ngf)
           Jbc_max=J_top(ngf)-1            ! interior points, no top
 !                                           right corner
-# ifdef NESTING_DEBUG
           IF (DOMAIN(ngf)%SouthWest_Test(tile)) THEN
             IF (Master) THEN
               WRITE (300,10) 'Eastern Boundary Mass Fluxes: ',          &
@@ -769,7 +778,6 @@
             END IF
           END IF
 !
-# endif
           DO Jbc=Jstr,Jend
             IF (((Istr.le.Ibc).and.(Ibc.le.Iend)).and.                  &
      &          ((Jbc_min.le.Jbc).and.(Jbc.le.Jbc_max))) THEN
@@ -790,8 +798,6 @@
 !  and finer grid is conserved.
 !
               BRY_CONTACT(ieast,cjcr)%Mflux(Jbc)=EastSum
-
-# ifdef NESTING_DEBUG
               IF (EastSum.ne.0) THEN
                 MFratio=REFINED(cr)%DU_avg2(1,m,tnew)/EastSum
               ELSE
@@ -800,7 +806,6 @@
               WRITE (300,30) Jbc, REFINED(cr)%DU_avg2(1,m,tnew),        &
      &                       EastSum, MFratio
               CALL my_flush (300)
-# endif
             END IF
           END DO
 !
@@ -813,7 +818,6 @@
           Ibc_min=I_left(ngf)
           Ibc_max=I_right(ngf)-1          ! interior points, no bottom
 !                                           right corner
-# ifdef NESTING_DEBUG
           IF (DOMAIN(ngf)%SouthWest_Test(tile)) THEN
             IF (Master) THEN
               WRITE (300,20) 'Southern Boundary Mass Fluxes: ',         &
@@ -822,7 +826,6 @@
             END IF
           END IF
 !
-# endif
           DO Ibc=Istr,Iend
             IF (((Ibc_min.le.Ibc).and.(Ibc.le.Ibc_max)).and.            &
      &          ((Jstr.le.Jbc).and.(Jbc.le.Jend))) THEN
@@ -844,8 +847,6 @@
 !  and finer grid is conserved.
 !
               BRY_CONTACT(isouth,cjcr)%Mflux(Ibc)=SouthSum
-
-# ifdef NESTING_DEBUG
               IF (SouthSum.ne.0) THEN
                 MFratio=REFINED(cr)%DV_avg2(1,m,tnew)/SouthSum
               ELSE
@@ -854,7 +855,6 @@
               WRITE (300,30) Ibc, REFINED(cr)%DV_avg2(1,m,tnew),        &
      &                       SouthSum, MFratio
               CALL my_flush (300)
-# endif
             END IF
           END DO
 !
@@ -867,7 +867,6 @@
           Ibc_min=I_left(ngf)
           Ibc_max=I_right(ngf)-1          ! interior points, no top
 !                                           right corner
-# ifdef NESTING_DEBUG
           IF (DOMAIN(ngf)%SouthWest_Test(tile)) THEN
             IF (Master) THEN
               WRITE (300,20) 'Northern Boundary Mass Fluxes: ',         &
@@ -876,7 +875,6 @@
             END IF
           END IF
 !
-# endif
           DO Ibc=Istr,Iend
             IF (((Ibc_min.le.Ibc).and.(Ibc.le.Ibc_max)).and.            &
      &          ((Jstr.le.Jbc).and.(Jbc.le.Jend))) THEN
@@ -898,8 +896,6 @@
 !  and finer grid is conserved.
 !
               BRY_CONTACT(inorth,cjcr)%Mflux(Ibc)=NorthSum
-
-# ifdef NESTING_DEBUG
               IF (NorthSum.ne.0) THEN
                 MFratio=REFINED(cr)%DV_avg2(1,m,tnew)/NorthSum
               ELSE
@@ -907,11 +903,10 @@
               END IF
               WRITE (300,30) Ibc, REFINED(cr)%DV_avg2(1,m,tnew),        &
      &                       NorthSum, MFratio
-# endif
             END IF
           END DO
 
-# ifdef DISTRIBUTE
+#  ifdef DISTRIBUTE
 !
 !  Collect data from all nodes.
 !
@@ -923,11 +918,9 @@
      &                      BRY_CONTACT(isouth,cjcr)%Mflux(ILB:))
           CALL mp_assemble (dg, model, NptsSN, spv,                      &
      &                      BRY_CONTACT(inorth,cjcr)%Mflux(ILB:))
-# endif
+#  endif
         END IF
       END DO
-
-# ifdef NESTING_DEBUG
 !
       CALL my_flush (300)
 !
@@ -942,14 +935,14 @@
      &        'Fine Grid',11x,'Ratio',/,4x,'Ib',9x,'DV_avg2',9x,        &
      &        'SUM(DV_avg2)',/)
   30  FORMAT (4x,i4.4,3(3x,1p,e15.8))
-# endif
 
       RETURN
       END SUBROUTINE check_massflux
+# endif
 
 # ifndef ONE_WAY
 !
-      FUNCTION do_twoway (nl, il, ng, istep) RESULT (doit)
+      FUNCTION do_twoway (model, nl, il, ng, istep) RESULT (doit)
 !
 !=======================================================================
 !                                                                      !
@@ -984,7 +977,7 @@
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: nl, il, ng, istep
+      integer, intent(in) :: model, nl, il, ng, istep
 !
 !  Local variable declarations.
 !
@@ -1007,9 +1000,9 @@
 !  correct sequence: finest grid exchage first.
 !
         IF (Telescoping(ng)) THEN
-          dgc=coarserDonor(ng)                        ! for debbuging
+          dgc=CoarserDonor(ng)
           dgf=FinerDonor(ng)
-          IF (TwoWayCounter(dgf).eq.RefineSteps(dgf)) THEN
+          IF (TwoWayInterval(dgf).eq.dt(dgc)) THEN
             doit=.TRUE.
           END IF
 !
@@ -1026,7 +1019,13 @@
 !  Update two-way exchange counter between fine and coarse grids.
 !
       IF (doit) THEN
-        TwoWayCounter(ng)=TwoWayCounter(ng)+1
+        IF (model.eq.iADM) THEN
+          TwoWayInterval(ng)=TwoWayInterval(ng)-                        &
+     &                       REAL(RefineSteps(ng),r8)*dt(ng)
+        ELSE
+          TwoWayInterval(ng)=TwoWayInterval(ng)+                        &
+     &                       REAL(RefineSteps(ng),r8)*dt(ng)
+        END IF
       END IF
 
       RETURN
@@ -1089,7 +1088,7 @@
       integer, intent(in) :: cr, gtype, Npoints
       integer, intent(in) :: LBi, UBi, LBj, UBj
 !
-      real(r8), intent(in) :: SpValCheck
+      real(dp), intent(in) :: SpValCheck
 !
       character(len=*), intent(in) :: mvname
 !
@@ -1284,10 +1283,10 @@
 !
 !  Linear interpolation weights.
 !
-              MaskLWsum=GRID(dg)%rmask_full(Idg  ,Jdg  )+               &
-     &                  GRID(dg)%rmask_full(Idgp1,Jdg  )+               &
-     &                  GRID(dg)%rmask_full(Idgp1,Jdgp1)+               &
-     &                  GRID(dg)%rmask_full(Idg  ,Jdgp1)
+              MaskLWsum=GRID(dg)%rmask(Idg  ,Jdg  )+                    &
+     &                  GRID(dg)%rmask(Idgp1,Jdg  )+                    &
+     &                  GRID(dg)%rmask(Idgp1,Jdgp1)+                    &
+     &                  GRID(dg)%rmask(Idg  ,Jdgp1)
               IF (MaskLWsum.lt.4) THEN
 #  ifdef WET_DRY
                 Lweight(1)=Rcontact(cr)%LweightUnmasked(1,m)*           &
@@ -1341,15 +1340,15 @@
 !
 !  Quadratic interpolation weights.
 !
-              MaskQWsum=GRID(dg)%rmask_full(Idg-1, Jdg-1)+              &
-     &                  GRID(dg)%rmask_full(Idg  , Jdg-1)+              &
-     &                  GRID(dg)%rmask_full(Idgp1, Jdg-1)+              &
-     &                  GRID(dg)%rmask_full(Idg-1, Jdg  )+              &
-     &                  GRID(dg)%rmask_full(Idg  , Jdg  )+              &
-     &                  GRID(dg)%rmask_full(Idgp1, Jdg  )+              &
-     &                  GRID(dg)%rmask_full(Idg-1, Jdgp1)+              &
-     &                  GRID(dg)%rmask_full(Idg  , Jdgp1)+              &
-     &                  GRID(dg)%rmask_full(Idgp1, Jdgp1)
+              MaskQWsum=GRID(dg)%rmask(Idg-1, Jdg-1)+                   &
+     &                  GRID(dg)%rmask(Idg  , Jdg-1)+                   &
+     &                  GRID(dg)%rmask(Idgp1, Jdg-1)+                   &
+     &                  GRID(dg)%rmask(Idg-1, Jdg  )+                   &
+     &                  GRID(dg)%rmask(Idg  , Jdg  )+                   &
+     &                  GRID(dg)%rmask(Idgp1, Jdg  )+                   &
+     &                  GRID(dg)%rmask(Idg-1, Jdgp1)+                   &
+     &                  GRID(dg)%rmask(Idg  , Jdgp1)+                   &
+     &                  GRID(dg)%rmask(Idgp1, Jdgp1)
               IF (MaskQWsum.lt.9) THEN
 #   ifdef WET_DRY
                 Qweight(1)=Rcontact(cr)%QweightUnmasked(1,m)*           &
@@ -3550,8 +3549,8 @@
      &                          GRID(rg)%pm,                            &
      &                          GRID(rg)%pn,                            &
 #  ifdef MASKING
-     &                          GRID(dg)%rmask_full,                    &
-     &                          GRID(rg)%rmask_full,                    &
+     &                          GRID(dg)%rmask,                         &
+     &                          GRID(rg)%rmask,                         &
 #  endif
      &                          COUPLING(dg)%Zt_avg1,                   &
      &                          COUPLING(rg)%Zt_avg1)
@@ -3567,8 +3566,8 @@
      &                          GRID(rg)%pm,                            &
      &                          GRID(rg)%pn,                            &
 #  ifdef MASKING
-     &                          GRID(dg)%rmask_full,                    &
-     &                          GRID(rg)%rmask_full,                    &
+     &                          GRID(dg)%rmask,                         &
+     &                          GRID(rg)%rmask,                         &
 #  endif
      &                          OCEAN(dg)%zeta(:,:,Dindex2d),           &
      &                          OCEAN(rg)%zeta(:,:,Rindex2d))
@@ -3650,8 +3649,8 @@
      &                            GRID(rg)%pm,                          &
      &                            GRID(rg)%pn,                          &
 #  ifdef MASKING
-     &                            GRID(dg)%rmask_full,                  &
-     &                            GRID(rg)%rmask_full,                  &
+     &                            GRID(dg)%rmask,                       &
+     &                            GRID(rg)%rmask,                       &
 #  endif
      &                            OCEAN(dg)%t(:,:,:,Dindex3d,itrc),     &
      &                            OCEAN(rg)%t(:,:,:,Rindex3d,itrc))
@@ -3707,84 +3706,91 @@
 !-----------------------------------------------------------------------
 !
           IF (EWperiodic(rg).or.NSperiodic(rg)) THEN
+            IF (vtype.eq.r2dvar) THEN
 # ifdef SOLVE3D
-            CALL exchange_r2d_tile (rg, tile,                           &
-     &                              LBiR, UBiR, LBjR, UBjR,             &
-     &                              COUPLING(rg)%Zt_avg1)
-            DO k=1,2
+              CALL exchange_r2d_tile (rg, tile,                         &
+     &                                LBiR, UBiR, LBjR, UBjR,           &
+     &                                COUPLING(rg)%Zt_avg1)
+              DO k=1,2
+                CALL exchange_u2d_tile (rg, tile,                       &
+     &                                  LBiR, UBiR, LBjR, UBjR,         &
+     &                                  OCEAN(rg)%ubar(:,:,k))
+                CALL exchange_v2d_tile (rg, tile,                       &
+     &                                  LBiR, UBiR, LBjR, UBjR,         &
+     &                                  OCEAN(rg)%vbar(:,:,k))
+              END DO
+# else
+              CALL exchange_r2d_tile (rg, tile,                         &
+     &                                LBiR, UBiR, LBjR, UBjR,           &
+     &                                OCEAN(rg)%zeta(:,:,Rindex2d))
               CALL exchange_u2d_tile (rg, tile,                         &
      &                                LBiR, UBiR, LBjR, UBjR,           &
-     &                                OCEAN(rg)%ubar(:,:,k))
+     &                                OCEAN(rg)%ubar(:,:,Rindex2d))
               CALL exchange_v2d_tile (rg, tile,                         &
      &                                LBiR, UBiR, LBjR, UBjR,           &
-     &                                OCEAN(rg)%vbar(:,:,k))
-            END DO
-# else
-            CALL exchange_r2d_tile (rg, tile,                           &
-     &                              LBiR, UBiR, LBjR, UBjR,             &
-     &                              OCEAN(rg)%zeta(:,:,Rindex2d))
-            CALL exchange_u2d_tile (rg, tile,                           &
-     &                              LBiR, UBiR, LBjR, UBjR,             &
-     &                              OCEAN(rg)%ubar(:,:,Rindex2d))
-            CALL exchange_v2d_tile (rg, tile,                           &
-     &                              LBiR, UBiR, LBjR, UBjR,             &
-     &                              OCEAN(rg)%vbar(:,:,Rindex2d))
+     &                                OCEAN(rg)%vbar(:,:,Rindex2d))
 
 # endif
 # ifdef SOLVE3D
-            CALL exchange_u3d_tile (rg, tile,                           &
-     &                              LBiR, UBiR, LBjR, UBjR, 1, N(rg),   &
-     &                              OCEAN(rg)%u(:,:,:,Rindex3d))
-            CALL exchange_v3d_tile (rg, tile,                           &
-     &                              LBiR, UBiR, LBjR, UBjR, 1, N(rg),   &
-     &                              OCEAN(rg)%v(:,:,:,Rindex3d))
-            DO itrc=1,NT(rg)
-              CALL exchange_r3d_tile (rg, tile,                         &
+            ELSE IF (vtype.eq.r3dvar) THEN
+              CALL exchange_u3d_tile (rg, tile,                         &
      &                                LBiR, UBiR, LBjR, UBjR, 1, N(rg), &
+     &                                OCEAN(rg)%u(:,:,:,Rindex3d))
+              CALL exchange_v3d_tile (rg, tile,                         &
+     &                                LBiR, UBiR, LBjR, UBjR, 1, N(rg), &
+     &                                OCEAN(rg)%v(:,:,:,Rindex3d))
+              DO itrc=1,NT(rg)
+                CALL exchange_r3d_tile (rg, tile,                       &
+     &                                  LBiR, UBiR, LBjR, UBjR,         &
+     &                                  1, N(rg),                       &
      &                                OCEAN(rg)%t(:,:,:,Rindex3d,itrc))
-            END DO
+              END DO
 # endif
+            END IF
           END IF
 
 # ifdef DISTRIBUTE
 !
+          IF (vtype.eq.r2dvar) THEN
 #  ifdef SOLVE3D
-          CALL mp_exchange2d (rg, tile, model, 1,                       &
-     &                        LBiR, UBiR, LBjR, UBjR,                   &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(rg), NSperiodic(rg),           &
-     &                        COUPLING(rg)%Zt_avg1)
-          CALL mp_exchange2d (rg, tile, model, 4,                       &
-     &                        LBiR, UBiR, LBjR, UBjR,                   &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(rg), NSperiodic(rg),           &
-     &                        OCEAN(rg)%ubar(:,:,1),                    &
-     &                        OCEAN(rg)%vbar(:,:,1),                    &
-     &                        OCEAN(rg)%ubar(:,:,2),                    &
-     &                        OCEAN(rg)%vbar(:,:,2))
+            CALL mp_exchange2d (rg, tile, model, 1,                     &
+     &                          LBiR, UBiR, LBjR, UBjR,                 &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(rg), NSperiodic(rg),         &
+     &                          COUPLING(rg)%Zt_avg1)
+            CALL mp_exchange2d (rg, tile, model, 4,                     &
+     &                          LBiR, UBiR, LBjR, UBjR,                 &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(rg), NSperiodic(rg),         &
+     &                          OCEAN(rg)%ubar(:,:,1),                  &
+     &                          OCEAN(rg)%vbar(:,:,1),                  &
+     &                          OCEAN(rg)%ubar(:,:,2),                  &
+     &                          OCEAN(rg)%vbar(:,:,2))
 #  else
-          CALL mp_exchange2d (rg, tile, model, 3,                       &
-     &                        LBiR, UBiR, LBjR, UBjR,                   &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(rg), NSperiodic(rg),           &
-     &                        OCEAN(rg)%zeta(:,:,Rindex2d),             &
-     &                        OCEAN(rg)%ubar(:,:,Rindex2d),             &
-     &                        OCEAN(rg)%vbar(:,:,Rindex2d))
+            CALL mp_exchange2d (rg, tile, model, 3,                     &
+     &                          LBiR, UBiR, LBjR, UBjR,                 &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(rg), NSperiodic(rg),         &
+     &                          OCEAN(rg)%zeta(:,:,Rindex2d),           &
+     &                          OCEAN(rg)%ubar(:,:,Rindex2d),           &
+     &                          OCEAN(rg)%vbar(:,:,Rindex2d))
 #  endif
 #  ifdef SOLVE3D
-          CALL mp_exchange3d (rg, tile, model, 2,                       &
-     &                        LBiR, UBiR, LBjR, UBjR, 1, N(rg),         &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(rg), NSperiodic(rg),           &
-     &                        OCEAN(rg)%u(:,:,:,Rindex3d),              &
-     &                        OCEAN(rg)%v(:,:,:,Rindex3d))
-          CALL mp_exchange4d (rg, tile, model, 1,                       &
-     &                        LBiR, UBiR, LBjR, UBjR, 1, N(rg),         &
-     &                        1, NT(rg),                                &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(rg), NSperiodic(rg),           &
-     &                        OCEAN(rg)%t(:,:,:,Rindex3d,:))
+          ELSE IF (vtype.eq.r3dvar) THEN
+            CALL mp_exchange3d (rg, tile, model, 2,                     &
+     &                          LBiR, UBiR, LBjR, UBjR, 1, N(rg),       &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(rg), NSperiodic(rg),         &
+     &                          OCEAN(rg)%u(:,:,:,Rindex3d),            &
+     &                          OCEAN(rg)%v(:,:,:,Rindex3d))
+            CALL mp_exchange4d (rg, tile, model, 1,                     &
+     &                          LBiR, UBiR, LBjR, UBjR, 1, N(rg),       &
+     &                          1, NT(rg),                              &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(rg), NSperiodic(rg),         &
+     &                          OCEAN(rg)%t(:,:,:,Rindex3d,:))
 #  endif
+          END IF
 # endif
         END IF
       END DO
@@ -5343,9 +5349,10 @@
 
 # ifdef DISTRIBUTE
 !
-      USE distribute_mod, ONLY : mp_assemble
+      USE distribute_mod,  ONLY : mp_assemble
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif
+      USE strings_mod,     ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -5366,8 +5373,8 @@
 # ifdef DISTRIBUTE
       real(r8), parameter :: spv = 0.0_r8
 # endif
-      real(r8) :: Wnew, Wold
-      real(r8) :: cff, cff1, fac
+      real(dp) :: Wnew, Wold, SecScale, fac
+      real(r8) :: cff, cff1
       real(r8) :: my_value
 
 # include "set_bounds.h"
@@ -5389,6 +5396,8 @@
         JUB=BOUNDS(ng)%UBj(my_tile)
         NptsWE=JUB-JLB+1
         NptsSN=IUB-ILB+1
+
+#  ifdef NESTING_DEBUG
 !
 !  If distributed-memory, initialize arrays used to check mass flux
 !  conservation with special value (zero) to facilitate the global
@@ -5398,6 +5407,7 @@
         BRY_CONTACT(ieast ,cr)%Mflux=spv
         BRY_CONTACT(isouth,cr)%Mflux=spv
         BRY_CONTACT(inorth,cr)%Mflux=spv
+#  endif
       END IF
 # endif
 !
@@ -5406,15 +5416,19 @@
       told=3-RollingIndex(cr)
       tnew=RollingIndex(cr)
 !
-!  Set time interpolation weights.
+!  Set linear time interpolation weights. Fractional seconds are
+!  rounded to the nearest milliseconds integer towards zero in the
+!  time interpolation weights.
 !
-      Wold=RollingTime(tnew,cr)-time(ng)
-      Wnew=time(ng)-RollingTime(told,cr)
-      fac=1.0_r8/(Wold+Wnew)
+      SecScale=1000.0_dp              ! seconds to milliseconds
+!
+      Wold=ANINT((RollingTime(tnew,cr)-time(ng))*SecScale,dp)
+      Wnew=ANINT((time(ng)-RollingTime(told,cr))*SecScale,dp)
+      fac=1.0_dp/(Wold+Wnew)
       Wold=fac*Wold
       Wnew=fac*Wnew
 !
-      IF (((Wold*Wnew).lt.0.0_r8).or.((Wold+Wnew).le.0.0_r8)) THEN
+      IF (((Wold*Wnew).lt.0.0_dp).or.((Wold+Wnew).le.0.0_dp)) THEN
         IF (DOMAIN(ng)%SouthWest_Test(tile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) cr, dg, ng,                               &
@@ -5425,6 +5439,8 @@
      &                        INT(RollingTime(tnew,cr))
           END IF
           exit_flag=8
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
         END IF
       END IF
 !
@@ -5625,7 +5641,9 @@
 #  ifdef WET_DRY
             my_value=my_value*GRID(ng)%umask_wet(Istr,j)
 #  endif
+#  ifdef NESTING_DEBUG
             BRY_CONTACT(iwest,cr)%Mflux(j)=cff*my_value
+#  endif
             OCEAN(ng)%ubar(Istr,j,indx1(ng))=my_value
           END DO
         END IF
@@ -5655,7 +5673,9 @@
 #  ifdef WET_DRY
             my_value=my_value*GRID(ng)%umask_wet(Iend+1,j)
 #  endif
+#  ifdef NESTING_DEBUG
             BRY_CONTACT(ieast,cr)%Mflux(j)=cff*my_value
+#  endif
             OCEAN(ng)%ubar(Iend+1,j,indx1(ng))=my_value
           END DO
         END IF
@@ -5685,7 +5705,9 @@
 #  ifdef WET_DRY
             my_value=my_value*GRID(ng)%vmask_wet(i,Jstr)
 #  endif
+#  ifdef NESTING_DEBUG
             BRY_CONTACT(isouth,cr)%Mflux(i)=cff*my_value
+#  endif
             OCEAN(ng)%vbar(i,Jstr,indx1(ng))=my_value
           END DO
         END IF
@@ -5715,7 +5737,9 @@
 #  ifdef WET_DRY
             my_value=my_value*GRID(ng)%vmask_wet(i,Jend+1)
 #  endif
+#  ifdef NESTING_DEBUG
             BRY_CONTACT(inorth,cr)%Mflux(i)=cff*my_value
+#  endif
             OCEAN(ng)%vbar(i,Jend+1,indx1(ng))=my_value
           END DO
         END IF
@@ -5765,6 +5789,8 @@
      &                      OCEAN(ng)%vbar(:,:,1),                      &
      &                      OCEAN(ng)%vbar(:,:,2),                      &
      &                      OCEAN(ng)%vbar(:,:,3))
+
+#  ifdef NESTING_DEBUG
 !
         CALL mp_assemble (ng, model, NptsWE, spv,                        &
      &                    BRY_CONTACT(iwest ,cr)%Mflux(JLB:))
@@ -5774,6 +5800,7 @@
      &                    BRY_CONTACT(isouth,cr)%Mflux(ILB:))
         CALL mp_assemble (ng, model, NptsSN, spv,                        &
      &                    BRY_CONTACT(inorth,cr)%Mflux(ILB:))
+#  endif
       END IF
 # endif
 !
@@ -5838,6 +5865,7 @@
 !
       USE mp_exchange_mod, ONLY : mp_exchange3d, mp_exchange4d
 #  endif
+      USE strings_mod,     ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -5851,7 +5879,7 @@
 # endif
       integer :: i, itrc, j, k, m, tnew, told
 
-      real(r8) :: Wnew, Wold, fac
+      real(dp) :: Wnew, Wold, SecScale, fac
       real(r8) :: my_value
 
 #  include "set_bounds.h"
@@ -5866,15 +5894,19 @@
       told=3-RollingIndex(cr)
       tnew=RollingIndex(cr)
 !
-!  Set time interpolation weights.
+!  Set linear time interpolation weights. Fractional seconds are
+!  rounded to the nearest milliseconds integer towards zero in the
+!  time interpolation weights.
 !
-      Wold=RollingTime(tnew,cr)-time(ng)
-      Wnew=time(ng)-RollingTime(told,cr)
-      fac=1.0_r8/(Wold+Wnew)
+      SecScale=1000.0_dp              ! seconds to milliseconds
+!
+      Wold=ANINT((RollingTime(tnew,cr)-time(ng))*SecScale,dp)
+      Wnew=ANINT((time(ng)-RollingTime(told,cr))*SecScale,dp)
+      fac=1.0_dp/(Wold+Wnew)
       Wold=fac*Wold
       Wnew=fac*Wnew
 !
-      IF (((Wold*Wnew).lt.0.0_r8).or.((Wold+Wnew).le.0.0_r8)) THEN
+      IF (((Wold*Wnew).lt.0.0_dp).or.((Wold+Wnew).le.0.0_dp)) THEN
         IF (DOMAIN(ng)%SouthWest_Test(tile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) cr, dg, ng,                               &
@@ -5885,6 +5917,8 @@
      &                        INT(RollingTime(tnew,cr))
           END IF
           exit_flag=8
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
         END IF
       END IF
 

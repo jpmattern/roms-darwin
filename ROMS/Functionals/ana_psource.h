@@ -1,8 +1,8 @@
       SUBROUTINE ana_psource (ng, tile, model)
 !
-!! svn $Id: ana_psource.h 889 2018-02-10 03:32:52Z arango $
+!! svn $Id: ana_psource.h 1016 2020-04-27 02:06:37Z arango $
 !!======================================================================
-!! Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
 !!   See License_ROMS.txt                                              !
 !=======================================================================
@@ -133,7 +133,7 @@
 !  If initialization, set point Sources and/or Sinks locations.
 !-----------------------------------------------------------------------
 !
-      IF (iic(ng).eq.ntstart(ng)) THEN
+      IF ((iic(ng).eq.ntstart(ng)).or.(iic(ng).eq.0)) THEN
 !
 !  Set-up point Sources/Sink number (Nsrc), direction (Dsrc), I- and
 !  J-grid locations (Isrc,Jsrc). Currently, the direction can be along
@@ -448,7 +448,9 @@
           DO k=1,N(ng)
             DO is=1,Nsrc(ng)
               SOURCES(ng)%Tsrc(is,k,itemp)=T0(ng)
+#  ifdef SALINITY
               SOURCES(ng)%Tsrc(is,k,isalt)=0.0_r8
+#  endif
             END DO
           END DO
         END IF
@@ -458,10 +460,14 @@
           DO k=1,N(ng)
             DO is=1,Nsrc(ng)-1
               SOURCES(ng)%Tsrc(is,k,itemp)=T0(ng)
+#  ifdef SALINITY
               SOURCES(ng)%Tsrc(is,k,isalt)=S0(ng)
+#  endif
             END DO
             SOURCES(ng)%Tsrc(Nsrc(ng),k,itemp)=T0(ng)
+#  ifdef SALINITY
             SOURCES(ng)%Tsrc(Nsrc(ng),k,isalt)=S0(ng)
+#  endif
           END DO
         END IF
 # else

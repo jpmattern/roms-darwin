@@ -3,9 +3,9 @@
 
       SUBROUTINE biology (ng,tile)
 !
-!svn $Id: red_tide.h 889 2018-02-10 03:32:52Z arango $
+!svn $Id: red_tide.h 995 2020-01-10 04:01:28Z arango $
 !******************************************************** Ruoying He ***
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !****************************************** Alexander F. Shchepetkin ***
@@ -158,7 +158,7 @@
       real(r8) :: GermD, GermL, G_DIN, G_light, G_rate, M_rate
       real(r8) :: G_fac, S_fac, T_fac
       real(r8) :: dtdays, oNsedLayers, salt, temp, wmig
-      real(r8) :: yday
+      real(dp) :: yday
 
       real(r8) :: alpha, cff, cffL, cffR, deltaL, deltaR, dz, wdt
 
@@ -281,7 +281,7 @@
 !  term. The cysts germination rates are regulated by an endogenous
 !  circannual clock.
 !
-        CALL caldate (tdays(ng), yd_r8=yday)
+        CALL caldate (tdays(ng), yd_dp=yday)
 !
         IF (yday.lt.Month_MidDay(1)) THEN
           cff=(365.0_r8-Month_MidDay(12)+yday)/                         &

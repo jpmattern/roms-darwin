@@ -5,9 +5,9 @@
    (defined TL_AVERAGES && defined TANGENT)
       SUBROUTINE wrt_avg (ng)
 !
-!svn $Id: wrt_avg.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: wrt_avg.F 1028 2020-06-01 00:24:59Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -57,8 +57,8 @@
 !
       integer :: LBi, UBi, LBj, UBj
       integer :: Fcount, gfactor, gtype, i, itrc, status
-
-      real(r8) :: scale
+!
+      real(dp) :: scale
 !
       SourceFile=__FILE__
 !
@@ -86,13 +86,13 @@
 !  Set time record index.
 !
       AVG(ng)%Rindex=AVG(ng)%Rindex+1
-      Fcount=AVG(ng)%Fcount
+      Fcount=AVG(ng)%load
       AVG(ng)%Nrec(Fcount)=AVG(ng)%Nrec(Fcount)+1
 !
 !  Write out averaged time.
 !
       CALL netcdf_put_fvar (ng, iNLM, AVG(ng)%name,                     &
-     &                      TRIM(Vname(idtime,ng)), AVGtime(ng:),       &
+     &                      TRIM(Vname(1,idtime)), AVGtime(ng:),        &
      &                      (/AVG(ng)%Rindex/), (/1/),                  &
      &                      ncid = AVG(ng)%ncid,                        &
      &                      varid = AVG(ng)%Vid(idtime))
@@ -102,7 +102,7 @@
 !  Write out free-surface (m).
 !
       IF (Aout(idFsur,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idFsur), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -127,7 +127,7 @@
 !  Write out detided free-surface (m).
 !
       IF (Aout(idFsuD,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idFsuD), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -151,7 +151,7 @@
 !  Write out 2D momentum component (m/s) in the XI-direction.
 !
       IF (Aout(idUbar,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idUbar), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -176,7 +176,7 @@
 !  Write out detided 2D momentum component (m/s) in the XI-direction.
 !
       IF (Aout(idu2dD,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idu2dD), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -200,7 +200,7 @@
 !  Write out 2D momentum component (m/s) in the ETA-direction.
 !
       IF (Aout(idVbar,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idVbar), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -225,7 +225,7 @@
 !  Write out detided 2D momentum component (m/s) in the ETA-direction.
 !
       IF (Aout(idv2dD,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idv2dD), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -249,7 +249,7 @@
 !  Write out 2D Eastward momentum component (m/s) at RHO-points.
 !
       IF (Aout(idu2dE,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idu2dE), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -272,7 +272,7 @@
 !  Write out 2D Northward momentum component (m/s) at RHO-points.
 !
       IF (Aout(idv2dN,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idv2dN), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -297,7 +297,7 @@
 !  Write out time-averaged mass fluxes for 3D momentum coupling.
 !
       IF (Aout(idUfx1,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idUfx1), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -382,7 +382,7 @@
 !  Write out 2D radiation stress, Sxx-component.
 !
       IF (Aout(idW2xx,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idW2xx), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -405,7 +405,7 @@
 !  Write out 2D radiation stress, Sxy-component.
 !
       IF (Aout(idW2xy,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idW2xy), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -428,7 +428,7 @@
 !  Write out 2D radiation stress, Syy-component.
 !
       IF (Aout(idW2yy,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idW2yy), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -451,7 +451,7 @@
 !  Write out 2D radiation stress in the XI-direction.
 !
       IF (Aout(idU2rs,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idU2rs), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -474,7 +474,7 @@
 !  Write out 2D radiation stress in the ETA-direction
 !
       IF (Aout(idV2rs,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idV2rs), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -497,7 +497,7 @@
 !  Write out 2D stokes momentum component (m/s) in the XI-direction.
 !
       IF (Aout(idU2Sd,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idU2Sd), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -520,7 +520,7 @@
 !  Write out 2D stokes momentum component (m/s) in the ETA-direction.
 !
       IF (Aout(idV2Sd,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idV2Sd), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -545,7 +545,7 @@
 !  Write out 3D momentum component (m/s) in the XI-direction.
 !
       IF (Aout(idUvel,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idUvel), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -570,7 +570,7 @@
 !  Write out detided 3D momentum component (m/s) in the XI-direction.
 !
       IF (Aout(idu3dD,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idu3dD), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -594,7 +594,7 @@
 !  Write out 3D momentum component (m/s) in the ETA-direction.
 !
       IF (Aout(idVvel,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idVvel), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -619,7 +619,7 @@
 !  Write out detided 3D momentum component (m/s) in the ETA-direction.
 !
       IF (Aout(idv3dD,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idv3dD), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -643,7 +643,7 @@
 !  Write out 3D Eastward momentum component (m/s) at RHO-points.
 !
       IF (Aout(idu3dE,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idu3dE), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -666,7 +666,7 @@
 !  Write out 3D Northward momentum component (m/s) at RHO-points.
 !
       IF (Aout(idv3dN,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idv3dN), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -691,7 +691,7 @@
 !  Write out 3D radiation stress, Sxx-component.
 !
       IF (Aout(idW3xx,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idW3xx), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -714,7 +714,7 @@
 !  Write out 3D radiation stress, Sxy-component.
 !
       IF (Aout(idW3xy,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idW3xy), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -737,7 +737,7 @@
 !  Write out 3D radiation stress, Syy-component.
 !
       IF (Aout(idW3yy,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idW3yy), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -762,7 +762,7 @@
 !  Write out 3D radiation stress, Szx-component.
 !
       IF (Aout(idW3zx,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idW3zx), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -785,7 +785,7 @@
 !  Write out 3D radiation stress, Szy-component.
 !
       IF (Aout(idW3zy,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idW3zy), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -809,7 +809,7 @@
 !  Write out 3D radiation stress in the XI-direction, u_Rstress.
 !
       IF (Aout(idU3rs,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idU3rs), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -832,7 +832,7 @@
 !  Write out 3D radiation stress in the ETA-direction, v_Rstress.
 !
       IF (Aout(idV3rs,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idV3rs), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -855,7 +855,7 @@
 !  Write out 3D stokes momentum component (m/s) in the XI-direction.
 !
       IF (Aout(idU3Sd,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idU3Sd), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -878,7 +878,7 @@
 !  Write out 3D stokes momentum component (m/s) in the ETA-direction.
 !
       IF (Aout(idV3Sd,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idV3Sd), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -902,7 +902,7 @@
 !  Write out S-coordinate omega vertical velocity (m/s).
 !
       IF (Aout(idOvel,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*w3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idOvel), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -925,7 +925,7 @@
 !  Write out "true" vertical velocity (m/s).
 !
       IF (Aout(idWvel,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*w3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idWvel), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -949,7 +949,7 @@
 !
       DO itrc=1,NT(ng)
         IF (Aout(idTvar(itrc),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*r3dvar
           status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Tid(itrc), &
      &                       AVG(ng)%Rindex, gtype,                     &
@@ -974,7 +974,7 @@
 #  if defined AVERAGES_DETIDE && (defined SSH_TIDES || defined UV_TIDES)
       DO itrc=1,NAT
         IF (Aout(idTrcD(itrc),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*r3dvar
           status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid,                    &
      &                       AVG(ng)%Vid(idTrcD(itrc)),                 &
@@ -1001,7 +1001,7 @@
 !  Write out density anomaly.
 !
       IF (Aout(idDano,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idDano), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1096,7 +1096,7 @@
 !  Write out depth of surface boundary layer.
 !
       IF (Aout(idHsbl,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idHsbl), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1121,7 +1121,7 @@
 !  Write out depth of bottom boundary layer.
 !
       IF (Aout(idHbbl,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idHbbl), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1146,7 +1146,7 @@
 !  Write out 2D potential vorticity.
 !
       IF (Aout(id2dPV,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*p2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(id2dPV), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1169,7 +1169,7 @@
 !  Write out 2D relative vorticity.
 !
       IF (Aout(id2dRV,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*p2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(id2dRV), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1193,7 +1193,7 @@
 !  Write out 3D potential vorticity.
 !
       IF (Aout(id3dPV,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*p3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(id3dPV), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1216,7 +1216,7 @@
 !  Write out 3D relative vorticity.
 !
       IF (Aout(id3dRV,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*p3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(id3dRV), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1240,7 +1240,7 @@
 !  Write out quadratic <zeta*zeta> term.
 !
       IF (Aout(idZZav,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idZZav), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1263,7 +1263,7 @@
 !  Write out quadratic <ubar*ubar> term.
 !
       IF (Aout(idU2av,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idU2av), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1286,7 +1286,7 @@
 !  Write out quadratic <vbar*vbar> term.
 !
       IF (Aout(idV2av,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idV2av), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1310,7 +1310,7 @@
 !  Write u-volume flux.
 !
       IF (Aout(idHUav,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idHUav), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1333,7 +1333,7 @@
 !  Write v-volume flux.
 !
       IF (Aout(idHVav,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idHVav), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1356,7 +1356,7 @@
 !  Write out quadratic <u*u> term.
 !
       IF (Aout(idUUav,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*u3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idUUav), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1379,7 +1379,7 @@
 !  Write out quadratic <u*v> term.
 !
       IF (Aout(idUVav,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idUVav), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1402,7 +1402,7 @@
 !  Write out quadratic <v*v> term.
 !
       IF (Aout(idVVav,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*v3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idVVav), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1426,7 +1426,7 @@
 !
       DO i=1,NT(ng)
         IF (Aout(idTTav(i),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*r3dvar
           status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid,                    &
      &                       AVG(ng)%Vid(idTTav(i)),                    &
@@ -1452,7 +1452,7 @@
 !
       DO i=1,NT(ng)
         IF (Aout(iHUTav(i),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*u3dvar
           status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid,                    &
      &                       AVG(ng)%Vid(iHUTav(i)),                    &
@@ -1474,7 +1474,7 @@
         END IF
 !
         IF (Aout(iHVTav(i),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*v3dvar
           status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid,                    &
      &                       AVG(ng)%Vid(iHVTav(i)),                    &
@@ -1500,7 +1500,7 @@
 !
       DO i=1,NT(ng)
         IF (Aout(idUTav(i),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*u3dvar
           status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid,                    &
      &                       AVG(ng)%Vid(idUTav(i)),                    &
@@ -1522,7 +1522,7 @@
         END IF
 !
         IF (Aout(idVTav(i),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*v3dvar
           status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid,                    &
      &                       AVG(ng)%Vid(idVTav(i)),                    &
@@ -1549,7 +1549,7 @@
 !  Write out vertical viscosity coefficient.
 !
       IF (Aout(idVvis,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*w3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idVvis), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1573,7 +1573,7 @@
 !  Write out vertical diffusion coefficient for potential temperature.
 !
       IF (Aout(idTdif,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*w3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idTdif), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1597,7 +1597,7 @@
 !  Write out vertical diffusion coefficient for salinity.
 !
       IF (Aout(idSdif,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*w3dvar
         status=nf_fwrite3d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idSdif), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1623,7 +1623,7 @@
 !  Write out surface air pressure.
 !
       IF (Aout(idPair,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idPair), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1643,12 +1643,37 @@
         END IF
       END IF
 #  endif
+#  if defined BULK_FLUXES
+!
+!  Write out surface air temperature.
+!
+      IF (Aout(idTair,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*r2dvar
+        status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idTair), &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, scale,                   &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgTair)
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idTair)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#  endif
 #  if defined BULK_FLUXES || defined ECOSIM
 !
 !  Write out surface winds.
 !
       IF (Aout(idUair,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idUair), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1669,7 +1694,7 @@
       END IF
 
       IF (Aout(idVair,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idVair), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1694,11 +1719,11 @@
 !
       IF (Aout(idTsur(itemp),ng)) THEN
 #  ifdef ADJOINT
-#   if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+#   if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
        defined OPT_OBSERVATIONS
-       scale=1.0_r8/(rho0*Cp)
+        scale=1.0_dp/(rho0*Cp)
 #   else
-        scale=1.0_r8
+        scale=1.0_dp
 #   endif
 #  else
         scale=rho0*Cp
@@ -1727,7 +1752,7 @@
 !  Write out surface salt flux  (PSU m/s = kg salt/m2/s).
 !
       IF (Aout(idTsur(isalt),ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid,                      &
      &                     AVG(ng)%Vid(idTsur(isalt)),                  &
@@ -1754,7 +1779,7 @@
 !
       IF (Aout(idLhea,ng)) THEN
 #   ifdef ADJOINT
-        scale=1.0_r8
+        scale=1.0_dp
 #   else
         scale=rho0*Cp
 #   endif
@@ -1781,7 +1806,7 @@
 !
       IF (Aout(idShea,ng)) THEN
 #   ifdef ADJOINT
-        scale=1.0_r8
+        scale=1.0_dp
 #   else
         scale=rho0*Cp
 #   endif
@@ -1808,7 +1833,7 @@
 !
       IF (Aout(idLrad,ng)) THEN
 #   ifdef ADJOINT
-        scale=1.0_r8
+        scale=1.0_dp
 #   else
         scale=rho0*Cp
 #   endif
@@ -1835,7 +1860,7 @@
 !  Write out evaportaion rate (kg/m2/s).
 !
       IF (Aout(idevap,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idevap), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1858,7 +1883,7 @@
 !  Write out precipitation rate (kg/m2/s).
 !
       IF (Aout(idrain,ng)) THEN
-        scale=1.0_r8
+        scale=1.0_dp
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid, AVG(ng)%Vid(idrain), &
      &                     AVG(ng)%Rindex, gtype,                       &
@@ -1885,7 +1910,7 @@
 !
       IF (Aout(idSrad,ng)) THEN
 #    ifdef ADJOINT
-        scale=1.0_r8
+        scale=1.0_dp
 #    else
         scale=rho0*Cp
 #    endif
@@ -1914,11 +1939,11 @@
 !
       IF (Aout(idUsms,ng)) THEN
 # ifdef ADJOINT
-#  if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+#  if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
       defined OPT_OBSERVATIONS
-        scale=1.0_r8/rho0
+        scale=1.0_dp/rho0
 #  else
-        scale=1.0_r8
+        scale=1.0_dp
 #  endif
 # else
         scale=rho0
@@ -1946,11 +1971,11 @@
 !
       IF (Aout(idVsms,ng)) THEN
 # ifdef ADJOINT
-#  if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+#  if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
       defined OPT_OBSERVATIONS
-        scale=1.0_r8/rho0
+        scale=1.0_dp/rho0
 #  else
-        scale=1.0_r8
+        scale=1.0_dp
 #  endif
 # else
         scale=rho0
@@ -1978,11 +2003,11 @@
 !
       IF (Aout(idUbms,ng)) THEN
 # ifdef ADJOINT
-#  if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+#  if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
       defined OPT_OBSERVATIONS
-        scale=1.0_r8/rho0
+        scale=1.0_dp/rho0
 #  else
-        scale=1.0_r8
+        scale=1.0_dp
 #  endif
 # else
         scale=rho0
@@ -2010,11 +2035,11 @@
 !
       IF (Aout(idVbms,ng)) THEN
 # ifdef ADJOINT
-#  if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
+#  if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
       defined OPT_OBSERVATIONS
-        scale=1.0_r8/rho0
+        scale=1.0_dp/rho0
 #  else
-        scale=1.0_r8
+        scale=1.0_dp
 #  endif
 # else
         scale=rho0
@@ -2043,7 +2068,7 @@
 !
       DO itrc=1,NST
         IF (Aout(idUbld(itrc),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*u2dvar
           status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid,                    &
      &                       AVG(ng)%Vid(idUbld(itrc)),                 &
@@ -2068,7 +2093,7 @@
 !  Write out bed load transport in V-direction.
 !
         IF (Aout(idVbld(itrc),ng)) THEN
-          scale=1.0_r8
+          scale=1.0_dp
           gtype=gfactor*v2dvar
           status=nf_fwrite2d(ng, iNLM, AVG(ng)%ncid,                    &
      &                       AVG(ng)%Vid(idVbld(itrc)),                 &
@@ -2108,12 +2133,12 @@
 #endif
 !
   10  FORMAT (/,' WRT_AVG - error while writing variable: ',a,/,11x,    &
-     &        'into averages NetCDF file for time record: ',i4)
+     &        'into averages NetCDF file for time record: ',i0)
   20  FORMAT (6x,'WRT_AVG     - wrote averaged',t39,'fields',t58,       &
 # ifdef NESTING
-     &        'in record = ',i7.7,t92,i2.2)
+     &        'in record = ',i0,t92,i2.2)
 # else
-     &        'in record = ',i7.7)
+     &        'in record = ',i0)
 # endif
 #else
       SUBROUTINE wrt_avg

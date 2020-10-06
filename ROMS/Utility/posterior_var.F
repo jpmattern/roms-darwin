@@ -6,9 +6,9 @@
    (defined POSTERIOR_ERROR_I || defined POSTERIOR_ERROR_F)
 
 !
-!svn $Id: posterior_var.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: posterior_var.F 1022 2020-05-13 03:03:15Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -53,7 +53,8 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 45, __LINE__, __FILE__)
+      CALL wclock_on (ng, model, 83, __LINE__,                          &
+     &                __FILE__)
 # endif
 !
       CALL posterior_var_tile (ng, tile, model,                         &
@@ -186,7 +187,8 @@
 # endif
      &                        OCEAN(ng) % ad_zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 45, __LINE__, __FILE__)
+      CALL wclock_off (ng, model, 83, __LINE__,                         &
+     &                 __FILE__)
 # endif
       RETURN
       END SUBROUTINE posterior_var
@@ -637,7 +639,7 @@
       CALL mp_bcasti (ng, model, info)
 # endif
       IF (info.ne.0) THEN
-        IF (Master) PRINT *,' Error in DPOTRF: info = ', info
+        IF (Master) WRITE (stdout,*) ' Error in DPOTRF: info = ', info
         exit_flag=8
         RETURN
       END IF
@@ -650,7 +652,7 @@
       CALL mp_bcastf (ng, model, zLanczos_inv)
 # endif
       IF (info.ne.0) THEN
-        IF (Master) PRINT *,' Error in DPOTRI: info =', info
+        IF (Master) WRITE (stdout,*) ' Error in DPOTRI: info = ', info
         exit_flag=8
         RETURN
       END IF

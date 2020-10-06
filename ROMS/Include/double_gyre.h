@@ -1,7 +1,7 @@
 /*
-** svn $Id: double_gyre.h 889 2018-02-10 03:32:52Z arango $
+** svn $Id: double_gyre.h 1022 2020-05-13 03:03:15Z arango $
 *******************************************************************************
-** Copyright (c) 2002-2018 The ROMS/TOMS Group                               **
+** Copyright (c) 2002-2020 The ROMS/TOMS Group                               **
 **   Licensed under a MIT/X style license                                    **
 **   See License_ROMS.txt                                                    **
 *******************************************************************************
@@ -9,7 +9,7 @@
 ** Options for 4DVar Data Assimilation Toy.
 **
 ** Application flag:   DOUBLE_GYRE
-** Input script:       ocean_double_gyre.in
+** Input script:       roms_double_gyre.in
 **
 **
 ** Available Driver options:  choose only one and activate it in the
@@ -21,18 +21,16 @@
 ** GRADIENT_CHECK             TLM/ADM Gradient Check
 ** FORCING_SV                 Forcing Singular Vectors
 ** FT_EIGENMODES              Finite Time Eigenmodes
-** IS4DVAR_OLD                Old Incremental, strong constraint 4DVAR
-** IS4DVAR                    Incremental, strong constraint 4DVAR
+** I4DVAR                     Incremental, strong constraint 4D-Var
 ** NLM_DRIVER                 Nonlinear Basic State trajectory
 ** OPT_PERTURBATION           Optimal perturbations
 ** PICARD_TEST                Picard Iterations Tes
+** RBL4DVAR                   Strong/Weak constraint RBL4D-Var
+** R4DVAR                     Strong/Weak constraint R4D-Var
 ** R_SYMMETRY                 Representer Matrix Symmetry Tes
-** S4DVAR                     Strong constraint 4DVAR
 ** SANITY_CHECK               Sanity Check
 ** SO_SEMI                    Stochastic Optimals: Semi-norm
 ** TLM_CHECK                  Tangent Linear Model Check
-** W4DPSAS                    Weak constraint 4D-PSAS
-** W4DVAR                     Weak constraint 4DVAR
 */
 
 #define SOLVE3D
@@ -56,12 +54,6 @@
 #  define DJ_GRADPS
 #  define SPLINES_VDIFF
 #  define SPLINES_VVISC
-#  undef  TS_C2HADVECTION
-#  undef  TS_C2VADVECTION
-#  undef  TS_A4HADVECTION
-#  undef  TS_A4VADVECTION
-#  define TS_U3HADVECTION
-#  define TS_C4VADVECTION
 #  define TS_DIF2
 #  undef  TS_DIF4
 #  define MIX_S_TS
@@ -125,12 +117,6 @@
 #  define DJ_GRADPS
 #  define SPLINES_VDIFF
 #  define SPLINES_VVISC
-#  undef  TS_C2HADVECTION
-#  undef  TS_C2VADVECTION
-#  undef  TS_A4HADVECTION
-#  undef  TS_A4VADVECTION
-#  define TS_U3HADVECTION
-#  define TS_C4VADVECTION
 #  define TS_DIF2
 #  undef  TS_DIF4
 #  undef  MIX_S_TS
@@ -173,8 +159,8 @@
 **-----------------------------------------------------------------------------
 */
 
-#if defined AFT_EIGENMODES || defined FT_EIGENMODES    ||
-    defined FORCING_SV     || defined OPT_PERTURBATION ||
+#if defined AFT_EIGENMODES || defined FT_EIGENMODES    || \
+    defined FORCING_SV     || defined OPT_PERTURBATION || \
     defined SO_SEMI
 # if defined SOLVE3D                   /* 3D Application */
 #  define UV_ADV
@@ -182,7 +168,6 @@
 #  define UV_VIS2
 #  define MIX_S_UV
 #  define UV_COR
-#  define TS_U3HADVECTION
 #  define TS_DIF2
 #  define MIX_S_TS
 #  define DJ_GRADPS
@@ -213,9 +198,9 @@
 **-----------------------------------------------------------------------------
 */
 
-#if defined CORRELATION || defined IS4DVAR   ||
-    defined R_SYMMETRY  || defined TLM_CHECK ||
-    defined W4DPSAS     || defined W4DVAR
+#if defined CORRELATION || defined I4DVAR    || \
+    defined RBL4DVAR    || defined R4DVAR    || \
+    defined R_SYMMETRY  || defined TLM_CHECK
 # if defined SOLVE3D                   /* 3D Application */
 #  undef  UV_C2ADVECTION
 #  undef  UV_C4ADVECTION
@@ -231,12 +216,6 @@
 #  define SPLINES_VDIFF
 #  define SPLINES_VVISC
 #  undef  TS_FIXED
-#  undef  TS_C2HADVECTION
-#  undef  TS_C2VADVECTION
-#  define TS_U3HADVECTION
-#  define TS_C4VADVECTION
-#  undef  TS_A4HADVECTION
-#  undef  TS_A4VADVECTION
 #  define TS_DIF2
 #  define MIX_S_TS
 #  undef  MIX_GEO_TS
@@ -256,7 +235,7 @@
 #  define OUT_DOUBLE
 #  define VCONVOLUTION
 #  define IMPLICIT_VCONV
-#  ifdef W4DVAR
+#  ifdef R4DVAR
 #   define RPM_RELAXATION
 #  endif
 # else                                 /* 2D Application */
@@ -299,15 +278,6 @@
 #  undef  DJ_GRADPS
 #  define SPLINES_VDIFF
 #  define SPLINES_VVISC
-#  define TS_C2HADVECTION
-#  define TS_C2VADVECTION
-#  undef  TS_C4HADVECTION
-#  undef  TS_C4VADVECTION
-#  undef  TS_U3HADVECTION
-#  undef  TS_C4VADVECTION
-#  undef  TS_A4HADVECTION
-#  undef  TS_A4VADVECTION
-#  undef  TS_SVADVECTION
 #  define TS_DIF2
 #  undef  TS_DIF4
 #  define MIX_S_TS
@@ -359,10 +329,6 @@
 #  undef  DJ_GRADPS
 #  define SPLINES_VDIFF
 #  define SPLINES_VVISC
-#  define TS_U3HADVECTION
-#  define TS_C4VADVECTION
-#  undef  TS_A4HADVECTION
-#  undef  TS_A4VADVECTION
 #  define TS_DIF2
 #  define MIX_S_TS
 #  undef  MIX_GEO_TS

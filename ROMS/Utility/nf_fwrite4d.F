@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE nf_fwrite4d_mod
 !
-!svn $Id: nf_fwrite4d.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: nf_fwrite4d.F 1026 2020-05-20 02:05:37Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -31,11 +31,13 @@
 !     Ascl         Factor to scale field before writing (real).        !
 !     A            Field to write out (real).                          !
 !     SetFillVal   Logical switch to set fill value in land areas      !
-!                    (optional).                                       !
+!                    (OPTIONAL).                                       !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
 !     nf_fwrite4d  Error flag (integer).                               !
+!     MinValue     Minimum value (real, OPTIONAL).                     !
+!     MaxValue     Maximum value (real, OPTIONAL).                     !
 !                                                                      !
 #ifdef POSITIVE_ZERO
 !  Starting F95 zero values can be signed (-0 or +0) following the     !
@@ -60,7 +62,7 @@
 # ifdef MASKING
      &                      Amask,                                      &
 # endif
-     &                      A, SetFillVal)
+     &                      A, SetFillVal, MinValue, MaxValue)
 !***********************************************************************
 !
       USE mod_param
@@ -81,8 +83,8 @@
       integer, intent(in) :: ng, model, ncid, ncvarid, tindex, gtype
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt
 
-      real(r8), intent(in) :: Ascl
-
+      real(dp), intent(in) :: Ascl
+!
 # ifdef ASSUMED_SHAPE
 #  ifdef MASKING
       real(r8), intent(in) :: Amask(LBi:,LBj:)
@@ -94,6 +96,8 @@
 #  endif
       real(r8), intent(in) :: A(LBi:UBi,LBj:UBj,LBk:UBk,LBt:UBt)
 # endif
+      real(r8), intent(out), optional :: MinValue
+      real(r8), intent(out), optional :: MaxValue
 !
 !  Local variable declarations.
 !
@@ -400,7 +404,7 @@
 # ifdef MASKING
      &                      Amask,                                      &
 # endif
-     &                      A, SetFillVal)
+     &                      A, SetFillVal, MinValue, MaxValue)
 !***********************************************************************
 !
       USE mod_param
@@ -411,7 +415,12 @@
 
 # ifdef DISTRIBUTE
 !
-      USE distribute_mod, ONLY : mp_bcasti, mp_gather3d
+      USE distribute_mod, ONLY : mp_bcasti
+#  ifdef INLINE_2DIO
+      USE distribute_mod, ONLY : mp_gather2d
+#  else
+      USE distribute_mod, ONLY : mp_gather3d
+#  endif
 # endif
 !
 !  Imported variable declarations.
@@ -421,8 +430,8 @@
       integer, intent(in) :: ng, model, ncid, ncvarid, tindex, gtype
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt
 
-      real(r8), intent(in) :: Ascl
-
+      real(dp), intent(in) :: Ascl
+!
 # ifdef ASSUMED_SHAPE
 #  ifdef MASKING
       real(r8), intent(in) :: Amask(LBi:,LBj:)
@@ -434,6 +443,8 @@
 #  endif
       real(r8), intent(in) :: A(LBi:UBi,LBj:UBj,LBk:UBk,LBt:UBt)
 # endif
+      real(r8), intent(out), optional :: MinValue
+      real(r8), intent(out), optional :: MaxValue
 !
 !  Local variable declarations.
 !
@@ -448,7 +459,11 @@
 
       integer :: nf_fwrite4d
 
+# if defined INLINE_2DIO && defined DISTRIBUTE
+      real(r8), dimension((Lm(ng)+2)*(Mm(ng)+2)) :: Awrk
+# else
       real(r8), dimension((Lm(ng)+2)*(Mm(ng)+2)*(UBk-LBk+1)) :: Awrk
+# endif
 !
 !-----------------------------------------------------------------------
 !  Set starting and ending indices to process.
@@ -515,6 +530,13 @@
       END IF
 # endif
 !
+!  If appropriate, initialize minimum and maximum processed values.
+!
+      IF (PRESENT(MinValue)) THEN
+        MinValue=spval
+        MaxValue=-spval
+      END IF
+!
 !  Initialize local array to avoid denormalized numbers. This
 !  facilitates processing and debugging.
 !
@@ -535,15 +557,46 @@
 #  endif
 !-----------------------------------------------------------------------
 !
-!  Process data as 3D slices.
-!
       DO fourth=LBt,UBt
+#  ifdef INLINE_2DIO
+!
+!  Process the data as 2D slices (level by level) to reduce memory
+!  requirements.
+!
+      DO k=LBk,UBk
+        CALL mp_gather2d (ng, model, LBi, UBi, LBj, UBj,                &
+     &                    tindex, gtype, Ascl,                          &
+#   ifdef MASKING
+     &                    Amask,                                        &
+#   endif
+     &                    A(:,:,k,fourth), Npts, Awrk, SetFillVal)
+#  else
+!
+!  Process the data as 3D slices.
+!
+
         CALL mp_gather3d (ng, model, LBi, UBi, LBj, UBj, LBk, UBk,      &
      &                    tindex, gtype, Ascl,                          &
-#  ifdef MASKING
+#   ifdef MASKING
      &                    Amask,                                        &
-#  endif
+#   endif
      &                    A(:,:,:,fourth), Npts, Awrk, SetFillVal)
+#  endif
+!
+!-----------------------------------------------------------------------
+!  If applicable, compute output field minimum and maximum values.
+!-----------------------------------------------------------------------
+!
+        IF (PRESENT(MinValue)) THEN
+          IF (OutThread) THEN
+            DO i=1,Npts
+              IF (ABS(Awrk(i)).lt.spval) THEN
+                MinValue=MIN(MinValue,Awrk(i))
+                MaxValue=MAX(MaxValue,Awrk(i))
+              END IF
+            END DO
+          END IF
+        END IF
 !
 !-----------------------------------------------------------------------
 !  Write output buffer into NetCDF file.
@@ -556,8 +609,13 @@
             total(1)=Ilen
             start(2)=1
             total(2)=Jlen
+#  ifdef INLINE_2DIO
+            start(3)=k-Koff+1
+            total(3)=1
+#  else
             start(3)=1
             total(3)=Klen
+#  endif
             start(4)=fourth+Loff
             total(4)=1
             start(5)=tindex
@@ -580,6 +638,9 @@
           status=nf90_put_var(ncid, ncvarid, Awrk, start, total)
           nf_fwrite4d=status
         END IF
+#  ifdef INLINE_2DIO
+      END DO
+#  endif
       END DO
 # else
 !
@@ -628,6 +689,21 @@
             END DO
           END DO
 #  endif
+        END IF
+!
+!-----------------------------------------------------------------------
+!  If applicable, compute output field minimum and maximum values.
+!-----------------------------------------------------------------------
+!
+        IF (PRESENT(MinValue)) THEN
+          IF (OutThread) THEN
+            DO i=1,Npts
+              IF (ABS(Awrk(i)).lt.spval) THEN
+                MinValue=MIN(MinValue,Awrk(i))
+                MaxValue=MAX(MaxValue,Awrk(i))
+              END IF
+            END DO
+          END IF
         END IF
 !
 !-----------------------------------------------------------------------

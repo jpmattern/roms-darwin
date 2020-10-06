@@ -1,9 +1,9 @@
 /*
 ** Include file "globaldef.h"
 **
-** svn $Id: globaldefs.h 898 2018-02-14 18:00:44Z arango $
+** svn $Id: globaldefs.h 1038 2020-09-29 01:54:25Z arango $
 ********************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2018 The ROMS/TOMS Group     Alexander F. Shchepetkin  **
+** Copyright (c) 2002-2020 The ROMS/TOMS Group     Alexander F. Shchepetkin  **
 **   Licensed under a MIT/X style license                                    **
 **   See License_ROMS.txt                                                    **
 *******************************************************************************
@@ -54,7 +54,7 @@
 
 #ifdef DISTRIBUTE
 # if !(defined REDUCE_ALLGATHER || defined REDUCE_ALLREDUCE)
-#  define REDUCE_ALLGATHER
+#  define REDUCE_ALLREDUCE
 # endif
 #endif
 
@@ -83,11 +83,20 @@
 #define RHO_SURF
 
 /*
-** Turn ON/OFF double precision for real type variables and
-** associated intrinsic functions.
+** Turn ON/OFF double precision arithmetic in numerical kernel (default)
+** and floating-point type variables and associated intrinsic functions.
 */
 
-#define DOUBLE_PRECISION
+#ifdef SINGLE_PRECISION
+# ifdef OUT_DOUBLE
+#   undef OUT_DOUBLE
+# endif
+# ifndef RST_SINGLE
+#   define RST_SINGLE
+# endif
+#else
+# define DOUBLE_PRECISION
+#endif
 
 /*
 ** Turn ON masking when wetting and drying is activated.
@@ -193,12 +202,107 @@
 #endif
 
 /*
-** Set 4DVAR sensitivity switch.
+** Single intrinsic Fortran functions.
 */
 
-#if defined W4DPSAS_SENSITIVITY || \
-    defined W4DVAR_SENSITIVITY
+#ifdef SINGLE_PRECISION
+# define DSIGN SIGN
+#endif
+
+/*
+** Check for 4D-Var deprecated CPP options.
+*/
+
+#ifdef IS4DVAR
+# ifndef I4DVAR
+#  define I4DVAR
+# endif
+#endif
+
+#ifdef IS4DVAR_SENSITIVITY
+# ifndef I4DVAR_ANA_SENSITIVITY
+#  define I4DVAR_ANA_SENSITIVITY
+# endif
+#endif
+
+#ifdef W4DPSAS
+# ifndef RBL4DVAR
+#  define RBL4DVAR
+# endif
+#endif
+
+#ifdef W4DPSAS_SENSITIVITY
+# ifndef RBL4DVAR_ANA_SENSITIVITY
+#  define RBL4DVAR_ANA_SENSITIVITY
+# endif
+#endif
+
+#ifdef W4DPSAS_FCT_SENSITIVITY
+# ifndef RBL4DVAR_FCT_SENSITIVITY
+#  define RBL4DVAR_FCT_SENSITIVITY
+# endif
+#endif
+
+#ifdef W4DVAR
+# ifndef R4DVAR
+#  define R4DVAR
+# endif
+#endif
+
+#ifdef W4DVAR_SENSITIVITY
+# ifndef R4DVAR_ANA_SENSITIVITY
+#  define R4DVAR_ANA_SENSITIVITY
+# endif
+#endif
+
+/*
+** Set multiple excutables split 4D-Var.
+*/
+
+#if defined SPLIT_I4DVAR   || \
+    defined SPLIT_RBL4DVAR || \
+    defined SPLIT_R4DVAR   || \
+    defined SPLIT_SP4DVAR
+# define SPLIT_4DVAR
+#endif
+
+/*
+** If split 4D-Var, activate the unsplit option since both share
+** identical configuration to avoid too many directives changes.
+*/
+
+#if !defined I4DVAR && defined SPLIT_I4DVAR
+# define I4DVAR
+#endif
+
+#if !defined RBL4DVAR && defined SPLIT_RBL4DVAR
+# define RBL4DVAR
+#endif
+
+#if !defined R4DVAR && defined SPLIT_R4DVAR
+# define R4DVAR
+#endif
+
+#if !defined SP4DVAR && defined SPLIT_SP4DVAR
+# define SP4DVAR
+#endif
+
+
+/*
+** Set 4D-Var sensitivity switch.
+*/
+
+#if defined RBL4DVAR_ANA_SENSITIVITY || \
+    defined RBL4DVAR_FCT_SENSITIVITY || \
+    defined R4DVAR_ANA_SENSITIVITY
 # define SENSITIVITY_4DVAR
+#endif
+
+#if (defined RBL4DVAR       && \
+     defined OBS_SPACE)     || \
+    (defined SPLIT_RBL4DVAR && \
+     defined OBS_SPACE)
+# undef OBS_SPACE
 #endif
 
 /*
@@ -206,105 +310,87 @@
 ** and adjoint model switches.
 */
 
-#if defined ARRAY_MODES         || defined CLIPPING            || \
-    defined CORRELATION         || defined FT_EIGENMODES       || \
-    defined FORCING_SV          || defined HESSIAN_FSV         || \
-    defined HESSIAN_SO          || defined HESSIAN_SV          || \
-    defined INNER_PRODUCT       || defined IS4DVAR             || \
-    defined IS4DVAR_SENSITIVITY || defined OPT_PERTURBATION    || \
-    defined OPT_OBSERVATIONS    || defined PICARD_TEST         || \
-    defined R_SYMMETRY          || defined RPM_DRIVER          || \
-    defined SANITY_CHECK        || defined SENSITIVITY_4DVAR   || \
-    defined STOCHASTIC_OPT      || defined TLM_CHECK           || \
-    defined TLM_DRIVER          || defined TL_W4DPSAS          || \
-    defined TL_W4DVAR           || defined W4DPSAS             || \
-    defined W4DVAR
+#if defined ARRAY_MODES            || \
+    defined CLIPPING               || \
+    defined CORRELATION            || \
+    defined FORCING_SV             || \
+    defined FT_EIGENMODES          || \
+    defined HESSIAN_FSV            || \
+    defined HESSIAN_SO             || \
+    defined HESSIAN_SV             || \
+    defined INNER_PRODUCT          || \
+    defined I4DVAR                 || \
+    defined I4DVAR_ANA_SENSITIVITY || \
+    defined OPT_PERTURBATION       || \
+    defined OPT_OBSERVATIONS       || \
+    defined PICARD_TEST            || \
+    defined RBL4DVAR               || \
+    defined RPM_DRIVER             || \
+    defined R4DVAR                 || \
+    defined R_SYMMETRY             || \
+    defined SANITY_CHECK           || \
+    defined SENSITIVITY_4DVAR      || \
+    defined SPLIT_I4DVAR           || \
+    defined SPLIT_RBL4DVAR         || \
+    defined SPLIT_R4DVAR           || \
+    defined SPLIT_SP4DVAR          || \
+    defined SP4DVAR                || \
+    defined STOCHASTIC_OPT         || \
+    defined TLM_CHECK              || \
+    defined TLM_DRIVER             || \
+    defined TL_RBL4DVAR            || \
+    defined TL_R4DVAR
 # define TANGENT
 #endif
-#if defined AD_SENSITIVITY      || defined ADM_DRIVER          || \
-    defined AFT_EIGENMODES      || defined ARRAY_MODES         || \
-    defined CLIPPING            || defined CORRELATION         || \
-    defined FORCING_SV          || defined HESSIAN_SO          || \
-    defined HESSIAN_FSV         || defined HESSIAN_SV          || \
-    defined INNER_PRODUCT       || defined IS4DVAR             || \
-    defined IS4DVAR_SENSITIVITY || defined OPT_PERTURBATION    || \
-    defined OPT_OBSERVATIONS    || defined R_SYMMETRY          || \
-    defined SANITY_CHECK        || defined SENSITIVITY_4DVAR   || \
-    defined SO_SEMI             || defined STOCHASTIC_OPT      || \
-    defined TLM_CHECK           || defined TL_W4DPSAS          || \
-    defined TL_W4DVAR           || defined W4DPSAS             || \
-    defined W4DVAR
+
+#if defined AD_SENSITIVITY         || \
+    defined ADM_DRIVER             || \
+    defined AFT_EIGENMODES         || \
+    defined ARRAY_MODES            || \
+    defined CLIPPING               || \
+    defined CORRELATION            || \
+    defined FORCING_SV             || \
+    defined HESSIAN_SO             || \
+    defined HESSIAN_FSV            || \
+    defined HESSIAN_SV             || \
+    defined INNER_PRODUCT          || \
+    defined I4DVAR                 || \
+    defined I4DVAR_ANA_SENSITIVITY || \
+    defined OPT_PERTURBATION       || \
+    defined OPT_OBSERVATIONS       || \
+    defined RBL4DVAR               || \
+    defined R4DVAR                 || \
+    defined R_SYMMETRY             || \
+    defined SANITY_CHECK           || \
+    defined SENSITIVITY_4DVAR      || \
+    defined SO_SEMI                || \
+    defined SPLIT_I4DVAR           || \
+    defined SPLIT_RBL4DVAR         || \
+    defined SPLIT_R4DVAR           || \
+    defined SPLIT_SP4DVAR          || \
+    defined SP4DVAR                || \
+    defined STOCHASTIC_OPT         || \
+    defined TLM_CHECK              || \
+    defined TL_RBL4DVAR            || \
+    defined TL_R4DVAR
 # define ADJOINT
 #endif
-#if defined PICARD_TEST        || defined RPM_DRIVER         || \
-    defined TL_W4DVAR          || defined W4DVAR             || \
-    defined W4DVAR_SENSITIVITY || defined ARRAY_MODES        || \
-    defined CLIPPING
+
+#if defined ARRAY_MODES            || \
+    defined CLIPPING               || \
+    defined PICARD_TEST            || \
+    defined RPM_DRIVER             || \
+    defined TL_R4DVAR              || \
+    defined R4DVAR                 || \
+    defined R4DVAR_ANA_SENSITIVITY
 # define TL_IOMS
 #endif
-#if !defined ANA_PERTURB                                 && \
-    (defined CORRELATION     || defined SANITY_CHECK     || \
+
+#if !defined ANA_PERTURB     && \
+    (defined CORRELATION     || \
+     defined SANITY_CHECK    || \
      defined R_SYMMETRY)
 # define ANA_PERTURB
-#endif
-
-/*
-** Since some of the tracer advection alogorithms are highly nonlinear,
-** it is possible to choose a simpler (less nonlinear) horizontal and
-** vertical tracer advection option for the tangent linear, representer
-** and adjoint routines. This is likely to improve the convergence of
-** the 4DVar algorithms. Notice that this strategy still allows us to
-** use highly nonlinear tracer advection schemes in the basic state
-** when running the nonlinear model.
-*/
-
-#if defined TANGENT || defined TL_IOMS || defined ADJOINT
-# if !defined TS_A4HADVECTION_TL       && \
-     !defined TS_C2HADVECTION_TL       && \
-     !defined TS_C4HADVECTION_TL       && \
-     !defined TS_U3HADVECTION_TL
-#  if defined TS_A4HADVECTION
-#   define TS_A4HADVECTION_TL
-#  elif defined TS_C2HADVECTION
-#   define TS_C2HADVECTION_TL
-#  elif defined TS_C4HADVECTION
-#   define TS_C4HADVECTION_TL
-#  elif defined TS_U3HADVECTION
-#   define TS_U3HADVECTION_TL
-#  endif
-# endif
-
-# if !defined TS_A4VADVECTION_TL       && \
-     !defined TS_C2VADVECTION_TL       && \
-     !defined TS_C4VADVECTION_TL       && \
-     !defined TS_SVADVECTION_TL
-#  if defined TS_A4VADVECTION
-#   define TS_A4VADVECTION_TL
-#  elif defined TS_C2VADVECTION
-#   define TS_C2VADVECTION_TL
-#  elif defined TS_C4VADVECTION
-#   define TS_C4VADVECTION_TL
-#  elif defined TS_SVADVECTION
-#   define TS_SVADVECTION_TL
-#  endif
-# endif
-#endif
-
-/*
-** Now, we need a switch the tracer advection schemes that
-** have not adjointed yet.
-*/
-
-#if defined TANGENT || defined TL_IOMS || defined ADJOINT
-# if defined TS_A4HADVECTION_TL || defined TS_C2HADVECTION_TL || \
-     defined TS_C4HADVECTION_TL || defined TS_U3HADVECTION_TL
-#  define TS_HADVECTION_TL
-# endif
-
-# if defined TS_A4VADVECTION_TL || defined TS_C2VADVECTION_TL || \
-     defined TS_C4VADVECTION_TL || defined TS_SVADVECTION_TL
-#  define TS_VADVECTION_TL
-# endif
 #endif
 
 /*
@@ -312,14 +398,22 @@
 */
 
 #define NONLINEAR
-#if defined AD_SENSITIVITY   || defined ADM_DRIVER       || \
-    defined AFT_EIGENMODES   || defined FORCING_SV       || \
-    defined FT_EIGENMODES    || defined HESSIAN_FSV      || \
-    defined HESSIAN_SO       || defined HESSIAN_SV       || \
-    defined INNER_PRODUCT    || defined OPT_OBSERVATIONS || \
-    defined OPT_PERTURBATION || defined PICARD_TEST      || \
-    defined RPM_DRIVER       || defined SANITY_CHECK     || \
-    defined SO_SEMI          || defined STOCHASTIC_OPT   || \
+#if defined AD_SENSITIVITY   || \
+    defined ADM_DRIVER       || \
+    defined AFT_EIGENMODES   || \
+    defined FORCING_SV       || \
+    defined FT_EIGENMODES    || \
+    defined HESSIAN_FSV      || \
+    defined HESSIAN_SO       || \
+    defined HESSIAN_SV       || \
+    defined INNER_PRODUCT    || \
+    defined OPT_OBSERVATIONS || \
+    defined OPT_PERTURBATION || \
+    defined PICARD_TEST      || \
+    defined RPM_DRIVER       || \
+    defined SANITY_CHECK     || \
+    defined SO_SEMI          || \
+    defined STOCHASTIC_OPT   || \
     defined TLM_DRIVER
 # undef NONLINEAR
 #endif
@@ -361,12 +455,18 @@
 ** Set internal switch for the need of a propagator driver.
 */
 
-#if defined AFT_EIGENMODES   || defined ENSEMBLE         || \
-    defined FORCING_SV       || defined FT_EIGENMODES    || \
-    defined HESSIAN_FSV      || defined HESSIAN_SO       || \
-    defined HESSIAN_SV       || defined OPT_PERTURBATION || \
-    defined PSEUDOSPECTRA    || defined SO_SEMI          || \
-    defined SO_TRACE         || defined STOCHASTIC_OPT
+#if defined AFT_EIGENMODES   || \
+    defined ENSEMBLE         || \
+    defined FORCING_SV       || \
+    defined FT_EIGENMODES    || \
+    defined HESSIAN_FSV      || \
+    defined HESSIAN_SO       || \
+    defined HESSIAN_SV       || \
+    defined OPT_PERTURBATION || \
+    defined PSEUDOSPECTRA    || \
+    defined SO_SEMI          || \
+    defined SO_TRACE         || \
+    defined STOCHASTIC_OPT
 # define PROPAGATOR
 #endif
 
@@ -376,9 +476,11 @@
 */
 
 #if !defined FORWARD_MIXING  && \
-    (defined TANGENT         || defined TL_IOMS    || \
+    (defined TANGENT         || \
+     defined TL_IOMS         || \
      defined ADJOINT)        && \
-    (defined LMD_MIXING      || defined GLS_MIXING || \
+    (defined LMD_MIXING      || \
+     defined GLS_MIXING      || \
      defined MY25_MIXING)
 # define FORWARD_MIXING
 #endif
@@ -387,66 +489,105 @@
 ** Set internal switches for all the 4DVAR schemes.
 */
 
-#if !defined WEAK_CONSTRAINT     && \
-    (defined ARRAY_MODES         || defined CLIPPING            || \
-     defined R_SYMMETRY          || defined TL_W4DPSAS          || \
-     defined TL_W4DVAR           || defined W4DPSAS             || \
-     defined W4DVAR              || defined W4DPSAS_SENSITIVITY || \
-     defined W4DVAR_SENSITIVITY)
+#if !defined WEAK_CONSTRAINT          && \
+    (defined ARRAY_MODES              || \
+     defined CLIPPING                 || \
+     defined SP4DVAR                  || \
+     defined RBL4DVAR                 || \
+     defined RBL4DVAR_FCT_SENSITIVITY || \
+     defined RBL4DVAR_ANA_SENSITIVITY || \
+     defined R4DVAR                   || \
+     defined R4DVAR_ANA_SENSITIVITY   || \
+     defined R_SYMMETRY               || \
+     defined SPLIT_RBL4DVAR           || \
+     defined SPLIT_R4DVAR             || \
+     defined SPLIT_SP4DVAR            || \
+     defined SP4DVAR                  || \
+     defined TL_RBL4DVAR              || \
+     defined TL_R4DVAR)
 # define WEAK_CONSTRAINT
 #endif
-#if !defined WEAK_CONSTRAINT     && defined RPM_RELAXATION
+
+#if !defined WEAK_CONSTRAINT && defined RPM_RELAXATION
 # undef RPM_RELAXATION
 #endif
-#if defined CORRELATION          || defined HESSIAN_FSV         || \
-    defined HESSIAN_SO           || defined HESSIAN_SV          || \
-    defined IS4DVAR              || defined IS4DVAR_SENSITIVITY || \
-    defined OPT_OBSERVATIONS     || defined TLM_CHECK           || \
+
+#if defined CORRELATION            || \
+    defined HESSIAN_FSV            || \
+    defined HESSIAN_SO             || \
+    defined HESSIAN_SV             || \
+    defined I4DVAR                 || \
+    defined I4DVAR_ANA_SENSITIVITY || \
+    defined OPT_OBSERVATIONS       || \
+    defined TLM_CHECK              || \
     defined WEAK_CONSTRAINT
 # define FOUR_DVAR
 #endif
-#if defined IS4DVAR
+
+#if defined I4DVAR
 # define BACKGROUND
 #endif
-#if !(defined W4DPSAS || defined W4DVAR) && defined POSTERIOR_EOFS
+
+#if !(defined RBL4DVAR || defined R4DVAR) && defined POSTERIOR_EOFS
 # undef POSTERIOR_EOFS
 #endif
-#if !(defined W4DPSAS || defined W4DVAR) && defined POSTERIOR_ERROR_F
+
+#if !(defined RBL4DVAR || defined R4DVAR) && defined POSTERIOR_ERROR_F
 # undef POSTERIOR_ERROR_F
 #endif
-#if !(defined W4DPSAS || defined W4DVAR) && defined POSTERIOR_ERROR_I
+
+#if !(defined RBL4DVAR || defined R4DVAR) && defined POSTERIOR_ERROR_I
 # undef POSTERIOR_ERROR_I
 #endif
-#if !(defined WEAK_CONSTRAINT || defined IS4DVAR_SENSITIVITY) && \
+
+#if !(defined WEAK_CONSTRAINT || defined I4DVAR_ANA_SENSITIVITY) && \
       defined OBS_IMPACT
 # undef OBS_IMPACT
 #endif
-#if !(defined OBS_IMPACT             && \
-      (defined W4DVAR_SENSITIVITY    || defined W4DPSAS_SENSITIVITY || \
-       defined IS4DVAR_SENSITIVITY))
+
+#if !(defined OBS_IMPACT                && \
+      (defined I4DVAR_ANA_SENSITIVITY   || \
+       defined RBL4DVAR_ANA_SENSITIVITY || \
+       defined RBL4DVAR_FCT_SENSITIVITY || \
+       defined R4DVAR_ANA_SENSITIVITY))
 # undef IMPACT_INNER
 #endif
-
 
 /*
 ** Activate internal switch to process 4DVAR observations.
 */
 
-#if defined IS4DVAR            || defined IS4DVAR_SENSITIVITY || \
-    defined SENSITIVITY_4DVAR  || defined TLM_CHECK           || \
-    defined TL_W4DPSAS         || defined TL_W4DVAR           || \
-    defined VERIFICATION       || defined W4DPSAS             || \
-    defined W4DVAR             || defined ARRAY_MODES         || \
-    defined CLIPPING
+#if defined ARRAY_MODES            || \
+    defined CLIPPING               || \
+    defined I4DVAR                 || \
+    defined I4DVAR_ANA_SENSITIVITY || \
+    defined RBL4DVAR               || \
+    defined R4DVAR                 || \
+    defined SENSITIVITY_4DVAR      || \
+    defined SPLIT_I4DVAR           || \
+    defined SPLIT_RBL4DVAR         || \
+    defined SPLIT_R4DVAR           || \
+    defined SPLIT_SP4DVAR          || \
+    defined SP4DVAR                || \
+    defined TLM_CHECK              || \
+    defined TL_RBL4DVAR            || \
+    defined TL_R4DVAR              || \
+    defined VERIFICATION
 # define OBSERVATIONS
 #endif
 
-#if defined IS4DVAR            || defined IS4DVAR_SENSITIVITY || \
-    defined R_SYMMETRY         || defined SENSITIVITY_4DVAR   || \
-    defined TLM_CHECK          || defined TL_W4DPSAS          || \
-    defined TL_W4DVAR          || defined W4DPSAS             || \
-    defined W4DVAR             || defined ARRAY_MODES         || \
-    defined CLIPPING
+#if defined ARRAY_MODES            || \
+    defined CLIPPING               || \
+    defined I4DVAR                 || \
+    defined I4DVAR_ANA_SENSITIVITY || \
+    defined RBL4DVAR               || \
+    defined R4DVAR                 || \
+    defined R_SYMMETRY             || \
+    defined SENSITIVITY_4DVAR      || \
+    defined SP4DVAR                || \
+    defined TLM_CHECK              || \
+    defined TL_RBL4DVAR            || \
+    defined TL_R4DVAR
 # define TLM_OBS
 #endif
 
@@ -454,20 +595,40 @@
 ** Activate reading and writting of the basic sate.
 */
 
-#if !defined FORWARD_READ      && \
-    (defined ARRAY_MODES       || defined CLIPPING            || \
-     defined IS4DVAR           || defined IS4DVAR_SENSITIVITY || \
-     defined PROPAGATOR        || defined SENSITIVITY_4DVAR   || \
-     defined TL_W4DPSAS        || defined TL_W4DVAR           || \
-     defined W4DPSAS           || defined W4DVAR)
+#if !defined FORWARD_READ           && \
+    (defined ARRAY_MODES            || \
+     defined CLIPPING               || \
+     defined I4DVAR                 || \
+     defined I4DVAR_ANA_SENSITIVITY || \
+     defined PROPAGATOR             || \
+     defined RBL4DVAR               || \
+     defined R4DVAR                 || \
+     defined SENSITIVITY_4DVAR      || \
+     defined SPLIT_I4DVAR           || \
+     defined SPLIT_RBL4DVAR         || \
+     defined SPLIT_R4DVAR           || \
+     defined SPLIT_SP4DVAR          || \
+     defined SP4DVAR                || \
+     defined TL_RBL4DVAR            || \
+     defined TL_R4DVAR)
 # define FORWARD_READ
 #endif
-#if !defined FORWARD_WRITE     && \
-    (defined ARRAY_MODES       || defined CLIPPING            || \
-     defined IS4DVAR           || defined IS4DVAR_SENSITIVITY || \
-     defined SENSITIVITY_4DVAR || defined TL_W4DPSAS          || \
-     defined TL_W4DVAR         || defined W4DPSAS             || \
-     defined W4DVAR)
+
+#if !defined FORWARD_WRITE          && \
+    (defined ARRAY_MODES            || \
+     defined CLIPPING               || \
+     defined I4DVAR                 || \
+     defined I4DVAR_ANA_SENSITIVITY || \
+     defined RBL4DVAR               || \
+     defined R4DVAR                 || \
+     defined SENSITIVITY_4DVAR      || \
+     defined SPLIT_I4DVAR           || \
+     defined SPLIT_RBL4DVAR         || \
+     defined SPLIT_R4DVAR           || \
+     defined SPLIT_SP4DVAR          || \
+     defined SP4DVAR                || \
+     defined TL_RBL4DVAR            || \
+     defined TL_R4DVAR)
 # define FORWARD_WRITE
 #endif
 
@@ -484,8 +645,12 @@
 ** equation of state expnasion polynomial T-derivatives.
 */
 
-#if defined LMD_SKPP || defined LMD_BKPP || defined BULK_FLUXES || \
-    defined TANGENT  || defined TL_IOMS  || defined ADJOINT
+#if defined ADJOINT     || \
+    defined BULK_FLUXES || \
+    defined LMD_BKPP    || \
+    defined LMD_SKPP    || \
+    defined TANGENT     || \
+    defined TL_IOMS
 # define EOS_TDERIVATIVE
 #endif
 
@@ -506,8 +671,12 @@
 ** frequency.
 */
 
-#if defined BVF_MIXING || defined LMD_MIXING  || defined LMD_SKPP    || \
-    defined LMD_BKPP   || defined GLS_MIXING  || defined MY25_MIXING
+#if defined BVF_MIXING  || \
+    defined GLS_MIXING  || \
+    defined LMD_MIXING  || \
+    defined LMD_SKPP    || \
+    defined LMD_BKPP    || \
+    defined MY25_MIXING
 # define BV_FREQUENCY
 #endif
 
@@ -515,7 +684,9 @@
 ** Activate internal switch for bottom boundary layer closure.
 */
 
-#if defined SSW_BBL || defined MB_BBL || defined SG_BBL
+#if defined MB_BBL  || \
+    defined SG_BBL  || \
+    defined SSW_BBL
 # define BBL_MODEL
 #endif
 
@@ -524,12 +695,16 @@
 */
 
 #if defined UV_DRAG_GRID && \
-  !(defined BBL_MODEL    || defined SEDIMENT || \
-    defined UV_LOGDRAG   || defined UV_LDRAG || \
+  !(defined BBL_MODEL    || \
+    defined SEDIMENT     || \
+    defined UV_LOGDRAG   || \
+    defined UV_LDRAG     || \
     defined UV_QDRAG)
 # undef UV_DRAG_GRID
 #endif
-#if defined ANA_DRAG     && !defined UV_DRAG_GRID
+
+#if defined ANA_DRAG     && \
+   !defined UV_DRAG_GRID
 # undef ANA_DRAG
 #endif
 
@@ -538,7 +713,8 @@
 ** monochromatic wave driver.
 */
 
-#if defined REFDIF_COUPLING && defined SVENDSEN_ROLLER
+#if defined REFDIF_COUPLING && \
+    defined SVENDSEN_ROLLER
 # define MONO_ROLLER
 #endif
 
@@ -547,10 +723,14 @@
 ** module.
 */
 
-#if defined BIO_FENNEL  || defined ECOSIM      || \
-    defined HYPOXIA_SRM || defined NEMURO      || \
-    defined NPZD_FRANKS || defined NPZD_IRON   || \
-    defined NPZD_POWELL || defined RED_TIDE    || \
+#if defined BIO_FENNEL  || \
+    defined ECOSIM      || \
+    defined HYPOXIA_SRM || \
+    defined NEMURO      || \
+    defined NPZD_FRANKS || \
+    defined NPZD_IRON   || \
+    defined NPZD_POWELL || \
+    defined RED_TIDE    || \
     defined DARWIN
 # define BIOLOGY
 #endif
@@ -583,7 +763,8 @@
 ** Activate internal option for biological float behavior.
 */
 
-#if defined FLOATS && defined FLOAT_OYSTER
+#if defined FLOATS       && \
+    defined FLOAT_OYSTER
 # define FLOAT_BIOLOGY
 #endif
 
@@ -592,31 +773,46 @@
 **
 */
 
-#if defined COAMPS_COUPLING || defined REGCM_COUPLING || \
+#if defined COAMPS_COUPLING || \
+    defined REGCM_COUPLING  || \
     defined WRF_COUPLING
 # define ATM_COUPLING
+# ifndef FRC_COUPLING
+#  define FRC_COUPLING
+# endif
 #endif
 
 #if defined CICE_COUPLING
 # define ICE_COUPLING
 #endif
 
-#if defined REFDIF_COUPLING || defined SWAN_COUPLING || \
+#if defined REFDIF_COUPLING || \
+    defined SWAN_COUPLING   || \
     defined WAM_COUPLING
 # define WAV_COUPLING
 #endif
 
-#if defined ATM_COUPLING || defined ICE_COUPLING || defined WAV_COUPLING
+#if defined ATM_COUPLING  || \
+    defined DATA_COUPLING || \
+    defined ICE_COUPLING  || \
+    defined WAV_COUPLING
 # define MODEL_COUPLING
+#endif
+
+#if defined MODEL_COUPLING && \
+    defined ESMF_LIB
+# define REGRESS_STARTCLOCK
 #endif
 
 /*
 ** Define internal option for radiation stress forcing.
 */
 
-#if defined NEARSHORE_MELLOR05 || defined NEARSHORE_MELLOR08
+#if defined NEARSHORE_MELLOR05 || \
+    defined NEARSHORE_MELLOR08
 # define NEARSHORE_MELLOR
 #endif
+
 #if defined NEARSHORE_MELLOR
 # define NEARSHORE
 #endif
@@ -625,52 +821,67 @@
 ** Define internal option to process wave data.
 */
 
-#if defined BBL_MODEL    || defined NEARSHORE || \
+#if defined BBL_MODEL    || \
+    defined NEARSHORE    || \
     defined WAV_COUPLING
 # define WAVES_DIR
 #endif
 
 #if  defined BBL_MODEL   && \
-   !(defined SSW_CALC_UB || defined MB_CALC_UB ||  \
+   !(defined SSW_CALC_UB || \
+     defined MB_CALC_UB  || \
      defined SG_CALC_UB)
 # define WAVES_UB
 #endif
 
-#if (defined BBL_MODEL        && !defined WAVES_UB)           || \
-     defined NEARSHORE        || \
-     defined ZOS_HSIG         || defined COARE_TAYLOR_YELLAND || \
-     defined BEDLOAD_SOULSBY  || defined WAV_COUPLING
+#if (defined BBL_MODEL           && \
+    !defined WAVES_UB)           || \
+    defined BEDLOAD_SOULSBY      || \
+    defined COARE_TAYLOR_YELLAND || \
+    defined NEARSHORE            || \
+    defined WAV_COUPLING         || \
+    defined ZOS_HSIG
 # define WAVES_HEIGHT
 #endif
 
-#if defined NEARSHORE    || defined BEDLOAD_SOULSBY || \
+#if defined BEDLOAD_SOULSBY || \
+    defined NEARSHORE       || \
     defined WAV_COUPLING
 # define WAVES_LENGTH
 #endif
 
 #if (!defined DEEPWATER_WAVES      && \
-     (defined COARE_TAYLOR_YELLAND || defined COARE_OOST)) || \
-      defined NEARSHORE_MELLOR     || \
-      defined BEDLOAD_SOULSBY      || defined WAV_COUPLING
+     (defined COARE_TAYLOR_YELLAND || \
+      defined COARE_OOST))         || \
+    defined BEDLOAD_SOULSBY        || \
+    defined NEARSHORE_MELLOR       || \
+    defined WAV_COUPLING
 # define WAVES_LENGTH
 #endif
 
-#if defined COARE_TAYLOR_YELLAND   || defined COARE_OOST || \
+#if defined COARE_TAYLOR_YELLAND   || \
+    defined COARE_OOST             || \
     defined WAV_COUPLING
 # define WAVES_TOP_PERIOD
 #endif
 
-#if defined BBL_MODEL || defined WAV_COUPLING
+#if defined BBL_MODEL    || \
+    defined WAV_COUPLING
 # define WAVES_BOT_PERIOD
 #endif
 
-#if !defined WAV_COUPLING    && \
-   ((defined BULK_FLUXES     && defined COARE_TAYLOR_YELLAND) || \
-    (defined BULK_FLUXES     && defined COARE_OOST)           || \
-     defined SVENDSEN_ROLLER || defined TKE_WAVEDISS          || \
-     defined WAVES_DIR       || defined WAVES_BOT_PERIOD      || \
-     defined WAVES_HEIGHT    || defined WAVES_TOP_PERIOD      || \
-     defined WAVES_LENGTH)
+#if !defined WAV_COUPLING          && \
+   ((defined BULK_FLUXES           && \
+     defined COARE_TAYLOR_YELLAND) || \
+    (defined BULK_FLUXES           && \
+     defined COARE_OOST)           || \
+    defined SVENDSEN_ROLLER        || \
+    defined TKE_WAVEDISS           || \
+    defined WAVES_DIR              || \
+    defined WAVES_BOT_PERIOD       || \
+    defined WAVES_HEIGHT           || \
+    defined WAVES_LENGTH           || \
+    defined WAVES_TOP_PERIOD)
 # define WAVE_DATA
 #endif
 
@@ -678,7 +889,8 @@
 ** Define internal option for bedload treatment.
 */
 
-#if defined BEDLOAD_MPM || defined BEDLOAD_SOULSBY
+#if defined BEDLOAD_MPM     || \
+    defined BEDLOAD_SOULSBY
 # define BEDLOAD
 #endif
 
@@ -697,36 +909,37 @@
 #  endif
 # endif
 # if !defined ANA_BTFLUX   || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
      !defined BULK_FLUXES  && !defined ANA_SMFLUX)   || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
      !defined BULK_FLUXES  && !defined ANA_STFLUX)   || \
     ( defined BIOLOGY      && !defined ANA_SPFLUX)   || \
     ( defined BIOLOGY      && !defined ANA_BPFLUX)   || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined BULK_FLUXES  && !defined LONGWAVE)     || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined BULK_FLUXES  && !defined ANA_PAIR)     || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined BULK_FLUXES  && !defined ANA_TAIR)     || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined BULK_FLUXES  && !defined ANA_HUMIDITY) || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined BULK_FLUXES  && !defined ANA_CLOUD)    || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined BULK_FLUXES  && !defined ANA_RAIN)     || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined BULK_FLUXES  && !defined ANA_WINDS)    || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined BULK_FLUXES  && !defined ANA_SRFLUX)   || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined LMD_SKPP     && !defined ANA_SRFLUX)   || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined RED_TIDE)    || \
-    (!defined ATM_COUPLING && \
+    (!defined ANA_BSFLUX   && defined SALINITY)      || \
+    (!defined FRC_COUPLING && \
       defined SALINITY     && !defined ANA_SSFLUX    && \
      (defined BULK_FLUXES  && !defined EMINUSP))     || \
-    (!defined ATM_COUPLING && \
+    (!defined FRC_COUPLING && \
       defined SOLAR_SOURCE && !defined ANA_SRFLUX)   || \
     ( defined BBL_MODEL    && (!defined ANA_WWAVE    && \
      !defined WAV_COUPLING))                         || \
@@ -737,7 +950,7 @@
 #  define FRC_FILE
 # endif
 #else
-# if(!defined ATM_COUPLING && !defined ANA_SMFLUX)
+# if(!defined FRC_COUPLING && !defined ANA_SMFLUX)
 #  define FRC_FILE
 # endif
 #endif
@@ -746,20 +959,31 @@
 ** Check analytical initial conditions options.
 */
 
-#if defined ANA_BIOLOGY && !defined BIOLOGY
+#if defined ANA_BIOLOGY && \
+   !defined BIOLOGY
 # undef ANA_BIOLOGY
 #endif
-#if defined ANA_PASSIVE && !defined T_PASSIVE
+
+#if defined ANA_PASSIVE && \
+   !defined T_PASSIVE
 # undef ANA_PASSIVE
 #endif
-#if defined ANA_SEDIMENT && !(defined SEDIMENT || defined BBL_MODEL)
+
+#if defined ANA_SEDIMENT && \
+   !(defined SEDIMENT    || \
+     defined BBL_MODEL)
 # undef ANA_SEDIMENT
 #endif
-#if  !defined ANA_INITIAL || \
-    ( defined BIOLOGY     && !defined ANA_BIOLOGY)  || \
-    ( defined T_PASSIVE   && !defined ANA_PASSIVE)  || \
-    ( defined SEDIMENT    && !defined ANA_SEDIMENT) || \
-    ( defined BBL_MODEL   && !defined ANA_SEDIMENT)
+
+#if !defined ANA_INITIAL   || \
+    (defined BIOLOGY       && \
+    !defined ANA_BIOLOGY)  || \
+    (defined T_PASSIVE     && \
+    !defined ANA_PASSIVE)  || \
+    (defined SEDIMENT      && \
+    !defined ANA_SEDIMENT) || \
+    (defined BBL_MODEL     && \
+    !defined ANA_SEDIMENT)
 # define INI_FILE
 #endif
 
@@ -768,14 +992,20 @@
 ** shortwave option if not needed.
 */
 
-#if defined LMD_SKPP     || defined SOLAR_SOURCE   || \
-    defined BULK_FLUXES  || defined BIOLOGY
+#if defined BIOLOGY      || \
+    defined BULK_FLUXES  || \
+    defined LMD_SKPP     || \
+    defined SOLAR_SOURCE
 # define SHORTWAVE
 #endif
-#if !defined SHORTWAVE   && defined ANA_SRFLUX
+
+#if !defined SHORTWAVE   && \
+     defined ANA_SRFLUX
 # undef ANA_SRFLUX
 #endif
-#if !defined SHORTWAVE   && defined DIURNAL_SRFLUX
+
+#if !defined SHORTWAVE      && \
+     defined DIURNAL_SRFLUX
 # undef DIURNAL_SRFLUX
 #endif
 
@@ -784,11 +1014,16 @@
 ** shortwave option if not needed.
 */
 
-#if (defined BULK_FLUXES && defined LONGWAVE) || defined ECOSIM || \
-    (defined ANA_SRFLUX  && defined ALBEDO)
+#if (defined ANA_SRFLUX   && \
+     defined ALBEDO)      || \
+    (defined BULK_FLUXES  && \
+     defined LONGWAVE)    || \
+    defined ECOSIM
 # define CLOUDS
 #endif
-#if !defined CLOUDS && defined ANA_CLOUD
+
+#if !defined CLOUDS    && \
+     defined ANA_CLOUD
 # undef ANA_CLOUD
 #endif
 
@@ -797,12 +1032,22 @@
 ** and activate internal diagnostics option.
 */
 
-#if !defined SOLVE3D || defined TS_FIXED
+#if !defined SOLVE3D  || \
+     defined TS_FIXED
 # if defined DIAGNOSTICS_TS
 #   undef DIAGNOSTICS_TS
 # endif
 #endif
-#if defined DIAGNOSTICS_BIO || defined DIAGNOSTICS_TS || \
+
+#if defined DIAGNOSTICS_BIO && \
+  !(defined BIO_FENNEL      || \
+    defined ECOSIM          || \
+    defined HYPOXIA_SRM)
+#  undef DIAGNOSTICS_BIO
+#endif
+
+#if defined DIAGNOSTICS_BIO || \
+    defined DIAGNOSTICS_TS  || \
     defined DIAGNOSTICS_UV
 # define DIAGNOSTICS
 #endif
@@ -811,56 +1056,50 @@
 ** Check if any analytical expression is defined.
 */
 
-#if defined ANA_BIOLOGY    || defined ANA_BPFLUX      || \
-    defined ANA_BSFLUX     || defined ANA_BTFLUX      || \
-    defined ANA_CLOUD      || defined ANA_DIAG        || \
-    defined ANA_DQDSST     || defined ANA_DRAG        || \
-    defined ANA_FSOBC      || defined ANA_GRID        || \
-    defined ANA_HUMIDITY   || defined ANA_INITIAL     || \
-    defined ANA_M2CLIMA    || defined ANA_M2OBC       || \
-    defined ANA_M3CLIMA    || defined ANA_M3OBC       || \
-    defined ANA_MASK       || defined ANA_NUDGCOEF    || \
-    defined ANA_PAIR       || defined ANA_PASSIVE     || \
-    defined ANA_PERTURB    || defined ANA_PSOURCE     || \
-    defined ANA_RAIN       || defined ANA_RESPIRATION || \
-    defined ANA_SEDIMENT   || defined ANA_SMFLUX      || \
-    defined ANA_SPFLUX     || defined ANA_SPINNING    || \
-    defined ANA_SPONGE     || defined ANA_SRFLUX      || \
-    defined ANA_SSFLUX     || defined ANA_SSH         || \
-    defined ANA_SSS        || defined ANA_SST         || \
-    defined ANA_STFLUX     || defined ANA_TAIR        || \
-    defined ANA_TCLIMA     || defined ANA_TOBC        || \
-    defined ANA_VMIX       || defined ANA_WINDS       || \
-    defined ANA_WWAVE      || defined DIFF_GRID       || \
+#if defined ANA_BIOLOGY     || \
+    defined ANA_BPFLUX      || \
+    defined ANA_BSFLUX      || \
+    defined ANA_BTFLUX      || \
+    defined ANA_CLOUD       || \
+    defined ANA_DIAG        || \
+    defined ANA_DQDSST      || \
+    defined ANA_DRAG        || \
+    defined ANA_FSOBC       || \
+    defined ANA_GRID        || \
+    defined ANA_HUMIDITY    || \
+    defined ANA_INITIAL     || \
+    defined ANA_M2CLIMA     || \
+    defined ANA_M2OBC       || \
+    defined ANA_M3CLIMA     || \
+    defined ANA_M3OBC       || \
+    defined ANA_MASK        || \
+    defined ANA_NUDGCOEF    || \
+    defined ANA_PAIR        || \
+    defined ANA_PASSIVE     || \
+    defined ANA_PERTURB     || \
+    defined ANA_PSOURCE     || \
+    defined ANA_RAIN        || \
+    defined ANA_RESPIRATION || \
+    defined ANA_SEDIMENT    || \
+    defined ANA_SMFLUX      || \
+    defined ANA_SPFLUX      || \
+    defined ANA_SPINNING    || \
+    defined ANA_SPONGE      || \
+    defined ANA_SRFLUX      || \
+    defined ANA_SSFLUX      || \
+    defined ANA_SSH         || \
+    defined ANA_SSS         || \
+    defined ANA_SST         || \
+    defined ANA_STFLUX      || \
+    defined ANA_TAIR        || \
+    defined ANA_TCLIMA      || \
+    defined ANA_TOBC        || \
+    defined ANA_VMIX        || \
+    defined ANA_WINDS       || \
+    defined ANA_WWAVE       || \
+    defined DIFF_GRID       || \
     defined VISC_GRID
 # define ANALYTICAL
-#endif
-
-/*
-** If splitting 3rd-order upstream bias horizontal advection of
-** tracer, activate other needed flags.
-*/
-
-#ifdef TS_U3ADV_SPLIT
-# define DIFF_3DCOEF
-# ifdef TS_U3HADVECTION
-#  undef TS_U3HADVECTION
-# endif
-# ifndef TS_C4HADVECTION
-#  define TS_C4HADVECTION
-# endif
-# ifndef TS_C4VADVECTION
-#  define TS_C4VADVECTION
-# endif
-# ifndef TS_DIF4
-#  define TS_DIF4
-# endif
-# ifdef TS_DIF2
-#  undef TS_DIF2
-# endif
-# ifdef TS_SMAGORINSKY
-#  undef TS_SMAGORINSKY
-# endif
 #endif
 
 /*

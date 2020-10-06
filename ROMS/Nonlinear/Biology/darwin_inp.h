@@ -1,8 +1,8 @@
       SUBROUTINE read_BioPar (model, inp, out, Lwrite)
 !
-!svn $Id: npzd_iron_inp.h 889 2018-02-10 03:32:52Z arango $
+!svn $Id: npzd_iron_inp.h 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -29,6 +29,8 @@
       USE mod_iounits,    ONLY: DRT
 #endif
 !
+      USE inp_decode_mod
+!
       implicit none
 !
 !  Imported variable declarations
@@ -43,8 +45,6 @@
       integer :: i, ifield, igrid, is, ic, ip, itracer, itrc
       integer :: ng, nline, status
 
-      integer :: decode_line, load_i, load_l, load_lbc, load_r
-
 #if defined DIAGNOSTICS_BIO
       logical, dimension(Ngrids) :: Lbio
 #endif
@@ -52,11 +52,11 @@
 
       real(r8), dimension(NBT,Ngrids) :: Rbio
 
-      real(r8), dimension(100) :: Rval
+      real(dp), dimension(nRval) :: Rval
 
       character (len=40 ) :: KeyWord
       character (len=256) :: line
-      character (len=256), dimension(200) :: Cval
+      character (len=256), dimension(nCval) :: Cval
 #if defined DARWIN_ROMSSINKING
       logical :: onegtzero
 #endif /* DARWIN_ROMSSINKING */

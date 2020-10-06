@@ -4,9 +4,9 @@
 
       SUBROUTINE bblm (ng, tile)
 !
-!svn $Id: ssw_bbl.h 889 2018-02-10 03:32:52Z arango $
+!svn $Id: ssw_bbl.h 995 2020-01-10 04:01:28Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group        Chris Sherwood   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group        Chris Sherwood   !
 !    Licensed under a MIT/X style license               Rich Signell   !
 !    See License_ROMS.txt                             John C. Warner   !
 !=======================================================================
@@ -119,6 +119,7 @@
 !
       USE mod_param
       USE mod_parallel
+      USE mod_iounits
       USE mod_scalars
       USE mod_sediment
 !
@@ -423,8 +424,9 @@
      &                 (1.0_r8+coef_st*tstar)
              IF (zoST(i,j).lt.0.0_r8) THEN
                IF (Master) THEN
-                 PRINT *, ' Warning: zoST<0  tstar, d50, coef_st:'
-                 PRINT *, tstar,d50,coef_st
+                 WRITE (stdout,'(/,a)')                                 &
+     &                         'Warning zoST < 0: tstar, d50, coef_st:'
+                 WRITE (stdout,*) tstar, d50, coef_st
                END IF
              END IF
 !
@@ -475,8 +477,8 @@
           IF (zoDEF(i,j).lt.absolute_zoMIN) THEN
             zoDEF(i,j)=absolute_zoMIN
             IF (Master) THEN
-              PRINT *, ' Warning: default zo < 0.05 mm, replaced with:',&
-     &                 zoDEF
+              WRITE (stdout,*) ' Warning: default zo < 0.05 mm,',       &
+     &                         ' replaced with: ', zoDEF
             END IF
           END IF
           zo=zoDEF(i,j)
@@ -519,7 +521,8 @@
 !  Waves and currents, but zr <= zo.
 !
             IF (Master) THEN
-              PRINT *,' Warning: w-c calcs ignored because zr <= zo'
+              WRITE (stdout,*) ' Warning: w-c calcs ignored because',   &
+     &                         ' zr <= zo'
             END IF
           ELSE IF ((Umag(i,j).gt.0.0_r8).and.(Ub(i,j).gt.eps).and.      &
      &             ((Zr(i,j)/zo).gt.1.0_r8)) THEN

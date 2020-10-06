@@ -2,9 +2,9 @@
       MODULE ad_set_avg_mod
 #if defined AD_AVERAGES && defined ADJOINT
 !
-!svn $Id: ad_set_avg.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: ad_set_avg.F 1022 2020-05-13 03:03:15Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -290,19 +290,23 @@
             END DO
           END DO
         END IF
+
+#   ifdef SALINITY
         IF (Aout(idSdif,ng)) THEN
           DO k=0,N(ng)
             DO j=JstrR,JendR
               DO i=IstrR,IendR
                 AVERAGE(ng)%avgAKs(i,j,k)=MIXING(ng)%ad_Akt(i,j,k,isalt)
-#   ifdef WET_DRY
+#    ifdef WET_DRY
                 AVERAGE(ng)%avgAKs(i,j,k)=AVERAGE(ng)%avgAKs(i,j,k)*    &
      &                                    GRID(ng)%rmask_full(i,j)
-#   endif
+#    endif
               END DO
             END DO
           END DO
         END IF
+#   endif
+
 #  endif
 # endif
 !
@@ -366,17 +370,21 @@
             END DO
           END DO
         END IF
+
+#  ifdef SALINITY
         IF (Aout(idTsur(isalt),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgswf(i,j)=FORCES(ng)%ad_stflx(i,j,isalt)
-#  ifdef WET_DRY
+#   ifdef WET_DRY
               AVERAGE(ng)%avgswf(i,j)=AVERAGE(ng)%avgswf(i,j)*          &
      &                                GRID(ng)%rmask_full(i,j)
-#  endif
+#   endif
             END DO
           END DO
         END IF
+#  endif
+
 #  ifdef SHORTWAVE
         IF (Aout(idSrad,ng)) THEN
           DO j=JstrR,JendR
@@ -769,19 +777,23 @@
             END DO
           END DO
         END IF
+
+#   ifdef SALINITY
         IF (Aout(idSdif,ng)) THEN
           DO k=0,N(ng)
             DO j=JstrR,JendR
               DO i=IstrR,IendR
                 AVERAGE(ng)%avgAKs(i,j,k)=AVERAGE(ng)%avgAKs(i,j,k)+    &
-#   ifdef WET_DRY
+#    ifdef WET_DRY
      &                                    GRID(ng)%rmask_full(i,j)*     &
-#   endif
+#    endif
      &                                    MIXING(ng)%ad_Akt(i,j,k,isalt)
               END DO
             END DO
           END DO
         END IF
+#   endif
+
 #  endif
 # endif
 !
@@ -845,17 +857,21 @@
             END DO
           END DO
         END IF
+
+#  ifdef SALINITY
         IF (Aout(idTsur(isalt),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgswf(i,j)=AVERAGE(ng)%avgswf(i,j)+          &
-#  ifdef WET_DRY
+#   ifdef WET_DRY
      &                                GRID(ng)%rmask_full(i,j)*         &
-#  endif
+#   endif
      &                                FORCES(ng)%ad_stflx(i,j,isalt)
             END DO
           END DO
         END IF
+#  endif
+
 #  ifdef SHORTWAVE
         IF (Aout(idSrad,ng)) THEN
           DO j=JstrR,JendR
@@ -1100,8 +1116,8 @@
           END DO
         END DO
 # else
-#  if defined AD_SENSITIVITY   || defined IS4DVAR_SENSITIVITY || \
-      defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR   || \
+#  if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
+      defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
       defined SO_SEMI
         fac=1.0_r8
 #  else
@@ -1279,6 +1295,8 @@
             END DO
           END DO
         END IF
+
+#  ifdef SALINITY
         IF (Aout(idTsur(isalt),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -1287,6 +1305,8 @@
             END DO
           END DO
         END IF
+#  endif
+
 #  ifdef SHORTWAVE
         IF (Aout(idSrad,ng)) THEN
           DO j=JstrR,JendR

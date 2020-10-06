@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE def_var_mod
 !
-!svn $Id: def_var.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: def_var.F 1029 2020-07-11 02:11:09Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -857,6 +857,12 @@
               ELSE IF (INT(Aval(5)).eq.p3dvar) THEN
                 text='lon_psi lat_psi s_rho'
                 location='node'
+              ELSE IF (INT(Aval(5)).eq.l3dvar) THEN
+                text='lon_rho lat_rho light'
+                location='face'
+              ELSE IF (INT(Aval(5)).eq.l4dvar) THEN
+                text='lon_rho lat_rho s_rho light'
+                location='face'
               END IF
             ELSE
               IF (INT(Aval(5)).eq.r2dvar) THEN
@@ -895,6 +901,12 @@
               ELSE IF (INT(Aval(5)).eq.p3dvar) THEN
                 text='x_psi y_psi s_rho'
                 location='node'
+              ELSE IF (INT(Aval(5)).eq.l3dvar) THEN
+                text='x_rho y_rho Nbands'
+                location='face'
+              ELSE IF (INT(Aval(5)).eq.l4dvar) THEN
+                text='x_rho y_rho s_rho Nbands'
+                location='face'
               END IF
             END IF
 
@@ -979,7 +991,7 @@
 #if defined MASKING && !defined WRITE_WATER
 !
 !  If land/sea masking, define "_FillValue" attribute since masking
-!  areas are overwrite with special value (spval) during output.
+!  areas are overwritten with special value (spval) during output.
 !  Notice that the coordinate attribute is used to check which
 !  variables need the "_FillValue" attribute.
 !

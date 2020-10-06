@@ -2,9 +2,9 @@
 #if defined WEAK_CONSTRAINT && defined RPCG
       SUBROUTINE wrt_aug_imp (ng, tile, model, Iinp, Iout, INPncname)
 !
-!svn $Id: wrt_aug_imp.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: wrt_aug_imp.F 1028 2020-06-01 00:24:59Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -22,10 +22,6 @@
       USE mod_ocean
       USE mod_scalars
 !
-      USE nf_fread2d_mod,  ONLY : nf_fread2d
-# ifdef SOLVE3D
-      USE nf_fread3d_mod,  ONLY : nf_fread3d
-# endif
       USE nf_fwrite2d_mod, ONLY : nf_fwrite2d
 # ifdef SOLVE3D
       USE nf_fwrite3d_mod, ONLY : nf_fwrite3d
@@ -46,10 +42,10 @@
       integer :: Irec, MyType, Nrec
       integer :: INPncid, INPvid
       integer :: i, gtype, status, varid
-      integer :: ibuffer(2), Vsize(4)
+      integer :: ibuffer(2)
 
-      real(r8) :: Fmin, Fmax, scale
-      real(r8) :: inp_time(1)
+      real(r8) :: Fmin, Fmax
+      real(dp) :: scale
 
 # include "set_bounds.h"
 !
@@ -77,15 +73,7 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
 !
-!  Set Vsize to zero to deactivate interpolation of input data to model
-!  grid in "nf_fread2d".
-!
-      DO i=1,4
-        Vsize(i)=0
-      END DO
-!
-      scale=1.0_r8
-
+      scale=1.0_dp
 !
 !  Process free-surface weak-constraint impulse forcing.
 !
@@ -286,15 +274,15 @@
 
       IF (Master)  WRITE (stdout,50) Nrec-1, TRIM(TLF(ng)%name)
 !
-  10  FORMAT (/,' WRT_IMPULSE - unable to open input NetCDF file: ',a)
-  20  FORMAT (/,' WRT_IMPULSE - error while reading variable: ',a,2x,   &
+  10  FORMAT (/,' WRT_AUG_IMP - unable to open input NetCDF file: ',a)
+  20  FORMAT (/,' WRT_AUG_IMP - error while reading variable: ',a,2x,   &
      &        'at time record = ',i3,/,17x,'in input NetCDF file: ',a)
-  30  FORMAT (/,' WRT_IMPULSE - error while writing variable: ',a,2x,   &
+  30  FORMAT (/,' WRT_AUG_IMP - error while writing variable: ',a,2x,   &
      &        'at time record = ',i3,/,17x,'into NetCDF file: ',a)
-  40  FORMAT (/,' WRT_IMPULSE - cannot find state variable: ',a,        &
+  40  FORMAT (/,' WRT_AUG_IMP - cannot find state variable: ',a,        &
      &        /,12x,'in input NetCDF file: ',a)
-  50  FORMAT (4x,'WRT_IMPULSE - wrote convolved adjoint impulses, ',    &
-     &           'records: 001 to ',i3.3,/,18x,'file: ',a)
+  50  FORMAT (4x,'WRT_AUG_IMP - wrote convolved adjoint impulses, ',    &
+     &           'records: 1 to ',i0,/,18x,'file: ',a)
 
       RETURN
       END SUBROUTINE wrt_aug_imp

@@ -3,9 +3,9 @@
 
 #ifdef ADJUST_BOUNDARY
 !
-!svn $Id: obc_adjust.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: obc_adjust.F 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -102,7 +102,11 @@
         fac1=1.0_r8
         fac2=0.0_r8
       ELSE
+# ifdef GENERIC_DSTART
+        it1=MAX(0,(iic(ng)-ntstart(ng))/nOBC(ng))+1
+# else
         it1=MAX(0,(iic(ng)-1)/nOBC(ng))+1
+# endif
         it2=MIN(it1+1,Nbrec(ng))
         fac1=OBC_time(it2,ng)-(time(ng)+dt(ng))
         fac2=(time(ng)+dt(ng))-OBC_time(it1,ng)
@@ -487,10 +491,10 @@
         END IF
       END DO
 # endif
-
+!
       RETURN
       END SUBROUTINE obc_adjust_tile
-
+!
       SUBROUTINE load_obc (ng, tile, Lout)
 !
 !=======================================================================
@@ -564,7 +568,7 @@
 !  Load nonlinear open boundary fields into storage arrays.
 !-----------------------------------------------------------------------
 !
-      LOAD : IF (MOD(iic(ng)-1,nOBC(ng)).eq.0) THEN
+      LOAD_OBC : IF (MOD(iic(ng)-1,nOBC(ng)).eq.0) THEN
         OBCcount(ng)=OBCcount(ng)+1
         ic=OBCcount(ng)
 !
@@ -824,7 +828,7 @@
           END IF
         END DO
 # endif
-      END IF LOAD
+      END IF LOAD_OBC
 
       RETURN
       END SUBROUTINE load_obc_tile

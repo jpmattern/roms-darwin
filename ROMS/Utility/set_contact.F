@@ -2,9 +2,9 @@
 #ifdef NESTING
       SUBROUTINE set_contact (ng, model)
 !
-!svn $Id: set_contact.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: set_contact.F 1030 2020-07-13 01:01:08Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -253,6 +253,7 @@
 !
       IF (.not.allocated(donor_grid)) THEN
         allocate ( donor_grid((Ngrids-1)*2) )
+        Dmem(ng)=Dmem(ng)+REAL((Ngrids-1)*2,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'donor_grid',           &
      &                      donor_grid,                                 &
@@ -262,6 +263,7 @@
 
       IF (.not.allocated(receiver_grid)) THEN
         allocate ( receiver_grid((Ngrids-1)*2) )
+        Dmem(ng)=Dmem(ng)+REAL((Ngrids-1)*2,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'receiver_grid',        &
      &                      receiver_grid,                              &
@@ -274,6 +276,7 @@
 !
       IF (.not.allocated(I_left)) THEN
         allocate ( I_left(Ngrids) )
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'I_left',               &
      &                      I_left,                                     &
@@ -283,6 +286,7 @@
 !
       IF (.not.allocated(I_right)) THEN
         allocate ( I_right(Ngrids) )
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'I_right',              &
      &                      I_right,                                    &
@@ -292,6 +296,7 @@
 !
       IF (.not.allocated(J_bottom)) THEN
         allocate ( J_bottom(Ngrids) )
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'J_bottom',             &
      &                      J_bottom,                                   &
@@ -301,6 +306,7 @@
 !
       IF (.not.allocated(J_top)) THEN
         allocate ( J_top(Ngrids) )
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'J_top',                &
      &                      J_top,                                      &
@@ -313,6 +319,7 @@
 !
       IF (.not.allocated(NstrR)) THEN
         allocate ( NstrR((Ngrids-1)*2) )
+        Dmem(ng)=Dmem(ng)+REAL((Ngrids-1)*2,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'NstrR',                &
      &                      NstrR,                                      &
@@ -322,6 +329,7 @@
 !
       IF (.not.allocated(NendR)) THEN
         allocate ( NendR((Ngrids-1)*2) )
+        Dmem(ng)=Dmem(ng)+REAL((Ngrids-1)*2,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'NendR',                &
      &                      NendR,                                      &
@@ -331,6 +339,7 @@
 !
       IF (.not.allocated(NstrU)) THEN
         allocate ( NstrU((Ngrids-1)*2) )
+        Dmem(ng)=Dmem(ng)+REAL((Ngrids-1)*2,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'NstrU',                &
      &                      NstrU,                                      &
@@ -340,6 +349,7 @@
 !
       IF (.not.allocated(NendU)) THEN
         allocate ( NendU((Ngrids-1)*2) )
+        Dmem(ng)=Dmem(ng)+REAL((Ngrids-1)*2,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'NendU',                &
      &                      NendU,                                      &
@@ -349,6 +359,7 @@
 !
       IF (.not.allocated(NstrV)) THEN
         allocate ( NstrV((Ngrids-1)*2) )
+        Dmem(ng)=Dmem(ng)+REAL((Ngrids-1)*2,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'NstrV',                &
      &                      NstrV,                                      &
@@ -358,6 +369,7 @@
 !
       IF (.not.allocated(NendV)) THEN
         allocate ( NendV((Ngrids-1)*2) )
+        Dmem(ng)=Dmem(ng)+REAL((Ngrids-1)*2,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'NendV',                &
      &                      NendV,                                      &
@@ -369,6 +381,7 @@
 !
       IF (.not.allocated(contact_region)) THEN
         allocate ( contact_region(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'contact_region',       &
      &                      contact_region,                             &
@@ -382,6 +395,7 @@
 !
       IF (.not.allocated(on_boundary)) THEN
         allocate ( on_boundary(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'on_boundary',          &
      &                      on_boundary,                                &
@@ -394,6 +408,7 @@
 !
       IF (.not.allocated(Idg_cp)) THEN
         allocate ( Idg_cp(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'Idg',                  &
      &                      Idg_cp,                                     &
@@ -403,6 +418,7 @@
 
       IF (.not.allocated(Jdg_cp)) THEN
         allocate ( Jdg_cp(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'Jdg',                  &
      &                      Jdg_cp,                                     &
@@ -414,6 +430,7 @@
 !
       IF (.not.allocated(Irg_cp)) THEN
         allocate ( Irg_cp(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'Irg',                  &
      &                      Irg_cp,                                     &
@@ -423,6 +440,7 @@
 
       IF (.not.allocated(Jrg_cp)) THEN
         allocate ( Jrg_cp(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_ivar (ng, model, NGCname, 'Jrg',                  &
      &                      Jrg_cp,                                     &
@@ -434,6 +452,7 @@
 !
       IF (.not.allocated(Xrg)) THEN
         allocate ( Xrg(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'Xrg',                  &
      &                      Xrg,                                        &
@@ -443,6 +462,7 @@
 
       IF (.not.allocated(Yrg)) THEN
         allocate ( Yrg(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'Yrg',                  &
      &                      Yrg,                                        &
@@ -455,6 +475,7 @@
 !
       IF (.not.allocated(Lweight)) THEN
         allocate ( Lweight(my_nLweights,NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(my_nLweights*NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'Lweight',              &
      &                      Lweight,                                    &
@@ -469,6 +490,7 @@
 !
       IF (.not.allocated(Qweight)) THEN
         allocate ( Qweight(my_nQweights,NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(my_nQweights*NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'Qweight',              &
      &                      Qweight,                                    &
@@ -481,6 +503,7 @@
 !
       IF (.not.allocated(h)) THEN
         allocate ( h(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'h',                    &
      &                      h,                                          &
@@ -492,6 +515,7 @@
 !
       IF (.not.allocated(f)) THEN
         allocate ( f(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'f',                    &
      &                      f,                                          &
@@ -504,6 +528,7 @@
 !
       IF (.not.allocated(pm)) THEN
         allocate ( pm(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'pm',                   &
      &                      pm,                                         &
@@ -513,6 +538,7 @@
 
       IF (.not.allocated(pn)) THEN
         allocate ( pn(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'pn',                   &
      &                      pn,                                         &
@@ -525,6 +551,7 @@
 !
       IF (.not.allocated(dndx)) THEN
         allocate ( dndx(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'dndx',                 &
      &                      dndx,                                       &
@@ -534,6 +561,7 @@
 
       IF (.not.allocated(dmde)) THEN
         allocate ( dmde(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'dmde',                 &
      &                      dmde,                                       &
@@ -545,6 +573,7 @@
 !
       IF (.not.allocated(angle)) THEN
         allocate ( angle(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'angle',                &
      &                      angle,                                      &
@@ -556,6 +585,7 @@
 !
       IF (.not.allocated(mask)) THEN
         allocate ( mask(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
       END IF
       CALL netcdf_get_fvar (ng, model, NGCname, 'mask',                 &
      &                      mask,                                       &
@@ -577,6 +607,7 @@
 !
       IF (.not.allocated(NCpoints)) THEN
         allocate ( NCpoints(Ncontact) )
+        Dmem(ng)=Dmem(ng)+REAL(Ncontact,r8)
       END IF
       DO cr=1,Ncontact
         NpointsR(cr)=NendR(cr)-NstrR(cr)+1
@@ -590,6 +621,7 @@
       allocate ( Rcontact(Ncontact) )
       allocate ( Ucontact(Ncontact) )
       allocate ( Vcontact(Ncontact) )
+      Dmem(ng)=Dmem(ng)+3.0_r8*REAL(Ncontact,r8)
 !
 !  Allocate arrays in grid connectivity structure.
 !
@@ -613,29 +645,55 @@
         allocate ( Ucontact(cr) % Jdg(NpointsU(cr)) )
         allocate ( Vcontact(cr) % Jdg(NpointsV(cr)) )
 
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsV(cr),r8)
+
 # ifdef SOLVE3D
         allocate ( Rcontact(cr) % Kdg(N(dg),NpointsR(cr)) )
         allocate ( Ucontact(cr) % Kdg(N(dg),NpointsU(cr)) )
         allocate ( Vcontact(cr) % Kdg(N(dg),NpointsV(cr)) )
+
+        Dmem(dg)=Dmem(dg)+REAL(N(dg)*NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+REAL(N(dg)*NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+REAL(N(dg)*NpointsV(cr),r8)
 # endif
 
         allocate ( Rcontact(cr) % Lweight(4,NpointsR(cr)) )
         allocate ( Ucontact(cr) % Lweight(4,NpointsU(cr)) )
         allocate ( Vcontact(cr) % Lweight(4,NpointsV(cr)) )
+
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsV(cr),r8)
+
 # ifdef WET_DRY
         allocate ( Rcontact(cr) % LweightUnmasked(4,NpointsR(cr)) )
         allocate ( Ucontact(cr) % LweightUnmasked(4,NpointsU(cr)) )
         allocate ( Vcontact(cr) % LweightUnmasked(4,NpointsV(cr)) )
+
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+4.0_r8*REAL(NpointsV(cr),r8)
 # endif
 
 # ifdef QUADRATIC_WEIGHTS
         allocate ( Rcontact(cr) % Qweight(9,NpointsR(cr)) )
         allocate ( Ucontact(cr) % Qweight(9,NpointsU(cr)) )
         allocate ( Vcontact(cr) % Qweight(9,NpointsV(cr)) )
+
+        Dmem(dg)=Dmem(dg)+9.0_r8*REAL(NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+9.0_r8*REAL(NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+9.0_r8*REAL(NpointsV(cr),r8)
+
 #  ifdef WET_DRY
         allocate ( Rcontact(cr) % QweightUnmasked(9,NpointsR(cr)) )
         allocate ( Ucontact(cr) % QweightUnmasked(9,NpointsU(cr)) )
         allocate ( Vcontact(cr) % QweightUnmasked(9,NpointsV(cr)) )
+
+        Dmem(dg)=Dmem(dg)+9.0_r8*REAL(NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+9.0_r8*REAL(NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+9.0_r8*REAL(NpointsV(cr),r8)
 #  endif
 # endif
 
@@ -643,6 +701,30 @@
         allocate ( Rcontact(cr) % Vweight(2,N(dg),NpointsR(cr)) )
         allocate ( Ucontact(cr) % Vweight(2,N(dg),NpointsU(cr)) )
         allocate ( Vcontact(cr) % Vweight(2,N(dg),NpointsV(cr)) )
+
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsV(cr),r8)
+
+#  if defined TANGENT || defined TL_IOMS
+        allocate ( Rcontact(cr) % tl_Vweight(2,N(dg),NpointsR(cr)) )
+        allocate ( Ucontact(cr) % tl_Vweight(2,N(dg),NpointsU(cr)) )
+        allocate ( Vcontact(cr) % tl_Vweight(2,N(dg),NpointsV(cr)) )
+
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsV(cr),r8)
+#  endif
+
+#  ifdef ADJOINT
+        allocate ( Rcontact(cr) % ad_Vweight(2,N(dg),NpointsR(cr)) )
+        allocate ( Ucontact(cr) % ad_Vweight(2,N(dg),NpointsU(cr)) )
+        allocate ( Vcontact(cr) % ad_Vweight(2,N(dg),NpointsV(cr)) )
+
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsR(cr),r8)
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsU(cr),r8)
+        Dmem(dg)=Dmem(dg)+2.0_r8*REAL(N(dg)*NpointsV(cr),r8)
+#  endif
 # endif
       END DO
 !
@@ -821,6 +903,10 @@
         allocate ( CONTACT_METRIC(cr) % Yu    (NpointsU(cr)) )
         allocate ( CONTACT_METRIC(cr) % Xv    (NpointsV(cr)) )
         allocate ( CONTACT_METRIC(cr) % Yv    (NpointsV(cr)) )
+
+        Dmem(ng)=Dmem(ng)+10.0_r8*REAL(NpointsR(cr),r8)
+        Dmem(ng)=Dmem(ng)+ 3.0_r8*REAL(NpointsU(cr),r8)
+        Dmem(ng)=Dmem(ng)+ 3.0_r8*REAL(NpointsV(cr),r8)
       END DO
 !
 !  Initialize contact region metrics structure.
@@ -867,6 +953,7 @@
       IF (.not.allocated(ContactRegion)) THEN
         allocate ( ContactRegion(4,Ngrids) )
         ContactRegion = .FALSE.
+        Dmem(ng)=Dmem(ng)+4.0_r8*REAL(Ngrids,r8)
       END IF
 !
       DO m=1,NCdatum
@@ -893,6 +980,15 @@
         RefinedGrid(rg)=Lrefinement(cr)
       END DO
 !
+!  Set the switch to compute vertical interpolation weights. Currently,
+!  they are only needed in non-coincident composite grids.
+!
+      IF (.not.ANY(Lcoincident).and.ANY(Lcomposite)) THEN
+        get_Vweights=.TRUE.
+      ELSE
+        get_Vweights=.FALSE.
+      END IF
+!
 !  Refinement grid scale factor.
 !
       DO ig=1,Ngrids
@@ -908,6 +1004,7 @@
       IF (.not.allocated(CoarserDonor)) THEN
         allocate ( CoarserDonor(Ngrids) )
         CoarserDonor = 0
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
 !$OMP END PARALLEL
 !
@@ -919,6 +1016,7 @@
       IF (.not.allocated(FinerDonor)) THEN
         allocate ( FinerDonor(Ngrids) )
         FinerDonor = 0
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
 !$OMP END PARALLEL
 !
@@ -930,13 +1028,14 @@
       IF (.not.allocated(DonorToFiner)) THEN
         allocate ( DonorToFiner(Ngrids) )
         DonorToFiner = .FALSE.
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
 !$OMP END PARALLEL
 !
 !  Number of refined grid time-steps. Their values are initialized to
 !  the optimal values based on the spatial refinement ratio.  These
 !  values are over-written in "metrics.F" to use the time-step
-!  size ration between donor and receiver grid.  The user is allowed
+!  size ratio between donor and receiver grid.  The user is allowed
 !  to take larger divisible time-step with respect to the donor grid.
 !  The user is responsible to set the appropriate refined grid time-step
 !  for stability.
@@ -944,6 +1043,7 @@
 !$OMP PARALLEL
       IF (.not.allocated(RefineSteps)) THEN
         allocate ( RefineSteps(Ngrids) )
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
         DO ig=1,Ngrids
           RefineSteps(ig)=Refine_factor(ig)
         END DO
@@ -956,13 +1056,15 @@
       IF (.not.allocated(RefineStepsCounter)) THEN
         allocate ( RefineStepsCounter(Ngrids) )
         RefineStepsCounter = 0
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
 !
-!  Counter for two-way exchange between fine and coarse grids.
+!  Interval used in the two-way exchange between fine and coarse grids.
 !
-      IF (.not.allocated(TwoWayCounter)) THEN
-        allocate ( TwoWayCounter(Ngrids) )
-        TwoWayCounter = 0
+      IF (.not.allocated(TwoWayInterval)) THEN
+        allocate ( TwoWayInterval(Ngrids) )
+        TwoWayInterval = 0.0_r8
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
 !
 !  Switch indicating which refined grid(s) include finer refined grids:
@@ -972,6 +1074,7 @@
       IF (.not.allocated(Telescoping)) THEN
         allocate ( Telescoping(Ngrids) )
         Telescoping = .FALSE.
+        Dmem(ng)=Dmem(ng)+REAL(Ngrids,r8)
       END IF
 !$OMP END PARALLEL
 !
@@ -982,11 +1085,13 @@
       IF (.not.allocated(RollingIndex)) THEN
         allocate ( RollingIndex(Ncontact) )
         RollingIndex = 0
+        Dmem(ng)=Dmem(ng)+REAL(Ncontact,r8)
       END IF
 
       IF (.not.allocated(RollingTime)) THEN
         allocate ( RollingTime(2,Ncontact) )
         RollingTime = 0
+        Dmem(ng)=Dmem(ng)+2.0_r8*REAL(Ncontact,r8)
       END IF
 !$OMP END PARALLEL
 !
@@ -1014,10 +1119,48 @@
 
           allocate ( COMPOSITE(cr) % rzeta(4,NpointsR(cr)) )
 
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsR(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsV(cr),r8)
+
+#  if defined TANGENT || defined TL_IOMS
+          allocate ( COMPOSITE(cr) % tl_bustr(4,NpointsU(cr)) )
+          allocate ( COMPOSITE(cr) % tl_bvstr(4,NpointsV(cr)) )
+
+          allocate ( COMPOSITE(cr) % tl_ubar(4,NpointsU(cr),2) )
+          allocate ( COMPOSITE(cr) % tl_vbar(4,NpointsV(cr),2) )
+          allocate ( COMPOSITE(cr) % tl_zeta(4,NpointsR(cr),2) )
+
+          allocate ( COMPOSITE(cr) % tl_rzeta(4,NpointsR(cr)) )
+
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsR(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsV(cr),r8)
+#  endif
+
+#  ifdef ADJOINT
+          allocate ( COMPOSITE(cr) % ad_bustr(4,NpointsU(cr)) )
+          allocate ( COMPOSITE(cr) % ad_bvstr(4,NpointsV(cr)) )
+
+          allocate ( COMPOSITE(cr) % ad_ubar(4,NpointsU(cr),2) )
+          allocate ( COMPOSITE(cr) % ad_vbar(4,NpointsV(cr),2) )
+          allocate ( COMPOSITE(cr) % ad_zeta(4,NpointsR(cr),2) )
+
+          allocate ( COMPOSITE(cr) % ad_rzeta(4,NpointsR(cr)) )
+
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsR(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*NpointsV(cr),r8)
+#  endif
+
 # ifdef SOLVE3D
           allocate ( COMPOSITE(cr) % DU_avg1(4,NpointsU(cr)) )
           allocate ( COMPOSITE(cr) % DV_avg1(4,NpointsV(cr)) )
           allocate ( COMPOSITE(cr) % Zt_avg1(4,NpointsR(cr)) )
+
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsR(cr),r8)
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsV(cr),r8)
 
           allocate ( COMPOSITE(cr) % u(4,N(dg),NpointsU(cr)) )
           allocate ( COMPOSITE(cr) % v(4,N(dg),NpointsV(cr)) )
@@ -1025,7 +1168,58 @@
           allocate ( COMPOSITE(cr) % Huon(4,N(dg),NpointsU(cr)) )
           allocate ( COMPOSITE(cr) % Hvom(4,N(dg),NpointsV(cr)) )
 
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsV(cr),r8)
+
           allocate ( COMPOSITE(cr) % t(4,N(dg),NpointsR(cr),NT(dg)) )
+
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsU(cr)*NT(dg),r8)
+
+#  if defined TANGENT || defined TL_IOMS
+          allocate ( COMPOSITE(cr) % tl_DU_avg1(4,NpointsU(cr)) )
+          allocate ( COMPOSITE(cr) % tl_DV_avg1(4,NpointsV(cr)) )
+          allocate ( COMPOSITE(cr) % tl_Zt_avg1(4,NpointsR(cr)) )
+
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsR(cr),r8)
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsV(cr),r8)
+
+          allocate ( COMPOSITE(cr) % tl_u(4,N(dg),NpointsU(cr)) )
+          allocate ( COMPOSITE(cr) % tl_v(4,N(dg),NpointsV(cr)) )
+
+          allocate ( COMPOSITE(cr) % tl_Huon(4,N(dg),NpointsU(cr)) )
+          allocate ( COMPOSITE(cr) % tl_Hvom(4,N(dg),NpointsV(cr)) )
+
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsV(cr),r8)
+
+          allocate ( COMPOSITE(cr) % tl_t(4,N(dg),NpointsR(cr),NT(dg)) )
+
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsU(cr)*NT(dg),r8)
+#  endif
+
+#  ifdef ADJOINT
+          allocate ( COMPOSITE(cr) % ad_DU_avg1(4,NpointsU(cr)) )
+          allocate ( COMPOSITE(cr) % ad_DV_avg1(4,NpointsV(cr)) )
+          allocate ( COMPOSITE(cr) % ad_Zt_avg1(4,NpointsR(cr)) )
+
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsR(cr),r8)
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+REAL(4*NpointsV(cr),r8)
+
+          allocate ( COMPOSITE(cr) % ad_u(4,N(dg),NpointsU(cr)) )
+          allocate ( COMPOSITE(cr) % ad_v(4,N(dg),NpointsV(cr)) )
+
+          allocate ( COMPOSITE(cr) % ad_Huon(4,N(dg),NpointsU(cr)) )
+          allocate ( COMPOSITE(cr) % ad_Hvom(4,N(dg),NpointsV(cr)) )
+
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsU(cr),r8)
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsV(cr),r8)
+
+          allocate ( COMPOSITE(cr) % ad_t(4,N(dg),NpointsR(cr),NT(dg)) )
+
+          Dmem(dg)=Dmem(dg)+2.0_r8*REAL(4*N(dg)*NpointsU(cr)*NT(dg),r8)
+#  endif
 # endif
         END DO
       END IF
@@ -1055,11 +1249,71 @@
           allocate ( REFINED(cr) % on_u(NpointsU(cr)) )
           allocate ( REFINED(cr) % om_v(NpointsV(cr)) )
 
+          Dmem(rg)=Dmem(rg)+REAL(4*NpointsR(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsU(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsV(cr),r8)
+
+# if defined TANGENT || defined TL_IOMS
+          allocate ( REFINED(cr) % tl_ubar(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % tl_vbar(4,NpointsV(cr),2) )
+          allocate ( REFINED(cr) % tl_zeta(4,NpointsR(cr),2) )
+
+          allocate ( REFINED(cr) % tl_DU_avg2(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % tl_DV_avg2(4,NpointsV(cr),2) )
+
+          Dmem(rg)=Dmem(rg)+REAL(4*NpointsR(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsU(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsV(cr),r8)
+# endif
+
+# ifdef ADJOINT
+          allocate ( REFINED(cr) % ad_ubar(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % ad_vbar(4,NpointsV(cr),2) )
+          allocate ( REFINED(cr) % ad_zeta(4,NpointsR(cr),2) )
+
+          allocate ( REFINED(cr) % ad_DU_avg2(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % ad_DV_avg2(4,NpointsV(cr),2) )
+
+          Dmem(rg)=Dmem(rg)+REAL(4*NpointsR(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsU(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsV(cr),r8)
+# endif
+
+
 # ifdef SOLVE3D
           allocate ( REFINED(cr) % u(4,N(rg),NpointsU(cr),2) )
           allocate ( REFINED(cr) % v(4,N(rg),NpointsV(cr),2) )
 
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*N(rg)*NpointsU(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*N(rg)*NpointsV(cr),r8)
+
           allocate ( REFINED(cr) % t(4,N(rg),NpointsR(cr),2,NT(rg)) )
+
+          Dmem(rg)=Dmem(rg)+2.0_r8*REAL(4*N(rg)*NpointsR(cr)*NT(rg),r8)
+
+#  if defined TANGENT || defined TL_IOMS
+          allocate ( REFINED(cr) % tl_u(4,N(rg),NpointsU(cr),2) )
+          allocate ( REFINED(cr) % tl_v(4,N(rg),NpointsV(cr),2) )
+
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*N(rg)*NpointsU(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*N(rg)*NpointsV(cr),r8)
+
+          allocate ( REFINED(cr) % tl_t(4,N(rg),NpointsR(cr),2,NT(rg)) )
+
+          Dmem(rg)=Dmem(rg)+2.0_r8*REAL(4*N(rg)*NpointsR(cr)*NT(rg),r8)
+#  endif
+
+#  ifdef ADJOINT
+          allocate ( REFINED(cr) % ad_u(4,N(rg),NpointsU(cr),2) )
+          allocate ( REFINED(cr) % ad_v(4,N(rg),NpointsV(cr),2) )
+
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*N(rg)*NpointsU(cr),r8)
+          Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*N(rg)*NpointsV(cr),r8)
+
+          allocate ( REFINED(cr) % ad_t(4,N(rg),NpointsR(cr),2,NT(rg)) )
+
+          Dmem(rg)=Dmem(rg)+2.0_r8*REAL(4*N(rg)*NpointsR(cr)*NT(rg),r8)
+#  endif
 # endif
         END DO
       END IF

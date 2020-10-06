@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE get_state (ng, model, msg, ncname, IniRec, Tindex)
 !
-!svn $Id: get_state.F 889 2018-02-10 03:32:52Z arango $
+!svn $Id: get_state.F 1031 2020-07-14 01:39:55Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -109,7 +109,7 @@
       integer, intent(in) :: ng, model, msg, Tindex
 
       integer, intent(inout) :: IniRec
-
+!
       character (len=*), intent(in) :: ncname
 !
 !  Local variable declarations.
@@ -120,7 +120,7 @@
       logical :: get_adjust
 #endif
       logical, dimension(NV) :: get_var, have_var
-
+!
       integer :: LBi, UBi, LBj, UBj
 #ifdef ADJUST_BOUNDARY
       integer :: IorJ, LBij, UBij
@@ -131,13 +131,15 @@
       integer :: IDmod, InpRec, gtype, i, ifield, itrc, lstr, lend
       integer :: Nrec, mySize, ncINPid, nvatts, nvdim, status, varid
       integer :: Vsize(4), start(4), total(4)
+      integer(i8b) :: Fhash
+!
+      real(dp), parameter :: Fscl = 1.0_r8
 
-      real(r8), parameter :: Fscl = 1.0_r8
+      real(dp) :: INPtime, Tmax, my_dstart, scale, time_scale
+      real(r8) :: Fmax, Fmin
 
-      real(r8) :: Fmax, Fmin, INPtime, Tmax, scale, time_scale
-
-      real(r8), allocatable :: TimeVar(:)
-
+      real(dp), allocatable :: TimeVar(:)
+!
       character (len=6 ) :: string
       character (len=15) :: Tstring, attnam, tvarnam
       character (len=22) :: t_code
@@ -215,7 +217,8 @@
 !
 !  Turn on time wall clock.
 !
-      CALL wclock_on (ng, IDmod, 42, __LINE__, __FILE__)
+      CALL wclock_on (ng, IDmod, 80, __LINE__,                          &
+     &                __FILE__)
 #endif
 !
 !  Set switch to process variables for nonlinear model perfect restart.
@@ -236,7 +239,6 @@
       DO i=1,4
         Vsize(i)=0
       END DO
-      SourceFile=__FILE__
 !
 !-----------------------------------------------------------------------
 !  Open input NetCDF file and check time variable.
@@ -262,6 +264,7 @@
      &                tvarnam, get_var, have_var)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
+      SourceFile=__FILE__
 
 #if defined DEBUGGING || defined NO_LBC_ATT
 !
@@ -300,7 +303,8 @@
 !
       mySize=var_Dsize(1)
       IF (.not.allocated(TimeVar)) allocate (TimeVar(mySize))
-      CALL netcdf_get_fvar (ng, IDmod, ncname, TRIM(tvarnam), TimeVar,  &
+      CALL netcdf_get_time (ng, IDmod, ncname, TRIM(tvarnam),           &
+     &                      Rclock%DateNumber, TimeVar,                 &
      &                      ncid = ncINPid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
@@ -336,13 +340,13 @@
 !
 !  Set input time scale by looking at the "units" attribute.
 !
-      time_scale=0.0_r8
+      time_scale=0.0_dp
       DO i=1,nvatts
         IF (TRIM(var_Aname(i)).eq.'units') THEN
           IF (INDEX(TRIM(var_Achar(i)),'day').ne.0) THEN
             time_scale=day2sec
           ELSE IF (INDEX(TRIM(var_Achar(i)),'second').ne.0) THEN
-            time_scale=1.0_r8
+            time_scale=1.0_dp
           END IF
         END IF
       END DO
@@ -356,10 +360,22 @@
 !
       IF ((model.eq.0).or.(model.eq.iNLM).or.                           &
      &    (model.eq.iTLM).or.(model.eq.iRPM)) THEN
+#ifdef GENERIC_DSTART
+        IF (INItime(ng).lt.0.0_dp) THEN
+          my_dstart=dstart                  ! ROMS input script
+        ELSE
+          my_dstart=INItime(ng)/86400.0_dp  ! NLM IC time is known
+        END IF
+        IF (((model.eq.iTLM).or.(model.eq.iRPM)).and.(msg.eq.1).and.    &
+     &      (INPtime.ne.(my_dstart*day2sec))) THEN
+          INPtime=my_dstart*day2sec
+        END IF
+#else
         IF (((model.eq.iTLM).or.(model.eq.iRPM)).and.(msg.eq.1).and.    &
      &      (INPtime.ne.(dstart*day2sec))) THEN
           INPtime=dstart*day2sec
         END IF
+#endif
         IF (msg.eq.1) THEN            ! processing initial conditions
           time(ng)=INPtime
           tdays(ng)=time(ng)*sec2day
@@ -415,15 +431,24 @@
           t_code=' '              ! time is meaningless for these fields
         END IF
         WRITE (Tstring,'(f15.4)') tdays(ng)
+#if defined I4DVAR          || defined I4DVAR_ANA_SENSITIVITY || \
+    defined WEAK_CONSTRAINT
+        WRITE (stdout,40) string, 'Reading '//TRIM(StateMsg(msg)),      &
+     &                    t_code, ng, ', Outer=', outer,                &
+     &                    TRIM(ADJUSTL(Tstring)), ncname(lstr:lend),    &
+     &                    InpRec, Tindex
+#else
         IF (ERend.gt.ERstr) THEN
           WRITE (stdout,40) string, 'Reading '//TRIM(StateMsg(msg)),    &
-     &                      t_code, ng, Nrun, TRIM(ADJUSTL(Tstring)),   &
-     &                      ncname(lstr:lend), InpRec, Tindex
+     &                      t_code, ng, ', Iter=', Nrun,                &
+     &                      TRIM(ADJUSTL(Tstring)),  ncname(lstr:lend), &
+     &                      InpRec, Tindex
         ELSE
           WRITE (stdout,50) string, 'Reading '//TRIM(StateMsg(msg)),    &
      &                      t_code, ng, TRIM(ADJUSTL(Tstring)),         &
      &                      ncname(lstr:lend), InpRec, Tindex
         END IF
+#endif
       END IF
 
 #ifdef NONLINEAR
@@ -498,28 +523,51 @@
         IF (get_var(idbath)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idbath)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idbath), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idbath), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 #  endif
-     &                      GRID(ng) % h)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idbath)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        GRID(ng) % h,                             &
+     &                        checksum = Fhash)
+#  else
+     &                        GRID(ng) % h)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idbath)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idbath)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idbath)), Fmin, Fmax
+#  endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idbath)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idbath)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -593,44 +641,72 @@
         IF (get_var(idFsur)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idFsur)),   &
      &                        varid)
-          IF (Perfect2D) THEN
-            gtype=var_flag(varid)*r3dvar
-          ELSE
-            gtype=var_flag(varid)*r2dvar
-          END IF
-          IF (Perfect2D) THEN
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idFsur), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, 3,                 &
-     &                        Fscl, Fmin, Fmax,                         &
+          IF (foundit) THEN
+            IF (Perfect2D) THEN
+              gtype=var_flag(varid)*r3dvar
+            ELSE
+              gtype=var_flag(varid)*r2dvar
+            END IF
+            IF (Perfect2D) THEN
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idFsur), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, 3,               &
+     &                          Fscl, Fmin, Fmax,                       &
 # ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 # endif
-     &                        OCEAN(ng) % zeta)
-          ELSE
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idFsur), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+# ifdef CHECKSUM
+     &                          OCEAN(ng) % zeta,                       &
+     &                          checksum = Fhash)
+# else
+     &                          OCEAN(ng) % zeta)
+# endif
+            ELSE
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idFsur), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 # ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 # endif
-     &                        OCEAN(ng) % zeta(:,:,Tindex))
-          END IF
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
+# ifdef CHECKSUM
+     &                          OCEAN(ng) % zeta(:,:,Tindex),           &
+     &                          checksum = Fhash)
+# else
+     &                          OCEAN(ng) % zeta(:,:,Tindex))
+# endif
+            END IF
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idFsur)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+# endif
+
+              END IF
+            END IF
+          ELSE
             IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idFsur)), InpRec,  &
+              WRITE (stdout,80) string, TRIM(Vname(1,idFsur)),          &
      &                          TRIM(ncname)
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -640,28 +716,51 @@
         IF (get_var(idRzet).and.Perfect2D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idRzet)),   &
      &                        varid)
-          gtype=var_flag(varid)*r3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idRzet), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, 2,                   &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idRzet), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, 2,                 &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 # endif
-     &                      OCEAN(ng) % rzeta)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idRzet)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % rzeta,                        &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % rzeta)
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idRzet)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idRzet)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idRzet)), Fmin, Fmax
+# endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idRzet)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idRzet)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -671,44 +770,72 @@
         IF (get_var(idUbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUbar)),   &
      &                        varid)
-          IF (Perfect2D) THEN
-            gtype=var_flag(varid)*u3dvar
-          ELSE
-            gtype=var_flag(varid)*u2dvar
-          END IF
-          IF (Perfect2D) THEN
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idUbar), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, 3,                 &
-     &                        Fscl, Fmin, Fmax,                         &
+          IF (foundit) THEN
+            IF (Perfect2D) THEN
+              gtype=var_flag(varid)*u3dvar
+            ELSE
+              gtype=var_flag(varid)*u2dvar
+            END IF
+            IF (Perfect2D) THEN
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idUbar), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, 3,               &
+     &                          Fscl, Fmin, Fmax,                       &
 # ifdef MASKING
-     &                        GRID(ng) % umask,                         &
+     &                          GRID(ng) % umask,                       &
 # endif
-     &                        OCEAN(ng) % ubar)
-          ELSE
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idUbar), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+# ifdef CHECKSUM
+     &                          OCEAN(ng) % ubar,                       &
+     &                          checksum = Fhash)
+# else
+     &                          OCEAN(ng) % ubar)
+# endif
+            ELSE
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idUbar), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 # ifdef MASKING
-     &                        GRID(ng) % umask,                         &
+     &                          GRID(ng) % umask,                       &
 # endif
-     &                        OCEAN(ng) % ubar(:,:,Tindex))
-          END IF
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
+# ifdef CHECKSUM
+     &                          OCEAN(ng) % ubar(:,:,Tindex),           &
+     &                          checksum = Fhash)
+# else
+     &                          OCEAN(ng) % ubar(:,:,Tindex))
+# endif
+            END IF
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+# endif
+
+              END IF
+            END IF
+          ELSE
             IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUbar)), InpRec,  &
+              WRITE (stdout,80) string, TRIM(Vname(1,idUbar)),          &
      &                          TRIM(ncname)
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -718,106 +845,180 @@
         IF (get_var(idRu2d).and.Perfect2D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idRu2d)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idRu2d), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, 2,                   &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idRu2d), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, 2,                 &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 # endif
-     &                      OCEAN(ng) % rubar)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idRu2d)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % rubar,                        &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % rubar)
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idRu2d)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idRu2d)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idRu2d)), Fmin, Fmax
+# endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idRu2d)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idRu2d)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
 !
-!  Read in nonlinear 2D U-momentum component (m/s).
+!  Read in nonlinear 2D V-momentum component (m/s).
 !
         IF (get_var(idVbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVbar)),   &
      &                        varid)
-          IF (Perfect2D) THEN
-            gtype=var_flag(varid)*v3dvar
-          ELSE
-            gtype=var_flag(varid)*v2dvar
-          END IF
-          IF (Perfect2D) THEN
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idVbar), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, 3,                 &
-     &                        Fscl, Fmin, Fmax,                         &
+          IF (foundit) THEN
+            IF (Perfect2D) THEN
+              gtype=var_flag(varid)*v3dvar
+            ELSE
+              gtype=var_flag(varid)*v2dvar
+            END IF
+            IF (Perfect2D) THEN
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idVbar), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, 3,               &
+     &                          Fscl, Fmin, Fmax,                       &
 # ifdef MASKING
-     &                        GRID(ng) % vmask,                         &
+     &                          GRID(ng) % vmask,                       &
 # endif
-     &                        OCEAN(ng) % vbar)
-          ELSE
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idVbar), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+# ifdef CHECKSUM
+     &                          OCEAN(ng) % vbar,                       &
+     &                          checksum = Fhash)
+# else
+     &                          OCEAN(ng) % vbar)
+# endif
+            ELSE
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idVbar), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 # ifdef MASKING
-     &                        GRID(ng) % vmask,                         &
+     &                          GRID(ng) % vmask,                       &
 # endif
-     &                        OCEAN(ng) % vbar(:,:,Tindex))
-          END IF
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
+# ifdef CHECKSUM
+     &                          OCEAN(ng) % vbar(:,:,Tindex),           &
+     &                          checksum = Fhash)
+# else
+     &                          OCEAN(ng) % vbar(:,:,Tindex))
+# endif
+            END IF
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+# endif
+
+              END IF
+            END IF
+          ELSE
             IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVbar)), InpRec,  &
+              WRITE (stdout,80) string, TRIM(Vname(1,idVbar)),          &
      &                          TRIM(ncname)
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
 !
-!  Read in nonlinear RHS 2D U-momentum component.
+!  Read in nonlinear RHS 2D V-momentum component.
 !
         IF (get_var(idRv2d).and.Perfect2D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idRv2d)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idRv2d), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, 2,                   &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idRv2d), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, 2,                 &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 # endif
-     &                      OCEAN(ng) % rvbar)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idRv2d)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % rvbar,                        &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % rvbar)
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idRv2d)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idRv2d)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idRv2d)), Fmin, Fmax
+# endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idRv2d)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idRv2d)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -829,40 +1030,67 @@
         IF (get_var(idUvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          IF (Perfect3D) THEN
-            status=nf_fread4d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idUvel), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng), 1, 2,       &
-     &                        Fscl, Fmin, Fmax,                         &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            IF (Perfect3D) THEN
+              status=nf_fread4d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idUvel), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng), 1, 2,     &
+     &                          Fscl, Fmin, Fmax,                       &
 #  ifdef MASKING
-     &                        GRID(ng) % umask,                         &
+     &                          GRID(ng) % umask,                       &
 #  endif
-     &                        OCEAN(ng) % u)
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % u,                          &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % u)
+#  endif
+            ELSE
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idUvel), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          Fscl, Fmin, Fmax,                       &
+#  ifdef MASKING
+     &                          GRID(ng) % umask,                       &
+#  endif
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % u(:,:,:,Tindex),            &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % u(:,:,:,Tindex))
+#  endif
+            END IF
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
           ELSE
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idUvel), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        Fscl, Fmin, Fmax,                         &
-#  ifdef MASKING
-     &                        GRID(ng) % umask,                         &
-#  endif
-     &                        OCEAN(ng) % u(:,:,:,Tindex))
-          END IF
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
             IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUvel)), InpRec,  &
+              WRITE (stdout,80) string, TRIM(Vname(1,idUvel)),          &
      &                          TRIM(ncname)
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -872,28 +1100,50 @@
         IF (get_var(idRu3d).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idRu3d)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          status=nf_fread4d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idRu3d), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng), 1, 2,         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            status=nf_fread4d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idRu3d), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng), 1, 2,       &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      OCEAN(ng) % ru)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idRu3d)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % ru,                           &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % ru)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idRu3d)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idRu3d)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idRu3d)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idRu3d)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idRu3d)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -903,40 +1153,68 @@
         IF (get_var(idVvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          IF (Perfect3D) THEN
-            status=nf_fread4d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idVvel), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng), 1, 2,       &
-     &                        Fscl, Fmin, Fmax,                         &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            IF (Perfect3D) THEN
+              status=nf_fread4d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idVvel), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng), 1, 2,     &
+     &                          Fscl, Fmin, Fmax,                       &
 #  ifdef MASKING
-     &                        GRID(ng) % vmask,                         &
+     &                          GRID(ng) % vmask,                       &
 #  endif
-     &                        OCEAN(ng) % v)
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % v,                          &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % v)
+#  endif
+            ELSE
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idVvel), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          Fscl, Fmin, Fmax,                       &
+#  ifdef MASKING
+     &                          GRID(ng) % vmask,                       &
+#  endif
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % v(:,:,:,Tindex),            &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % v(:,:,:,Tindex))
+#  endif
+            END IF
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+#  endif
+
+              END IF
+            END IF
           ELSE
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idVvel), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        Fscl, Fmin, Fmax,                         &
-#  ifdef MASKING
-     &                        GRID(ng) % vmask,                         &
-#  endif
-     &                        OCEAN(ng) % v(:,:,:,Tindex))
-          END IF
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
             IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVvel)), InpRec,  &
+              WRITE (stdout,80) string, TRIM(Vname(1,idVvel)),          &
      &                          TRIM(ncname)
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -946,28 +1224,51 @@
         IF (get_var(idRv3d).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idRv3d)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          status=nf_fread4d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idRv3d), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng), 1, 2,         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            status=nf_fread4d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idRv3d), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng), 1, 2,       &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      OCEAN(ng) % rv)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idRv3d)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % rv,                           &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % rv)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idRv3d)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idRv3d)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idRv3d)), Fmin, Fmax
+#  endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idRv3d)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idRv3d)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -978,41 +1279,68 @@
           IF (get_var(idTvar(itrc))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTvar(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            IF (Perfect3D) THEN
-              status=nf_fread4d(ng, IDmod, ncname, ncINPid,             &
-     &                          Vname(1,idTvar(itrc)), varid,           &
-     &                          InpRec, gtype, Vsize,                   &
-     &                          LBi, UBi, LBj, UBj, 1, N(ng), 1, 2,     &
-     &                          Fscl, Fmin, Fmax,                       &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              IF (Perfect3D) THEN
+                status=nf_fread4d(ng, IDmod, ncname, ncINPid,           &
+     &                            Vname(1,idTvar(itrc)), varid,         &
+     &                            InpRec, gtype, Vsize,                 &
+     &                            LBi, UBi, LBj, UBj, 1, N(ng), 1, 2,   &
+     &                            Fscl, Fmin, Fmax,                     &
 #  ifdef MASKING
-     &                          GRID(ng) % rmask,                       &
+     &                            GRID(ng) % rmask,                     &
 #  endif
-     &                          OCEAN(ng) % t(:,:,:,:,itrc))
-            ELSE
-              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
-     &                          Vname(1,idTvar(itrc)), varid,           &
-     &                          InpRec, gtype, Vsize,                   &
-     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
-     &                          Fscl, Fmin, Fmax,                       &
+#  ifdef CHECKSUM
+     &                            OCEAN(ng) % t(:,:,:,:,itrc),          &
+     &                            checksum = Fhash)
+#  else
+     &                            OCEAN(ng) % t(:,:,:,:,itrc))
+#  endif
+              ELSE
+                status=nf_fread3d(ng, IDmod, ncname, ncINPid,           &
+     &                            Vname(1,idTvar(itrc)), varid,         &
+     &                            InpRec, gtype, Vsize,                 &
+     &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
+     &                            Fscl, Fmin, Fmax,                     &
 #  ifdef MASKING
-     &                          GRID(ng) % rmask,                       &
+     &                            GRID(ng) % rmask,                     &
 #  endif
-     &                          OCEAN(ng) % t(:,:,:,Tindex,itrc))
-            END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                            OCEAN(ng) % t(:,:,:,Tindex,itrc),     &
+     &                            checksum = Fhash)
+#  else
+     &                            OCEAN(ng) % t(:,:,:,Tindex,itrc))
+#  endif
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
+              END IF
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),          &
-     &                            Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTvar(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -1025,37 +1353,60 @@
         IF (have_var(idVvis)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVvis)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVvis), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng),               &
-     &                      Fscl, Fmin,Fmax,                            &
-#   ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
-#   endif
-     &                      MIXING(ng) % AKv)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVvis)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVvis)), Fmin, Fmax
-            END IF
-          END IF
-#   ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVvis), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin,Fmax,                          &
+#   ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#   endif
+#   ifdef CHECKSUM
+     &                        MIXING(ng) % AKv,                         &
+     &                        checksum = Fhash)
+#   else
      &                        MIXING(ng) % AKv)
 #   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVvis)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVvis)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,idVvis)), Fmin, Fmax
+#   endif
+
+              END IF
+            END IF
+#   ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          MIXING(ng) % AKv)
+#   endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idVvis)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 !
 !  Read in temperature vertical diffusion.
@@ -1063,37 +1414,60 @@
         IF (have_var(idTdif)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idTdif)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idTdif), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng),               &
-     &                      Fscl, Fmin,Fmax,                            &
-#   ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
-#   endif
-     &                      MIXING(ng) % AKt(:,:,:,itemp))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idTdif)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idTdif)), Fmin, Fmax
-            END IF
-          END IF
-#   ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idTdif), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin,Fmax,                          &
+#   ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#   endif
+#   ifdef CHECKSUM
+     &                        MIXING(ng) % AKt(:,:,:,itemp),            &
+     &                        checksum = Fhash)
+#   else
      &                        MIXING(ng) % AKt(:,:,:,itemp))
 #   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idTdif)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idTdif)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,idTdif)), Fmin, Fmax
+#   endif
+
+              END IF
+            END IF
+#   ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          MIXING(ng) % AKt(:,:,:,itemp))
+#   endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idTdif)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 #   ifdef SALINITY
 !
@@ -1102,37 +1476,60 @@
         IF (have_var(idSdif)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idSdif)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idSdif), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng),               &
-     &                      Fscl, Fmin,Fmax,                            &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idSdif), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
+     &                        Fscl, Fmin,Fmax,                          &
 #    ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 #    endif
-     &                      MIXING(ng) % AKt(:,:,:,isalt))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idSdif)), InpRec,  &
-     &                          TRIM(ncname)
+#    ifdef CHECKSUM
+     &                        MIXING(ng) % AKt(:,:,:,isalt),            &
+     &                        checksum = Fhash)
+#    else
+     &                        MIXING(ng) % AKt(:,:,:,isalt))
+#    endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idSdif)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#    ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idSdif)), Fmin, Fmax,    &
+     &                            Fhash
+#    else
+                WRITE (stdout,70) TRIM(Vname(2,idSdif)), Fmin, Fmax
+#    endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
+#    ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          MIXING(ng) % AKt(:,:,:,isalt))
+#    endif
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idSdif)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idSdif)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
-#   ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
-     &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
-     &                        MIXING(ng) % AKt(:,:,:,isalt))
-#   endif
         END IF
 #   endif
 #  endif
@@ -1143,28 +1540,51 @@
         IF (have_var(idHsbl).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idHsbl)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idHsbl), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
-# ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
-# endif
-     &                      MIXING(ng) % Hsbl)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idHsbl)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idHsbl), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
+#   ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#   endif
+#   ifdef CHECKSUM
+     &                        MIXING(ng) % Hsbl,                        &
+     &                        checksum = Fhash)
+#   else
+     &                        MIXING(ng) % Hsbl)
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idHsbl)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idHsbl)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,idHsbl)), Fmin, Fmax
+#   endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idHsbl)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idHsbl)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -1176,28 +1596,51 @@
         IF (have_var(idHbbl).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idHbbl)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idHbbl), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idHbbl), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 # endif
-     &                      MIXING(ng) % Hbbl)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idHbbl)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        MIXING(ng) % Hbbl,                        &
+     &                        checksum = Fhash)
+# else
+     &                        MIXING(ng) % Hbbl)
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idHbbl)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idHbbl)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idHbbl)), Fmin, Fmax
+#  endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idHbbl)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idHbbl)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -1210,28 +1653,51 @@
         IF (have_var(idGhat(itrc))) THEN
           foundit=find_string(var_name, n_var,                          &
      &                        TRIM(Vname(1,idGhat(itrc))), varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idGhat(itrc)), varid,               &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng),               &
-     &                      Fscl, Fmin,Fmax,                            &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idGhat(itrc)), varid,             &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
+     &                        Fscl, Fmin,Fmax,                          &
 #   ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 #   endif
-     &                      MIXING(ng) % Ghats(:,:,:,itrc))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idGhat(itrc))),    &
-     &                          InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                        MIXING(ng) % Ghats(:,:,:,itrc),           &
+     &                        checksum = Fhash)
+#   else
+     &                        MIXING(ng) % Ghats(:,:,:,itrc))
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idGhat(itrc))),  &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idGhat(itrc))),          &
+     &                            Fmin, Fmax, Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,idGhat(itrc))),          &
+     &                            Fmin, Fmax
+#   endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idGhat(itrc))), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idGhat(itrc))),    &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -1244,28 +1710,51 @@
         IF (get_var(idMtke).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idMtke)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread4d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idMtke), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng), 1, 2,         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread4d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idMtke), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng), 1, 2,       &
+     &                        Fscl, Fmin, Fmax,                         &
 #   ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 #   endif
-     &                      MIXING(ng) % tke)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idMtke)), InpRec,  &
-     &                          TRIM(ncname)
+#   ifdef CHECKSUM
+     &                        MIXING(ng) % tke,                         &
+     &                        checksum = Fhash)
+#   else
+     &                        MIXING(ng) % tke)
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idMtke)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idMtke)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,idMtke)), Fmin, Fmax
+#   endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idMtke)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idMtke)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -1275,28 +1764,51 @@
         IF (get_var(idMtls).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idMtls)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread4d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idMtls), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng), 1, 2,         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread4d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idMtls), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng), 1, 2,       &
+     &                        Fscl, Fmin, Fmax,                         &
 #   ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 #   endif
-     &                      MIXING(ng) % gls)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idMtls)), InpRec,  &
-     &                          TRIM(ncname)
+#   ifdef CHECKSUM
+     &                        MIXING(ng) % gls,                         &
+     &                        checksum = Fhash)
+#   else
+     &                        MIXING(ng) % gls)
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idMtls)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+             RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idMtls)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,idMtls)), Fmin, Fmax
+#   endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-           RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idMtls)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idMtls)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -1306,28 +1818,51 @@
         IF (get_var(idVmLS).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVmLS)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVmLS), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVmLS), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #   ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 #   endif
-     &                      MIXING(ng) % Lscale)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVmLS)), InpRec,  &
-     &                          TRIM(ncname)
+#   ifdef CHECKSUM
+     &                        MIXING(ng) % Lscale,                      &
+     &                        checksum = Fhash)
+#   else
+     &                        MIXING(ng) % Lscale)
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVmLS)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVmLS)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,idVmLS)), Fmin, Fmax
+#   endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVmLS)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVmLS)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -1337,28 +1872,51 @@
         IF (get_var(idVmKK).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVmKK)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVmKK), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVmKK), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #   ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 #   endif
-     &                      MIXING(ng) % Akk)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVmKK)), InpRec,  &
-     &                          TRIM(ncname)
+#   ifdef CHECKSUM
+     &                        MIXING(ng) % Akk,                         &
+     &                        checksum = Fhash)
+#   else
+     &                        MIXING(ng) % Akk)
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVmKK)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVmKK)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,idVmKK)), Fmin, Fmax
+#   endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVmKK)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVmKK)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -1369,28 +1927,51 @@
         IF (get_var(idVmKP).and.Perfect3D) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVmKP)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVmKP), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVmKP), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #    ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 #    endif
-     &                      MIXING(ng) % Akp)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVmKP)), InpRec,  &
-     &                          TRIM(ncname)
+#    ifdef CHECKSUM
+     &                        MIXING(ng) % Akp,                         &
+     &                        checksum = Fhash)
+#    else
+     &                        MIXING(ng) % Akp)
+#    endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVmKP)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#    ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVmKP)), Fmin, Fmax,    &
+     &                            Fhash
+#    else
+                WRITE (stdout,70) TRIM(Vname(2,idVmKP)), Fmin, Fmax
+#    endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVmKP)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVmKP)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -1405,28 +1986,52 @@
           IF (get_var(idfrac(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idfrac(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idfrac(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idfrac(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % bed_frac(:,:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idfrac(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % bed_frac(:,:,:,i),         &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % bed_frac(:,:,:,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idfrac(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idfrac(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idfrac(i))),           &
+     &                              Fmin, Fmax
+#   endif
+
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idfrac(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idfrac(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -1436,28 +2041,52 @@
           IF (get_var(idBmas(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idBmas(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idBmas(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idBmas(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % bed_mass(:,:,:,Tindex,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idBmas(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % bed_mass(:,:,:,Tindex,i),  &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % bed_mass(:,:,:,Tindex,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idBmas(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idBmas(i))),           &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idBmas(i))),           &
+     &                              Fmin, Fmax
+#  endif
+
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idBmas(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idBmas(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -1469,28 +2098,52 @@
           IF (get_var(idSbed(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idSbed(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idSbed(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idSbed(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % bed(:,:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idSbed(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % bed(:,:,:,i),              &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % bed(:,:,:,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idSbed(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idSbed(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idSbed(i))),           &
+     &                              Fmin, Fmax
+#   endif
+
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idSbed(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idSbed(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -1504,28 +2157,52 @@
           IF (get_var(idUbld(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idUbld(i))), varid)
-            gtype=var_flag(varid)*u2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idUbld(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*u2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idUbld(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #    ifdef MASKING
-     &                        GRID(ng) % umask,                         &
+     &                          GRID(ng) % umask,                       &
 #    endif
-     &                        SEDBED(ng) % bedldu(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idUbld(i))),     &
-     &                            InpRec, TRIM(ncname)
+#    ifdef CHECKSUM
+     &                          SEDBED(ng) % bedldu(:,:,i),             &
+     &                          checksum = Fhash)
+#    else
+     &                          SEDBED(ng) % bedldu(:,:,i))
+#    endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idUbld(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#    ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idUbld(i))),           &
+     &                              Fmin, Fmax, Fhash
+#    else
+                  WRITE (stdout,70) TRIM(Vname(2,idUbld(i))),           &
+     &                              Fmin, Fmax
+#    endif
+
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idUbld(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idUbld(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -1533,28 +2210,52 @@
           IF (get_var(idVbld(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idVbld(i))), varid)
-            gtype=var_flag(varid)*v2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idVbld(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*v2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idVbld(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #    ifdef MASKING
-     &                        GRID(ng) % vmask,                         &
+     &                          GRID(ng) % vmask,                       &
 #    endif
-     &                        SEDBED(ng) % bedldv(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idVbld(i))),     &
-     &                            InpRec, TRIM(ncname)
+#    ifdef CHECKSUM
+     &                          SEDBED(ng) % bedldv(:,:,i),             &
+     &                          checksum = Fhash)
+#    else
+     &                          SEDBED(ng) % bedldv(:,:,i))
+#    endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idVbld(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#    ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idVbld(i))),           &
+     &                              Fmin, Fmax, Fhash
+#    else
+                  WRITE (stdout,70) TRIM(Vname(2,idVbld(i))),           &
+     &                              Fmin, Fmax
+#    endif
+
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idVbld(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idVbld(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -1570,28 +2271,52 @@
           IF (get_var(idBott(i)).and.have_var(idBott(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idBott(i))), varid)
-            gtype=var_flag(varid)*r2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idBott(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idBott(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % bottom(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idBott(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % bottom(:,:,i),             &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % bottom(:,:,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idBott(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idBott(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idBott(i))),           &
+     &                              Fmin, Fmax
+#   endif
+
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idBott(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idBott(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2052,28 +2777,50 @@
         IF (get_var(idFsur)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idFsur)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idFsur), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idFsur), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 # endif
-     &                      OCEAN(ng) % tl_zeta(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idFsur)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_zeta(:,:,Tindex),          &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % tl_zeta(:,:,Tindex))
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idFsur)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+# endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idFsur)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2086,25 +2833,48 @@
           ifield=idSbry(isFsur)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, r2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_zeta_obc(:,:,:,      &
-     &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, r2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_zeta_obc(:,:,:,    &
+     &                                                        Tindex),  &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % tl_zeta_obc(:,:,:,    &
+     &                                                        Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2115,28 +2885,50 @@
         IF (get_var(idUbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*u2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 # endif
-     &                      OCEAN(ng) % tl_ubar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUbar)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_ubar(:,:,Tindex),          &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % tl_ubar(:,:,Tindex))
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+# endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2149,25 +2941,48 @@
           ifield=idSbry(isUbar)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, u2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_ubar_obc(:,:,:,      &
-     &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, u2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_ubar_obc(:,:,:,    &
+     &                                                        Tindex),  &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % tl_ubar_obc(:,:,:,    &
+     &                                                        Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2178,28 +2993,50 @@
         IF (get_var(idVbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*v2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 # endif
-     &                      OCEAN(ng) % tl_vbar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVbar)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_vbar(:,:,Tindex),          &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % tl_vbar(:,:,Tindex))
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+# endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2212,25 +3049,48 @@
           ifield=idSbry(isVbar)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, v2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_vbar_obc(:,:,:,      &
-     &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, v2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_vbar_obc(:,:,:,    &
+     &                                                        Tindex),  &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % tl_vbar_obc(:,:,:,    &
+     &                                                        Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2242,30 +3102,53 @@
         IF (get_var(idUsms).and.get_adjust) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          scale=1.0_r8
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, Nfrec(ng),           &
-     &                      scale, Fmin, Fmax,                          &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            scale=1.0_dp
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
+     &                        scale, Fmin, Fmax,                        &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      FORCES(ng) % tl_ustr(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUsms)),          &
-     &                          InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % tl_ustr(:,:,:,Tindex),       &
+     &                        checksum = Fhash)
+#  else
+     &                        FORCES(ng) % tl_ustr(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUsms))//               &
+     &                            ', adjusted tl_ustr', Fmin, Fmax,     &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUsms))//               &
+     &                            ', adjusted tl_ustr', Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUsms))//                 &
-     &                          ', adjusted tl_ustr', Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2275,30 +3158,53 @@
         IF (get_var(idVsms).and.get_adjust) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          scale=1.0_r8
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, Nfrec(ng),           &
-     &                      scale, Fmin, Fmax,                          &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            scale=1.0_dp
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
+     &                        scale, Fmin, Fmax,                        &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      FORCES(ng) % tl_vstr(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVsms)),          &
-     &                          InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % tl_vstr(:,:,:,Tindex),       &
+     &                        checksum = Fhash)
+#  else
+     &                        FORCES(ng) % tl_vstr(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVsms))//               &
+     &                            ', adjusted tl_vstr', Fmin, Fmax,     &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVsms))//               &
+     &                            ', adjusted tl_vstr', Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVsms))//                 &
-     &                          ', adjusted tl_vstr', Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2306,32 +3212,55 @@
 # ifdef SOLVE3D
 !
 !  Read in tangent linear 3D U-momentum component.
+
 !
         IF (get_var(idUvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      OCEAN(ng) % tl_u(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUvel)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_u(:,:,:,Tindex),           &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % tl_u(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2344,25 +3273,48 @@
           ifield=idSbry(isUvel)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, u3dvar,                        &
-     &                           LBij, UBij, 1, N(ng), Nbrec(ng),       &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_u_obc(:,:,:,:,       &
-     &                                                   Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, u3dvar,                      &
+     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_u_obc(:,:,:,:,     &
+     &                                                     Tindex),     &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % tl_u_obc(:,:,:,:,     &
+     &                                                     Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2373,28 +3325,50 @@
         IF (get_var(idVvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      OCEAN(ng) % tl_v(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVvel)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_v(:,:,:,Tindex),           &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % tl_v(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2407,25 +3381,48 @@
           ifield=idSbry(isVvel)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, v3dvar,                        &
-     &                           LBij, UBij, 1, N(ng), Nbrec(ng),       &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_v_obc(:,:,:,:,       &
-     &                                                   Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, v3dvar,                      &
+     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
+     &                             Fscl, Fmin, Fmax,                    &
+#   ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_v_obc(:,:,:,:,     &
+     &                                                     Tindex),     &
+     &                             checksum = Fhash)
+#   else
+     &                             BOUNDARY(ng) % tl_v_obc(:,:,:,:,     &
+     &                                                     Tindex))
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2437,29 +3434,51 @@
           IF (get_var(idTvar(itrc))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTvar(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTvar(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTvar(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          Fscl, Fmin, Fmax,                       &
 #  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #  endif
-     &                        OCEAN(ng) % tl_t(:,:,:,Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % tl_t(:,:,:,Tindex,itrc),    &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % tl_t(:,:,:,Tindex,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),          &
-     &                            Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTvar(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2474,25 +3493,48 @@
             ifield=idSbry(isTvar(itrc))
             foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)), &
      &                          varid)
-            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
-     &                             Vname(1,ifield), varid,              &
-     &                             InpRec, r3dvar,                      &
-     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
-     &                             Fscl, Fmin, Fmax,                    &
-     &                             BOUNDARY(ng) % tl_t_obc(:,:,:,:,     &
-     &                                                     Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
-     &                            InpRec, TRIM(ncname)
+            IF (foundit) THEN
+              status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,        &
+     &                               Vname(1,ifield), varid,            &
+     &                               InpRec, r3dvar,                    &
+     &                               LBij, UBij, 1, N(ng), Nbrec(ng),   &
+     &                               Fscl, Fmin, Fmax,                  &
+#   ifdef CHECKSUM
+     &                               BOUNDARY(ng) % tl_t_obc(:,:,:,:,   &
+     &                                                    Tindex,itrc), &
+     &                               checksum = Fhash)
+#   else
+     &                               BOUNDARY(ng) % tl_t_obc(:,:,:,:,   &
+     &                                                    Tindex,itrc))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,ifield)),      &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,  &
+     &                              Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,ifield)),        &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2504,33 +3546,58 @@
 !
         DO itrc=1,NT(ng)
           IF (get_var(idTsur(itrc)).and.get_adjust.and.                 &
-     &        Lstflux(itrc,ng)) THEN
+    &        Lstflux(itrc,ng)) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTsur(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            scale=1.0_r8
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTsur(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
-     &                        scale, Fmin, Fmax,                        &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              scale=1.0_dp
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTsur(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nfrec(ng),       &
+     &                          scale, Fmin, Fmax,                      &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        FORCES(ng)% tl_tflux(:,:,:,Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          FORCES(ng)% tl_tflux(:,:,:,             &
+     &                                               Tindex,itrc),      &
+     &                          checksum = Fhash)
+#  else
+     &                          FORCES(ng)% tl_tflux(:,:,:,             &
+     &                                               Tindex,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//       &
+     &                              ', adjusted tl_tflux', Fmin, Fmax,  &
+     &                              Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//       &
+     &                              ', adjusted tl_tflux', Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//         &
-     &                            ', adjusted tl_tflux', Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTsur(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2545,28 +3612,51 @@
           IF (get_var(idfrac(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idfrac(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idfrac(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idfrac(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % tl_bed_frac(:,:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idfrac(i))),     &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          SEDBED(ng) % tl_bed_frac(:,:,:,i),      &
+     &                          checksum = Fhash)
+#  else
+     &                          SEDBED(ng) % tl_bed_frac(:,:,:,i))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idfrac(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idfrac(i))),           &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idfrac(i))),           &
+     &                              Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idfrac(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idfrac(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2577,28 +3667,53 @@
           IF (get_var(idBmas(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idBmas(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idBmas(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idBmas(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % tl_bed_mass(:,:,:,Tindex,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idBmas(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % tl_bed_mass(:,:,:,         &
+     &                                                   Tindex,i),     &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % tl_bed_mass(:,:,:,         &
+     &                                                   Tindex,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idBmas(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idBmas(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idBmas(i))),           &
+     &                              Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idBmas(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idBmas(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2610,28 +3725,51 @@
           IF (get_var(idSbed(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idSbed(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idSbed(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idSbed(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % tl_bed(:,:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idSbed(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % tl_bed(:,:,:,i),           &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % tl_bed(:,:,:,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idSbed(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idSbed(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idSbed(i))),           &
+     &                              Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idSbed(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idSbed(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2645,28 +3783,51 @@
           IF (get_var(idUbld(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idUbld(i))), varid)
-            gtype=var_flag(varid)*u2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idUbld(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*u2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idUbld(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #    ifdef MASKING
-     &                        GRID(ng) % umask,                         &
+     &                          GRID(ng) % umask,                       &
 #    endif
-     &                        SEDBED(ng) % tl_bedldu(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idUbld(i))),     &
-     &                            InpRec, TRIM(ncname)
+#    ifdef CHECKSUM
+     &                          SEDBED(ng) % tl_bedldu(:,:,i),          &
+     &                          checksum = Fhash)
+#    else
+     &                          SEDBED(ng) % tl_bedldu(:,:,i))
+#    endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idUbld(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#    ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idUbld(i))),           &
+     &                              Fmin, Fmax, Fhash
+#    else
+                  WRITE (stdout,70) TRIM(Vname(2,idUbld(i))),           &
+     &                              Fmin, Fmax
+#    endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idUbld(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idUbld(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2674,28 +3835,51 @@
           IF (get_var(idVbld(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idVbld(i))), varid)
-            gtype=var_flag(varid)*v2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idVbld(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*v2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idVbld(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #    ifdef MASKING
-     &                        GRID(ng) % vmask,                         &
+     &                          GRID(ng) % vmask,                       &
 #    endif
-     &                        SEDBED(ng) % tl_bedldv(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idVbld(i))),     &
-     &                            InpRec, TRIM(ncname)
+#    ifdef CHECKSUM
+     &                          SEDBED(ng) % tl_bedldv(:,:,i),          &
+     &                          checksum = Fhash)
+#    else
+     &                          SEDBED(ng) % tl_bedldv(:,:,i))
+#    endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idVbld(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#    ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idVbld(i))),           &
+     &                              Fmin, Fmax, Fhash
+#    else
+                  WRITE (stdout,70) TRIM(Vname(2,idVbld(i))),           &
+     &                              Fmin, Fmax
+#    endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idVbld(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idVbld(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2711,28 +3895,51 @@
           IF (get_var(idBott(i)).and.have_var(idBott(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idBott(i))), varid)
-            gtype=var_flag(varid)*r2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idBott(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idBott(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % tl_bottom(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idBott(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % tl_bottom(:,:,i),          &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % tl_bottom(:,:,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idBott(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idBott(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idBott(i))),           &
+     &                              Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idBott(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idBott(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -2755,28 +3962,50 @@
         IF (get_var(idFsur)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idFsur)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idFsur), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idFsur), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 # endif
-     &                      OCEAN(ng) % ad_zeta(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idFsur)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % ad_zeta(:,:,Tindex),          &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % ad_zeta(:,:,Tindex))
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idFsur)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+# endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idFsur)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2789,25 +4018,48 @@
           ifield=idSbry(isFsur)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, r2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % ad_zeta_obc(:,:,:,      &
-     &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, r2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % ad_zeta_obc(:,:,:,    &
+     &                                                        Tindex),  &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % ad_zeta_obc(:,:,:,    &
+     &                                                        Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2818,28 +4070,50 @@
         IF (get_var(idUbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*u2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 # endif
-     &                      OCEAN(ng) % ad_ubar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUbar)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % ad_ubar(:,:,Tindex),          &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % ad_ubar(:,:,Tindex))
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+# endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2852,25 +4126,48 @@
           ifield=idSbry(isUbar)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, u2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % ad_ubar_obc(:,:,:,      &
-     &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, u2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % ad_ubar_obc(:,:,:,    &
+     &                                                        Tindex),  &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % ad_ubar_obc(:,:,:,    &
+     &                                                        Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2881,28 +4178,50 @@
         IF (get_var(idVbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*v2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 # endif
-     &                      OCEAN(ng) % ad_vbar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVbar)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % ad_vbar(:,:,Tindex),          &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % ad_vbar(:,:,Tindex))
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+# endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2915,25 +4234,49 @@
           ifield=idSbry(isVbar)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, v2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % ad_vbar_obc(:,:,:,      &
-     &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, v2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % ad_vbar_obc(:,:,:,    &
+     &                                                        Tindex),  &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % ad_vbar_obc(:,:,:,    &
+     &                                                        Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2945,30 +4288,53 @@
         IF (get_var(idUsms)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          scale=1.0_r8
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, Nfrec(ng),           &
-     &                      scale, Fmin, Fmax,                          &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            scale=1.0_dp
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
+     &                        scale, Fmin, Fmax,                        &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      FORCES(ng) % ad_ustr(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUsms)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % ad_ustr(:,:,:,Tindex),       &
+     &                        checksum = Fhash)
+#  else
+     &                        FORCES(ng) % ad_ustr(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUsms))//               &
+     &                            ', adjusted ad_ustr', Fmin, Fmax,     &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUsms))//               &
+     &                            ', adjusted ad_ustr', Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUsms))//                 &
-     &                          ', adjusted ad_ustr', Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -2978,30 +4344,53 @@
         IF (get_var(idVsms)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          scale=1.0_r8
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, Nfrec(ng),           &
-     &                      scale, Fmin, Fmax,                          &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            scale=1.0_dp
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
+     &                        scale, Fmin, Fmax,                        &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      FORCES(ng) % ad_vstr(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVsms)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % ad_vstr(:,:,:,Tindex),       &
+     &                        checksum = Fhash)
+#  else
+     &                        FORCES(ng) % ad_vstr(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVsms))//               &
+     &                            ', adjusted ad_vstr', Fmin, Fmax,     &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVsms))//               &
+     &                            ', adjusted ad_vstr', Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVsms))//                 &
-     &                          ', adjusted ad_vstr', Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -3013,28 +4402,51 @@
         IF (get_var(idUvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      OCEAN(ng) % ad_u(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUvel)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % ad_u(:,:,:,Tindex),           &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % ad_u(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+#  endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -3047,25 +4459,48 @@
           ifield=idSbry(isUvel)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, u3dvar,                        &
-     &                           LBij, UBij, 1, N(ng), Nbrec(ng),       &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % ad_u_obc(:,:,:,:,       &
-     &                                                   Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, u3dvar,                      &
+     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
+     &                             Fscl, Fmin, Fmax,                    &
+#   ifdef CHECKSUM
+     &                             BOUNDARY(ng) % ad_u_obc(:,:,:,:,     &
+     &                                                     Tindex),     &
+     &                             checksum = Fhash)
+#   else
+     &                             BOUNDARY(ng) % ad_u_obc(:,:,:,:,     &
+     &                                                     Tindex))
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -3076,28 +4511,51 @@
         IF (get_var(idVvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      OCEAN(ng) % ad_v(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVvel)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % ad_v(:,:,:,Tindex),           &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % ad_v(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+#  endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -3110,25 +4568,48 @@
           ifield=idSbry(isVvel)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, v3dvar,                        &
-     &                           LBij, UBij, 1, N(ng), Nbrec(ng),       &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % ad_v_obc(:,:,:,:,       &
-     &                                                   Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, v3dvar,                      &
+     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
+     &                             Fscl, Fmin, Fmax,                    &
+#   ifdef CHECKSUM
+     &                             BOUNDARY(ng) % ad_v_obc(:,:,:,:,     &
+     &                                                     Tindex),     &
+     &                             checksum = Fhash)
+#   else
+     &                             BOUNDARY(ng) % ad_v_obc(:,:,:,:,     &
+     &                                                     Tindex))
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -3140,29 +4621,51 @@
           IF (get_var(idTvar(itrc))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTvar(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTvar(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTvar(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          Fscl, Fmin, Fmax,                       &
 #  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #  endif
-     &                        OCEAN(ng) % ad_t(:,:,:,Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % ad_t(:,:,:,Tindex,itrc),    &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % ad_t(:,:,:,Tindex,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmin, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),          &
-     &                            Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTvar(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3177,25 +4680,48 @@
             ifield=idSbry(isTvar(itrc))
             foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)), &
      &                          varid)
-            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
-     &                             Vname(1,ifield), varid,              &
-     &                             InpRec, r3dvar,                      &
-     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
-     &                             Fscl, Fmin, Fmax,                    &
-     &                             BOUNDARY(ng) % ad_t_obc(:,:,:,:,     &
-     &                                                     Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
-     &                            InpRec, TRIM(ncname)
+            IF (foundit) THEN
+              status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,        &
+     &                               Vname(1,ifield), varid,            &
+     &                               InpRec, r3dvar,                    &
+     &                               LBij, UBij, 1, N(ng), Nbrec(ng),   &
+     &                               Fscl, Fmin, Fmax,                  &
+#   ifdef CHECKSUM
+     &                               BOUNDARY(ng) % ad_t_obc(:,:,:,:,   &
+     &                                                    Tindex,itrc), &
+     &                               checksum = Fhash)
+#   else
+     &                               BOUNDARY(ng) % ad_t_obc(:,:,:,:,   &
+     &                                                    Tindex,itrc))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,ifield)),      &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,  &
+     &                              Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,ifield)),        &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3209,30 +4735,55 @@
           IF (get_var(idTsur(itrc)).and.Lstflux(itrc,ng)) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTsur(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            scale=1.0_r8
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTsur(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
-     &                        scale, Fmin, Fmax,                        &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              scale=1.0_dp
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTsur(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nfrec(ng),       &
+     &                          scale, Fmin, Fmax,                      &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        FORCES(ng) % ad_tflux(:,:,:,Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          FORCES(ng) % ad_tflux(:,:,:,            &
+     &                                                Tindex,itrc),     &
+     &                          checksum = Fhash)
+#   else
+     &                          FORCES(ng) % ad_tflux(:,:,:,            &
+     &                                                Tindex,itrc))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//       &
+     &                              ', adjusted ad_tflux', Fmin, Fmax,  &
+     &                              Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//       &
+     &                              ', adjusted ad_tflux', Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//         &
-     &                            ', adjusted ad_tflux', Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTsur(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3247,28 +4798,51 @@
           IF (get_var(idfrac(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idfrac(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idfrac(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idfrac(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % ad_bed_frac(:,:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idfrac(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % ad_bed_frac(:,:,:,i),      &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % ad_bed_frac(:,:,:,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idfrac(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idfrac(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idfrac(i))),           &
+     &                              Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idfrac(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idfrac(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3278,28 +4852,53 @@
           IF (get_var(idBmas(i))) THEN
             foundit=find_string(var_name, n_var,
      &                          TRIM(Vname(1,idBmas(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idBmas(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idBmas(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % ad_bed_mass(:,:,:,Tindex,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idBmas(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % ad_bed_mass(:,:,:,         &
+                                                         Tindex,i),     &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % ad_bed_mass(:,:,:,         &
+     &                                                   Tindex,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idBmas(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idBmas(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idBmas(i))),           &
+     &                              Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idBmas(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idBmas(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3311,28 +4910,51 @@
           IF (get_var(idSbed(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idSbed(i))), varid)
-            gtype=var_flag(varid)*b3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idSbed(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nbed,              &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*b3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idSbed(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nbed,            &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % ad_bed(:,:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idSbed(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % ad_bed(:,:,:,i),           &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % ad_bed(:,:,:,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idSbed(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idSbed(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idSbed(i))),           &
+     &                              Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idSbed(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idSbed(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3345,28 +4967,51 @@
           IF (get_var(idUbld(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idUbld(i))), varid)
-            gtype=var_flag(varid)*u2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idUbld(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*u2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idUbld(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #    ifdef MASKING
-     &                        GRID(ng) % umask,                         &
+     &                          GRID(ng) % umask,                       &
 #    endif
-     &                        SEDBED(ng) % ad_bedldu(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idUbld(i))),     &
-     &                            InpRec, TRIM(ncname)
+#    ifdef CHECKSUM
+     &                          SEDBED(ng) % ad_bedldu(:,:,i),          &
+     &                          checksum = Fhash)
+#    else
+     &                          SEDBED(ng) % ad_bedldu(:,:,i))
+#    endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idUbld(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#    ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idUbld(i))),           &
+     &                              Fmin, Fmax, Fhash
+#    else
+                  WRITE (stdout,70) TRIM(Vname(2,idUbld(i))),           &
+     &                              Fmin, Fmax
+#    endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idUbld(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idUbld(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3374,28 +5019,51 @@
           IF (get_var(idVbld(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idVbld(i))), varid)
-            gtype=var_flag(varid)*v2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idVbld(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*v2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idVbld(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #    ifdef MASKING
-     &                        GRID(ng) % vmask,                         &
+     &                          GRID(ng) % vmask,                       &
 #    endif
-     &                        SEDBED(ng) % ad_bedldv(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idVbld(i))),     &
-     &                            InpRec, TRIM(ncname)
+#    ifdef CHECKSUM
+     &                          SEDBED(ng) % ad_bedldv(:,:,i),          &
+     &                          checksum = Fhash)
+#    else
+     &                          SEDBED(ng) % ad_bedldv(:,:,i))
+#    endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idVbld(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#    ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idVbld(i))),           &
+     &                              Fmin, Fmax, Fhash
+#    else
+                  WRITE (stdout,70) TRIM(Vname(2,idVbld(i))),           &
+     &                              Fmin, Fmax
+#    endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idVbld(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idVbld(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3410,28 +5078,51 @@
           IF (get_var(idBott(i)).and.have_var(idBott(i))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idBott(i))), varid)
-            gtype=var_flag(varid)*r2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idBott(i)), varid,                &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idBott(i)), varid,              &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
-     &                        SEDBED(ng) % ad_bottom(:,:,i))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idBott(i))),     &
-     &                            InpRec, TRIM(ncname)
+#   ifdef CHECKSUM
+     &                          SEDBED(ng) % ad_bottom(:,:,i),          &
+     &                          checksum = Fhash)
+#   else
+     &                          SEDBED(ng) % ad_bottom(:,:,i))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idBott(i))),   &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idBott(i))),           &
+     &                              Fmin, Fmax, Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,idBott(i))),           &
+     &                              Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idBott(i))), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idBott(i))),     &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -3457,37 +5148,60 @@
         IF (get_var(idFsur).and.((model.eq.14).or.(model.eq.15))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idFsur)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idFsur), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
-# ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
-# endif
-     &                      OCEAN(ng) % b_zeta(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idFsur)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
-            END IF
-          END IF
-# ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idFsur), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+# ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+# endif
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % b_zeta(:,:,Tindex),           &
+     &                        checksum = Fhash)
+# else
      &                        OCEAN(ng) % b_zeta(:,:,Tindex))
 # endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idFsur)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+# endif
+
+              END IF
+            END IF
+# ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % b_zeta(:,:,Tindex))
+# endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idFsur)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 !
 !  Read in 2D U-momentum component normalization factor.
@@ -3495,37 +5209,59 @@
         IF (get_var(idUbar).and.((model.eq.14).or.(model.eq.15))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*u2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
-# ifdef MASKING
-     &                      GRID(ng) % umask,                           &
-# endif
-     &                      OCEAN(ng) % b_ubar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUbar)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
-            END IF
-          END IF
-# ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+# ifdef MASKING
+     &                        GRID(ng) % umask,                         &
+# endif
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % b_ubar(:,:,Tindex),           &
+     &                        checksum = Fhash)
+# else
      &                        OCEAN(ng) % b_ubar(:,:,Tindex))
 # endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+# endif
+              END IF
+            END IF
+# ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % b_ubar(:,:,Tindex))
+# endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idUbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 !
 !  Read in 2D V-momentum component normalization factor.
@@ -3533,37 +5269,60 @@
         IF (get_var(idVbar).and.((model.eq.14).or.(model.eq.15))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*v2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                       LBi, UBi, LBj, UBj,                        &
-     &                      Fscl, Fmin, Fmax,                           &
-# ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
-# endif
-     &                      OCEAN(ng) % b_vbar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVbar)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
-            END IF
-          END IF
-# ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+# ifdef MASKING
+     &                        GRID(ng) % vmask,                         &
+# endif
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % b_vbar(:,:,Tindex),           &
+     &                        checksum = Fhash)
+# else
      &                        OCEAN(ng) % b_vbar(:,:,Tindex))
 # endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+# endif
+              END IF
+            END IF
+# ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % b_vbar(:,:,Tindex))
+# endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idVbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+
+          END IF
         END IF
 # ifdef SOLVE3D
 !
@@ -3572,37 +5331,60 @@
         IF (get_var(idUvel).and.((model.eq.14).or.(model.eq.15))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
-#  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
-#  endif
-     &                      OCEAN(ng) % b_u(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUvel)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+#  ifdef MASKING
+     &                        GRID(ng) % umask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % b_u(:,:,:,Tindex),            &
+     &                        checksum = Fhash)
+#  else
      &                        OCEAN(ng) % b_u(:,:,:,Tindex))
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % b_u(:,:,:,Tindex))
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idUvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+
+          END IF
         END IF
 !
 !  Read in 3D V-momentum component normalization factor.
@@ -3610,37 +5392,60 @@
         IF (get_var(idVvel).and.((model.eq.14).or.(model.eq.15))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
-#  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
-#  endif
-     &                      OCEAN(ng) % b_v(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVvel)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+#  ifdef MASKING
+     &                        GRID(ng) % vmask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % b_v(:,:,:,Tindex),            &
+     &                        checksum = Fhash)
+#  else
      &                        OCEAN(ng) % b_v(:,:,:,Tindex))
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % b_v(:,:,:,Tindex))
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idVvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+
+          END IF
         END IF
 !
 !  Read in tracer type variables normalization factor.
@@ -3650,38 +5455,60 @@
      &        ((model.eq.14).or.(model.eq.15))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTvar(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTvar(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        Fscl, Fmin, Fmax,                         &
-#  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
-#  endif
-     &                        OCEAN(ng) % b_t(:,:,:,Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),  &
-     &                            InpRec, TRIM(ncname)
-              END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
-            ELSE
-              IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),          &
-     &                            Fmin, Fmax
-              END IF
-            END IF
-#  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTvar(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
-     &                          NghostPoints,                           &
-     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          Fscl, Fmin, Fmax,                       &
+#  ifdef MASKING
+     &                          GRID(ng) % rmask,                       &
+#  endif
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % b_t(:,:,:,Tindex,itrc),     &
+     &                          checksum = Fhash)
+#  else
      &                          OCEAN(ng) % b_t(:,:,:,Tindex,itrc))
 #  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
+              END IF
+#  ifdef DISTRIBUTE
+              CALL mp_exchange3d (ng, MyRank, IDmod, 1,                 &
+     &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
+     &                            NghostPoints,                         &
+     &                            EWperiodic(ng), NSperiodic(ng),       &
+     &                            OCEAN(ng) % b_t(:,:,:,Tindex,itrc))
+#  endif
+            ELSE
+              IF (Master) THEN
+                WRITE (stdout,80) string, TRIM(Vname(1,idTvar(itrc))),  &
+     &                          TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
+              END IF
+            END IF
           END IF
         END DO
 # endif
@@ -3701,7 +5528,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isFsur))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isFsur))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -3720,7 +5547,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isUbar))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isUbar))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -3739,7 +5566,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isVbar))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isVbar))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -3759,7 +5586,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isUvel))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isUvel))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -3778,7 +5605,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isVvel))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isVvel))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -3799,7 +5626,7 @@
             IF (FoundError(exit_flag, NoError, __LINE__,                &
      &                     __FILE__)) RETURN
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
+              WRITE (stdout,75) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
      &                          Fmin, Fmax
             END IF
           END IF
@@ -3813,37 +5640,59 @@
         IF (get_var(idUsms).and.(model.eq.17)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*u2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
-#  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
-#  endif
-     &                      FORCES(ng) % b_sustr)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUsms)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUsms)), Fmin, Fmax
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+#  ifdef MASKING
+     &                        GRID(ng) % umask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % b_sustr,                     &
+     &                        checksum = Fhash)
+#  else
      &                        FORCES(ng) % b_sustr)
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUsms)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUsms)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          FORCES(ng) % b_sustr)
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idUsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 !
 !  Read in surface V-momentum stress normalization factors.
@@ -3851,37 +5700,60 @@
         IF (get_var(idVsms).and.(model.eq.17)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*v2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
-#  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
-#  endif
-     &                      FORCES(ng) % b_svstr)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVsms)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVsms)), Fmin, Fmax
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+#  ifdef MASKING
+     &                        GRID(ng) % vmask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % b_svstr,                     &
+     &                        checksum = Fhash)
+#  else
      &                        FORCES(ng) % b_svstr)
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVsms)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVsms)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          FORCES(ng) % b_svstr)
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idVsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+
+          END IF
         END IF
 # endif
 # if defined ADJUST_STFLUX && defined SOLVE3D
@@ -3893,38 +5765,60 @@
      &        Lstflux(itrc,ng)) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTsur(itrc))), varid)
-            gtype=var_flag(varid)*r2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTsur(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r2dvar
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTsur(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
 #  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #  endif
-     &                        FORCES(ng) % b_stflx(:,:,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          FORCES(ng) % b_stflx(:,:,itrc),         &
+     &                          checksum = Fhash)
+#  else
+     &                          FORCES(ng) % b_stflx(:,:,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc))),        &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
+#  ifdef DISTRIBUTE
+              CALL mp_exchange2d (ng, MyRank, IDmod, 1,                 &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            NghostPoints,                         &
+     &                            EWperiodic(ng), NSperiodic(ng),       &
+     &                            FORCES(ng) % b_stflx(:,:,itrc))
+#  endif
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc))),          &
-     &                            Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTsur(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
-     &                        FORCES(ng) % b_stflx(:,:,itrc))
-#  endif
           END IF
         END DO
 # endif
@@ -3947,37 +5841,60 @@
         IF (get_var(idFsur).and.((model.eq.10).or.(model.eq.11))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idFsur)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idFsur), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
-# ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
-# endif
-     &                      OCEAN(ng) % e_zeta(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idFsur)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
-            END IF
-          END IF
-# ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idFsur), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+# ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+# endif
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % e_zeta(:,:,Tindex),           &
+     &                        checksum = Fhash)
+# else
      &                        OCEAN(ng) % e_zeta(:,:,Tindex))
 # endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idFsur)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+# endif
+              END IF
+            END IF
+# ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % e_zeta(:,:,Tindex))
+# endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idFsur)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+
+          END IF
         END IF
 !
 !  Read in 2D U-momentum component standard deviation.
@@ -3985,37 +5902,59 @@
         IF (get_var(idUbar).and.((model.eq.10).or.(model.eq.11))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*u2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
-# ifdef MASKING
-     &                      GRID(ng) % umask,                           &
-# endif
-     &                      OCEAN(ng) % e_ubar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUbar)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
-            END IF
-          END IF
-# ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+# ifdef MASKING
+     &                        GRID(ng) % umask,                         &
+# endif
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % e_ubar(:,:,Tindex),           &
+     &                        checksum = Fhash)
+# else
      &                        OCEAN(ng) % e_ubar(:,:,Tindex))
 # endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+# endif
+              END IF
+            END IF
+# ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % e_ubar(:,:,Tindex))
+# endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idUbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 !
 !  Read in 2D V-momentum component standard deviation.
@@ -4023,37 +5962,61 @@
         IF (get_var(idVbar).and.((model.eq.10).or.(model.eq.11))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*v2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
-# ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
-# endif
-     &                      OCEAN(ng) % e_vbar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVbar)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
-            END IF
-          END IF
-# ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+# ifdef MASKING
+     &                        GRID(ng) % vmask,                         &
+# endif
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % e_vbar(:,:,Tindex),           &
+     &                        checksum = Fhash)
+# else
      &                        OCEAN(ng) % e_vbar(:,:,Tindex))
 # endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+# endif
+
+              END IF
+            END IF
+# ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % e_vbar(:,:,Tindex))
+# endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idVbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+
+          END IF
         END IF
 # ifdef SOLVE3D
 !
@@ -4062,37 +6025,59 @@
         IF (get_var(idUvel).and.((model.eq.10).or.(model.eq.11))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
-#  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
-#  endif
-     &                      OCEAN(ng) % e_u(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUvel)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+#  ifdef MASKING
+     &                        GRID(ng) % umask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % e_u(:,:,:,Tindex),            &
+     &                        checksum = Fhash)
+#  else
      &                        OCEAN(ng) % e_u(:,:,:,Tindex))
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % e_u(:,:,:,Tindex))
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idUvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 !
 !  Read in 3D V-momentum standard deviation.
@@ -4100,37 +6085,60 @@
         IF (get_var(idVvel).and.((model.eq.10).or.(model.eq.11))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
-#  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
-#  endif
-     &                      OCEAN(ng) % e_v(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVvel)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, Fmin, Fmax,                         &
+#  ifdef MASKING
+     &                        GRID(ng) % vmask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % e_v(:,:,:,Tindex),            &
+     &                        checksum = Fhash)
+#  else
      &                        OCEAN(ng) % e_v(:,:,:,Tindex))
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % e_v(:,:,:,Tindex))
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idVvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+
+          END IF
         END IF
 !
 !  Read in tracer type variables standard deviation.
@@ -4140,38 +6148,60 @@
      &        ((model.eq.10).or.(model.eq.11))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTvar(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTvar(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTvar(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          Fscl, Fmin, Fmax,                       &
 #  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #  endif
-     &                        OCEAN(ng) % e_t(:,:,:,Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % e_t(:,:,:,Tindex,itrc),     &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % e_t(:,:,:,Tindex,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
+#  ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          OCEAN(ng) % e_t(:,:,:,Tindex,itrc))
+#  endif
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),          &
-     &                            Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTvar(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
-     &                        OCEAN(ng) % e_t(:,:,:,Tindex,itrc))
-#  endif
           END IF
         END DO
 # endif
@@ -4181,38 +6211,60 @@
         IF (have_var(idKhor).and.((model.eq.10).or.(model.eq.11))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idKhor)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idKhor), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, KhMin(ng), KhMax(ng),                 &
-# ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
-# endif
-     &                      MIXING(ng) % Kh)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idKhor)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idKhor)), KhMin(ng),       &
-     &                          KhMax(ng)
-            END IF
-          END IF
-# ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idKhor), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, KhMin(ng), KhMax(ng),               &
+# ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+# endif
+# ifdef CHECKSUM
+     &                        MIXING(ng) % Kh,                          &
+     &                        checksum = Fhash)
+# else
      &                        MIXING(ng) % Kh)
 # endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idKhor)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idKhor)),                &
+     &                            KhMin(ng), Khmax(ng),  Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idKhor)),                &
+     &                            KhMin(ng), KhMax(ng)
+# endif
+              END IF
+            END IF
+# ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          MIXING(ng) % Kh)
+# endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idKhor)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 # ifdef SOLVE3D
 !
@@ -4221,38 +6273,60 @@
         IF (have_var(idKver).and.((model.eq.10).or.(model.eq.11))) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idKver)),   &
      &                        varid)
-          gtype=var_flag(varid)*w3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idKver), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 0, N(ng),               &
-     &                      Fscl, KvMin(ng), KvMax(ng),                 &
-#  ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
-#  endif
-     &                      MIXING(ng) % Kv)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idKver)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idKver)), KvMin(ng),       &
-     &                          KvMax(ng)
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange3d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*w3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idKver), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj, 0, N(ng),             &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        Fscl, KvMin(ng), KvMax(ng),               &
+#  ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        MIXING(ng) % Kv,                          &
+     &                        checksum = Fhash)
+#  else
      &                        MIXING(ng) % Kv)
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idKver)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idKver)),                &
+     &                            KvMin(ng), KvMax, Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idKver)),                &
+     &                            KvMin(ng), KvMax, Fhash
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          MIXING(ng) % Kv)
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idKver)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 # endif
 # ifdef ADJUST_BOUNDARY
@@ -4271,7 +6345,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isFsur))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isFsur))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -4290,7 +6364,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isUbar))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isUbar))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -4309,7 +6383,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isVbar))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isVbar))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -4329,7 +6403,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isUvel))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isUvel))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -4348,7 +6422,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
           IF (Master) THEN
-            WRITE (stdout,70) TRIM(Vname(1,idSbry(isVvel))),            &
+            WRITE (stdout,75) TRIM(Vname(1,idSbry(isVvel))),            &
      &                        Fmin, Fmax
           END IF
         END IF
@@ -4369,7 +6443,7 @@
             IF (FoundError(exit_flag, NoError, __LINE__,                &
      &                     __FILE__)) RETURN
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
+              WRITE (stdout,75) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
      &                          Fmin, Fmax
             END IF
           END IF
@@ -4383,38 +6457,60 @@
         IF (get_var(idUsms).and.(model.eq.13)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*u2dvar
-          scale=1.0_r8/rho0                 ! N/m2 (Pa) to m2/s2
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      scale, Fmin, Fmax,                          &
-#  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
-#  endif
-     &                      FORCES(ng) % e_sustr)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUsms)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUsms)), Fmin, Fmax
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u2dvar
+            scale=1.0_dp/rho0                   ! N/m2 (Pa) to m2/s2
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        scale, Fmin, Fmax,                        &
+#  ifdef MASKING
+     &                        GRID(ng) % umask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % e_sustr,                     &
+     &                        checksum = Fhash)
+#  else
      &                        FORCES(ng) % e_sustr)
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUsms)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUsms)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          FORCES(ng) % e_sustr)
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idUsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 !
 !  Read in surface V-momentum stress standard deviation.
@@ -4422,38 +6518,60 @@
         IF (get_var(idVsms).and.(model.eq.13)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*v2dvar
-          scale=1.0_r8/rho0                 ! N/m2 (Pa) to m2/s2
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      scale, Fmin, Fmax,                          &
-#  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
-#  endif
-     &                      FORCES(ng) % e_svstr)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVsms)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVsms)), Fmin, Fmax
-            END IF
-          END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v2dvar
+            scale=1.0_dp/rho0                   ! N/m2 (Pa) to m2/s2
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        scale, Fmin, Fmax,                        &
+#  ifdef MASKING
+     &                        GRID(ng) % vmask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % e_svstr,                     &
+     &                        checksum = Fhash)
+#  else
      &                        FORCES(ng) % e_svstr)
 #  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVsms)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVsms)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, MyRank, IDmod, 1,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          FORCES(ng) % e_svstr)
+#  endif
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idVsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
         END IF
 # endif
 # if defined ADJUST_STFLUX && defined SOLVE3D
@@ -4465,43 +6583,65 @@
      &        Lstflux(itrc,ng)) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTsur(itrc))), varid)
-            gtype=var_flag(varid)*r2dvar
-            IF (itrc.eq.itemp) THEN
-              scale=1.0_r8/(rho0*Cp)        ! W/m2 to Celsius m/s
-            ELSE
-              scale=1.0_r8
-            END IF
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-                              Vname(1,idTsur(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        scale, Fmin, Fmax,                        &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r2dvar
+              IF (itrc.eq.itemp) THEN
+                scale=1.0_dp/(rho0*Cp)        ! W/m2 to Celsius m/s
+              ELSE
+                scale=1.0_dp
+              END IF
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTsur(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          scale, Fmin, Fmax,                      &
 #  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #  endif
-     &                        FORCES(ng) % e_stflx(:,:,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          FORCES(ng) % e_stflx(:,:,itrc),         &
+     &                          checksum = Fhash)
+#  else
+     &                          FORCES(ng) % e_stflx(:,:,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc))),        &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
+#  ifdef DISTRIBUTE
+              CALL mp_exchange2d (ng, MyRank, IDmod, 1,                 &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            NghostPoints,                         &
+     &                            EWperiodic(ng), NSperiodic(ng),       &
+     &                            FORCES(ng) % e_stflx(:,:,itrc))
+#  endif
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc))),          &
-     &                            Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTsur(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
-#  ifdef DISTRIBUTE
-          CALL mp_exchange2d (ng, MyRank, IDmod, 1,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
-     &                        FORCES(ng) % e_stflx(:,:,itrc))
-#  endif
           END IF
         END DO
 # endif
@@ -4522,8 +6662,8 @@
 !
 !  Read in next impulse forcing time to process.
 !
-        CALL netcdf_get_fvar (ng, IDmod, ncname, TRIM(tvarnam),         &
-     &                        FrcTime(ng:),                             &
+        CALL netcdf_get_time (ng, IDmod, ncname, TRIM(tvarnam),         &
+     &                        Rclock%DateNumber, FrcTime(ng:),          &
      &                        ncid = ncINPid,                           &
      &                        start = (/InpRec/),                       &
      &                        total = (/1/))
@@ -4535,28 +6675,50 @@
         IF (get_var(idFsur)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idFsur)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idFsur), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idFsur), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 # endif
-     &                      OCEAN(ng) % f_zeta)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idFsur)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % f_zeta,                       &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % f_zeta)
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idFsur)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+# endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idFsur)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4568,28 +6730,50 @@
         IF (get_var(idUbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*u2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      OCEAN(ng) % f_ubar)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUbar)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % f_ubar,                       &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % f_ubar)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4599,28 +6783,50 @@
         IF (get_var(idVbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*v2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      OCEAN(ng) % f_vbar)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVbar)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % f_vbar,                       &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % f_vbar)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4632,28 +6838,50 @@
         IF (get_var(idUvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      OCEAN(ng) % f_u)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUvel)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % f_u,                          &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % f_u)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4663,28 +6891,50 @@
         IF (get_var(idVvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      OCEAN(ng) % f_v)
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVvel)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % f_v,                          &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % f_v)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4695,29 +6945,51 @@
           IF (get_var(idTvar(itrc))) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTvar(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTvar(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTvar(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          Fscl, Fmin, Fmax,                       &
 #  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #  endif
-     &                        OCEAN(ng) % f_t(:,:,:,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % f_t(:,:,:,itrc),            &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % f_t(:,:,:,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),          &
-     &                            Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTvar(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -4726,10 +6998,13 @@
       END IF FRC_STATE
 #endif
 
-#if (defined W4DPSAS || defined TL_W4DPSAS || \
-     defined W4DPSAS_SENSITIVITY)          && \
-    (defined ADJUST_BOUNDARY || defined ADJUST_WSTRESS ||\
-     defined ADJUST_STFLUX)
+#if (defined RBL4DVAR                 || \
+     defined RBL4DVAR_ANA_SENSITIVITY || \
+     defined RBL4DVAR_FCT_SENSITIVITY || \
+     defined TL_RBL4DVAR)             && \
+    (defined ADJUST_BOUNDARY          || \
+     defined ADJUST_STFLUX            || \
+     defined ADJUST_WSTRESS)
 !
 !-----------------------------------------------------------------------
 !  Read in tangent linear forcing corrections.
@@ -4738,7 +7013,7 @@
       TLM_FORCING: IF (model.eq.5) THEN
 !
 !  Set switch to process surface forcing and/or open boundaries during
-!  4DVar minimization.
+!  4D-Var minimization.
 !
         get_adjust=.TRUE.
 
@@ -4751,25 +7026,48 @@
           ifield=idSbry(isFsur)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, r2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_zeta_obc(:,:,:,      &
-     &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, r2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_zeta_obc(:,:,:,    &
+     &                                                        Tindex),  &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % tl_zeta_obc(:,:,:,    &
+     &                                                        Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4781,25 +7079,48 @@
           ifield=idSbry(isUbar)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, u2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_ubar_obc(:,:,:,      &
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, u2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_ubar_obc(:,:,:,    &
+     &                                                      Tindex),    &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % tl_ubar_obc(:,:,:,    &
      &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4811,25 +7132,48 @@
           ifield=idSbry(isVbar)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, v2dvar,                        &
-     &                           LBij, UBij, Nbrec(ng),                 &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_vbar_obc(:,:,:,      &
-     &                                                      Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread2d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, v2dvar,                      &
+     &                             LBij, UBij, Nbrec(ng),               &
+     &                             Fscl, Fmin, Fmax,                    &
+#  ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_vbar_obc(:,:,:,    &
+     &                                                        Tindex),  &
+     &                             checksum = Fhash)
+#  else
+     &                             BOUNDARY(ng) % tl_vbar_obc(:,:,:,    &
+     &                                                        Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4843,25 +7187,48 @@
           ifield=idSbry(isUvel)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, u3dvar,                        &
-     &                           LBij, UBij, 1, N(ng), Nbrec(ng),       &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_u_obc(:,:,:,:,       &
-     &                                                   Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, u3dvar,                      &
+     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
+     &                             Fscl, Fmin, Fmax,                    &
+#   ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_u_obc(:,:,:,:,     &
+     &                                                     Tindex),     &
+     &                             checksum = Fhash)
+#   else
+     &                             BOUNDARY(ng) % tl_u_obc(:,:,:,:,     &
+     &                                                     Tindex))
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4873,25 +7240,49 @@
           ifield=idSbry(isVvel)
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
-          status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,            &
-     &                           Vname(1,ifield), varid,                &
-     &                           InpRec, v3dvar,                        &
-     &                           LBij, UBij, 1, N(ng), Nbrec(ng),       &
-     &                           Fscl, Fmin, Fmax,                      &
-     &                           BOUNDARY(ng) % tl_v_obc(:,:,:,:,       &
-     &                                                   Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,ifield)), InpRec,  &
-     &                          TRIM(ncname)
+          IF (foundit) THEN
+            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
+     &                             Vname(1,ifield), varid,              &
+     &                             InpRec, v3dvar,                      &
+     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
+     &                             Fscl, Fmin, Fmax,                    &
+#   ifdef CHECKSUM
+     &                             BOUNDARY(ng) % tl_v_obc(:,:,:,:,     &
+     &                                                     Tindex),     &
+     &                             checksum = Fhash)
+#   else
+     &                             BOUNDARY(ng) % tl_v_obc(:,:,:,:,     &
+     &                                                     Tindex))
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#   ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
+     &                            Fhash
+#   else
+                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,ifield)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4904,25 +7295,48 @@
             ifield=idSbry(isTvar(itrc))
             foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)), &
      &                          varid)
-            status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,          &
-     &                             Vname(1,ifield), varid,              &
-     &                             InpRec, r3dvar,                      &
-     &                             LBij, UBij, 1, N(ng), Nbrec(ng),     &
-     &                             Fscl, Fmin, Fmax,                    &
-     &                             BOUNDARY(ng) % tl_t_obc(:,:,:,:,     &
-     &                                                     Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
-     &                            InpRec, TRIM(ncname)
+            IF (foundit) THEN
+              status=nf_fread3d_bry (ng, IDmod, ncname, ncINPid,        &
+     &                               Vname(1,ifield), varid,            &
+     &                               InpRec, r3dvar,                    &
+     &                               LBij, UBij, 1, N(ng), Nbrec(ng),   &
+     &                               Fscl, Fmin, Fmax,                  &
+#   ifdef CHECKSUM
+     &                               BOUNDARY(ng) % tl_t_obc(:,:,:,:,   &
+     &                                                    Tindex,itrc), &
+     &                               checksum = Fhash)
+#   else
+     &                               BOUNDARY(ng) % tl_t_obc(:,:,:,:,   &
+     &                                                    Tindex,itrc))
+#   endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,ifield)),      &
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#   ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,  &
+     &                            Fhash
+#   else
+                  WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,ifield)),        &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -4936,30 +7350,53 @@
         IF (get_var(idUsms).and.get_adjust) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          scale=1.0_r8
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, Nfrec(ng),           &
-     &                      scale, Fmin, Fmax,                          &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            scale=1.0_dp
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
+     &                        scale, Fmin, Fmax,                        &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      FORCES(ng) % tl_ustr(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUsms)),          &
-     &                          InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % tl_ustr(:,:,:,Tindex),       &
+     &                        checksum = Fhash)
+#  else
+     &                        FORCES(ng) % tl_ustr(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUsms))//               &
+     &                            ', adjusted tl_ustr', Fmin, Fmax,     &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUsms))//               &
+     &                            ', adjusted tl_ustr', Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUsms))//                 &
-     &                          ', adjusted tl_ustr', Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -4969,30 +7406,53 @@
         IF (get_var(idVsms).and.get_adjust) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVsms)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          scale=1.0_r8
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVsms), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, Nfrec(ng),           &
-     &                      scale, Fmin, Fmax,                          &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
+            scale=1.0_dp
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVsms), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
+     &                        scale, Fmin, Fmax,                        &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      FORCES(ng) % tl_vstr(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVsms)),          &
-     &                          InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        FORCES(ng) % tl_vstr(:,:,:,Tindex),       &
+     &                        checksum = Fhash)
+#  else
+     &                        FORCES(ng) % tl_vstr(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVsms)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVsms))//               &
+     &                            ', adjusted tl_vstr', Fmin, Fmax,     &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVsms))//               &
+     &                            ', adjusted tl_vstr', Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVsms))//                 &
-     &                          ', adjusted tl_vstr', Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVsms)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -5006,30 +7466,55 @@
      &        Lstflux(itrc,ng)) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,idTsur(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
-            scale=1.0_r8
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTsur(itrc)), varid,             &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, Nfrec(ng),         &
-     &                        scale, Fmin, Fmax,                        &
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              scale=1.0_dp
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTsur(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, Nfrec(ng),       &
+     &                          scale, Fmin, Fmax,                      &
 #  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #  endif
-     &                        FORCES(ng)% tl_tflux(:,:,:,Tindex,itrc))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),  &
-     &                            InpRec, TRIM(ncname)
+#  ifdef CHECKSUM
+     &                          FORCES(ng)% tl_tflux(:,:,:,             &
+     &                                               Tindex,itrc),      &
+     &                          checksum = Fhash)
+#  else
+     &                          FORCES(ng)% tl_tflux(:,:,:,             &
+     &                                               Tindex,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTsur(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//       &
+     &                              ', adjusted tl_tflux', Fmin, Fmax,  &
+     &                              Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//       &
+     &                              ', adjusted tl_tflux', Fmin, Fmax
+#  endif
+                END IF
               END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTsur(itrc)))//         &
-     &                            ', adjusted tl_tflux', Fmin, Fmax
+                WRITE (stdout,80) string, TRIM(Vname(1,idTsur(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -5053,8 +7538,8 @@
 !
 !  Read in next impulse forcing time to process.
 !
-        CALL netcdf_get_fvar (ng, IDmod, ncname, TRIM(tvarnam),         &
-     &                        ForceTime(ng:),                           &
+        CALL netcdf_get_time (ng, IDmod, ncname, TRIM(tvarnam),         &
+     &                        Rclock%DateNumber, ForceTime(ng:),        &
      &                        ncid = ncINPid,                           &
      &                        start = (/InpRec/),                       &
      &                        total = (/1/))
@@ -5066,28 +7551,51 @@
         IF (get_var(idFsur)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idFsur)),   &
      &                        varid)
-          gtype=var_flag(varid)*r2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idFsur), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idFsur), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 # ifdef MASKING
-     &                      GRID(ng) % rmask,                           &
+     &                        GRID(ng) % rmask,                         &
 # endif
-     &                      OCEAN(ng) % tl_zeta(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idFsur)), InpRec,  &
-     &                          TRIM(ncname)
+# ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_zeta(:,:,Tindex),          &
+     &                        checksum = Fhash)
+# else
+     &                        OCEAN(ng) % tl_zeta(:,:,Tindex))
+# endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idFsur)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+# ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax,    &
+     &                            Fhash
+# else
+                WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+# endif
+
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idFsur)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idFsur)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -5099,28 +7607,50 @@
         IF (get_var(idUbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*u2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      OCEAN(ng) % tl_ubar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUbar)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_ubar(:,:,Tindex),          &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % tl_ubar(:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUbar)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -5130,28 +7660,50 @@
         IF (get_var(idVbar)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVbar)),   &
      &                        varid)
-          gtype=var_flag(varid)*v2dvar
-          status=nf_fread2d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVbar), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idVbar), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                      OCEAN(ng) % tl_vbar(:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVbar)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_vbar(:,:,Tindex),          &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % tl_vbar(:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idVbar)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVbar)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idVbar)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -5163,28 +7715,50 @@
         IF (get_var(idUvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idUvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*u3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idUvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
+          IF (foundit) THEN
+            gtype=var_flag(varid)*u3dvar
+            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idUvel), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
+     &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                      GRID(ng) % umask,                           &
+     &                        GRID(ng) % umask,                         &
 #  endif
-     &                      OCEAN(ng) % tl_u(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idUvel)), InpRec,  &
-     &                          TRIM(ncname)
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_u(:,:,:,Tindex),           &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % tl_u(:,:,:,Tindex))
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__,                &
+     &                     __FILE__)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idUvel)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+#  endif
+              END IF
             END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
           ELSE
             IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idUvel)), Fmin, Fmax
+              WRITE (stdout,80) string, TRIM(Vname(1,idUvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
             END IF
           END IF
         END IF
@@ -5194,52 +7768,26 @@
         IF (get_var(idVvel)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idVvel)),   &
      &                        varid)
-          gtype=var_flag(varid)*v3dvar
-          status=nf_fread3d(ng, IDmod, ncname, ncINPid,                 &
-     &                      Vname(1,idVvel), varid,                     &
-     &                      InpRec, gtype, Vsize,                       &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      Fscl, Fmin, Fmax,                           &
-#  ifdef MASKING
-     &                      GRID(ng) % vmask,                           &
-#  endif
-     &                      OCEAN(ng) % tl_v(:,:,:,Tindex))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idVvel)), InpRec,  &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
-            END IF
-          END IF
-        END IF
-!
-!  Read in tracer type variables norm.
-!
-        DO itrc=1,NT(ng)
-          IF (get_var(idTvar(itrc))) THEN
-            foundit=find_string(var_name, n_var,                        &
-     &                          TRIM(Vname(1,idTvar(itrc))), varid)
-            gtype=var_flag(varid)*r3dvar
+          IF (foundit) THEN
+            gtype=var_flag(varid)*v3dvar
             status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idTvar(itrc)), varid,             &
+     &                        Vname(1,idVvel), varid,                   &
      &                        InpRec, gtype, Vsize,                     &
      &                        LBi, UBi, LBj, UBj, 1, N(ng),             &
      &                        Fscl, Fmin, Fmax,                         &
 #  ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                        GRID(ng) % vmask,                         &
 #  endif
-     &                        OCEAN(ng) % tl_t(:,:,:,Tindex,itrc))
+#  ifdef CHECKSUM
+     &                        OCEAN(ng) % tl_v(:,:,:,Tindex),           &
+     &                        checksum = Fhash)
+#  else
+     &                        OCEAN(ng) % tl_v(:,:,:,Tindex))
+#  endif
             IF (FoundError(status, nf90_noerr, __LINE__,                &
      &                     __FILE__)) THEN
               IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),  &
+                WRITE (stdout,60) string, TRIM(Vname(1,idVvel)),        &
      &                            InpRec, TRIM(ncname)
               END IF
               exit_flag=2
@@ -5247,8 +7795,78 @@
               RETURN
             ELSE
               IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),          &
-     &                            Fmin, Fmax
+#  ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax,    &
+     &                            Fhash
+#  else
+                WRITE (stdout,70) TRIM(Vname(2,idVvel)), Fmin, Fmax
+#  endif
+              END IF
+            END IF
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idVvel)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
+     &                     __FILE__)) THEN
+              RETURN
+            END IF
+          END IF
+        END IF
+!
+!  Read in tracer type variables.
+!
+        DO itrc=1,NT(ng)
+          IF (get_var(idTvar(itrc))) THEN
+            foundit=find_string(var_name, n_var,                        &
+     &                          TRIM(Vname(1,idTvar(itrc))), varid)
+            IF (foundit) THEN
+              gtype=var_flag(varid)*r3dvar
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,idTvar(itrc)), varid,           &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          Fscl, Fmin, Fmax,                       &
+#  ifdef MASKING
+     &                          GRID(ng) % rmask,                       &
+#  endif
+#  ifdef CHECKSUM
+     &                          OCEAN(ng) % tl_t(:,:,:,Tindex,itrc),    &
+     &                          checksum = Fhash)
+#  else
+     &                          OCEAN(ng) % tl_t(:,:,:,Tindex,itrc))
+#  endif
+              IF (FoundError(status, nf90_noerr, __LINE__,              &
+     &                       __FILE__)) THEN
+                IF (Master) THEN
+                  WRITE (stdout,60) string, TRIM(Vname(1,idTvar(itrc))),&
+     &                              InpRec, TRIM(ncname)
+                END IF
+                exit_flag=2
+                ioerror=status
+                RETURN
+              ELSE
+                IF (Master) THEN
+#  ifdef CHECKSUM
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax, Fhash
+#  else
+                  WRITE (stdout,70) TRIM(Vname(2,idTvar(itrc))),        &
+     &                              Fmin, Fmax
+#  endif
+                END IF
+              END IF
+            ELSE
+              IF (Master) THEN
+                WRITE (stdout,80) string, TRIM(Vname(1,idTvar(itrc))),  &
+     &                            TRIM(ncname)
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, nf90_noerr, __LINE__,           &
+     &                       __FILE__)) THEN
+                RETURN
               END IF
             END IF
           END IF
@@ -5267,7 +7885,8 @@
 !
 !  Turn off time wall clock.
 !
-      CALL wclock_off (ng, IDmod, 42, __LINE__, __FILE__)
+      CALL wclock_off (ng, IDmod, 80, __LINE__,                         &
+     &                 __FILE__)
 #endif
 !
   10  FORMAT (/,a,'GET_STATE - unable to open input NetCDF file: ',a)
@@ -5278,15 +7897,24 @@
      &        18x,'not found in input NetCDF: ',a,/,                    &
      &        18x,'number of available records = ',i3)
   40  FORMAT (/,a,'GET_STATE - ',a,t75,a,                               &
-     &        /,19x,'(Grid ',i2.2,', Iter=',i4.4, ', t = ',a,           &
+     &        /,19x,'(Grid ',i2.2,a,i4.4, ', t = ',a,                   &
      &        ', File: ',a, ', Rec=',i4.4,', Index=',i1,')')
   50  FORMAT (/,a,'GET_STATE - ',a,t75,a,                               &
      &        /,19x,'(Grid ',i2.2, ', t = ',a,                          &
      &        ', File: ',a,', Rec=',i4.4, ', Index=',i1,')')
   60  FORMAT (/,a,'GET_STATE - error while reading variable: ',a,2x,    &
      &        'at time record = ',i3,/,18x,'in input NetCDF file: ',a)
+#ifdef CHECKSUM
+  70  FORMAT (16x,'- ',a,/,19x,'(Min = ',1p,e15.8,                      &
+     &        ' Max = ',1p,e15.8,' CheckSum = ',i0,')')
+#else
   70  FORMAT (16x,'- ',a,/,19x,'(Min = ',1p,e15.8,                      &
      &        ' Max = ',1p,e15.8,')')
+#endif
+  75  FORMAT (16x,'- ',a,/,19x,'(Min = ',1p,e15.8,                      &
+     &        ' Max = ',1p,e15.8,')')
+  80  FORMAT (/,a,'GET_STATE - cannot find variable: ',a,               &
+     &        /,18x,'in input NetCDF file: ',a)
 #if defined DARWIN_REPORT_TRAITS
  200  FORMAT (1x,a30,' = ',e21.15,99(', ',e21.15))
  201  FORMAT (1x,a30,' = ',i0,99(', ',i0))

@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE checkadj
 !
-!svn $Id: checkadj.F 820 2016-08-30 20:14:28Z arango $
+!svn $Id: checkadj.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -299,6 +299,14 @@
      &                               'not differentiable, WARNING'
       END IF
 # endif
+
+      string=uppercase('hypoxia_srm')
+      ifound=INDEX(TRIM(Coptions), TRIM(string))
+      IF (ifound.ne.0) THEN
+        ic=ic+1
+        IF (Master) WRITE(stdout,20) TRIM(string),                      &
+     &                               'not coded, FATAL ERROR'
+      END IF
 
       string=uppercase('limit_bstress')
       ifound=INDEX(TRIM(Coptions), TRIM(string))

@@ -3,9 +3,9 @@
 
 #if defined TLM_CHECK || defined PROPAGATOR
 !
-!svn $Id: dotproduct.F 807 2016-07-09 02:03:55Z arango $
+!svn $Id: dotproduct.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -58,7 +58,7 @@
 #  include "tile.h"
 !
 #  ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 7)
+      CALL wclock_on (ng, iNLM, 7, __LINE__, __FILE__)
 #  endif
       CALL nl_dotproduct_tile (ng, tile,                                &
      &                         LBi, UBi, LBj, UBj,                      &
@@ -93,7 +93,7 @@
      &                         OCEAN(ng) % zeta,                        &
      &                         OCEAN(ng) % zetaG)
 #  ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 7)
+      CALL wclock_off (ng, iNLM, 7, __LINE__, __FILE__)
 #  endif
       RETURN
       END SUBROUTINE nl_dotproduct
@@ -396,7 +396,7 @@
 #  include "tile.h"
 !
 #  ifdef PROFILE
-      CALL wclock_on (ng, iADM, 7)
+      CALL wclock_on (ng, iADM, 7, __LINE__, __FILE__)
 #  endif
       CALL ad_statenorm_tile (ng, tile,                                 &
      &                        LBi, UBi, LBj, UBj,                       &
@@ -423,7 +423,7 @@
 #  endif
      &                        OCEAN(ng) % ad_zeta)
 #  ifdef PROFILE
-      CALL wclock_off (ng, iADM, 7)
+      CALL wclock_off (ng, iADM, 7, __LINE__, __FILE__)
 #  endif
       RETURN
       END SUBROUTINE ad_statenorm
@@ -708,7 +708,7 @@
 #  include "tile.h"
 !
 #  ifdef PROFILE
-      CALL wclock_on (ng, iTLM, 7)
+      CALL wclock_on (ng, iTLM, 7, __LINE__, __FILE__)
 #  endif
       CALL tl_statenorm_tile (ng, tile,                                 &
      &                        LBi, UBi, LBj, UBj,                       &
@@ -746,7 +746,7 @@
 #  endif
      &                        OCEAN(ng) % tl_zeta)
 #  ifdef PROFILE
-      CALL wclock_off (ng, iTLM, 7)
+      CALL wclock_off (ng, iTLM, 7, __LINE__, __FILE__)
 #  endif
       RETURN
       END SUBROUTINE tl_statenorm
@@ -1116,7 +1116,7 @@
 #  include "tile.h"
 !
 #  ifdef PROFILE
-      CALL wclock_on (ng, iTLM, 7)
+      CALL wclock_on (ng, iTLM, 7, __LINE__, __FILE__)
 #  endif
       CALL tl_dotproduct_tile (ng, tile,                                &
      &                         LBi, UBi, LBj, UBj,                      &
@@ -1145,7 +1145,7 @@
      &                         OCEAN(ng) % ad_zeta,                     &
      &                         OCEAN(ng) % tl_zeta)
 #  ifdef PROFILE
-      CALL wclock_off (ng, iTLM, 7)
+      CALL wclock_off (ng, iTLM, 7, __LINE__, __FILE__)
 #  endif
       RETURN
       END SUBROUTINE tl_dotproduct
@@ -1424,7 +1424,7 @@
 #  include "tile.h"
 !
 #  ifdef PROFILE
-      CALL wclock_on (ng, iADM, 7)
+      CALL wclock_on (ng, iADM, 7, __LINE__, __FILE__)
 #  endif
       CALL ad_dotproduct_tile (ng, tile,                                &
      &                         LBi, UBi, LBj, UBj,                      &
@@ -1444,7 +1444,7 @@
      &                         OCEAN(ng) % ad_vbar,                     &
      &                         OCEAN(ng) % ad_zeta)
 #  ifdef PROFILE
-      CALL wclock_off (ng, iADM, 7)
+      CALL wclock_off (ng, iADM, 7, __LINE__, __FILE__)
 #  endif
       RETURN
       END SUBROUTINE ad_dotproduct

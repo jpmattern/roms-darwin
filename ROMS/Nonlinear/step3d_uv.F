@@ -2,9 +2,9 @@
       MODULE step3d_uv_mod
 #if defined NONLINEAR && defined SOLVE3D
 !
-!svn $Id: step3d_uv.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: step3d_uv.F 889 2018-02-10 03:32:52Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license           Hernan G. Arango   !
 !    See License_ROMS.txt                   Alexander F. Shchepetkin   !
 !==================================================== John C. Warner ===
@@ -46,7 +46,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 34)
+      CALL wclock_on (ng, iNLM, 34, __LINE__, __FILE__)
 # endif
       CALL step3d_uv_tile (ng, tile,                                    &
      &                     LBi, UBi, LBj, UBj,                          &
@@ -97,7 +97,7 @@
      &                     GRID(ng) % Huon,                             &
      &                     GRID(ng) % Hvom)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 34)
+      CALL wclock_off (ng, iNLM, 34, __LINE__, __FILE__)
 # endif
 
       RETURN

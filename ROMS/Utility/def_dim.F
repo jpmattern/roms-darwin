@@ -2,9 +2,9 @@
       FUNCTION def_dim (ng, model, ncid, ncname, DimName, DimSize,      &
      &                  DimID)
 !
-!svn $Id: def_dim.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: def_dim.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -32,11 +32,11 @@
       USE mod_iounits
       USE mod_netcdf
       USE mod_scalars
-
-#if !defined PARALLEL_IO  && defined DISTRIBUTE
 !
+#if !defined PARALLEL_IO  && defined DISTRIBUTE
       USE distribute_mod, ONLY : mp_bcasti
 #endif
+      USE strings_mod, ONLY : FoundError
 !
       implicit none
 !
@@ -68,7 +68,8 @@
 
       IF (OutThread) THEN
         status=nf90_def_dim(ncid, TRIM(DimName), DimSize, DimId)
-        IF (status.ne.nf90_noerr) THEN
+        IF (FoundError(status, nf90_noerr, __LINE__,                    &
+     &                 __FILE__)) THEN
           IF (Master) WRITE (stdout,10) TRIM(DimName), TRIM(ncname)
           exit_flag=3
           ioerror=status

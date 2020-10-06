@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE gasdev_s (harvest)
 !
-!svn $Id: gasdev.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: gasdev.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -100,8 +100,8 @@
 
       logical, dimension(SIZE(harvest)) :: mask
 
-      integer(i4b), save :: last_allocated = 0
-      integer(i4b) :: i, ii, m, mc, n, ng, nn
+      integer(i8b), save :: last_allocated = 0
+      integer(i8b) :: i, ii, m, mc, n, ng, nn
 
       real(r8), dimension(SIZE(harvest)) :: rsq, v1, v2, v3
       real(r8), allocatable, dimension(:), save :: g

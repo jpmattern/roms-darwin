@@ -2,9 +2,9 @@
       MODULE omega_mod
 #ifdef SOLVE3D
 !
-!svn $Id: omega.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: omega.F 889 2018-02-10 03:32:52Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -25,7 +25,7 @@
       CONTAINS
 !
 !***********************************************************************
-      SUBROUTINE omega (ng, tile)
+      SUBROUTINE omega (ng, tile, model)
 !***********************************************************************
 !
       USE mod_param
@@ -38,16 +38,16 @@
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, tile
+      integer, intent(in) :: ng, tile, model
 !
 !  Local variable declarations.
 !
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 13)
+      CALL wclock_on (ng, model, 13, __LINE__, __FILE__)
 # endif
-      CALL omega_tile (ng, tile,                                        &
+      CALL omega_tile (ng, tile, model,                                 &
      &                 LBi, UBi, LBj, UBj,                              &
      &                 IminS, ImaxS, JminS, JmaxS,                      &
 # if defined SEDIMENT && defined SED_MORPH
@@ -60,14 +60,14 @@
      &                 GRID(ng) % z_w,                                  &
      &                 OCEAN(ng) % W)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 13)
+      CALL wclock_off (ng, model, 13, __LINE__, __FILE__)
 # endif
 
       RETURN
       END SUBROUTINE omega
 !
 !***********************************************************************
-      SUBROUTINE omega_tile (ng, tile,                                  &
+      SUBROUTINE omega_tile (ng, tile, model,                           &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       IminS, ImaxS, JminS, JmaxS,                &
 # if defined SEDIMENT && defined SED_MORPH
@@ -90,7 +90,7 @@
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, tile
+      integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
 # if defined SEDIMENT && defined SED_MORPH
@@ -202,7 +202,7 @@
      &                  LBi, UBi, LBj, UBj, 0, N(ng),                   &
      &                  W)
 # ifdef DISTRIBUTE
-      CALL mp_exchange3d (ng, tile, iNLM, 1,                            &
+      CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &

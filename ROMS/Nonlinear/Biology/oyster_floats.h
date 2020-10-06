@@ -2,9 +2,9 @@
 
       SUBROUTINE biology_floats (ng, Lstr, Lend, Predictor, my_thread)
 !
-!svn $Id: oyster_floats.h 795 2016-05-11 01:42:43Z arango $
+!svn $Id: oyster_floats.h 889 2018-02-10 03:32:52Z arango $
 !************************************************** Hernan G. Arango ***
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group      Diego A. Narvaez   !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group      Diego A. Narvaez   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !***********************************************************************
@@ -83,7 +83,7 @@
 #endif
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 10)
+      CALL wclock_on (ng, iNLM, 10, __LINE__, __FILE__)
 #endif
       CALL biology_floats_tile (ng, Lstr, Lend,                         &
      &                          nfm3(ng), nfm2(ng), nfm1(ng), nf(ng),   &
@@ -93,7 +93,7 @@
      &                          DRIFTER(ng) % Tinfo,                    &
      &                          DRIFTER(ng) % track)
 #ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 10)
+      CALL wclock_off (ng, iNLM, 10, __LINE__, __FILE__)
 #endif
 
       RETURN

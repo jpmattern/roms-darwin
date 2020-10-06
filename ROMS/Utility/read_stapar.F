@@ -2,9 +2,9 @@
 #ifdef STATIONS
       SUBROUTINE read_StaPar (model, inp, out, Lwrite)
 !
-!svn $Id: read_stapar.F 804 2016-06-06 23:02:36Z arango $
+!svn $Id: read_stapar.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -173,7 +173,7 @@
             CASE ('Sout(idWorb)')
               Npts=load_l(Nval, Cval, Ngrids, Sout(idWorb,:))
 # endif
-# if defined TKE_WAVEDISS || defined WAVES_OCEAN
+# if defined TKE_WAVEDISS || defined WAV_COUPLING
             CASE ('Sout(idWdis)')
               Npts=load_l(Nval, Cval, Ngrids, Sout(idWdis,:))
 # endif
@@ -588,7 +588,7 @@
      &         'Sout(idWorb)',                                          &
      &         'Write out wave bottom orbital velocity.'
 # endif
-# if defined TKE_WAVEDISS || defined WAVES_OCEAN
+# if defined TKE_WAVEDISS || defined WAV_COUPLING
             IF (Sout(idWdis,ng)) WRITE (out,90) Sout(idWdis,ng),        &
      &         'Sout(idWdis)',                                          &
      &         'Write out wave dissipation.'

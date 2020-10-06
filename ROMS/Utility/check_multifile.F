@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE check_multifile (ng, model)
 !
-!svn $Id: check_multifile.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: check_multifile.F 896 2018-02-13 03:26:53Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -20,8 +20,12 @@
 !
       USE mod_param
       USE mod_parallel
+      USE mod_ncparam
       USE mod_iounits
       USE mod_scalars
+!
+      USE dateclock_mod, ONLY : time_string
+      USE strings_mod,   ONLY : FoundError
 !
       implicit none
 !
@@ -38,21 +42,66 @@
 
       real(r8) :: Tfinal, Tmax, Tmin, Tscale
 
-      character(len=14 ) :: F_code, I_code, Tmin_code, Tmax_code
-      character(len=256) :: ncname
+      character (len=1), parameter :: blank = ' '
+      character (len= 22) :: F_code, I_code, Tmin_code, Tmax_code
+      character (len=256) :: ncname
+!
+      SourceFile=__FILE__
 !
 !=======================================================================
 !  If applicable, initialize parameters for input multi-files.
 !=======================================================================
 !
+!  Initialize I/O information variables to facilitate to reset the
+!  values in iterative algorithms that call the NLM, TLM, RPM, and
+!  ADM kernels repetitevely.  Notice that Iinfo(1,:,:) is not reset
+!  because it is part of the metadata.
+!
+      DO i=1,NV
+        Cinfo(i,ng)=blank
+        Linfo(1,i,ng)=.FALSE.
+        Linfo(2,i,ng)=.FALSE.
+        Linfo(3,i,ng)=.FALSE.
+        Linfo(4,i,ng)=.FALSE.
+        Linfo(5,i,ng)=.FALSE.
+        Linfo(6,i,ng)=.FALSE.
+        Iinfo(2,i,ng)=-1
+        Iinfo(3,i,ng)=-1
+        Iinfo(4,i,ng)=0
+        Iinfo(5,i,ng)=0
+        Iinfo(6,i,ng)=0
+        Iinfo(7,i,ng)=0
+        Iinfo(8,i,ng)=2
+        Iinfo(9,i,ng)=0
+        Iinfo(10,i,ng)=0
+        Finfo(1,i,ng)=0.0_r8
+        Finfo(2,i,ng)=0.0_r8
+        Finfo(3,i,ng)=0.0_r8
+        Finfo(5,i,ng)=0.0_r8
+        Finfo(6,i,ng)=0.0_r8
+        Finfo(7,i,ng)=0.0_r8
+        Finfo(10,i,ng)=1.0_r8
+        Fpoint(1,i,ng)=0.0_r8
+        Fpoint(2,i,ng)=0.0_r8
+        Tintrp(1,i,ng)=0.0_r8
+        Tintrp(2,i,ng)=0.0_r8
+        Vtime(1,i,ng)=0.0_r8
+        Vtime(2,i,ng)=0.0_r8
+        ncFRCid(i,ng)=-1
+      END DO
+!
 !  Get initialization time string.
 !
-      CALL time_string(time(ng), I_code)
+      CALL time_string (time(ng), I_code)
 !
 !  Get final time string for simulation.
 !
-      Tfinal=dstart*day2sec+ntimes(ng)*dt(ng)
-      CALL time_string(tfinal, F_code)
+      IF (model.eq.iADM) THEN
+        Tfinal=time(ng)-ntimes(ng)*dt(ng)
+      ELSE
+        Tfinal=time(ng)+ntimes(ng)*dt(ng)
+      END IF
+      CALL time_string (tfinal, F_code)
 !
 !-----------------------------------------------------------------------
 !  Input lateral boundary conditions data.
@@ -64,25 +113,30 @@
           ncname=BRY(ng)%files(ifile)
           foundit=check_file(ng, model, ncname, Tmin, Tmax, Tscale,     &
      &                       Lcheck)
-          IF (exit_flag.ne.NoError) RETURN
           BRY(ng)%time_min(ifile)=Tmin
           BRY(ng)%time_max(ifile)=Tmax
         END DO
 !
 !  Set the appropriate file counter to use during initialization or
-!  restart. The EXIT below is removed because when restarting there is
-!  a possibility that the restart time is not included in the first
-!  boundary file in the list to avoid getting an IO error.
+!  restart.
 !
         Fcount=0
         IF (Lcheck) THEN
-          DO ifile=1,Nfiles
-            Tmin=Tscale*BRY(ng)%time_min(ifile)
-            IF (time(ng).ge.Tmin) THEN
-              Fcount=ifile
-!!            EXIT
-            END IF
-          END DO
+          IF (model.eq.iADM) THEN
+            DO ifile=Nfiles,1,-1
+              Tmax=Tscale*BRY(ng)%time_max(ifile)
+              IF (time(ng).le.Tmax) THEN
+                Fcount=ifile
+              END IF
+            END DO
+          ELSE
+            DO ifile=1,Nfiles
+              Tmin=Tscale*BRY(ng)%time_min(ifile)
+              IF (time(ng).ge.Tmin) THEN
+                Fcount=ifile
+              END IF
+            END DO
+          END IF
         ELSE
           Fcount=1
         END IF
@@ -102,27 +156,145 @@
             DO ifile=1,Nfiles
               Tmin=Tscale*BRY(ng)%time_min(ifile)
               Tmax=Tscale*BRY(ng)%time_max(ifile)
-              CALL time_string(Tmin, Tmin_code)
-              CALL time_string(Tmax, Tmax_code)
+              CALL time_string (Tmin, Tmin_code)
+              CALL time_string (Tmax, Tmax_code)
               WRITE (stdout,20) Tmin_code, Tmax_code,                   &
      &                          TRIM(BRY(ng)%files(ifile))
             END DO
           END IF
           exit_flag=4
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
         END IF
 !
-!  Check if there is boundary data to the end of the simulation.
+!  Check if there is boundary data up to the end of the simulation.
 !
         IF (Lcheck) THEN
-          Tmax=Tscale*BRY(ng)%time_max(Nfiles)
-          IF (Tfinal.gt.Tmax) THEN
-            CALL time_string(Tmax, Tmax_code)
-            IF (Master) THEN
-              WRITE (stdout,30) 'Lateral Boundary',                     &
-     &                          TRIM(BRY(ng)%files(Nfiles)),            &
-     &                          Tmax_code, F_code
+          IF (model.eq.iADM) THEN
+            Tmin=Tscale*BRY(ng)%time_min(1)
+            IF (Tfinal.lt.Tmin) THEN
+              CALL time_string (Tmin, Tmin_code)
+              IF (Master) THEN
+                WRITE (stdout,30) 'Lateral Boundary (adjoint)',         &
+     &                            TRIM(BRY(ng)%files(1)),               &
+     &                            'first ', Tmin_code, F_code
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
             END IF
-            exit_flag=4
+          ELSE
+            Tmax=Tscale*BRY(ng)%time_max(Nfiles)
+            IF (Tfinal.gt.Tmax) THEN
+              CALL time_string (Tmax, Tmax_code)
+              IF (Master) THEN
+                WRITE (stdout,30) 'Lateral Boundary',                   &
+     &                            TRIM(BRY(ng)%files(Nfiles)),          &
+     &                            'last  ', Tmax_code, F_code
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
+            END IF
+          END IF
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
+!  Input Source/Sink data (river runoff).
+!-----------------------------------------------------------------------
+!
+      IF (LuvSrc(ng).or.LwSrc(ng)) THEN
+        Nfiles=SSF(ng)%Nfiles
+        DO ifile=1,Nfiles
+          ncname=SSF(ng)%files(ifile)
+          foundit=check_file(ng, model, ncname, Tmin, Tmax, Tscale,     &
+     &                       Lcheck)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+          SSF(ng)%time_min(ifile)=Tmin
+          SSF(ng)%time_max(ifile)=Tmax
+        END DO
+!
+!  Set the appropriate file counter to use during initialization or
+!  restart.
+!
+        Fcount=0
+        IF (Lcheck) THEN
+          IF (model.eq.iADM) THEN
+            DO ifile=Nfiles,1,-1
+              Tmax=Tscale*SSF(ng)%time_max(ifile)
+              IF (time(ng).le.Tmax) THEN
+                Fcount=ifile
+              END IF
+            END DO
+          ELSE
+            DO ifile=1,Nfiles
+              Tmin=Tscale*SSF(ng)%time_min(ifile)
+              IF (time(ng).ge.Tmin) THEN
+                Fcount=ifile
+              END IF
+            END DO
+          END IF
+        ELSE
+          Fcount=1
+        END IF
+!
+!  Initialize other structure parameters or issue an error if data does
+!  not include initalization time.
+!
+        IF (Fcount.gt.0) THEN
+          SSF(ng)%Fcount=Fcount
+          ncname=SSF(ng)%files(Fcount)
+          lstr=LEN_TRIM(ncname)
+          SSF(ng)%name=TRIM(ncname)
+          SSF(ng)%base=ncname(1:lstr-3)
+        ELSE
+          IF (Master.and.Lcheck) THEN
+            WRITE (stdout,10) 'Sources/Sinks Data', I_code
+            DO ifile=1,Nfiles
+              Tmin=Tscale*SSF(ng)%time_min(ifile)
+              Tmax=Tscale*SSF(ng)%time_max(ifile)
+              CALL time_string (Tmin, Tmin_code)
+              CALL time_string (Tmax, Tmax_code)
+              WRITE (stdout,20) Tmin_code, Tmax_code,                   &
+     &                          TRIM(SSF(ng)%files(ifile))
+            END DO
+          END IF
+          exit_flag=4
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+!
+!  Check if there is Sources/Sinks data up to the end of the simulation.
+!
+        IF (Lcheck) THEN
+          IF (model.eq.iADM) THEN
+            Tmin=Tscale*SSF(ng)%time_min(1)
+            IF (Tfinal.lt.Tmin) THEN
+              CALL time_string (Tmin, Tmin_code)
+              IF (Master) THEN
+                WRITE (stdout,30) 'Sources/Sinks Data (adjoint)',       &
+     &                            TRIM(SSF(ng)%files(1)),               &
+     &                            'first ', Tmin_code, F_code
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
+            END IF
+          ELSE
+            Tmax=Tscale*SSF(ng)%time_max(Nfiles)
+            IF (Tfinal.gt.Tmax) THEN
+              CALL time_string (Tmax, Tmax_code)
+              IF (Master) THEN
+                WRITE (stdout,30) 'Sources/Sinks Data',                 &
+     &                            TRIM(SSF(ng)%files(Nfiles)),          &
+     &                            'last  ', Tmax_code, F_code
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
+            END IF
           END IF
         END IF
       END IF
@@ -139,25 +311,32 @@
           ncname=FRC(i,ng)%files(ifile)
           foundit=check_file(ng, model, ncname, Tmin, Tmax, Tscale,     &
      &                       Lcheck)
-          IF (exit_flag.ne.NoError) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
           FRC(i,ng)%time_min(ifile)=Tmin
           FRC(i,ng)%time_max(ifile)=Tmax
         END DO
 !
 !  Set the appropriate file counter to use during initialization or
-!  restart. The EXIT below is removed because when restarting there is
-!  a possibility that the restart time is not included in the first
-!  forcing file in the list to avoid getting an IO error.
+!  restart.
 !
         Fcount=0
         IF (Lcheck) THEN
-          DO ifile=1,Nfiles
-            Tmin=Tscale*FRC(i,ng)%time_min(ifile)
-            IF (time(ng).ge.Tmin) THEN
-              Fcount=ifile
-!!            EXIT
-            END IF
-          END DO
+          IF (model.eq.iADM) THEN
+            DO ifile=Nfiles,1,-1
+              Tmax=Tscale*FRC(i,ng)%time_max(ifile)
+              IF (time(ng).le.Tmax) THEN
+                Fcount=ifile
+              END IF
+            END DO
+          ELSE
+            DO ifile=1,Nfiles
+              Tmin=Tscale*FRC(i,ng)%time_min(ifile)
+              IF (time(ng).ge.Tmin) THEN
+                Fcount=ifile
+              END IF
+            END DO
+          END IF
         ELSE
           Fcount=1
         END IF
@@ -177,27 +356,46 @@
             DO ifile=1,Nfiles
               Tmin=Tscale*FRC(i,ng)%time_min(ifile)
               Tmax=Tscale*FRC(i,ng)%time_max(ifile)
-              CALL time_string(Tmin, Tmin_code)
-              CALL time_string(Tmax, Tmax_code)
+              CALL time_string (Tmin, Tmin_code)
+              CALL time_string (Tmax, Tmax_code)
               WRITE (stdout,20) Tmin_code, Tmax_code,                   &
      &                          TRIM(FRC(i,ng)%files(ifile))
             END DO
           END IF
           exit_flag=4
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
         END IF
 !
-!  Check if there is focing data to the end of the simulation.
+!  Check if there is forcing data up to the end of the simulation.
 !
         IF (Lcheck) THEN
-          Tmax=Tscale*FRC(i,ng)%time_max(Nfiles)
-          IF (Tfinal.gt.Tmax) THEN
-            CALL time_string(Tmax, Tmax_code)
-            IF (Master) THEN
-              WRITE (stdout,30) 'Forcing',                              &
-     &                          TRIM(FRC(i,ng)%files(Nfiles)),          &
-     &                          Tmax_code, F_code
+          IF (model.eq.iADM) THEN
+            Tmin=Tscale*FRC(i,ng)%time_min(1)
+            IF (Tfinal.lt.Tmin) THEN
+              CALL time_string (Tmin, Tmin_code)
+              IF (Master) THEN
+                WRITE (stdout,30) 'Forcing (adjoint)',                  &
+     &                            TRIM(FRC(i,ng)%files(1)),             &
+     &                            'first ', Tmin_code, F_code
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
             END IF
-            exit_flag=4
+          ELSE
+            Tmax=Tscale*FRC(i,ng)%time_max(Nfiles)
+            IF (Tfinal.gt.Tmax) THEN
+              CALL time_string (Tmax, Tmax_code)
+              IF (Master) THEN
+                WRITE (stdout,30) 'Forcing',                            &
+     &                            TRIM(FRC(i,ng)%files(Nfiles)),        &
+     &                            'last  ', Tmax_code, F_code
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
+            END IF
           END IF
         END IF
       END DO
@@ -213,7 +411,8 @@
           ncname=CLM(ng)%files(ifile)
           foundit=check_file(ng, model, ncname, Tmin, Tmax, Tscale,     &
      &                       Lcheck)
-          IF (exit_flag.ne.NoError) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
           CLM(ng)%time_min(ifile)=Tmin
           CLM(ng)%time_max(ifile)=Tmax
         END DO
@@ -223,12 +422,21 @@
 !
         Fcount=0
         IF (Lcheck) THEN
-          DO ifile=1,Nfiles
-            Tmin=Tscale*CLM(ng)%time_min(ifile)
-            IF (time(ng).ge.Tmin) THEN
-              Fcount=ifile
-            END IF
-          END DO
+          IF (model.eq.iADM) THEN
+            DO ifile=Nfiles,1,-1
+              Tmax=Tscale*CLM(ng)%time_max(ifile)
+              IF (time(ng).le.Tmax) THEN
+                Fcount=ifile
+              END IF
+            END DO
+          ELSE
+            DO ifile=1,Nfiles
+              Tmin=Tscale*CLM(ng)%time_min(ifile)
+              IF (time(ng).ge.Tmin) THEN
+                Fcount=ifile
+              END IF
+            END DO
+          END IF
         ELSE
           Fcount=1
         END IF
@@ -248,27 +456,46 @@
             DO ifile=1,Nfiles
               Tmin=Tscale*CLM(ng)%time_min(ifile)
               Tmax=Tscale*CLM(ng)%time_max(ifile)
-              CALL time_string(Tmin, Tmin_code)
-              CALL time_string(Tmax, Tmax_code)
+              CALL time_string (Tmin, Tmin_code)
+              CALL time_string (Tmax, Tmax_code)
               WRITE (stdout,20) Tmin_code, Tmax_code,                   &
      &                          TRIM(CLM(ng)%files(ifile))
             END DO
           END IF
           exit_flag=4
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
         END IF
 !
-!  Check if there is boundary data to the end of the simulation.
+!  Check if there is climatology data up to the end of the simulation.
 !
         IF (Lcheck) THEN
-          Tmax=Tscale*CLM(ng)%time_max(Nfiles)
-          IF (Tfinal.gt.Tmax) THEN
-            CALL time_string(Tmax, Tmax_code)
-            IF (Master) THEN
-              WRITE (stdout,30) 'Climatology',                          &
-     &                          TRIM(CLM(ng)%files(Nfiles)),            &
-     &                          Tmax_code, F_code
+          IF (model.eq.iADM) THEN
+            Tmin=Tscale*CLM(ng)%time_min(1)
+            IF (Tfinal.lt.Tmin) THEN
+              CALL time_string (Tmin, Tmin_code)
+              IF (Master) THEN
+                WRITE (stdout,30) 'Climatology (adjoint)',              &
+     &                            TRIM(CLM(ng)%files(1)),               &
+     &                            'first ', Tmin_code, F_code
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
             END IF
-            exit_flag=4
+          ELSE
+            Tmax=Tscale*CLM(ng)%time_max(Nfiles)
+            IF (Tfinal.gt.Tmax) THEN
+              CALL time_string (Tmax, Tmax_code)
+              IF (Master) THEN
+                WRITE (stdout,30) 'Climatology',                        &
+     &                            TRIM(CLM(ng)%files(Nfiles)),          &
+     &                            'last  ', Tmax_code, F_code
+              END IF
+              exit_flag=4
+              IF (FoundError(exit_flag, NoError, __LINE__,              &
+     &                       __FILE__)) RETURN
+            END IF
           END IF
         END IF
       END IF
@@ -279,8 +506,8 @@
  20   FORMAT (3x,a,2x,a,5x,a)
  30   FORMAT (/,' CHECK_MULTIFILE - Error while checking input ', a,    &
      &        ' file:',/,19x,a,/,19x,                                   &
-     &        'last data time record available is for day: ',a,/,19x,   &
-     &        'but data is needed to finish run until day: ',a)
+     &        a,'data time record available is for day: ',a,/,19x,      &
+     &        'but  data is needed to finish run until day: ',a)
 
       RETURN
       END SUBROUTINE check_multifile
@@ -319,6 +546,8 @@
       USE mod_netcdf
       USE mod_scalars
 !
+      USE strings_mod, ONLY : FoundError
+!
       implicit none
 !
 !  Imported variable declarations.
@@ -335,11 +564,11 @@
 !
       logical :: Lcycle, Lperpetual, Lspectral, foundit
 
-      integer :: Nrec, TvarID, i, nvdim, nvatt
+      integer :: Nrec, TvarID, i, ncid, nvdim, nvatt
 
       character (len=40) :: Tunits, TvarName
 !
-      SourceFile='check_multifile.F, check_file'
+      SourceFile=__FILE__ // ", check_file"
 !
 !------------------------------------------------------------------------
 !  Check if requested time is within the NetCDF file dataset.
@@ -356,10 +585,21 @@
       Tmin=0.0_r8
       Tmax=0.0_r8
 !
+!  Open NetCDF file for reading.
+!
+      CALL netcdf_open (ng, model, ncname, 0, ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) THEN
+        WRITE (stdout,10) TRIM(ncname)
+        RETURN
+      END IF
+!
 !  Inquire about all the variables
 !
-      CALL netcdf_inq_var (ng, model, ncname)
-      IF (exit_flag.ne.NoError) RETURN
+      CALL netcdf_inq_var (ng, model, ncname,                           &
+     &                     ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 !
 !  Search for the time variable: any 1D array variable with the string
 !  'time' in the variable name.
@@ -380,19 +620,23 @@
       END DO
       IF (.not.foundit) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(ncname)
+          WRITE (stdout,20) TRIM(ncname)
         END IF
         exit_flag=4
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
       END IF
 !
 !  Inquire about requested variable.
 !
       CALL netcdf_inq_var (ng, model, ncname,                           &
+     &                     ncid = ncid,                                 &
      &                     MyVarName = TRIM(TvarName),                  &
      &                     VarID = TvarID,                              &
      &                     nVarDim = nvdim,                             &
      &                     nVarAtt = nvatt)
-      IF (exit_flag.ne.NoError) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 !
 !  Set number of records available and check the 'units' attribute.
 !  Also, set output logical switch 'Lcheck' for the calling to check
@@ -426,7 +670,7 @@
 !  Turn off the checking of time range if cycling, perpectual, or
 !  spectral time axis.
 !
-      IF (Lcycle.or.Lperpetual.or.Lspectral) THEN
+      IF (Lcycle.or.Lperpetual.or.Lspectral.or.(Nrec.eq.1)) THEN
         Lcheck=.FALSE.
       END IF
 !
@@ -434,17 +678,28 @@
 !
       CALL netcdf_get_fvar (ng, model, ncname, TvarName,                &
      &                      Tmin,                                       &
+     &                      ncid = ncid,                                &
      &                      start = (/1/),                              &
      &                      total = (/1/))
-      IF (exit_flag.ne.NoError) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 !
       CALL netcdf_get_fvar (ng, model, ncname, TvarName,                &
      &                      Tmax,                                       &
+     &                      ncid = ncid,                                &
      &                      start = (/Nrec/),                           &
      &                      total = (/1/))
-      IF (exit_flag.ne.NoError) RETURN
-
- 10   FORMAT (/, ' CHECK_FILE - unable to find time variable in input', &
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+!
+!  Close NetCDF file.
+!
+      CALL netcdf_close (ng, model, ncid, ncname, .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
+!
+ 10   FORMAT (/, ' CHECK_FILE - unable to open grid NetCDF file: ',a)
+ 20   FORMAT (/, ' CHECK_FILE - unable to find time variable in input', &
      &        ' NetCDF file:', /, 14x, a, /, 14x,                       &
      &        'variable name does not contains the "time" string.')
 

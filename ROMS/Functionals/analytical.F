@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE analytical_mod
 !
-!svn $Id: analytical.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: analytical.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -42,6 +42,7 @@
 !!                       analytical expressions.                       !
 !! ana_psource.h       Analytical mass/tracer point sources/sinks.     !
 !! ana_rain.h          Analytical rain fall rate.                      !
+!! ana_respiration.h   Analytical total respiration for hypoxia.       !
 !! ana_scope.h         Analytical adjoint sensitivity spatial scope    !
 !!                       mask.                                         !
 !! ana_sediment.h      Analytical initial conditions for sediment      !
@@ -177,6 +178,12 @@
 # ifdef SOLVE3D
 #  if defined ANA_RAIN && defined BULK_FLUXES
 #   include <ana_rain.h>
+#  endif
+# endif
+
+# ifdef SOLVE3D
+#  if defined ANA_RESPIRATION && defined HYPOXIA_SRM
+#   include <ana_respiration.h>
 #  endif
 # endif
 

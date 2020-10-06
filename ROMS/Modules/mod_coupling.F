@@ -2,9 +2,9 @@
       MODULE mod_coupling
 #ifdef SOLVE3D
 !
-!svn $Id: mod_coupling.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: mod_coupling.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================

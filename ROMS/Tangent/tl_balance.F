@@ -3,9 +3,9 @@
 
 #if defined TANGENT && defined BALANCE_OPERATOR
 !
-!svn $Id: tl_balance.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: tl_balance.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -90,9 +90,9 @@
 !
       COUPLING(ng) % Zt_avg1 = 0.0_r8
 
-      CALL set_depth (ng, tile)
+      CALL set_depth (ng, tile, iTLM)
       nrhs(ng)=Lbck
-      CALL rho_eos (ng, tile)
+      CALL rho_eos (ng, tile, iTLM)
 !
 # endif
       CALL tl_balance_tile (ng, tile,                                   &

@@ -3,15 +3,19 @@
 #if  defined ADJOINT && defined FOUR_DVAR  && defined OBSERVATIONS && \
     !defined WEAK_CONSTRAINT
 !
-!svn $Id: ad_misfit.F 807 2016-07-09 02:03:55Z arango $
+!svn $Id: ad_misfit.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
 !                                                                      !
 !  This routine computes the model minus observations adjoint misfit   !
 !  forcing for each state variable.                                    !
+!                                                                      !
+!  The observation screening and quality control variable "ObsScale"   !
+!  is not modified in this routine. Their values are the ones set in   !
+!  obs_write.F during the running of the nonlinear model.              !
 !                                                                      !
 !=======================================================================
 !
@@ -141,7 +145,7 @@
 !  Local variable declarations.
 !
       integer :: ObsSum, ObsVoid
-      integer :: i, ie, iobs, is, kfrc
+      integer :: i, ic, ie, iobs, is, kfrc
 # ifdef SOLVE3D
       integer :: itrc, j, k, nfrc
 # endif
@@ -149,7 +153,7 @@
 
 # include "set_bounds.h"
 !
-!-----------------------------------------------------------------------
+!=======================================================================
 !  Compute model minus observations adjoint misfit forcing.
 # ifdef DISTRIBUTE
 !  Notice that ad_mp_exchange*d calls are not required here
@@ -157,37 +161,14 @@
 !  using the adjoint state arrays directly which will be
 !  exchanged during the initialization step.
 # endif
-!-----------------------------------------------------------------------
+!
+!  The processing flag used to reject (ObsVetting=0) or accept
+!  (ObsVetting=1) observations is computed here but it is never
+!  used. The observation screening and quality control variable
+!  (ObsScale) is only computed in routine obs_write.
+!=======================================================================
 !
       IF (ProcessObs(ng)) THEN
-# ifndef BGQC
-!
-!  Set observation scale (ObsScale). The scale factor is used for
-!  screenning  or normalization of the observations. If only screening,
-!  the scale is one for good observations and zero for bad observations.
-!  If normalizing, the scale is terms of screenning and some specified
-!  norm. In incremental 4DVAR only screenning is carried out.
-!
-        DO iobs=1,Mobs
-          ObsScale(iobs)=IniVal
-        END DO
-# endif
-!
-!  Compute adjoint forcing terms at observation locations.
-!
-        DO iobs=1,Nobs(ng)
-          ADmodVal(iobs)=ObsErr(iobs)*                                  &
-     &                   (NLmodVal(iobs)+TLmodVal(iobs)-ObsVal(iobs))
-        END DO
-
-# ifdef BGQC
-!
-!  Reject observations that fail background quality control check.
-!
-        DO iobs=1,Nobs(ng)
-          ADmodVal(iobs)=ObsScale(iobs)*ADmodVal(iobs)
-        END DO
-# endif
 !
 !  Set adjoint time index to update.
 !
@@ -196,17 +177,61 @@
         nfrc=nstp
 # endif
 !
+!  Initialize observation reject/accept processing flag.
+!
+        DO iobs=1,Mobs
+          ObsVetting(iobs)=IniVal
+        END DO
+!
+!  Compute adjoint forcing terms at observation locations.
+!
+        DO iobs=1,Nobs(ng)
+          ADmodVal(iobs)=ObsErr(iobs)*                                  &
+     &                   (NLmodVal(iobs)+TLmodVal(iobs)-ObsVal(iobs))
+        END DO
+!
+!-----------------------------------------------------------------------
+!  Load observation reject and accept flag into screening variable.
+!-----------------------------------------------------------------------
+!
+!  In the primal formulation, the current time window (or survey)
+!  observations are loaded to the working arrays using local indexes
+!  (array elements 1:Nobs) as opposed to global indexes in the dual
+!  formulation. Recall that the screening variable ObsScale is computed
+!  only once to facilitate Background Quality Control on the first pass
+!  of the NLM. Therefore, we need to load its values from the saved
+!  global arrays values, ObsScaleGlobal.
+!
+        ic=0
+        DO iobs=NstrObs(ng),NendObs(ng)
+          ic=ic+1
+          ObsScale(ic)=ObsScaleGlobal(iobs)
+        END DO
+
+# ifdef BGQC
+!
+!-----------------------------------------------------------------------
+!  Reject observations that fail background quality control check.
+!-----------------------------------------------------------------------
+!
+        DO iobs=1,Nobs(ng)
+          ADmodVal(iobs)=ObsScale(iobs)*ADmodVal(iobs)
+        END DO
+# endif
+!
+!-----------------------------------------------------------------------
 !  Free-surface.
+!-----------------------------------------------------------------------
 !
         IF (FOURDVAR(ng)%ObsCount(isFsur).gt.0) THEN
           CALL ad_extract_obs2d (ng, 0, Lm(ng)+1, 0, Mm(ng)+1,          &
      &                           LBi, UBi, LBj, UBj,                    &
-     &                           isFsur,                                &
+     &                           ObsState2Type(isFsur),                 &
      &                           Mobs, 1, Nobs(ng),                     &
      &                           rXmin(ng), rXmax(ng),                  &
      &                           rYmin(ng), rYmax(ng),                  &
      &                           time(ng), dt(ng),                      &
-     &                           ObsType, ObsScale,                     &
+     &                           ObsType, ObsVetting,                   &
      &                           Tobs, Xobs, Yobs,                      &
      &                           ad_zeta(:,:,kfrc),                     &
 # ifdef MASKING
@@ -215,17 +240,19 @@
      &                           ADmodVal)
         END IF
 !
+!-----------------------------------------------------------------------
 !  2D u-momentum component.
+!-----------------------------------------------------------------------
 !
         IF (FOURDVAR(ng)%ObsCount(isUbar).gt.0) THEN
           CALL ad_extract_obs2d (ng, 1, Lm(ng)+1, 0, Mm(ng)+1,          &
      &                           LBi, UBi, LBj, UBj,                    &
-     &                           isUbar,                                &
+     &                           ObsState2Type(isUbar),                 &
      &                           Mobs, 1, Nobs(ng),                     &
      &                           uXmin(ng), uXmax(ng),                  &
      &                           uYmin(ng), uYmax(ng),                  &
      &                           time(ng), dt(ng),                      &
-     &                           ObsType, ObsScale,                     &
+     &                           ObsType, ObsVetting,                   &
      &                           Tobs, Xobs, Yobs,                      &
      &                           ad_ubar(:,:,kfrc),                     &
 # ifdef MASKING
@@ -234,17 +261,19 @@
      &                           ADmodVal)
         END IF
 !
+!-----------------------------------------------------------------------
 !  2D v-momentum component.
+!-----------------------------------------------------------------------
 !
         IF (FOURDVAR(ng)%ObsCount(isVbar).gt.0) THEN
           CALL ad_extract_obs2d (ng, 0, Lm(ng)+1, 1, Mm(ng)+1,          &
      &                           LBi, UBi, LBj, UBj,                    &
-     &                           isVbar,                                &
+     &                           ObsState2Type(isVbar),                 &
      &                           Mobs, 1, Nobs(ng),                     &
      &                           vXmin(ng), vXmax(ng),                  &
      &                           vYmin(ng), vYmax(ng),                  &
      &                           time(ng), dt(ng),                      &
-     &                           ObsType, ObsScale,                     &
+     &                           ObsType, ObsVetting,                   &
      &                           Tobs, Xobs, Yobs,                      &
      &                           ad_vbar(:,:,kfrc),                     &
 # ifdef MASKING
@@ -252,9 +281,12 @@
 # endif
      &                           ADmodVal)
         END IF
+
 # ifdef SOLVE3D
 !
+!-----------------------------------------------------------------------
 !  3D u-momentum component.
+!-----------------------------------------------------------------------
 !
         IF (FOURDVAR(ng)%ObsCount(isUvel).gt.0) THEN
           DO k=1,N(ng)
@@ -267,12 +299,12 @@
           END DO
           CALL ad_extract_obs3d (ng, 1, Lm(ng)+1, 0, Mm(ng)+1,          &
      &                           LBi, UBi, LBj, UBj, 1, N(ng),          &
-     &                           isUvel,                                &
+     &                           ObsState2Type(isUvel),                 &
      &                           Mobs, 1, Nobs(ng),                     &
      &                           uXmin(ng), uXmax(ng),                  &
      &                           uYmin(ng), uYmax(ng),                  &
      &                           time(ng), dt(ng),                      &
-     &                           ObsType, ObsScale,                     &
+     &                           ObsType, ObsVetting,                   &
      &                           Tobs, Xobs, Yobs, Zobs,                &
      &                           ad_u(:,:,:,nfrc),                      &
      &                           z_v,                                   &
@@ -282,7 +314,9 @@
      &                           ADmodVal)
         END IF
 !
+!-----------------------------------------------------------------------
 !  3D v-momentum component.
+!-----------------------------------------------------------------------
 !
         IF (FOURDVAR(ng)%ObsCount(isVvel).gt.0) THEN
           DO k=1,N(ng)
@@ -295,12 +329,12 @@
           END DO
           CALL ad_extract_obs3d (ng, 0, Lm(ng)+1, 1, Mm(ng)+1,          &
      &                           LBi, UBi, LBj, UBj, 1, N(ng),          &
-     &                           isVvel,                                &
+     &                           ObsState2Type(isVvel),                 &
      &                           Mobs, 1, Nobs(ng),                     &
      &                           vXmin(ng), vXmax(ng),                  &
      &                           vYmin(ng), vYmax(ng),                  &
      &                           time(ng), dt(ng),                      &
-     &                           ObsType, ObsScale,                     &
+     &                           ObsType, ObsVetting,                   &
      &                           Tobs, Xobs, Yobs, Zobs,                &
      &                           ad_v(:,:,:,nfrc),                      &
      &                           z_v,                                   &
@@ -310,18 +344,20 @@
      &                           ADmodVal)
         END IF
 !
+!-----------------------------------------------------------------------
 !  Tracer type variables.
+!-----------------------------------------------------------------------
 !
         DO itrc=1,NT(ng)
           IF (FOURDVAR(ng)%ObsCount(isTvar(itrc)).gt.0) THEN
             CALL ad_extract_obs3d (ng, 0, Lm(ng)+1, 0, Mm(ng)+1,        &
      &                             LBi, UBi, LBj, UBj, 1, N(ng),        &
-     &                             isTvar(itrc),                        &
+     &                             ObsState2Type(isTvar(itrc)),         &
      &                             Mobs, 1, Nobs(ng),                   &
      &                             rXmin(ng), rXmax(ng),                &
      &                             rYmin(ng), rYmax(ng),                &
      &                             time(ng), dt(ng),                    &
-     &                             ObsType, ObsScale,                   &
+     &                             ObsType, ObsVetting,                 &
      &                             Tobs, Xobs, Yobs, Zobs,              &
      &                             ad_t(:,:,:,nfrc,itrc),               &
      &                             z_r,                                 &
@@ -332,41 +368,43 @@
           END IF
         END DO
 # endif
-# if defined DISTRIBUTE && !defined BGQC
+# ifdef DISTRIBUTE
 !
 !-----------------------------------------------------------------------
-!  Collect all observations scaling factors.
+!  For debugging purposes, collect all observations reject/accept
+!  processing flag.
 !-----------------------------------------------------------------------
 !
-        CALL mp_collect (ng, model, Mobs, IniVal, ObsScale)
+        CALL mp_collect (ng, model, Mobs, IniVal, ObsVetting)
 # endif
 !
 !-----------------------------------------------------------------------
-!  Set counters for number of rejected observations for each state
-!  variable.
+!  Set counters for the number of rejected observations for each state
+!  variable. Although unnecessary, the counters are recomputed here to
+!  check if "ObsScale" changed from its initial values.
 !-----------------------------------------------------------------------
 !
         DO iobs=1,Nobs(ng)
           IF (ObsScale(iobs).lt.1.0) THEN
-            IF  (ObsType(iobs).eq.isFsur) THEN
+            IF (ObsType(iobs).eq.ObsState2Type(isFsur)) THEN
               FOURDVAR(ng)%ObsReject(isFsur)=                           &
      &                              FOURDVAR(ng)%ObsReject(isFsur)+1
-            ELSE IF (ObsType(iobs).eq.isUbar) THEN
+            ELSE IF (ObsType(iobs).eq.ObsState2Type(isUbar)) THEN
               FOURDVAR(ng)%ObsReject(isUbar)=                           &
      &                              FOURDVAR(ng)%ObsReject(isUbar)+1
-            ELSE IF (ObsType(iobs).eq.isVbar) THEN
+            ELSE IF (ObsType(iobs).eq.ObsState2Type(isVbar)) THEN
               FOURDVAR(ng)%ObsReject(isVbar)=                           &
      &                              FOURDVAR(ng)%ObsReject(isVbar)+1
 # ifdef SOLVE3D
-            ELSE IF (ObsType(iobs).eq.isUvel) THEN
+            ELSE IF (ObsType(iobs).eq.ObsState2Type(isUvel)) THEN
               FOURDVAR(ng)%ObsReject(isUvel)=                           &
      &                              FOURDVAR(ng)%ObsReject(isUvel)+1
-            ELSE IF (ObsType(iobs).eq.isVvel) THEN
+            ELSE IF (ObsType(iobs).eq.ObsState2Type(isVvel)) THEN
               FOURDVAR(ng)%ObsReject(isVvel)=                           &
      &                              FOURDVAR(ng)%ObsReject(isVvel)+1
             ELSE
               DO itrc=1,NT(ng)
-                IF (ObsType(iobs).eq.isTvar(itrc)) THEN
+                IF (ObsType(iobs).eq.ObsState2Type(isTvar(itrc))) THEN
                   i=isTvar(itrc)
                   FOURDVAR(ng)%ObsReject(i)=FOURDVAR(ng)%ObsReject(i)+1
                 END IF
@@ -379,7 +417,7 @@
 !  Load total available and rejected observations into structure
 !  array.
 !
-        DO i=1,NstateVar(ng)
+        DO i=1,NobsVar(ng)
           FOURDVAR(ng)%ObsCount(0)=FOURDVAR(ng)%ObsCount(0)+            &
      &                             FOURDVAR(ng)%ObsCount(i)
           FOURDVAR(ng)%ObsReject(0)=FOURDVAR(ng)%ObsReject(0)+          &
@@ -393,10 +431,10 @@
             ObsSum=0
             ObsVoid=0
             is=NstrObs(ng)
-            DO i=1,NstateVar(ng)
+            DO i=1,NobsVar(ng)
               IF (FOURDVAR(ng)%ObsCount(i).gt.0) THEN
                 ie=is+FOURDVAR(ng)%ObsCount(i)-1
-                WRITE (stdout,10) TRIM(Vname(1,idSvar(i))), is, ie,     &
+                WRITE (stdout,10) TRIM(ObsName(i)), is, ie,             &
      &                            ie-is+1, FOURDVAR(ng)%ObsReject(i)
                 is=ie+1
                 ObsSum=ObsSum+FOURDVAR(ng)%ObsCount(i)

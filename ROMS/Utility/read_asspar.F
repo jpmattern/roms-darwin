@@ -2,9 +2,9 @@
 #if defined FOUR_DVAR || defined VERIFICATION
       SUBROUTINE read_AssPar (model, inp, out, Lwrite)
 !
-!svn $Id: read_asspar.F 820 2016-08-30 20:14:28Z arango $
+!svn $Id: read_asspar.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -23,6 +23,7 @@
       USE mod_ncparam
       USE mod_scalars
 !
+      USE strings_mod, ONLY : FoundError
       USE strings_mod, ONLY : uppercase
 !
       implicit none
@@ -56,7 +57,7 @@
 #   ifdef SOLVE3D
       logical, dimension(4,MT,Ngrids) :: Lbry_trc
       logical, dimension(MT,4) :: Lboundary
-      real(r8), dimension(MT,4,Ngrids) :: Rboundary
+      real(r8), dimension(4,MT,Ngrids) :: Rboundary
 #   endif
 #  endif
       real(r8), dimension(MT,Ngrids) :: Rtracer
@@ -153,6 +154,28 @@
             CASE ('NpostI')
               Npts=load_i(Nval, Rval, 1, Ivalue)
               NpostI=Ivalue(1)
+            CASE ('Nimpact')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              Nimpact=Ivalue(1)
+            CASE ('NextraObs')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              NextraObs=Ivalue(1)
+              IF (NextraObs.gt.0) THEN
+                IF (.not.allocated(ExtraIndex)) THEN
+                  allocate ( ExtraIndex(NextraObs) )
+                END IF
+                IF (.not.allocated(ExtraName)) THEN
+                  allocate ( ExtraName(NextraObs) )
+                END IF
+              END IF
+            CASE ('ExtraIndex')
+              IF (NextraObs.gt.0) THEN
+                Npts=load_i(Nval, Rval, NextraObs, ExtraIndex)
+              END IF
+            CASE ('ExtraName')
+              IF (NextraObs.gt.0) THEN
+                ExtraName(Nval)=TRIM(Cval(Nval))
+              END IF
             CASE ('tl_M2diff')
               Npts=load_r(Nval, Rval, Ngrids, tl_M2diff)
             CASE ('tl_M3diff')
@@ -400,9 +423,9 @@
             CASE ('HdecayB(isTvar)')
               Npts=load_r(Nval, Rval, 4*MT*Ngrids, Rboundary)
               DO ng=1,Ngrids
-                DO ib=1,4
-                  DO itrc=1,NT(ng)
-                    HdecayB(isTvar(itrc),ib,ng)=Rboundary(itrc,ib,ng)
+                DO itrc=1,NT(ng)
+                  DO ib=1,4
+                    HdecayB(isTvar(itrc),ib,ng)=Rboundary(ib,itrc,ng)
                   END DO
                 END DO
               END DO
@@ -413,9 +436,9 @@
             CASE ('VdecayB(isTvar)')
               Npts=load_r(Nval, Rval, 4*MT*Ngrids, Rboundary)
               DO ng=1,Ngrids
-                DO ib=1,4
-                  DO itrc=1,NT(ng)
-                    VdecayB(isTvar(itrc),ib,ng)=Rboundary(itrc,ib,ng)
+                DO itrc=1,NT(ng)
+                  DO ib=1,4
+                    VdecayB(isTvar(itrc),ib,ng)=Rboundary(ib,itrc,ng)
                   END DO
                 END DO
               END DO
@@ -685,8 +708,10 @@
 !
       IF (Lwrite) THEN
         DO ng=1,Ngrids
-#  if defined FOUR_DVAR
+#  if defined FOUR_DVAR || defined VERIFICATION
           WRITE (out,60) ng
+#  endif
+#  if defined FOUR_DVAR
 #   ifdef WEAK_CONSTRAINT
 #    ifdef RPM_RELAXATION
           WRITE (out,120) tl_M2diff, 'tl_M2diff',                       &
@@ -765,6 +790,18 @@
 #   if defined POSTERIOR_EOFS && defined WEAK_CONSTRAINT
           WRITE (out,80) NpostI, 'NpostI',                              &
      &            'Number of Lanczos iterations in posterior analysis.'
+#   endif
+#   if defined W4DPSAS_SENSITIVITY || defined W$DVAR_SENSITIVITY
+          WRITE (out,80) Nimpact, 'Nimpact',                             &
+     &            'Observations impact/sensitivity outer loop to use.'
+          IF (Nimpact.gt.Nouter) THEN
+            IF (Master) THEN
+              WRITE (out,240) 'Nimpact', Nimpact,                        &
+     &              'must be less or equal than Nouter'
+            END IF
+            exit_flag=5
+            RETURN
+          END IF
 #   endif
 #   ifndef TLM_CHECK
 #    ifndef IS4DVAR_SENSITIVITY
@@ -1068,7 +1105,7 @@
 #     else
             WRITE (out,100) S_bgqc(isUvel,ng), 'S_bgqc(isUvel)',        &
      &            'Quality control reject threshold, 3D U-momentum.'
-            WRITE (out,100) S_bgqc(isVbar,ng), 'S_bgqc(isVvel)',        &
+            WRITE (out,100) S_bgqc(isVvel,ng), 'S_bgqc(isVvel)',        &
      &            'Quality control reject threshold, 3D V-momentum.'
             DO itrc=1,NT(ng)
               WRITE (out,190) S_bgqc(isTvar(itrc),ng),                  &
@@ -1115,6 +1152,15 @@
 #    endif
 #   endif
 #  endif
+          IF (NextraObs.gt.0) THEN
+            WRITE (out,80) NextraObs, 'NextraObs',                       &
+     &            'Number of extra-observations classes to process.'
+            DO i=1,NextraObs
+              WRITE (out,85) ExtraIndex(i), 'ExtraIndex', i,             &
+     &            'Extra-observation type index for: '//                 &
+     &            TRIM(ExtraName(i))
+            END DO
+          END IF
 !
 !-----------------------------------------------------------------------
 !  Report input files and check availability of input files.
@@ -1256,9 +1302,17 @@
      &                    TRIM(ERR(ng)%name)
 #  endif
           GO TO 40
-  30      WRITE (out,220) TRIM(fname)
+  30      IF (Master) THEN
+            IF (LEN_TRIM(fname).eq.0) THEN
+              WRITE (out,220) ng, 'Oops unassigned file name. '//       &
+     &                            'Check assimilation input script...'
+            ELSE
+              WRITE (out,220) ng, TRIM(fname)
+            END IF
+          END IF
           exit_flag=4
-          RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
   40      CONTINUE
         END DO
       END IF
@@ -1297,10 +1351,17 @@
 !
   50  FORMAT (/,' READ_AssPar - Error while processing line: ',/,a)
   55  FORMAT (/,' READ_AssPar - ',a,i4,2x,i4,/,15x,a)
+#  ifdef VERIFICATION
+  60  FORMAT (/,/,' Observation Parameters, Grid: ',i2.2,               &
+     &        /,  ' ================================',/)
+#  else
   60  FORMAT (/,/,' Assimilation Parameters, Grid: ',i2.2,              &
      &        /,  ' =================================',/)
+#  endif
   70  FORMAT (10x,l1,2x,a,t30,a)
   80  FORMAT (1x,i10,2x,a,t30,a)
+  85  FORMAT (1x,i10,2x,a,'(',i2.2,')',t30,a)
+
   90  FORMAT (1x,i10,2x,a,t30,a,/,t32,a)
  100  FORMAT (1p,e11.4,2x,a,t30,a)
  110  FORMAT (10x,l1,2x,a,t30,a,i2.2,':',1x,a)
@@ -1317,9 +1378,12 @@
  190  FORMAT (1p,e11.4,2x,a,t30,a,a,'.')
  200  FORMAT (1p,e11.4,2x,a,'(',i2.2,')',t30,a,':',1x,i6)
  210  FORMAT (/,' READ_ASSPAR - variable info not yet loaded, ', a)
- 220  FORMAT (/,' READ_ASSPAR - could not find input file:  ',a)
+ 220  FORMAT (/,' READ_ASSPAR - Grid ', i2.2,                           &
+     &        ', could not find input file:  ',a)
  230  FORMAT (/,' READ_ASSPAR - Illegal parameter, ', a, ' = ', 1x, l1, &
      &        /,15x,a,/,15x,a)
+ 240  FORMAT (/,' READ_ASSPAR - Illegal parameter, ', a, ' = ', 1x, i2, &
+     &        /,15x,a)
 # endif
 
       RETURN

@@ -1,9 +1,9 @@
 /*
 ** Include file "globaldef.h"
 **
-** svn $Id: globaldefs.h 795 2016-05-11 01:42:43Z arango $
+** svn $Id: globaldefs.h 898 2018-02-14 18:00:44Z arango $
 ********************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2016 The ROMS/TOMS Group     Alexander F. Shchepetkin  **
+** Copyright (c) 2002-2018 The ROMS/TOMS Group     Alexander F. Shchepetkin  **
 **   Licensed under a MIT/X style license                                    **
 **   See License_ROMS.txt                                                    **
 *******************************************************************************
@@ -45,6 +45,17 @@
 
 #if defined MPI
 # define DISTRIBUTE
+#endif
+
+/*
+** Make sure that either "mpi_allgather" or "mpi_allreduce" is used
+** in mp_reduce.  Low-level routines give an error.
+*/
+
+#ifdef DISTRIBUTE
+# if !(defined REDUCE_ALLGATHER || defined REDUCE_ALLREDUCE)
+#  define REDUCE_ALLGATHER
+# endif
 #endif
 
 /*
@@ -410,6 +421,12 @@
       defined OBS_IMPACT
 # undef OBS_IMPACT
 #endif
+#if !(defined OBS_IMPACT             && \
+      (defined W4DVAR_SENSITIVITY    || defined W4DPSAS_SENSITIVITY || \
+       defined IS4DVAR_SENSITIVITY))
+# undef IMPACT_INNER
+#endif
+
 
 /*
 ** Activate internal switch to process 4DVAR observations.
@@ -531,9 +548,9 @@
 */
 
 #if defined BIO_FENNEL  || defined ECOSIM      || \
-    defined NEMURO      || defined NPZD_FRANKS || \
-    defined NPZD_IRON   || defined NPZD_POWELL || \
-    defined RED_TIDE
+    defined HYPOXIA_SRM || defined NEMURO      || \
+    defined NPZD_FRANKS || defined NPZD_IRON   || \
+    defined NPZD_POWELL || defined RED_TIDE
 # define BIOLOGY
 #endif
 
@@ -550,15 +567,21 @@
 **
 */
 
-#if defined WRF_COUPLING
-# define AIR_OCEAN
+#if defined COAMPS_COUPLING || defined REGCM_COUPLING || \
+    defined WRF_COUPLING
+# define ATM_COUPLING
 #endif
 
-#if defined REFDIF_COUPLING || defined SWAN_COUPLING
-# define WAVES_OCEAN
+#if defined CICE_COUPLING
+# define ICE_COUPLING
 #endif
 
-#if defined AIR_OCEAN || defined WAVES_OCEAN
+#if defined REFDIF_COUPLING || defined SWAN_COUPLING || \
+    defined WAM_COUPLING
+# define WAV_COUPLING
+#endif
+
+#if defined ATM_COUPLING || defined ICE_COUPLING || defined WAV_COUPLING
 # define MODEL_COUPLING
 #endif
 
@@ -577,8 +600,8 @@
 ** Define internal option to process wave data.
 */
 
-#if defined BBL_MODEL   || defined NEARSHORE || \
-    defined WAVES_OCEAN
+#if defined BBL_MODEL    || defined NEARSHORE || \
+    defined WAV_COUPLING
 # define WAVES_DIR
 #endif
 
@@ -588,35 +611,35 @@
 # define WAVES_UB
 #endif
 
-#if (defined BBL_MODEL        && !defined WAVES_UB) ||  \
+#if (defined BBL_MODEL        && !defined WAVES_UB)           || \
      defined NEARSHORE        || \
      defined ZOS_HSIG         || defined COARE_TAYLOR_YELLAND || \
-     defined BEDLOAD_SOULSBY  || defined WAVES_OCEAN
+     defined BEDLOAD_SOULSBY  || defined WAV_COUPLING
 # define WAVES_HEIGHT
 #endif
 
-#if defined NEARSHORE || defined BEDLOAD_SOULSBY || \
-    defined WAVES_OCEAN
+#if defined NEARSHORE    || defined BEDLOAD_SOULSBY || \
+    defined WAV_COUPLING
 # define WAVES_LENGTH
 #endif
 
 #if (!defined DEEPWATER_WAVES      && \
      (defined COARE_TAYLOR_YELLAND || defined COARE_OOST)) || \
       defined NEARSHORE_MELLOR     || \
-      defined BEDLOAD_SOULSBY      || defined WAVES_OCEAN
+      defined BEDLOAD_SOULSBY      || defined WAV_COUPLING
 # define WAVES_LENGTH
 #endif
 
 #if defined COARE_TAYLOR_YELLAND   || defined COARE_OOST || \
-    defined WAVES_OCEAN
+    defined WAV_COUPLING
 # define WAVES_TOP_PERIOD
 #endif
 
-#if defined BBL_MODEL || defined WAVES_OCEAN
+#if defined BBL_MODEL || defined WAV_COUPLING
 # define WAVES_BOT_PERIOD
 #endif
 
-#if !defined WAVES_OCEAN     && \
+#if !defined WAV_COUPLING    && \
    ((defined BULK_FLUXES     && defined COARE_TAYLOR_YELLAND) || \
     (defined BULK_FLUXES     && defined COARE_OOST)           || \
      defined SVENDSEN_ROLLER || defined TKE_WAVEDISS          || \
@@ -649,36 +672,47 @@
 #  endif
 # endif
 # if !defined ANA_BTFLUX   || \
-    (!defined AIR_OCEAN    && \
+    (!defined ATM_COUPLING && \
      !defined BULK_FLUXES  && !defined ANA_SMFLUX)   || \
-    (!defined BULK_FLUXES  && !defined ANA_STFLUX)   || \
+    (!defined ATM_COUPLING && \
+     !defined BULK_FLUXES  && !defined ANA_STFLUX)   || \
     ( defined BIOLOGY      && !defined ANA_SPFLUX)   || \
     ( defined BIOLOGY      && !defined ANA_BPFLUX)   || \
-    ( defined BULK_FLUXES  && !defined LONGWAVE)     || \
-    ( defined BULK_FLUXES  && !defined ANA_PAIR)     || \
-    ( defined BULK_FLUXES  && !defined ANA_TAIR)     || \
-    ( defined BULK_FLUXES  && !defined ANA_HUMIDITY) || \
-    ( defined BULK_FLUXES  && !defined ANA_CLOUD)    || \
-    ( defined BULK_FLUXES  && !defined ANA_RAIN)     || \
-    ( defined BULK_FLUXES  && !defined ANA_WINDS)    || \
-    ( defined BULK_FLUXES  && !defined ANA_SRFLUX)   || \
-    ( defined LMD_SKPP     && !defined ANA_SRFLUX)   || \
-      defined RED_TIDE     || \
-    ( defined SALINITY     && !defined ANA_SSFLUX    && \
+    (!defined ATM_COUPLING && \
+      defined BULK_FLUXES  && !defined LONGWAVE)     || \
+    (!defined ATM_COUPLING && \
+      defined BULK_FLUXES  && !defined ANA_PAIR)     || \
+    (!defined ATM_COUPLING && \
+      defined BULK_FLUXES  && !defined ANA_TAIR)     || \
+    (!defined ATM_COUPLING && \
+      defined BULK_FLUXES  && !defined ANA_HUMIDITY) || \
+    (!defined ATM_COUPLING && \
+      defined BULK_FLUXES  && !defined ANA_CLOUD)    || \
+    (!defined ATM_COUPLING && \
+      defined BULK_FLUXES  && !defined ANA_RAIN)     || \
+    (!defined ATM_COUPLING && \
+      defined BULK_FLUXES  && !defined ANA_WINDS)    || \
+    (!defined ATM_COUPLING && \
+      defined BULK_FLUXES  && !defined ANA_SRFLUX)   || \
+    (!defined ATM_COUPLING && \
+      defined LMD_SKPP     && !defined ANA_SRFLUX)   || \
+    (!defined ATM_COUPLING && \
+      defined RED_TIDE)    || \
+    (!defined ATM_COUPLING && \
+      defined SALINITY     && !defined ANA_SSFLUX    && \
      (defined BULK_FLUXES  && !defined EMINUSP))     || \
-    ( defined SOLAR_SOURCE && !defined ANA_SRFLUX)   || \
-    ( defined SSH_TIDES    || defined UV_TIDES)      || \
+    (!defined ATM_COUPLING && \
+      defined SOLAR_SOURCE && !defined ANA_SRFLUX)   || \
     ( defined BBL_MODEL    && (!defined ANA_WWAVE    && \
-     !defined WAVES_OCEAN))                          || \
+     !defined WAV_COUPLING))                         || \
     ( defined SEDIMENT     && !defined ANA_SPFLUX)   || \
     ( defined SEDIMENT     && !defined ANA_BPFLUX)   || \
     ( defined WAVE_DATA    && (!defined ANA_WWAVE    && \
-     !defined WAVES_OCEAN))
+     !defined WAV_COUPLING))
 #  define FRC_FILE
 # endif
 #else
-# if !defined ANA_SMFLUX   || \
-    ( defined  SSH_TIDES   || defined UV_TIDES)
+# if(!defined ATM_COUPLING && !defined ANA_SMFLUX)
 #  define FRC_FILE
 # endif
 #endif
@@ -743,7 +777,8 @@
 #   undef DIAGNOSTICS_TS
 # endif
 #endif
-#if !defined BIO_FENNEL && defined DIAGNOSTICS_BIO
+#if defined DIAGNOSTICS_BIO && \
+  !(defined BIO_FENNEL      || defined HYPOXIA_SRM)
 #  undef DIAGNOSTICS_BIO
 #endif
 #if defined DIAGNOSTICS_BIO || defined DIAGNOSTICS_TS || \
@@ -755,27 +790,28 @@
 ** Check if any analytical expression is defined.
 */
 
-#if defined ANA_BIOLOGY    || defined ANA_BPFLUX     || \
-    defined ANA_BSFLUX     || defined ANA_BTFLUX     || \
-    defined ANA_CLOUD      || defined ANA_DIAG       || \
-    defined ANA_DQDSST     || defined ANA_DRAG       || \
-    defined ANA_FSOBC      || defined ANA_GRID       || \
-    defined ANA_HUMIDITY   || defined ANA_INITIAL    || \
-    defined ANA_M2CLIMA    || defined ANA_M2OBC      || \
-    defined ANA_M3CLIMA    || defined ANA_M3OBC      || \
-    defined ANA_MASK       || defined ANA_NUDGCOEF   || \
-    defined ANA_PAIR       || defined ANA_PASSIVE    || \
-    defined ANA_PERTURB    || defined ANA_PSOURCE    || \
-    defined ANA_RAIN       || defined ANA_SEDIMENT   || \
-    defined ANA_SMFLUX     || defined ANA_SPFLUX     || \
-    defined ANA_SPINNING   || defined ANA_SPONGE     || \
-    defined ANA_SRFLUX     || defined ANA_SSFLUX     || \
-    defined ANA_SSH        || defined ANA_SSS        || \
-    defined ANA_SST        || defined ANA_STFLUX     || \
-    defined ANA_TAIR       || defined ANA_TCLIMA     || \
-    defined ANA_TOBC       || defined ANA_VMIX       || \
-    defined ANA_WINDS      || defined ANA_WWAVE      || \
-    defined DIFF_GRID      || defined VISC_GRID
+#if defined ANA_BIOLOGY    || defined ANA_BPFLUX      || \
+    defined ANA_BSFLUX     || defined ANA_BTFLUX      || \
+    defined ANA_CLOUD      || defined ANA_DIAG        || \
+    defined ANA_DQDSST     || defined ANA_DRAG        || \
+    defined ANA_FSOBC      || defined ANA_GRID        || \
+    defined ANA_HUMIDITY   || defined ANA_INITIAL     || \
+    defined ANA_M2CLIMA    || defined ANA_M2OBC       || \
+    defined ANA_M3CLIMA    || defined ANA_M3OBC       || \
+    defined ANA_MASK       || defined ANA_NUDGCOEF    || \
+    defined ANA_PAIR       || defined ANA_PASSIVE     || \
+    defined ANA_PERTURB    || defined ANA_PSOURCE     || \
+    defined ANA_RAIN       || defined ANA_RESPIRATION || \
+    defined ANA_SEDIMENT   || defined ANA_SMFLUX      || \
+    defined ANA_SPFLUX     || defined ANA_SPINNING    || \
+    defined ANA_SPONGE     || defined ANA_SRFLUX      || \
+    defined ANA_SSFLUX     || defined ANA_SSH         || \
+    defined ANA_SSS        || defined ANA_SST         || \
+    defined ANA_STFLUX     || defined ANA_TAIR        || \
+    defined ANA_TCLIMA     || defined ANA_TOBC        || \
+    defined ANA_VMIX       || defined ANA_WINDS       || \
+    defined ANA_WWAVE      || defined DIFF_GRID       || \
+    defined VISC_GRID
 # define ANALYTICAL
 #endif
 

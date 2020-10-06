@@ -3,9 +3,9 @@
 #if (defined TL_AVERAGES && defined TANGENT) || \
     (defined RP_AVERAGES && defined TL_IOMS)
 !
-!svn $Id: tl_set_avg.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: tl_set_avg.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -38,7 +38,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iTLM, 5)
+      CALL wclock_on (ng, iTLM, 5, __LINE__, __FILE__)
 # endif
       CALL tl_set_avg_tile (ng, tile,                                   &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -49,7 +49,7 @@
      &                      KOUT)
 
 # ifdef WET_DRY
-      CALL set_avg_masks (ng, tile, iADM,                               &
+      CALL set_avg_masks (ng, tile, iTLM,                               &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
      &                    GRID(ng) % pmask_avg,                         &
@@ -59,7 +59,7 @@
 # endif
 
 # ifdef PROFILE
-      CALL wclock_off (ng, iTLM, 5)
+      CALL wclock_off (ng, iTLM, 5, __LINE__, __FILE__)
 # endif
       RETURN
       END SUBROUTINE tl_set_avg

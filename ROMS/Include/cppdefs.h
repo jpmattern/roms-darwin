@@ -1,9 +1,9 @@
 /*
 ** Include file "cppdefs.h"
 **
-** svn $Id: cppdefs.h 807 2016-07-09 02:03:55Z arango $
+** svn $Id: cppdefs.h 889 2018-02-10 03:32:52Z arango $
 ********************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2016 The ROMS/TOMS Group                               **
+** Copyright (c) 2002-2018 The ROMS/TOMS Group                               **
 **   Licensed under a MIT/X style license                                    **
 **   See License_ROMS.txt                                                    **
 *******************************************************************************
@@ -163,6 +163,7 @@
 ** LONGWAVE            use if computing net longwave radiation               **
 ** LONGWAVE_OUT        use if computing outgoing longwave radiation          **
 ** EMINUSP             use if computing E-P                                  **
+** WIND_MINUS_CURRENT  use if compute effective wind by removing current     **
 **                                                                           **
 ** OPTIONS for wave roughness formulation in bulk fluxes:                    **
 **                                                                           **
@@ -275,9 +276,12 @@
 ** (activate only one closure):                                              **
 **                                                                           **
 ** BVF_MIXING          use if Brunt-Vaisala frequency mixing                 **
-** GLS_MIXING          use if Generic Length-Scale mixing                    **
+** GLS_MIXING          use if Generic Length-Scale mixing closure            **
 ** MY25_MIXING         use if Mellor/Yamada Level-2.5 closure                **
 ** LMD_MIXING          use if Large et al. (1994) interior closure           **
+**                                                                           **
+** LIMIT_VDIFF         use to impose an upper limit on vertical diffusion    **
+** LIMIT_VVISC         use to impose an upper limit on vertical viscosity    **
 **                                                                           **
 ** OPTIONS for the Generic Length-Scale closure (Warner et al., 2005):       **
 **                                                                           **
@@ -439,6 +443,7 @@
 ** FORWARD_WRITE       use if writing out forward solution, basic state      **
 ** FORWARD_READ        use if reading in  forward solution, basic state      **
 ** FORWARD_RHS         use if processing forward right-hand-side terms       **
+** IMPACT_INNER        use to write observations impacts for each inner loop **
 ** IMPLICIT_VCONV      use if implicit vertical convolution algorithm        **
 ** IMPULSE             use if processing adjoint impulse forcing             **
 ** MINRES              use if Minimal Residual Method for 4DVar minimization **
@@ -451,6 +456,7 @@
 ** POSTERIOR_ERROR_I   use if initial posterior analysis error covariance    **
 ** RECOMPUTE_4DVAR     use if recomputing 4DVar in analysis algorithms       **
 ** RPM_RELAXATION      use if Picard iterations, Diffusive Relaxation of RPM **
+** SKIP_NLM            use to skip running NLM, reading NLM trajectory       **
 ** SO_SEMI_WHITE       use to activate SO semi norm white/red noise processes**
 ** STOCH_OPT_WHITE     use to activate SO white/red noise processes          **
 ** SPLINES_VCONV       use to activate implicit splines vertical convolution **
@@ -473,6 +479,10 @@
 ** OXYGEN              use to add oxygen dynamics                            **
 ** OCMIP_OXYGEN_SC     use if Schmidt number from Keeling et al. (1998)      **
 ** TALK_NONCONSERV     use if nonconservative computation of alkalinity      **
+**                                                                           **
+** Hypoxia ecosysten model OPTIONS:                                          **
+**                                                                           **
+** HYPOXIA_SRM         use if Hypoxia Simple Respiration Model               **
 **                                                                           **
 ** NPZD biology model OPTIONS:                                               **
 **                                                                           **
@@ -528,6 +538,34 @@
 ** WET_DRY             use to activate wetting and drying                    **
 ** NEARSHORE_MELLOR05  use to activate radiation stress terms (Mellor 2005). **
 ** NEARSHORE_MELLOR08  use to activate radiation stress terms (Mellor 2008). **
+**                                                                           **
+** MPI communication OPTIONS:  The routines "mp_assemble" (used in nesting), **
+**                             "mp_collect" (used in NetCDF I/O and 4D-Var), **
+** and "mp_reduce" (used in global reductions) are coded in "distribution.F" **
+** by either using low-level ("mpi_isend" and "mpi_irecv") or high-level     **
+** ("mpi_allgather" and "mpi_allreduce") MPI calls. The default is to use    **
+** the low-level MPI  calls. The options for routine "mp_boundary" (used to  **
+** process lateral open boundary conditions is either "mpi_allgather" or     **
+** "mpi_allreduce" (default).                                                **
+**                                                                           **
+** The user needs to be aware that the choice of these MPI communication     **
+** routines it will affect performance issue. In some computers, the         **
+** low-level are either slower or faster than the high-level MPI library     **
+** calls. It depends on the computer (cluster) set-up. Some vendors provide  **
+** native MPI libraries fine-tuned for the computer architecture. The        **
+** user needs to find which function option performs better by carrying on   **
+** benchmarks. We provides the following choices:                            **
+**                                                                           **
+** ASSEMBLE_ALLGATHER  use "mpi_allgather" in "mp_assemble"                  **
+** ASSEMBLE_ALLREDUCE  use "mpi_allreduce" in "mp_assemble"                  **
+**                                                                           **
+** BOUNDARY_ALLGATHER  use "mpi_allgather" in "mp_boundary"                  **
+**                                                                           **
+** COLLECT_ALLGATHER   use "mpi_allgather" in "mp_collect"                   **
+** COLLECT_ALLREDUCE   use "mpi_allreduce" in "mp_collect"                   **
+**                                                                           **
+** REDUCE_ALLGATHER    use "mpi_allgather" in "mp_reduce"                    **
+** REDUCE_ALLREDUCE    use "mpi_allreduce" in "mp_reduce"                    **
 **                                                                           **
 ** NetCDF input/output OPTIONS:                                              **
 **                                                                           **

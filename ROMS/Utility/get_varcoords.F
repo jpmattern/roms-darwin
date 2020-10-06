@@ -4,9 +4,9 @@
      &                          Xmin, Xmax, X, Ymin, Ymax, Y,           &
      &                          rectangular)
 !
-!svn $Id: get_varcoords.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: get_varcoords.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -45,6 +45,8 @@
       USE mod_netcdf
       USE mod_scalars
 !
+      USE strings_mod, ONLY : FoundError
+!
       implicit none
 !
 !  Imported variable declarations.
@@ -74,7 +76,7 @@
 
       character (len=20) :: Xname, Yname
 !
-      SourceFile='get_varcoords.F'
+      SourceFile=__FILE__
 !
 !-----------------------------------------------------------------------
 !  Get coarse variable coordinates.
@@ -85,7 +87,8 @@
       CALL netcdf_inq_var (ng, model, ncname,                           &
      &                     ncid = ncid,                                 &
      &                     myVarName = ncvname)
-      IF (exit_flag.ne.NoError) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 !
 !  Get names of variable coordinates.
 !
@@ -119,7 +122,8 @@
      &                     ncid = ncid,                                 &
      &                     myVarName = Xname,                           &
      &                     VarID= varid)
-      IF (exit_flag.ne.NoError) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 !
       IF (n_vdim.eq.1) THEN
         CALL netcdf_get_fvar (ng, model, ncname, Xname,                 &
@@ -127,7 +131,8 @@
      &                        ncid = ncid,                              &
      &                        start = (/1/),                            &
      &                        total = (/Nx/))
-        IF (exit_flag.ne.NoError) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
 
         rectangular=.TRUE.
         jc=0
@@ -142,7 +147,8 @@
      &                        ncid = ncid,                              &
      &                        start = (/1,1/),                          &
      &                        total = (/Nx,Ny/))
-        IF (exit_flag.ne.NoError) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
 
         jc=1
         DO j=2,Ny
@@ -158,7 +164,8 @@
      &                     ncid = ncid,                                 &
      &                     myVarName = Yname,                           &
      &                     VarID= varid)
-      IF (exit_flag.ne.NoError) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &               __FILE__)) RETURN
 !
       IF (n_vdim.eq.1) THEN
         CALL netcdf_get_fvar (ng, model, ncname, Yname,                 &
@@ -166,7 +173,8 @@
      &                        ncid = ncid,                              &
      &                        start = (/1/),                            &
      &                        total = (/Ny/))
-        IF (exit_flag.ne.NoError) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
 
         rectangular=.TRUE.
         ic=0
@@ -181,7 +189,8 @@
      &                        ncid = ncid,                              &
      &                        start = (/1,1/),                          &
      &                        total = (/Nx,Ny/))
-        IF (exit_flag.ne.NoError) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
 
         ic=1
         DO i=2,Nx

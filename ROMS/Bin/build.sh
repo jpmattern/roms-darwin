@@ -1,8 +1,8 @@
 #!/bin/csh -f
 #
-# svn $Id: build.sh 795 2016-05-11 01:42:43Z arango $
+# svn $Id: build.sh 891 2018-02-11 00:36:55Z arango $
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::: John Wilkin :::
-# Copyright (c) 2002-2016 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2018 The ROMS/TOMS Group                           :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.txt                                                :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::: Hernan G. Arango :::
@@ -31,6 +31,11 @@
 #                                                                       :::
 #    -j [N]      Compile in parallel using N CPUs                       :::
 #                  omit argument for all available CPUs                 :::
+#                                                                       :::
+#    -p macro    Prints any Makefile macro value. For example,          :::
+#                                                                       :::
+#                  build.sh -p FFLAGS                                   :::
+#                                                                       :::
 #    -noclean    Do not clean already compiled objects                  :::
 #                                                                       :::
 # Notice that sometimes the parallel compilation fail to find MPI       :::
@@ -38,14 +43,25 @@
 #                                                                       :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+set which_MPI = openmpi                      #  default, overwritten below
+
 set parallel = 0
 set clean = 1
+set dprint = 0
 
 while ( ($#argv) > 0 )
   switch ($1)
     case "-noclean"
       shift
       set clean = 0
+    breaksw
+
+    case "-p"
+      shift
+      set clean = 0
+      set dprint = 1
+      set debug = "print-$1"
+      shift
     breaksw
 
     case "-j"
@@ -67,6 +83,10 @@ while ( ($#argv) > 0 )
       echo ""
       echo "-j [N]      Compile in parallel using N CPUs"
       echo "              omit argument for all avaliable CPUs"
+      echo ""
+      echo "-p macro    Prints any Makefile macro value"
+      echo "              For example:  build.sh -p FFLAGS"
+      echo ""
       echo "-noclean    Do not clean already compiled objects"
       echo ""
       exit 1
@@ -148,8 +168,6 @@ setenv MY_PROJECT_DIR        ${PWD}
 #setenv USE_NETCDF4         on          # compile with NetCDF-4 library
 #setenv USE_PARALLEL_IO     on          # Parallel I/O with NetCDF-4/HDF5
 
-#setenv USE_MY_LIBS         on          # use my library paths below
-
 # There are several MPI libraries available. Here, we set the desired
 # "mpif90" script to use during compilation. This only works if the make
 # configuration file (say, Linux-pgi.mk) in the "Compilers" directory
@@ -196,7 +214,11 @@ if ($?USE_MPIF90) then
   endsw
 endif
 
-# If the USE_MY_LIBS is activated above, the path of the libraries
+#--------------------------------------------------------------------------
+# Set libraries to compile.
+#--------------------------------------------------------------------------
+
+# If the USE_MY_LIBS is activated below, the path of the libraries
 # required by ROMS can be set here using environmental variables
 # which take precedence to the values specified in the make macro
 # definitions file (Compilers/*.mk). For most applications, only
@@ -204,7 +226,7 @@ endif
 #
 # Notice that when the USE_NETCDF4 macro is activated, we need the
 # serial or parallel version of the NetCDF-4/HDF5 library. The
-# configuration script NC_CONFIG (available since NetCDF 4.0.1)
+# configuration script NF_CONFIG (available since NetCDF 4.0.1)
 # is used to set up all the required libraries according to the
 # installed options (openDAP, netCDF4/HDF5 file format). The
 # parallel library uses the MPI-I/O layer (usually available
@@ -224,15 +246,19 @@ endif
 # Recall also that the MPI library comes in several flavors:
 # MPICH, MPICH2, OpenMPI, etc.
 
-if ($?USE_MY_LIBS) then
+
+#setenv USE_MY_LIBS no           # don't use my library paths below
+ setenv USE_MY_LIBS yes          # use my library paths below
+
+if ($USE_MY_LIBS == 'yes') then
+
   switch ($FORT)
 
     case "ifort"
-      setenv ESMF_OS              Linux
-      setenv ESMF_COMPILER        ifort
+      setenv ESMF_COMPILER        intelgcc
       setenv ESMF_BOPT            O
       setenv ESMF_ABI             64
-      setenv ESMF_COMM            mpich
+      setenv ESMF_COMM            ${which_MPI}
       setenv ESMF_SITE            default
 
       setenv ARPACK_LIBDIR        /opt/intelsoft/serial/ARPACK
@@ -258,17 +284,17 @@ if ($?USE_MY_LIBS) then
       if ($?USE_NETCDF4) then
         if ($?USE_PARALLEL_IO && $?USE_MPI) then
           if ($which_MPI == "mpich" ) then
-            setenv NC_CONFIG      /opt/intelsoft/mpich/netcdf4/bin/nc-config
+            setenv NF_CONFIG      /opt/intelsoft/mpich/netcdf4/bin/nf-config
             setenv NETCDF_INCDIR  /opt/intelsoft/mpich/netcdf4/include
           else if ($which_MPI == "mpich2" ) then
-            setenv NC_CONFIG      /opt/intelsoft/mpich2/netcdf4/bin/nc-config
+            setenv NF_CONFIG      /opt/intelsoft/mpich2/netcdf4/bin/nf-config
             setenv NETCDF_INCDIR  /opt/intelsoft/mpich2/netcdf4/include
           else if ($which_MPI == "openmpi" ) then
-            setenv NC_CONFIG      /opt/intelsoft/openmpi/netcdf4/bin/nc-config
+            setenv NF_CONFIG      /opt/intelsoft/openmpi/netcdf4/bin/nf-config
             setenv NETCDF_INCDIR  /opt/intelsoft/openmpi/netcdf4/include
           endif
         else
-          setenv NC_CONFIG        /opt/intelsoft/serial/netcdf4/bin/nc-config
+          setenv NF_CONFIG        /opt/intelsoft/serial/netcdf4/bin/nf-config
           setenv NETCDF_INCDIR    /opt/intelsoft/serial/netcdf4/include
         endif
       else
@@ -278,11 +304,10 @@ if ($?USE_MY_LIBS) then
     breaksw
 
     case "pgi"
-      setenv ESMF_OS              Linux
       setenv ESMF_COMPILER        pgi
       setenv ESMF_BOPT            O
       setenv ESMF_ABI             64
-      setenv ESMF_COMM            mpich
+      setenv ESMF_COMM            ${which_MPI}
       setenv ESMF_SITE            default
 
       setenv ARPACK_LIBDIR        /opt/pgisoft/serial/ARPACK
@@ -308,17 +333,17 @@ if ($?USE_MY_LIBS) then
       if ($?USE_NETCDF4) then
         if ($?USE_PARALLEL_IO && $?USE_MPI) then
           if ($which_MPI == "mpich" ) then
-            setenv NC_CONFIG      /opt/pgisoft/mpich/netcdf4/bin/nc-config
+            setenv NF_CONFIG      /opt/pgisoft/mpich/netcdf4/bin/nf-config
             setenv NETCDF_INCDIR  /opt/pgisoft/mpich/netcdf4/include
           else if ($which_MPI == "mpich2" ) then
-            setenv NC_CONFIG      /opt/pgisoft/mpich2/netcdf4/bin/nc-config
+            setenv NF_CONFIG      /opt/pgisoft/mpich2/netcdf4/bin/nf-config
             setenv NETCDF_INCDIR  /opt/pgisoft/mpich2/netcdf4/include
           else if ($which_MPI == "openmpi" ) then
-            setenv NC_CONFIG      /opt/pgisoft/openmpi/netcdf4/bin/nc-config
+            setenv NF_CONFIG      /opt/pgisoft/openmpi/netcdf4/bin/nf-config
             setenv NETCDF_INCDIR  /opt/pgisoft/openmpi/netcdf4/include
           endif
         else
-          setenv NC_CONFIG        /opt/pgisoft/serial/netcdf4/bin/nc-config
+          setenv NF_CONFIG        /opt/pgisoft/serial/netcdf4/bin/nf-config
           setenv NETCDF_INCDIR    /opt/pgisoft/serial/netcdf4/include
         endif
       else
@@ -328,11 +353,10 @@ if ($?USE_MY_LIBS) then
     breaksw
 
     case "gfortran"
-      setenv ESMF_OS              Linux
       setenv ESMF_COMPILER        gfortran
       setenv ESMF_BOPT            O
       setenv ESMF_ABI             64
-      setenv ESMF_COMM            mpich
+      setenv ESMF_COMM            ${which_MPI}
       setenv ESMF_SITE            default
 
       setenv ARPACK_LIBDIR        /opt/gfortransoft/serial/ARPACK
@@ -353,14 +377,14 @@ if ($?USE_MY_LIBS) then
       if ($?USE_NETCDF4) then
         if ($?USE_PARALLEL_IO && $?USE_MPI) then
           if ($which_MPI == "mpich2" ) then
-            setenv NC_CONFIG      /opt/gfortransoft/mpich2/netcdf4/bin/nc-config
+            setenv NF_CONFIG      /opt/gfortransoft/mpich2/netcdf4/bin/nf-config
             setenv NETCDF_INCDIR  /opt/gfortransoft/mpich2/netcdf4/include
           else if ($which_MPI == "openmpi" ) then
-            setenv NC_CONFIG      /opt/gfortransoft/openmpi/netcdf4/bin/nc-config
+            setenv NF_CONFIG      /opt/gfortransoft/openmpi/netcdf4/bin/nf-config
             setenv NETCDF_INCDIR  /opt/gfortransoft/openmpi/netcdf4/include
           endif
         else
-          setenv NC_CONFIG        /opt/gfortransoft/serial/netcdf4/bin/nc-config
+          setenv NF_CONFIG        /opt/gfortransoft/serial/netcdf4/bin/nf-config
           setenv NETCDF_INCDIR    /opt/gfortransoft/serial/netcdf4/include
         endif
       else
@@ -404,6 +428,10 @@ if ( ${?USE_MPI} & ${?USE_OpenMP} ) then
   exit 1
 endif
 
+#--------------------------------------------------------------------------
+# Compile.
+#--------------------------------------------------------------------------
+
 # Remove build directory.
 
 if ( $clean == 1 ) then
@@ -412,8 +440,12 @@ endif
 
 # Compile (the binary will go to BINDIR set above).
 
-if ( $parallel == 1 ) then
-  make $NCPUS
+if ( $dprint == 1 ) then
+  make $debug
 else
-  make
+  if ( $parallel == 1 ) then
+    make $NCPUS
+  else
+    make
+  endif
 endif

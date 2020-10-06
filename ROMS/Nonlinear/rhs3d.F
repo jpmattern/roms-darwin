@@ -2,9 +2,9 @@
       MODULE rhs3d_mod
 #if defined NONLINEAR && defined SOLVE3D
 !
-!svn $Id: rhs3d.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: rhs3d.F 889 2018-02-10 03:32:52Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -99,7 +99,7 @@
 !-----------------------------------------------------------------------
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 21)
+      CALL wclock_on (ng, iNLM, 21, __LINE__, __FILE__)
 # endif
       CALL rhs3d_tile (ng, tile,                                        &
      &                 LBi, UBi, LBj, UBj,                              &
@@ -145,7 +145,7 @@
      &                 OCEAN(ng) % ru,                                  &
      &                 OCEAN(ng) % rv)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 21)
+      CALL wclock_off (ng, iNLM, 21, __LINE__, __FILE__)
 # endif
 # ifdef UV_VIS2
 !

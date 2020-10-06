@@ -2,9 +2,9 @@
       MODULE bulk_flux_mod
 #ifdef BULK_FLUXES
 !
-!svn $Id: bulk_flux.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: bulk_flux.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -35,7 +35,7 @@
 !  (10/2004).                                                          !
 !                                                                      !
 !  Modified by Kate Hedstrom for COARE version 3.0 (03/2005).          !
-!  Modified by Jim Edson to correct specific hunidities.               !
+!  Modified by Jim Edson to correct specific humidities.               !
 !                                                                      !
 !  Reference:                                                          !
 !                                                                      !
@@ -79,7 +79,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 17)
+      CALL wclock_on (ng, iNLM, 17, __LINE__, __FILE__)
 # endif
       CALL bulk_flux_tile (ng, tile,                                    &
      &                     LBi, UBi, LBj, UBj,                          &
@@ -99,6 +99,10 @@
      &                     MIXING(ng) % beta,                           &
      &                     OCEAN(ng) % rho,                             &
      &                     OCEAN(ng) % t,                               &
+# ifdef WIND_MINUS_CURRENT
+     &                     OCEAN(ng) % u,                               &
+     &                     OCEAN(ng) % v,                               &
+# endif
      &                     FORCES(ng) % Hair,                           &
      &                     FORCES(ng) % Pair,                           &
      &                     FORCES(ng) % Tair,                           &
@@ -130,7 +134,7 @@
      &                     FORCES(ng) % sustr,                          &
      &                     FORCES(ng) % svstr)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 17)
+      CALL wclock_off (ng, iNLM, 17, __LINE__, __FILE__)
 # endif
 
       RETURN
@@ -148,6 +152,9 @@
      &                           rmask_wet, umask_wet, vmask_wet,       &
 # endif
      &                           alpha, beta, rho, t,                   &
+# ifdef WIND_MINUS_CURRENT
+     &                           u, v,                                  &
+# endif
      &                           Hair, Pair, Tair, Uwind, Vwind,        &
 # ifdef CLOUDS
      &                           cloud,                                 &
@@ -200,11 +207,20 @@
       real(r8), intent(in) :: beta(LBi:,LBj:)
       real(r8), intent(in) :: rho(LBi:,LBj:,:)
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
+#  ifdef WIND_MINUS_CURRENT
+      real(r8), intent(in) :: u(LBi:,LBj:,:,:)
+      real(r8), intent(in) :: v(LBi:,LBj:,:,:)
+#  endif
       real(r8), intent(in) :: Hair(LBi:,LBj:)
       real(r8), intent(in) :: Pair(LBi:,LBj:)
       real(r8), intent(in) :: Tair(LBi:,LBj:)
+#  ifdef WIND_MINUS_CURRENT
+      real(r8), intent(inout) :: Uwind(LBi:,LBj:)
+      real(r8), intent(inout) :: Vwind(LBi:,LBj:)
+#  else
       real(r8), intent(in) :: Uwind(LBi:,LBj:)
       real(r8), intent(in) :: Vwind(LBi:,LBj:)
+#  endif
 #  ifdef CLOUDS
       real(r8), intent(in) :: cloud(LBi:,LBj:)
 #  endif
@@ -247,11 +263,20 @@
       real(r8), intent(in) :: beta(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: rho(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
+#  ifdef WIND_MINUS_CURRENT
+      real(r8), intent(in) :: u(LBi:UBi,LBj:UBj,N(ng),3)
+      real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),3)
+#  endif
       real(r8), intent(in) :: Hair(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Pair(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Tair(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: Uwind(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: Vwind(LBi:UBi,LBj:UBj)
+#  ifdef WIND_MINUS_CURRENT
+      real(r8), intent(inout) :: Uwind(LBi:,LBj:)
+      real(r8), intent(inout) :: Vwind(LBi:,LBj:)
+#  else
+      real(r8), intent(in) :: Uwind(LBi:,LBj:)
+      real(r8), intent(in) :: Vwind(LBi:,LBj:)
+#  endif
 #  ifdef CLOUDS
       real(r8), intent(in) :: cloud(LBi:UBi,LBj:UBj)
 #  endif
@@ -364,6 +389,26 @@
 !=======================================================================
 !  Atmosphere-Ocean bulk fluxes parameterization.
 !=======================================================================
+!
+#ifdef WIND_MINUS_CURRENT
+!
+!  Modify near-surface (2m or 10m) effective winds by subtracting the
+!  ocean surface current (J Wilkin). See:
+!
+!  Bye, J.A.T. and J.-O. Wolff, 1999: Atmosphere-ocean momentum exchange
+!     in general circulation models. J. Phys. Oceanogr. 29, 671-691.
+!
+      DO j=Jstr-1,JendR
+        DO i=Istr-1,IendR
+          Uwind(i,j)=Uwind(i,j)-                                        &
+     &               0.5_r8*(u(i,j,N(ng),nrhs)+u(i+1,j,N(ng),nrhs))
+          Vwind(i,j)=Vwind(i,j)-                                        &
+     &               0.5_r8*(v(i,j,N(ng),nrhs)+v(i,j+1,N(ng),nrhs))
+        END DO
+      END DO
+#endif
+!
+!  Compute Atmosphere-ocean fluxes using a bulk flux parameterization.
 !
       Hscale=rho0*Cp
       twopi_inv=0.5_r8/pi
@@ -514,7 +559,11 @@
 !
 !  Compute latent heat of vaporization (J/kg) at sea surface, Hlv.
 !
+#ifdef REGCM_COUPLING
+          Hlv(i,j)=2.5104E+6_r8 ! to be consistent with RegCM
+#else
           Hlv(i,j)=(2.501_r8-0.00237_r8*TseaC(i))*1.0E+6_r8
+#endif
 !
 !  Assume that wind is measured relative to sea surface and include
 !  gustiness.
@@ -725,7 +774,9 @@
      &                                     (blk_Cpa*diffh))
           Hsr=rain(i,j)*wet_bulb*blk_Cpw*                               &
      &        ((TseaC(i)-TairC(i))+(Qsea(i)-Q(i))*Hlv(i,j)/blk_Cpa)
+# ifndef REGCM_COUPLING
           SHeat(i,j)=(Hs+Hsr)
+# endif
 # ifdef MASKING
           SHeat(i,j)=SHeat(i,j)*rmask(i,j)
 # endif
@@ -742,7 +793,9 @@
           upvel=-1.61_r8*Wstar(i)*Qstar(i)-                             &
      &          (1.0_r8+1.61_r8*Q(i))*Wstar(i)*Tstar(i)/TairK(i)
           Hlw=rhoAir(i)*Hlv(i,j)*upvel*Q(i)
+# ifndef REGCM_COUPLING
           LHeat(i,j)=(Hl+Hlw)
+# endif
 # ifdef MASKING
           LHeat(i,j)=LHeat(i,j)*rmask(i,j)
 # endif

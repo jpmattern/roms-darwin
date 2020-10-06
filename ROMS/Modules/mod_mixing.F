@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE mod_mixing
 !
-!svn $Id: mod_mixing.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: mod_mixing.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -228,9 +228,6 @@
 # endif
 # ifdef BV_FREQUENCY
           real(r8), pointer :: bvf(:,:,:)
-# endif
-# if defined MIX_ISO_TS || defined GENT_McWILLIAMS
-          real(r8), pointer :: neutral(:,:,:)
 # endif
 # if defined GLS_MIXING || defined MY25_MIXING
           real(r8), pointer :: tke(:,:,:,:)
@@ -492,10 +489,6 @@
 
 # ifdef BV_FREQUENCY
       allocate ( MIXING(ng) % bvf(LBi:UBi,LBj:UBj,0:N(ng)) )
-# endif
-
-# if defined MIX_ISO_TS || defined GENT_McWILLIAMS
-      allocate ( MIXING(ng) % neutral(LBi:UBi,LBj:UBj,0:N(ng)) )
 # endif
 
 # if defined GLS_MIXING || defined MY25_MIXING
@@ -870,13 +863,6 @@
           DO k=0,N(ng)
             DO i=Imin,Imax
               MIXING(ng) % bvf(i,j,k) = IniVal
-            END DO
-          END DO
-# endif
-# if defined MIX_ISO_TS || defined GENT_McWILLIAMS
-          DO k=1,N(ng)
-            DO i=Imin,Imax
-              MIXING(ng) % neutral(i,j,k) = IniVal
             END DO
           END DO
 # endif

@@ -6,9 +6,9 @@
 
 #if defined NONLINEAR && defined SEDIMENT && defined SUSPLOAD
 !
-!svn $Id: sed_settling.F 795 2016-05-11 01:42:43Z arango $
+!svn $Id: sed_settling.F 889 2018-02-10 03:32:52Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license           Hernan G. Arango   !
 !    See License_ROMS.txt                   Alexander F. Shchepetkin   !
 !==================================================== John C. Warner ===
@@ -60,7 +60,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 16)
+      CALL wclock_on (ng, iNLM, 16, __LINE__, __FILE__)
 # endif
       CALL sed_settling_tile (ng, tile,                                 &
      &                        LBi, UBi, LBj, UBj,                       &
@@ -71,7 +71,7 @@
      &                        SEDBED(ng) % settling_flux,               &
      &                        OCEAN(ng) % t)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 16)
+      CALL wclock_off (ng, iNLM, 16, __LINE__, __FILE__)
 # endif
       RETURN
       END SUBROUTINE sed_settling

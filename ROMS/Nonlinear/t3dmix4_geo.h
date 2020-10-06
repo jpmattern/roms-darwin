@@ -1,8 +1,8 @@
       SUBROUTINE t3dmix4 (ng, tile)
 !
-!svn $Id: t3dmix4_geo.h 795 2016-05-11 01:42:43Z arango $
+!svn $Id: t3dmix4_geo.h 889 2018-02-10 03:32:52Z arango $
 !***********************************************************************
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !****************************************** Alexander F. Shchepetkin ***
@@ -33,7 +33,7 @@
 #include "tile.h"
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 28)
+      CALL wclock_on (ng, iNLM, 28, __LINE__, __FILE__)
 #endif
       CALL t3dmix4_tile (ng, tile,                                      &
      &                   LBi, UBi, LBj, UBj,                            &
@@ -71,7 +71,7 @@
 #endif
      &                   OCEAN(ng) % t)
 #ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 28)
+      CALL wclock_off (ng, iNLM, 28, __LINE__, __FILE__)
 #endif
 
       RETURN

@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE mod_param
 !
-!svn $Id: mod_param.F 807 2016-07-09 02:03:55Z arango $
+!svn $Id: mod_param.F 889 2018-02-10 03:32:52Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2016 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2018 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -369,6 +369,18 @@
       TYPE (T_LBC), allocatable :: ad_LBC(:,:,:)
       TYPE (T_LBC), allocatable :: tl_LBC(:,:,:)
 #endif
+!
+!-----------------------------------------------------------------------
+!  Field statistics STATS structure.
+!-----------------------------------------------------------------------
+!
+      TYPE T_STATS
+        real(r8) :: count         ! processed values count
+        real(r8) :: min           ! minimum value
+        real(r8) :: max           ! maximum value
+        real(r8) :: avg           ! arithmetic mean
+        real(r8) :: rms           ! root mean square
+      END TYPE T_STATS
 
 #ifdef PROPAGATOR
 !

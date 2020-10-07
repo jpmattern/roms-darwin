@@ -4,13 +4,13 @@
 
 #if defined DARWIN_RADTRANS
             CASE ('aphy_chl')
-              Npts=load_r(Nval, Rval, nplank*nlam*Ngrids, aphy_chl)
+              Npts=load_r(Nval, Rval, nplank, nlam, Ngrids, aphy_chl)
             CASE ('aphy_chl_ps')
-              Npts=load_r(Nval, Rval, nplank*nlam*Ngrids, aphy_chl_ps)
+              Npts=load_r(Nval, Rval, nplank, nlam, Ngrids, aphy_chl_ps)
             CASE ('bphy_mgC')
-              Npts=load_r(Nval, Rval, nplank*nlam*Ngrids, bphy_mgC)
+              Npts=load_r(Nval, Rval, nplank, nlam, Ngrids, bphy_mgC)
             CASE ('bbphy_mgC')
-              Npts=load_r(Nval, Rval, nplank*nlam*Ngrids, bbphy_mgC)
+              Npts=load_r(Nval, Rval, nplank, nlam, Ngrids, bbphy_mgC)
 #endif
 #if defined DARWIN_RANDOM_TRAITS
             CASE ('Smallgrow')
@@ -264,340 +264,340 @@
               Npts=load_r(Nval, Rval, Ngrids, logvolinc)
 #endif
             CASE ('biovol0')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, biovol0)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, biovol0)
             CASE ('biovolfac')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, biovolfac)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, biovolfac)
 #if ! defined DARWIN_RANDOM_TRAITS
             CASE ('logvol0ind')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, logvol0ind)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, logvol0ind)
             CASE ('grp_logvolind')
-              Npts=load_r(Nval, Rval, nPlank*nGroup*Ngrids, grp_logvolind)
+              Npts=load_r(Nval, Rval, nPlank, nGroup, Ngrids, grp_logvolind)
             CASE ('grp_biovol')
-              Npts=load_r(Nval, Rval, nPlank*nGroup*Ngrids, grp_biovol)
+              Npts=load_r(Nval, Rval, nPlank, nGroup, Ngrids, grp_biovol)
             CASE ('grp_nplank')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_nplank)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_nplank)
             CASE ('grp_photo')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_photo)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_photo)
             CASE ('grp_bacttype')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_bacttype)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_bacttype)
             CASE ('grp_aerobic')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_aerobic)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_aerobic)
             CASE ('grp_denit')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_denit)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_denit)
             CASE ('grp_pred')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_pred)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_pred)
             CASE ('grp_prey')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_prey)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_prey)
             CASE ('grp_hasSi')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_hasSi)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_hasSi)
             CASE ('grp_hasPIC')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_hasPIC)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_hasPIC)
             CASE ('grp_diazo')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_diazo)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_diazo)
             CASE ('grp_useNH4')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_useNH4)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_useNH4)
             CASE ('grp_useNO2')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_useNO2)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_useNO2)
             CASE ('grp_useNO3')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_useNO3)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_useNO3)
             CASE ('grp_combNO')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_combNO)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_combNO)
 #endif
 #if defined DARWIN_RADTRANS && ! defined DARWIN_RANDOM_TRAITS
             CASE ('grp_aptype')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_aptype)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_aptype)
 #endif
 #if ! defined DARWIN_RANDOM_TRAITS
             CASE ('grp_tempMort')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_tempMort)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_tempMort)
             CASE ('grp_tempMort2')
-              Npts=load_i(Nval, Rval, nGroup*Ngrids, grp_tempMort2)
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_tempMort2)
             CASE ('grp_Xmin')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_Xmin)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_Xmin)
             CASE ('grp_R_NC')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_R_NC)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_R_NC)
             CASE ('grp_R_PC')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_R_PC)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_R_PC)
             CASE ('grp_R_SiC')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_R_SiC)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_R_SiC)
             CASE ('grp_R_FeC')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_R_FeC)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_R_FeC)
             CASE ('grp_R_ChlC')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_R_ChlC)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_R_ChlC)
             CASE ('grp_R_PICPOC')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_R_PICPOC)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_R_PICPOC)
             CASE ('grp_ExportFracMort')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_ExportFracMort)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_ExportFracMort)
             CASE ('grp_ExportFracMort2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_ExportFracMort2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_ExportFracMort2)
             CASE ('grp_ExportFrac')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_ExportFrac)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_ExportFrac)
             CASE ('grp_mort_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_mort_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_mort_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   grp_mort(ig,ng)=grp_mort_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('grp_mort2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_mort2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_mort2)
             CASE ('grp_tempcoeff1')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_tempcoeff1)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_tempcoeff1)
             CASE ('grp_tempcoeff2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_tempcoeff2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_tempcoeff2)
             CASE ('grp_tempcoeff3')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_tempcoeff3)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_tempcoeff3)
             CASE ('grp_tempopt')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_tempopt)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_tempopt)
             CASE ('grp_tempdecay')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_tempdecay)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_tempdecay)
 #endif
 #if defined DARWIN_ALLOMETRIC_PALAT && ! defined DARWIN_RANDOM_TRAITS
             CASE ('grp_pp_sig')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_pp_sig)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_pp_sig)
 #endif
 #if ! defined DARWIN_RANDOM_TRAITS && defined DARWIN_GEIDER
             CASE ('grp_mQyield')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_mQyield)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_mQyield)
             CASE ('grp_chl2cmax')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_chl2cmax)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_chl2cmax)
             CASE ('grp_inhibcoef_geid')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_inhibcoef_geid)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_inhibcoef_geid)
 #endif
 #if ! defined DARWIN_RANDOM_TRAITS && ! defined DARWIN_GEIDER
             CASE ('grp_ksatPAR')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_ksatPAR)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_ksatPAR)
             CASE ('grp_kinhPAR')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_kinhPAR)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_kinhPAR)
 #endif
 #if ! defined DARWIN_RANDOM_TRAITS
             CASE ('grp_ksatNH4fac')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_ksatNH4fac)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_ksatNH4fac)
             CASE ('grp_ksatNO2fac')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_ksatNO2fac)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_ksatNO2fac)
             CASE ('grp_amminhib')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_amminhib)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_amminhib)
             CASE ('grp_acclimtimescl_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, grp_acclimtimescl_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_acclimtimescl_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   grp_acclimtimescl(ig,ng)=grp_acclimtimescl_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('a_graz_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_graz_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_graz_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_graz(ig,ng)=a_graz_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_graz')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_graz)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_graz)
             CASE ('a_kg')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kg)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kg)
             CASE ('b_kg')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kg)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kg)
             CASE ('a_biosink_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_biosink_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_biosink_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_biosink(ig,ng)=a_biosink_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_biosink')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_biosink)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_biosink)
             CASE ('a_bioswim_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_bioswim_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_bioswim_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_bioswim(ig,ng)=a_bioswim_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_bioswim')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_bioswim)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_bioswim)
 #endif
 #if defined DARWIN_ALLOMETRIC_PALAT && ! defined DARWIN_RANDOM_TRAITS
             CASE ('a_prdpry')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_prdpry)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_prdpry)
             CASE ('b_prdpry')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_prdpry)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_prdpry)
 #endif
 #if ! defined DARWIN_RANDOM_TRAITS
             CASE ('a_vmax_DIC_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_vmax_DIC_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_vmax_DIC_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_vmax_DIC(ig,ng)=a_vmax_DIC_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_vmax_DIC')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_vmax_DIC)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_vmax_DIC)
             CASE ('a_qcarbon')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qcarbon)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qcarbon)
             CASE ('b_qcarbon')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qcarbon)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qcarbon)
             CASE ('a_respir')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_respir)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_respir)
             CASE ('b_respir')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_respir)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_respir)
             CASE ('a_kexc_c')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kexc_c)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kexc_c)
             CASE ('b_kexc_c')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kexc_c)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kexc_c)
             CASE ('a_vmax_NO3_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_vmax_NO3_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_vmax_NO3_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_vmax_NO3(ig,ng)=a_vmax_NO3_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_vmax_NO3')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_vmax_NO3)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_vmax_NO3)
             CASE ('a_kn_NO3')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kn_NO3)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kn_NO3)
             CASE ('b_kn_NO3')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kn_NO3)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kn_NO3)
             CASE ('a_qmin_n')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qmin_n)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qmin_n)
             CASE ('b_qmin_n')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qmin_n)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qmin_n)
             CASE ('a_qmax_n')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qmax_n)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qmax_n)
             CASE ('b_qmax_n')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qmax_n)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qmax_n)
             CASE ('a_kexc_n')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kexc_n)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kexc_n)
             CASE ('b_kexc_n')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kexc_n)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kexc_n)
             CASE ('a_vmax_NO2_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_vmax_NO2_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_vmax_NO2_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_vmax_NO2(ig,ng)=a_vmax_NO2_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_vmax_NO2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_vmax_NO2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_vmax_NO2)
             CASE ('a_kn_NO2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kn_NO2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kn_NO2)
             CASE ('b_kn_NO2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kn_NO2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kn_NO2)
             CASE ('a_vmax_NH4_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_vmax_NH4_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_vmax_NH4_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_vmax_NH4(ig,ng)=a_vmax_NH4_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_vmax_NH4')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_vmax_NH4)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_vmax_NH4)
             CASE ('a_kn_NH4')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kn_NH4)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kn_NH4)
             CASE ('b_kn_NH4')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kn_NH4)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kn_NH4)
             CASE ('a_vmax_N_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_vmax_N_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_vmax_N_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_vmax_N(ig,ng)=a_vmax_N_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_vmax_N')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_vmax_N)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_vmax_N)
             CASE ('a_vmax_PO4_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_vmax_PO4_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_vmax_PO4_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_vmax_PO4(ig,ng)=a_vmax_PO4_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_vmax_PO4')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_vmax_PO4)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_vmax_PO4)
             CASE ('a_kn_PO4')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kn_PO4)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kn_PO4)
             CASE ('b_kn_PO4')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kn_PO4)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kn_PO4)
             CASE ('a_qmin_p')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qmin_p)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qmin_p)
             CASE ('b_qmin_p')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qmin_p)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qmin_p)
             CASE ('a_qmax_p')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qmax_p)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qmax_p)
             CASE ('b_qmax_p')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qmax_p)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qmax_p)
             CASE ('a_kexc_p_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kexc_p_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kexc_p_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_kexc_p(ig,ng)=a_kexc_p_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_kexc_p')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kexc_p)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kexc_p)
             CASE ('a_vmax_SiO2_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_vmax_SiO2_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_vmax_SiO2_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_vmax_SiO2(ig,ng)=a_vmax_SiO2_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_vmax_SiO2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_vmax_SiO2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_vmax_SiO2)
             CASE ('a_kn_SiO2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kn_SiO2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kn_SiO2)
             CASE ('b_kn_SiO2')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kn_SiO2)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kn_SiO2)
             CASE ('a_qmin_si')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qmin_si)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qmin_si)
             CASE ('b_qmin_si')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qmin_si)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qmin_si)
             CASE ('a_qmax_si')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qmax_si)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qmax_si)
             CASE ('b_qmax_si')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qmax_si)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qmax_si)
             CASE ('a_kexc_si_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kexc_si_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kexc_si_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_kexc_si(ig,ng)=a_kexc_si_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_kexc_si')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kexc_si)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kexc_si)
             CASE ('a_vmax_FeT_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_vmax_FeT_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_vmax_FeT_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_vmax_FeT(ig,ng)=a_vmax_FeT_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_vmax_FeT')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_vmax_FeT)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_vmax_FeT)
             CASE ('a_kn_feT')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kn_feT)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kn_feT)
             CASE ('b_kn_FeT')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kn_FeT)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kn_FeT)
             CASE ('a_qmin_fe')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qmin_fe)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qmin_fe)
             CASE ('b_qmin_fe')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qmin_fe)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qmin_fe)
             CASE ('a_qmax_fe')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_qmax_fe)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_qmax_fe)
             CASE ('b_qmax_fe')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_qmax_fe)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_qmax_fe)
             CASE ('a_kexc_fe_pday')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, a_kexc_fe_pday)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kexc_fe_pday)
               DO ig=1,nGroup
                 DO ng=1,Ngrids
                   a_kexc_fe(ig,ng)=a_kexc_fe_pday(ig,ng)*sec2day
                 END DO
               END DO
             CASE ('b_kexc_fe')
-              Npts=load_r(Nval, Rval, nGroup*Ngrids, b_kexc_fe)
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kexc_fe)
             CASE ('grp_ExportFracPreyPred')
-              Npts=load_r(Nval, Rval, nGroup*nGroup*Ngrids, grp_ExportFracPreyPred)
+              Npts=load_r(Nval, Rval, nGroup, nGroup, Ngrids, grp_ExportFracPreyPred)
             CASE ('grp_ass_eff')
-              Npts=load_r(Nval, Rval, nGroup*nGroup*Ngrids, grp_ass_eff)
+              Npts=load_r(Nval, Rval, nGroup, nGroup, Ngrids, grp_ass_eff)
 #endif
 #if defined DARWIN_RANDOM_TRAITS
             CASE ('phymin')
@@ -884,15 +884,15 @@
               Npts=load_r(Nval, Rval, Ngrids, BioMin)
 #if defined DARWIN_RANDOM_TRAITS
             CASE ('seed_phytoplankton')
-              Npts=load_i(Nval, Rval, nChl*Ngrids, seed_phytoplankton)
+              Npts=load_i(Nval, Rval, nChl, Ngrids, seed_phytoplankton)
 #endif
 #if defined DARWIN_DEBUGVARS
             CASE ('darwin_debug_1di')
               Npts=load_i(Nval, Rval, Ngrids, darwin_debug_1di)
             CASE ('darwin_debug_2df')
-              Npts=load_r(Nval, Rval, nlam*Ngrids, darwin_debug_2df)
+              Npts=load_r(Nval, Rval, nlam, Ngrids, darwin_debug_2df)
 #endif
 #if ! defined DARWIN_RANDOM_TRAITS && defined DARWIN_PLANK_BUOYCTRL
             CASE ('grp_buoyctrl')
-              Npts=load_l(Nval, Cval, nGroup*Ngrids, grp_buoyctrl)
+              Npts=load_l(Nval, Cval, nGroup, Ngrids, grp_buoyctrl)
 #endif

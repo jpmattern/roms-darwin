@@ -2603,7 +2603,7 @@
           Fscale(varid,ng)=1.0_r8
           Iinfo(1,varid,ng)=r2dvar
         END DO
-#if defined DARWIN_VERBOSE
+#if defined DARWIN_VERBOSE_LEVEL2
         if (Master) then
           write(stdout,'(a4,i2,a,i2,a,i3,i4,2x,a20,10i4)') '>>>',i,'/',MT,' NBT=',NBT,varid,Vname(1,idTvar(i)), ic_, in_, ip_, ife, isi, iChl, echl ! TODO remove
         end if

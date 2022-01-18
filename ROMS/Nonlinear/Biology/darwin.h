@@ -1,6 +1,14 @@
+      MODULE biology_mod
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: biology
+!
+      CONTAINS
+!
+!***********************************************************************
       SUBROUTINE biology (ng,tile)
 !***********************************************************************
-!
       USE mod_param
       USE mod_forces
       USE mod_grid
@@ -17,6 +25,9 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
 !  Set header file name.
@@ -27,13 +38,13 @@
       IF (Lbiofile(iNLM).and.(tile.eq.0)) THEN
 #endif /* DISTRIBUTE */
         Lbiofile(iNLM)=.FALSE.
-        BIONAME(iNLM)=__FILE__
+        BIONAME(iNLM)=MyFile
       END IF
 !
 #if defined PROFILE
       CALL wclock_on (ng, iNLM, 15)
 #endif /* PROFILE */
-      CALL biology_tile (ng, tile,                                      &
+      CALL darwin_tile  (ng, tile,                                      &
      &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &
      &                   IminS, ImaxS, JminS, JmaxS,                    &
      &                   nstp(ng), nnew(ng),                            &
@@ -68,13 +79,14 @@
      &                   OCEAN(ng) % t)
 
 #if defined PROFILE
-      CALL wclock_off (ng, iNLM, 15)
+      CALL wclock_off (ng, iNLM, 15, __LINE__, MyFile)
 #endif /* PROFILE */
+!
       RETURN
       END SUBROUTINE biology
 !
 !-----------------------------------------------------------------------
-      SUBROUTINE biology_tile (ng, tile,                                &
+      SUBROUTINE darwin_tile  (ng, tile,                                &
      &                         LBi, UBi, LBj, UBj, UBk, UBt,            &
      &                         IminS, ImaxS, JminS, JmaxS,              &
      &                         nstp, nnew,                              &
@@ -187,9 +199,9 @@
 #if defined DIAGNOSTICS_BIO_MAPPING
       integer :: idia
 #endif
-      
+
       real(r8), parameter :: MinVal = 1.0e-6_r8
-      
+
       real(r8) :: cff
       real(r8), dimension(NT(ng),2) :: BioTrc
       real(r8), dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
@@ -211,7 +223,7 @@
       real(r8), dimension(IminS:ImaxS,N(ng),nplank) :: limitnut_save
       real(r8), dimension(IminS:ImaxS,N(ng),nplank) :: limitlight_save
 #endif
-      
+
       !TODO read this somewhere
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: inputFe
 #include "set_bounds.h"
@@ -300,7 +312,7 @@
         END DO
 #if defined DARWIN_INPUTFE
 !
-!  
+!
 !
         DO i=Istr,Iend
           inputFe(i,j)=DARWIN_INPUTFE
@@ -315,7 +327,7 @@
 #if defined DARWIN_VERBOSE_LIGHT
         IF (j==DARWIN_VERBOSE_J.and.DARWIN_VERBOSE_I.ge.Istr.and.DARWIN_VERBOSE_I.le.Iend) THEN
           i=DARWIN_VERBOSE_I
-          write(*,'(3x,a,i0,a,i0,a)') 'light at (',i,',',j,')' 
+          write(*,'(3x,a,i0,a,i0,a)') 'light at (',i,',',j,')'
           DO k=N(ng),1,-1
             write(*,'(3x,a,f9.2,a,99f11.7)')                            &
      &        'depth:',0.5_r8*(z_w(i,j,k)+z_w(i,j,k-1)),                &
@@ -330,7 +342,7 @@
 #if defined DARWIN_VERBOSE_LIGHT
         IF (j==DARWIN_VERBOSE_J.and.DARWIN_VERBOSE_I.ge.Istr.and.DARWIN_VERBOSE_I.le.Iend) THEN
           i=DARWIN_VERBOSE_I
-          write(*,'(3x,a,i0,a,i0,a)') 'light at (',i,',',j,')' 
+          write(*,'(3x,a,i0,a,i0,a)') 'light at (',i,',',j,')'
           DO k=N(ng),1,-1
             write(*,'(3x,a,f9.2,a,99f11.7)')                            &
      &        'depth:',0.5_r8*(z_w(i,j,k)+z_w(i,j,k-1)),                &
@@ -341,7 +353,7 @@
 #if defined DARWIN_CONSTRUCTION && defined DARWIN_VERBOSE_CONSTRUCTION
         IF (j==DARWIN_VERBOSE_J.and.DARWIN_VERBOSE_I.ge.Istr.and.DARWIN_VERBOSE_I.le.Iend) THEN
           i=DARWIN_VERBOSE_I
-          write(*,'(3x,a,i0,a,i0,a)') 'avcos at (',i,',',j,')' 
+          write(*,'(3x,a,i0,a,i0,a)') 'avcos at (',i,',',j,')'
           DO ibio=1,nlam
             write(*,'(3x,a,i3,a,99f11.7)')                              &
      &        'l:',ibio,                                                &
@@ -434,7 +446,7 @@
         DO ibio=iChl,eChl
           DO k=1,N(ng)
             DO i=Istr,Iend
-              Bio(i,k,iTChl)=Bio(i,k,iTChl)+Bio(i,k,ibio) 
+              Bio(i,k,iTChl)=Bio(i,k,iTChl)+Bio(i,k,ibio)
             END DO
           END DO
         END DO
@@ -452,7 +464,7 @@
 # if defined DIAGNOSTICS_BIO_MAPPING
         DO itrc=1,NDb3d_o
           IF (Dout(iDbio3(itrc),ng)) THEN
-            idia=iDbiomapping(itrc,ng) 
+            idia=iDbiomapping(itrc,ng)
             DO k=1,N(ng)
               DO i=Istr,Iend
                 DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(i,k,idia)
@@ -510,6 +522,8 @@
         END DO
 
       END DO J_LOOP
-
+!
       RETURN
-      END SUBROUTINE biology_tile
+      END SUBROUTINE darwin_tile
+
+      END MODULE biology_mod

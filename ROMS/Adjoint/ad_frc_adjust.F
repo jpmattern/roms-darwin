@@ -3,9 +3,9 @@
 
 #if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
 !
-!svn $Id: ad_frc_adjust.F 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: ad_frc_adjust.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -23,10 +23,10 @@
 !=======================================================================
 !
       implicit none
-
+!
       PRIVATE
       PUBLIC :: ad_frc_adjust
-
+!
       CONTAINS
 !
 !***********************************************************************
@@ -42,10 +42,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 7, __LINE__, MyFile)
 # endif
       CALL ad_frc_adjust_tile (ng, tile,                                &
      &                         LBi, UBi, LBj, UBj,                      &
@@ -62,9 +65,9 @@
 # endif
      &                         Linp)
 # ifdef PROFILE
-      CALL wclock_off (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 7, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE ad_frc_adjust
 !
@@ -166,9 +169,9 @@
 !
       DO j=JstrR,JendR
         DO i=Istr,IendR
-!>        tl_sustr(i,j)=fac1*tl_ustr(i,j,it1,Linp)+                     &
-!>   &                  fac2*tl_ustr(i,j,it2,Linp)
-!>
+!^        tl_sustr(i,j)=fac1*tl_ustr(i,j,it1,Linp)+                     &
+!^   &                  fac2*tl_ustr(i,j,it2,Linp)
+!^
           ad_ustr(i,j,it1,Linp)=ad_ustr(i,j,it1,Linp)+                  &
      &                          fac1*ad_sustr(i,j)
           ad_ustr(i,j,it2,Linp)=ad_ustr(i,j,it2,Linp)+                  &
@@ -178,9 +181,9 @@
       END DO
       DO j=Jstr,JendR
         DO i=IstrR,IendR
-!>        tl_svstr(i,j)=fac1*tl_vstr(i,j,it1,Linp)+                     &
-!>   &                  fac2*tl_vstr(i,j,it2,Linp)
-!>
+!^        tl_svstr(i,j)=fac1*tl_vstr(i,j,it1,Linp)+                     &
+!^   &                  fac2*tl_vstr(i,j,it2,Linp)
+!^
           ad_vstr(i,j,it1,Linp)=ad_vstr(i,j,it1,Linp)+                  &
      &                          fac1*ad_svstr(i,j)
           ad_vstr(i,j,it2,Linp)=ad_vstr(i,j,it2,Linp)+                  &
@@ -197,10 +200,10 @@
 #  ifdef QCORRECTION
         DO j=JstrR,JendR
           DO i=IstrR,IendR
-!>          tl_stflx(i,j,itemp)=tl_stflx(i,j,itemp)+                    &
-!>   &                          fac1*tl_tflux(i,j,it1,Linp,itemp)+      &
-!>   &                          fac2*tl_tflux(i,j,it2,Linp,itemp)
-!>
+!^          tl_stflx(i,j,itemp)=tl_stflx(i,j,itemp)+                    &
+!^   &                          fac1*tl_tflux(i,j,it1,Linp,itemp)+      &
+!^   &                          fac2*tl_tflux(i,j,it2,Linp,itemp)
+!^
             ad_tflux(i,j,it1,Linp,itemp)=ad_tflux(i,j,it1,Linp,itemp)+  &
      &                                   fac1*ad_stflx(i,j,itemp)
             ad_tflux(i,j,it2,Linp,itemp)=ad_tflux(i,j,it2,Linp,itemp)+  &
@@ -210,9 +213,9 @@
 #  else
         DO j=JstrR,JendR
           DO i=IstrR,IendR
-!>          tl_stflx(i,j,itemp)=fac1*tl_tflux(i,j,it1,Linp,itemp)+      &
-!>   &                          fac2*tl_tflux(i,j,it2,Linp,itemp)
-!>
+!^          tl_stflx(i,j,itemp)=fac1*tl_tflux(i,j,it1,Linp,itemp)+      &
+!^   &                          fac2*tl_tflux(i,j,it2,Linp,itemp)
+!^
             ad_tflux(i,j,it1,Linp,itemp)=ad_tflux(i,j,it1,Linp,itemp)+  &
      &                                   fac1*ad_stflx(i,j,itemp)
             ad_tflux(i,j,it2,Linp,itemp)=ad_tflux(i,j,it2,Linp,itemp)+  &
@@ -227,10 +230,10 @@
       IF (Lstflux(isalt,ng)) THEN
         DO j=JstrR,JendR
           DO i=IstrR,IendR
-!>          tl_stflx(i,j,isalt)=tl_stflx(i,j,isalt)+                    &
-!>   &                          fac1*tl_tflux(i,j,it1,Linp,isalt)+      &
-!>   &                          fac2*tl_tflux(i,j,it2,Linp,isalt)
-!>
+!^          tl_stflx(i,j,isalt)=tl_stflx(i,j,isalt)+                    &
+!^   &                          fac1*tl_tflux(i,j,it1,Linp,isalt)+      &
+!^   &                          fac2*tl_tflux(i,j,it2,Linp,isalt)
+!^
             ad_tflux(i,j,it1,Linp,isalt)=ad_tflux(i,j,it1,Linp,isalt)+  &
      &                                   fac1*ad_stflx(i,j,isalt)
             ad_tflux(i,j,it2,Linp,isalt)=ad_tflux(i,j,it2,Linp,isalt)+  &
@@ -244,9 +247,9 @@
         IF (Lstflux(itrc,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
-!>            tl_stflx(i,j,itrc)=fac1*tl_tflux(i,j,it1,Linp,itrc)+      &
-!>   &                           fac2*tl_tflux(i,j,it2,Linp,itrc)
-!>
+!^            tl_stflx(i,j,itrc)=fac1*tl_tflux(i,j,it1,Linp,itrc)+      &
+!^   &                           fac2*tl_tflux(i,j,it2,Linp,itrc)
+!^
               ad_tflux(i,j,it1,Linp,itrc)=ad_tflux(i,j,it1,Linp,itrc)+  &
      &                                    fac1*ad_stflx(i,j,itrc)
               ad_tflux(i,j,it2,Linp,itrc)=ad_tflux(i,j,it2,Linp,itrc)+  &
@@ -257,7 +260,7 @@
         END IF
       END DO
 # endif
-
+!
       RETURN
       END SUBROUTINE ad_frc_adjust_tile
 #endif

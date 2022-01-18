@@ -2,9 +2,9 @@
 #if defined NONLINEAR && !defined SOLVE3D
       SUBROUTINE main2d (RunInterval)
 !
-!svn $Id: main2d.F 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: main2d.F 1099 2022-01-06 21:01:01Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -33,6 +33,9 @@
       USE diag_mod,             ONLY : diag
 # ifdef TLM_CHECK
       USE dotproduct_mod,       ONLY : nl_dotproduct
+# endif
+# ifdef TIDE_GENERATING_FORCES
+      USE equilibrium_tide_mod, ONLY : equilibrium_tide
 # endif
 # if defined NLM_OUTER                || \
      defined RBL4DVAR                 || \
@@ -85,13 +88,16 @@
 !  Local variable declarations.
 !
       logical :: DoNestLayer, Time_Step
-
+!
       integer :: Nsteps, Rsteps
       integer :: ig, il, istep, ng, nl, tile
       integer :: next_indx1
 # ifdef FLOATS
       integer :: Lend, Lstr, chunk_size
 # endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !  Time-step vertically integrated equations.
@@ -125,8 +131,7 @@
 !  or just a single step (RunInterval=0).
 !
           CALL ntimesteps (iNLM, RunInterval, nl, Nsteps, Rsteps)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           IF ((nl.le.0).or.(nl.gt.NestLayers)) EXIT
 !
 !  Time-step governing equations for Nsteps.
@@ -188,8 +193,8 @@
               CALL get_data (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END DO
 !
 !-----------------------------------------------------------------------
@@ -204,8 +209,7 @@
               END DO
 !$OMP BARRIER
             END DO
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Initialize all time levels and compute other initial fields.
@@ -256,6 +260,9 @@
 # ifdef DIAGNOSTICS
                 CALL set_diags (ng, tile)
 # endif
+# ifdef TIDE_GENERATING_FORCES
+                CALL equilibrium_tide (ng, tile, iNLM)
+# endif
                 CALL diag (ng, tile)
 # ifdef TLM_CHECK
                 CALL nl_dotproduct (ng, tile, Lnew(ng))
@@ -263,8 +270,7 @@
               END DO
 !$OMP BARRIER
             END DO
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # if defined ATM_COUPLING && defined MCT_LIB
 !
@@ -398,8 +404,7 @@
               CALL output (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-              IF ((FoundError(exit_flag, NoError, __LINE__,             &
-     &                        __FILE__)).or.                            &
+              IF ((FoundError(exit_flag, NoError, __LINE__, MyFile)).or.&
      &            ((iic(ng).eq.(ntend(ng)+1)).and.(ng.eq.Ngrids))) THEN
                 RETURN
               END IF

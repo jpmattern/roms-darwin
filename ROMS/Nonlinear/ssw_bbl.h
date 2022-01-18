@@ -2,11 +2,11 @@
 #undef SGWC
 #define N92_RIPRUF
 
-      SUBROUTINE bblm (ng, tile)
+      MODULE bbl_mod
 !
-!svn $Id: ssw_bbl.h 995 2020-01-10 04:01:28Z arango $
+!svn $Id: ssw_bbl.h 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group        Chris Sherwood   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group        Chris Sherwood   !
 !    Licensed under a MIT/X style license               Rich Signell   !
 !    See License_ROMS.txt                             John C. Warner   !
 !=======================================================================
@@ -24,6 +24,17 @@
 !                                                                      !
 !=======================================================================
 !
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: bblm
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE bblm (ng, tile)
+!***********************************************************************
+!
       USE mod_param
       USE mod_bbl
       USE mod_forces
@@ -38,83 +49,87 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 37, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 37, __LINE__, MyFile)
 #endif
-      CALL bblm_tile (ng, tile,                                         &
-     &                LBi, UBi, LBj, UBj,                               &
-     &                IminS, ImaxS, JminS, JmaxS,                       &
-     &                nrhs(ng),                                         &
-     &                GRID(ng) % h,                                     &
+      CALL ssw_bbl_tile (ng, tile,                                      &
+     &                   LBi, UBi, LBj, UBj,                            &
+     &                   IminS, ImaxS, JminS, JmaxS,                    &
+     &                   nrhs(ng),                                      &
+     &                   GRID(ng) % h,                                  &
 #ifdef LIMIT_BSTRESS
-     &                GRID(ng) % Hz,                                    &
+     &                   GRID(ng) % Hz,                                 &
 #endif
-     &                GRID(ng) % z_r,                                   &
-     &                GRID(ng) % z_w,                                   &
-     &                GRID(ng) % angler,                                &
-     &                GRID(ng) % ZoBot,                                 &
+     &                   GRID(ng) % z_r,                                &
+     &                   GRID(ng) % z_w,                                &
+     &                   GRID(ng) % angler,                             &
+     &                   GRID(ng) % ZoBot,                              &
 #if defined SSW_CALC_UB
-     &                FORCES(ng) % Hwave,                               &
+     &                   FORCES(ng) % Hwave,                            &
 #else
-     &                FORCES(ng) % Ub_swan,                             &
+     &                   FORCES(ng) % Ub_swan,                          &
 #endif
-     &                FORCES(ng) % Dwave,                               &
-     &                FORCES(ng) % Pwave_bot,                           &
+     &                   FORCES(ng) % Dwave,                            &
+     &                   FORCES(ng) % Pwave_bot,                        &
 #ifdef BEDLOAD
-     &                SEDBED(ng) % bedldu,                              &
-     &                SEDBED(ng) % bedldv,                              &
+     &                   SEDBED(ng) % bedldu,                           &
+     &                   SEDBED(ng) % bedldv,                           &
 #endif
-     &                SEDBED(ng) % bottom,                              &
-     &                OCEAN(ng) % rho,                                  &
-     &                OCEAN(ng) % u,                                    &
-     &                OCEAN(ng) % v,                                    &
-     &                BBL(ng) % Iconv,                                  &
-     &                BBL(ng) % Ubot,                                   &
-     &                BBL(ng) % Vbot,                                   &
-     &                BBL(ng) % Ur,                                     &
-     &                BBL(ng) % Vr,                                     &
-     &                BBL(ng) % bustrc,                                 &
-     &                BBL(ng) % bvstrc,                                 &
-     &                BBL(ng) % bustrw,                                 &
-     &                BBL(ng) % bvstrw,                                 &
-     &                BBL(ng) % bustrcwmax,                             &
-     &                BBL(ng) % bvstrcwmax,                             &
-     &                FORCES(ng) % bustr,                               &
-     &                FORCES(ng) % bvstr)
+     &                   SEDBED(ng) % bottom,                           &
+     &                   OCEAN(ng) % rho,                               &
+     &                   OCEAN(ng) % u,                                 &
+     &                   OCEAN(ng) % v,                                 &
+     &                   BBL(ng) % Iconv,                               &
+     &                   BBL(ng) % Ubot,                                &
+     &                   BBL(ng) % Vbot,                                &
+     &                   BBL(ng) % Ur,                                  &
+     &                   BBL(ng) % Vr,                                  &
+     &                   BBL(ng) % bustrc,                              &
+     &                   BBL(ng) % bvstrc,                              &
+     &                   BBL(ng) % bustrw,                              &
+     &                   BBL(ng) % bvstrw,                              &
+     &                   BBL(ng) % bustrcwmax,                          &
+     &                   BBL(ng) % bvstrcwmax,                          &
+     &                   FORCES(ng) % bustr,                            &
+     &                   FORCES(ng) % bvstr)
 #ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 37, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 37, __LINE__, MyFile)
 #endif
+!
       RETURN
       END SUBROUTINE bblm
 !
 !***********************************************************************
-      SUBROUTINE bblm_tile (ng, tile,                                   &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      IminS, ImaxS, JminS, JmaxS,                 &
-     &                      nrhs,                                       &
-     &                      h,                                          &
+      SUBROUTINE ssw_bbl_tile (ng, tile,                                &
+     &                         LBi, UBi, LBj, UBj,                      &
+     &                         IminS, ImaxS, JminS, JmaxS,              &
+     &                         nrhs,                                    &
+     &                         h,                                       &
 #ifdef LIMIT_BSTRESS
-     &                      Hz,                                         &
+     &                         Hz,                                      &
 #endif
-     &                      z_r, z_w, angler, ZoBot,                    &
+     &                         z_r, z_w, angler, ZoBot,                 &
 #if defined SSW_CALC_UB
-     &                      Hwave,                                      &
+     &                         Hwave,                                   &
 #else
-     &                      Ub_swan,                                    &
+     &                         Ub_swan,                                 &
 #endif
-     &                      Dwave, Pwave_bot,                           &
+     &                         Dwave, Pwave_bot,                        &
 #ifdef BEDLOAD
-     &                      bedldu, bedldv,                             &
+     &                         bedldu, bedldv,                          &
 #endif
-     &                      bottom, rho, u, v,                          &
-     &                      Iconv,                                      &
-     &                      Ubot, Vbot, Ur, Vr,                         &
-     &                      bustrc, bvstrc,                             &
-     &                      bustrw, bvstrw,                             &
-     &                      bustrcwmax, bvstrcwmax,                     &
-     &                      bustr, bvstr)
+     &                         bottom, rho, u, v,                       &
+     &                         Iconv,                                   &
+     &                         Ubot, Vbot, Ur, Vr,                      &
+     &                         bustrc, bvstrc,                          &
+     &                         bustrw, bvstrw,                          &
+     &                         bustrcwmax, bvstrcwmax,                  &
+     &                         bustr, bvstr)
 !***********************************************************************
 !
       USE mod_param
@@ -414,8 +429,8 @@
           ELSE
 !
 !  Threshold of motion exceeded - calculate new zoST and zoBF
-!  Calculate saltation roughness according to Wiberg & Rubin (1989)
-!  (Eqn. 11 in Harris & Wiberg, 2001)
+!  Calculate saltation roughness according to Wiberg and Rubin (1989)
+!  (Eqn. 11 in Harris and Wiberg, 2001)
 !  (d50 is in m, but this formula needs cm)
 !
              coef_st=0.0204_r8*LOG(100.0_r8*d50)**2+                    &
@@ -431,7 +446,7 @@
              END IF
 !
 !  Calculate ripple height and wavelength.
-!  Use Malarkey & Davies (2003) explict version of Wiberg & Harris.
+!  Use Malarkey and Davies (2003) explict version of Wiberg and Harris.
 !
              coef_b1=1.0_r8/coef_a1
              coef_b2=0.5_r8*(1.0_r8 + coef_a2)*coef_b1
@@ -826,11 +841,12 @@
      &                    bottom(:,:,izbfm),                            &
      &                    bottom(:,:,izwbl))
 #endif
-
+!
       RETURN
-      END SUBROUTINE bblm_tile
+      END SUBROUTINE ssw_bbl_tile
 
 #ifdef SGWC
+!
       SUBROUTINE sg_bstress (sg_row, sg_zrozn, sg_phicw, sg_ubokur,     &
      &                       sg_ubouc, sg_mu, sg_epsilon, sg_ro,        &
      &                       sg_fofx)
@@ -1000,9 +1016,10 @@
           sg_fofx=-sg_ubouc+sg_ubokur*sg_epsilon*LOG(sg_zrozn)
         END IF
       END IF
+!
       RETURN
       END SUBROUTINE sg_bstress
-
+!
       SUBROUTINE  sg_purewave (sg_row, sg_ubouwm, sg_znotp, sg_ro)
 !
 !=======================================================================
@@ -1104,9 +1121,10 @@
           sg_ubouwm=sg_ubouwmn
         END IF
       END DO
+!
       RETURN
       END SUBROUTINE  sg_purewave
-
+!
       SUBROUTINE sg_kelvin8m (x, ber, bei, ker, kei, berp, beip,        &
      &                        kerp, keip)
 !
@@ -1183,9 +1201,10 @@
      &        19.41182758_r8*xp(8)-4.65950823_r8*xp(12)+                &
      &        0.33049424_r8*xp(16)-0.00926707_r8*xp(20)+                &
      &        0.00011997_r8*xp(24))
+!
       RETURN
       END SUBROUTINE sg_kelvin8m
-
+!
       SUBROUTINE sg_kelvin8p (x, ker, kei, ber, bei, kerp, keip,        &
      &                        berp, beip)
 !
@@ -1272,11 +1291,13 @@
 !
       berp=REAL(gofx*phip)-keip/pi
       beip=AIMAG(gofx*phip)+kerp/pi
+!
       RETURN
       END SUBROUTINE sg_kelvin8p
 #endif
 
 #ifdef M94WC
+!
       SUBROUTINE madsen94 (ubr, wr, ucr, zr, phiwc, kN,                 &
      &                     ustrc, ustrwm, ustrr, fwc, zoa)
 !
@@ -1430,7 +1451,8 @@
       phicwc=phiwc
       zoa=EXP(LOG(dwc(i))-(ustrc/ustrr)*LOG(dwc(i)/zo))       ! Eq 11
       fwc=fwci(i)
-
+!
       RETURN
       END SUBROUTINE madsen94
 #endif
+      END MODULE bbl_mod

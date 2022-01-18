@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE def_var_mod
 !
-!svn $Id: def_var.F 1029 2020-07-11 02:11:09Z arango $
+!svn $Id: def_var.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -12,12 +12,17 @@
 !                                                                      !
 !  On Input:                                                           !
 !                                                                      !
-!     ng           Nested grid number (integer).                       !
-!     model        Calling model identifier (integer).                 !
-!     ncid         NetCDF file ID (integer).                           !
-!     Vtype        NetCDF variable type (integer).                     !
-!     nVdim        Number of variable dimensions (integer; 0=scalar).  !
-!     Vdim         Dimensions IDs for this variable (integer vector).  !
+!     ng           Nested grid number (integer)                        !
+!     model        Calling model identifier (integer)                  !
+!     ncid         NetCDF file ID (integer)                            !
+#if defined PIO_LIB && defined DISTRIBUTE
+!or   pioFile      PIO file descriptor structure, TYPE(file_desc_t)    !
+!                    pioFile%fh         file handler                   !
+!                    pioFile%iosystem   IO system descriptor (struct)  !
+#endif
+!     Vtype        NetCDF variable type (integer)                      !
+!     nVdim        Number of variable dimensions (integer; 0=scalar)   !
+!     Vdim         Dimensions IDs for this variable (integer vector)   !
 !     Aval         Attribute values (real vector):                     !
 !                    Aval(1)   =>  Add offset value                    !
 !                    Aval(2)   =>  Valid minimum value                 !
@@ -54,37 +59,52 @@
 #if defined DARWIN_INTERNAL_EXTRAATT
 !                    Vinfo(26) =>  Variable "plankton_type" attribute  !
 #endif
-!     ncname       NetCDF file name.                                   !
+!     ncname       NetCDF file name                                    !
 !     SetFillVal   Logical switch to set fill value in land areas      !
-!                    (optional).                                       !
+!                    (optional)                                        !
 !     SetParAccess Logical switch to set parallel I/O access flag to   !
-!                    either collective or independent (optional).      !
+!                    either collective or independent (optional)       !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
-!     def_var      Error flag (integer).                               !
-!     Vid          NetCDF variable ID (integer).                       !
+!     def_var      Error flag (integer)                                !
+!     Vid          NetCDF variable ID (integer)                        !
+#if defined PIO_LIB && defined DISTRIBUTE
+!or   pioVar       PIO variable descriptor structure, TYPE(Var_desc_t) !
+!                    pioVar%varID       Variable ID                    !
+!                    pioVar%ncid        File ID                        !
+#endif
 !                                                                      !
 !  Notice that arrays "Aval" and "Vinfo" is destroyed on output to     !
 !  facilitate the definition of the next variable.                     !
 !                                                                      !
 !=======================================================================
 !
-      implicit none
-
-      CONTAINS
-!
-!***********************************************************************
-      FUNCTION def_var (ng, model, ncid, Vid, Vtype, nVdim, Vdim,       &
-     &                  Aval, Vinfo, ncname, SetFillVal, SetParAccess)
-!***********************************************************************
-!
       USE mod_param
       USE mod_parallel
       USE mod_iounits
       USE mod_ncparam
-      USE mod_netcdf
       USE mod_scalars
+!
+      implicit none
+!
+      INTERFACE def_var
+        MODULE PROCEDURE def_var_nf90
+#if defined PIO_LIB && defined DISTRIBUTE
+        MODULE PROCEDURE def_var_pio
+#endif
+      END INTERFACE def_var
+!
+      CONTAINS
+!
+!***********************************************************************
+      FUNCTION def_var_nf90 (ng, model, ncid, Vid,                      &
+     &                       Vtype, nVdim, Vdim,                        &
+     &                       Aval, Vinfo, ncname,                       &
+     &                       SetFillVal, SetParAccess) RESULT (status)
+!***********************************************************************
+!
+      USE mod_netcdf
 !
 #if !defined PARALLEL_IO  && defined DISTRIBUTE
       USE distribute_mod, ONLY : mp_bcasti
@@ -95,15 +115,15 @@
 !
       logical, intent(in), optional :: SetFillVal
       logical, intent(in), optional :: SetParAccess
-
+!
       integer, intent (in) :: ng, model, ncid, Vtype, nVdim
 
       integer, dimension(:), intent (in) :: Vdim
 
       integer, intent (out) :: Vid
-
+!
       real(r8), dimension(:), intent(inout) :: Aval
-
+!
       character (len=*), intent(in) :: ncname
 #if defined DARWIN_INTERNAL_EXTRAATT
       character (len=*), intent(inout) :: Vinfo(DARWIN_INTERNAL_EXTRAATT)
@@ -118,17 +138,22 @@
 #endif
 #if defined PARALLEL_IO && defined DISTRIBUTE
       logical :: Ltiled
+!
 #endif
-      integer :: i, j, latt, status
-
-      integer :: def_var
-
+      integer :: i, j, latt
+      integer :: status
+!
       character (len=  5) location
       character (len=160) text
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", def_var_nf90"
 !
 !-----------------------------------------------------------------------
 !  Define requested variable and its attributes.
 !-----------------------------------------------------------------------
+!
+      status=nf90_noerr
 !
       IF (OutThread) THEN
 !
@@ -143,8 +168,7 @@
               status=nf90_def_var(ncid, TRIM(Vinfo(1)), Vtype,          &
      &                            Vdim(1:nVdim), Vid)
             END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) ng, TRIM(Vinfo(1)),         &
      &                                      TRIM(ncname)
               exit_flag=3
@@ -166,8 +190,7 @@
             IF ((nVdim.gt.1).and.(Vdim(1).ne.0)) THEN
               status=nf90_def_var_deflate (ncid, Vid, shuffle, deflate, &
      &                                     deflate_level)
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,20) TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
                 exit_flag=3
@@ -184,8 +207,7 @@
           IF (TRIM(Vinfo(1)).eq.'grid') THEN
             status=nf90_put_att(ncid, Vid, 'cf_role',                   &
      &                          'grid_topology')
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'cf_role',                  &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -195,8 +217,7 @@
 !
             status=nf90_put_att(ncid, Vid, 'topology_dimension',        &
      &                          (/2/))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'topology_dimension',       &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -206,8 +227,7 @@
 !
             status=nf90_put_att(ncid, Vid, 'node_dimensions',           &
      &                          'xi_psi eta_psi')
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'node_dimensions',          &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -219,8 +239,7 @@
      &           'eta_rho: eta_psi (padding: both)'
             status=nf90_put_att(ncid, Vid, 'face_dimensions',           &
      &                          TRIM(text))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'face_dimensions',          &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -231,8 +250,7 @@
             text='xi_u: xi_psi eta_u: eta_psi (padding: both)'
             status=nf90_put_att(ncid, Vid, 'edge1_dimensions',          &
      &                          TRIM(text))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'edge1_dimensions',         &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -243,8 +261,7 @@
             text='xi_v: xi_psi (padding: both) eta_v: eta_psi'
             status=nf90_put_att(ncid, Vid, 'edge2_dimensions',          &
      &                          TRIM(text))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'edge2_dimensions',         &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -255,41 +272,37 @@
             IF (spherical) THEN
               status=nf90_put_att(ncid, Vid, 'node_coordinates',        &
      &                            'lon_psi lat_psi')
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'node_coordinates',       &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
                 exit_flag=3
                 ioerror=status
               END IF
-
+!
               status=nf90_put_att(ncid, Vid, 'face_coordinates',        &
      &                            'lon_rho lat_rho')
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'face_coordinates',       &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
                 exit_flag=3
                 ioerror=status
               END IF
-
+!
               status=nf90_put_att(ncid, Vid, 'edge1_coordinates',       &
      &                            'lon_u lat_u')
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'edge1_coordinates',      &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
                 exit_flag=3
                 ioerror=status
               END IF
-
+!
               status=nf90_put_att(ncid, Vid, 'edge2_coordinates',       &
      &                            'lon_v lat_v')
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'edge2_coordinates',      &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
@@ -299,41 +312,37 @@
             ELSE
               status=nf90_put_att(ncid, Vid, 'node_coordinates',        &
      &                            'x_psi y_psi')
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'node_coordinates',       &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
                 exit_flag=3
                 ioerror=status
               END IF
-
+!
               status=nf90_put_att(ncid, Vid, 'face_coordinates',        &
      &                            'x_rho y_rho')
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'face_coordinates',       &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
                 exit_flag=3
                 ioerror=status
               END IF
-
+!
               status=nf90_put_att(ncid, Vid, 'edge1_coordinates',       &
      &                            'x_u y_u')
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'edge1_coordinates',      &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
                 exit_flag=3
                 ioerror=status
               END IF
-
+!
               status=nf90_put_att(ncid, Vid, 'edge2_coordinates',       &
      &                            'x_v y_v')
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'edge2_coordinates',      &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
@@ -345,8 +354,7 @@
 !
             status=nf90_put_att(ncid, Vid, 'vertical_dimensions',       &
      &                          's_rho: s_w (padding: none)')
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'vertical_dimensions',      &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -356,7 +364,6 @@
 #endif
           END IF
         END IF
-
 !
 !  Define "longname" attribute.
 !
@@ -365,8 +372,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'long_name',                 &
      &                          Vinfo(2)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'long_name',                &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -383,8 +389,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'size_class',                &
      &                          Vinfo(19)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'size_class',               &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -402,8 +407,7 @@
             IF (TRIM(Vinfo(3)).ne.'nondimensional') THEN
               status=nf90_put_att(ncid, Vid, 'units',                   &
      &                            Vinfo(3)(1:latt))
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'units',                  &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
@@ -421,8 +425,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'calendar',                  &
      &                          Vinfo(4)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'calendar',                 &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -449,8 +452,7 @@
               status=nf90_put_att(ncid, Vid, TRIM(Vinfo(5)),            &
      &                            Aval(2))
             END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) TRIM(Vinfo(5)),             &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -478,8 +480,7 @@
               status=nf90_put_att(ncid, Vid, TRIM(Vinfo(6)),            &
      &                            Aval(3))
             END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) TRIM(Vinfo(6)),             &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -505,8 +506,7 @@
               latt=LEN_TRIM(text)
               status=nf90_put_att(ncid, Vid, 'flag_meanings',           &
      &                            text(1:latt))
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'flag_meanings (T/F)',    &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
@@ -546,8 +546,7 @@
               latt=LEN_TRIM(text)
               status=nf90_put_att(ncid, Vid, 'flag_meanings',           &
      &                            text(1:latt))
-              IF (FoundError(status, nf90_noerr, __LINE__,              &
-     &                       __FILE__)) THEN
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,30) 'flag_meanings',          &
      &                                        TRIM(Vinfo(1)),           &
      &                                        TRIM(ncname)
@@ -571,8 +570,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'negative_value',            &
      &                          Vinfo(11)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'negative_value',           &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -589,8 +587,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'positive_value',            &
      &                          Vinfo(12)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'positive_value',           &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -607,8 +604,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'positive',                  &
      &                          Vinfo(25)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'positive',                 &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -645,8 +641,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'cycle',                     &
      &                          Vinfo(13)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'cycle',                    &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -663,8 +658,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'positions',                 &
      &                          Vinfo(15)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'positions',                &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -681,8 +675,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'time',                      &
      &                          Vinfo(16)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'time',                     &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -709,8 +702,7 @@
               status=nf90_put_att(ncid, Vid, TRIM(Vinfo(17)),           &
      &                            Aval(4))
             END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) TRIM(Vinfo(17)),            &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -738,8 +730,7 @@
               status=nf90_put_att(ncid, Vid, TRIM(Vinfo(18)),           &
      &                            Aval(1))
             END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) TRIM(Vinfo(18)),            &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -767,8 +758,7 @@
               status=nf90_put_att(ncid, Vid, TRIM(Vinfo(24)),           &
      &                            Aval(6))
             END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) TRIM(Vinfo(24)),            &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -786,8 +776,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'water_points',              &
      &                          Vinfo(20)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'water_points',             &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -804,8 +793,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'standard_name',             &
      &                          Vinfo(21)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'standard_name',            &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -912,8 +900,7 @@
 
             status=nf90_put_att(ncid, Vid, 'grid',                      &
      &                          'grid')
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'grid',                     &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -923,8 +910,7 @@
 !
             status=nf90_put_att(ncid, Vid, 'location',                  &
      &                          TRIM(location))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'location',                 &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -940,8 +926,7 @@
             END IF
             status=nf90_put_att(ncid, Vid, TRIM(Vinfo(22)),             &
      &                          text(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'coordinates',              &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -959,8 +944,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'formula_terms',             &
      &                          Vinfo(23)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'formula_terms',            &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -977,8 +961,7 @@
           IF (latt.gt.0) THEN
             status=nf90_put_att(ncid, Vid, 'field',                     &
      &                          Vinfo(14)(1:latt))
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) 'field',                    &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -995,7 +978,6 @@
 !  Notice that the coordinate attribute is used to check which
 !  variables need the "_FillValue" attribute.
 !
-
         IF (exit_flag.eq.NoError) THEN
           latt=LEN_TRIM(Vinfo(22))
           IF (PRESENT(SetFillVal)) THEN
@@ -1013,8 +995,7 @@
      &                            REAL(spval,r4))
 # endif
             END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,30) '_FillValue',               &
      &                                      TRIM(Vinfo(1)),             &
      &                                      TRIM(ncname)
@@ -1042,8 +1023,7 @@
           ELSE
             status=nf90_var_par_access(ncid, Vid, IO_nontiled_access)
           END IF
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
+          IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) WRITE (stdout,40) TRIM(Vinfo(1)),               &
      &                                    TRIM(ncname)
             exit_flag=3
@@ -1060,27 +1040,907 @@
           Vinfo(i)(j:j)=' '
         END DO
       END DO
-!
-!  Set error flag
-!
+
 #if !defined PARALLEL_IO  && defined DISTRIBUTE
+!
+!  Broadcast error flag.
+!
       CALL mp_bcasti (ng, model, exit_flag)
 #endif
-      def_var=exit_flag
 !
- 10   FORMAT (/,' DEF_VAR - Grid ',i2.2,                                &
+ 10   FORMAT (/,' DEF_VAR_NF90 - Grid ',i2.2,                           &
      &          ', unable to define variable: ',a,/,                    &
-     &        11x,'in NetCDF file: ',a)
- 20   FORMAT (/,' DEF_VAR - error while setting deflate parameters',    &
-     &        ' for variable: ',a,/,11x,'in NetCDF file: ',a)
- 30   FORMAT (/,'DEF_VAR - error while defining attribute: ',a,         &
-     &        ' for variable: ',a,/,11x,'in NetCDF file: ',a)
+     &        16x,'in NetCDF file: ',a)
+ 20   FORMAT (/,' DEF_VAR_NF90 - error while setting deflate',          &
+     &        ' parameters for variable: ',a,/,16x,'in NetCDF file: ',a)
+ 30   FORMAT (/,'DEF_VAR_NF90 - error while defining attribute: ',a,    &
+     &        ' for variable: ',a,/,16x,'in NetCDF file: ',a)
 #if defined PARALLEL_IO && defined DISTRIBUTE
  40   FORMAT (/,'DEF_VAR - error while setting parallel access flag',   &
-     &        ' for variable: ',a,/,11x,'in NetCDF file: ',a)
+     &        ' for variable: ',a,/,16x,'in NetCDF file: ',a)
 #endif
-
+!
       RETURN
-      END FUNCTION def_var
+      END FUNCTION def_var_nf90
+
+#if defined PIO_LIB && defined DISTRIBUTE
+!
+!***********************************************************************
+      FUNCTION def_var_pio (ng, model, pioFile, pioVar,                 &
+     &                      Vtype, nVdim, Vdim,                         &
+     &                      Aval, Vinfo, ncname,                        &
+     &                      SetFillVal, SetParAccess) RESULT (status)
+!***********************************************************************
+!
+      USE pio
+!
+      USE strings_mod, ONLY : FoundError
+!
+!  Imported variable declarations.
+!
+      logical, intent(in), optional :: SetFillVal
+      logical, intent(in), optional :: SetParAccess
+!
+      integer, intent(in) :: ng, model, Vtype, nVdim
+
+      integer, dimension(:), intent (in) :: Vdim
+!
+      real(r8), dimension(:), intent(inout) :: Aval
+!
+      character (len=*), intent(in) :: ncname
+      character (len=*), intent(inout) :: Vinfo(25)
+!
+      TYPE (File_desc_t) :: pioFile
+      TYPE (Var_desc_t), intent(out) :: pioVar
+!
+!  Local variable declarations.
+!
+#ifdef MASKING
+      logical :: LandFill
+#endif
+      integer :: i, j, latt
+      integer :: status
+!
+      character (len=  5) location
+      character (len=160) text
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", def_var_pio"
+!
+!-----------------------------------------------------------------------
+!  Define requested variable and its attributes.
+!-----------------------------------------------------------------------
+!
+      status=PIO_noerr
+!
+!  Define variable.
+!
+      IF (exit_flag.eq.NoError) THEN
+        IF (LEN_TRIM(Vinfo(1)).gt.0) THEN
+          IF ((nVdim.eq.1).and.(Vdim(1).eq.0)) THEN
+            status=PIO_def_var(pioFile,                                 &
+     &                         name = TRIM(Vinfo(1)),                   &
+     &                         type = Vtype,                            &
+     &                         vardesc = pioVar)
+          ELSE
+            status=PIO_def_var(pioFile,                                 &
+     &                         name = TRIM(Vinfo(1)),                   &
+     &                         type = Vtype,                            &
+     &                         dimids = Vdim(1:nVdim),                  &
+     &                         vardesc = pioVar)
+          END IF
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,10) ng, TRIM(Vinfo(1)),           &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  Define special attributes for SGRID conventions variable "grid".
+!
+      IF (exit_flag.eq.NoError) THEN
+        IF (TRIM(Vinfo(1)).eq.'grid') THEN
+          status=PIO_put_att(pioFile, pioVar, 'cf_role',                &
+     &                       'grid_topology')
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'cf_role',                    &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+!
+          status=PIO_put_att(pioFile, pioVar, 'topology_dimension',     &
+     &                       (/2/))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'topology_dimension',         &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+!
+          status=PIO_put_att(pioFile, pioVar, 'node_dimensions',        &
+     &                          'xi_psi eta_psi')
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'node_dimensions',            &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+!
+          text='xi_rho: xi_psi (padding: both) '//                      &
+     &         'eta_rho: eta_psi (padding: both)'
+          status=PIO_put_att(pioFile, pioVar, 'face_dimensions',        &
+     &                       TRIM(text))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'face_dimensions',            &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+!
+          text='xi_u: xi_psi eta_u: eta_psi (padding: both)'
+          status=PIO_put_att(pioFile, pioVar, 'edge1_dimensions',       &
+     &                       TRIM(text))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'edge1_dimensions',           &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+!
+          text='xi_v: xi_psi (padding: both) eta_v: eta_psi'
+          status=PIO_put_att(pioFile, pioVar, 'edge2_dimensions',       &
+     &                       TRIM(text))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'edge2_dimensions',           &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+!
+          IF (spherical) THEN
+            status=PIO_put_att(pioFile, pioVar, 'node_coordinates',     &
+     &                         'lon_psi lat_psi')
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'node_coordinates',         &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+!
+            status=PIO_put_att(pioFile, pioVar, 'face_coordinates',     &
+     &                         'lon_rho lat_rho')
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'face_coordinates',         &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+!
+            status=PIO_put_att(pioFile, pioVar, 'edge1_coordinates',    &
+     &                         'lon_u lat_u')
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'edge1_coordinates',        &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+!
+            status=PIO_put_att(pioFile, pioVar, 'edge2_coordinates',    &
+     &                         'lon_v lat_v')
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'edge2_coordinates',        &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+          ELSE
+            status=PIO_put_att(pioFile, pioVar, 'node_coordinates',     &
+     &                         'x_psi y_psi')
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'node_coordinates',         &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+!
+            status=PIO_put_att(pioFile, pioVar, 'face_coordinates',     &
+     &                         'x_rho y_rho')
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'face_coordinates',         &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+!
+            status=PIO_put_att(pioFile, pioVar, 'edge1_coordinates',    &
+     &                         'x_u y_u')
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'edge1_coordinates',        &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+!
+            status=PIO_put_att(pioFile, pioVar, 'edge2_coordinates',    &
+     &                            'x_v y_v')
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'edge2_coordinates',        &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+          END IF
+#ifdef SOLVE3D
+!
+          status=PIO_put_att(pioFile, pioVar, 'vertical_dimensions',    &
+     &                       's_rho: s_w (padding: none)')
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'vertical_dimensions',        &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+#endif
+        END IF
+      END IF
+!
+!  Define "longname" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(2))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'long_name',              &
+     &                       Vinfo(2)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'long_name',                  &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  Define "size_class" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(19))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'size_class',             &
+     &                       Vinfo(19)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'size_class',                 &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "units" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(3))
+        IF (latt.gt.0) THEN
+          IF (TRIM(Vinfo(3)).ne.'nondimensional') THEN
+            status=PIO_put_att(pioFile, pioVar, 'units',                &
+     &                         Vinfo(3)(1:latt))
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'units',                    &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "calendar" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(4))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'calendar',               &
+     &                       Vinfo(4)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'calendar',                   &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "valid_min" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(5))
+        IF (latt.gt.0) THEN
+          IF (Vtype.eq.PIO_int) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(5)),         &
+     &                         INT(Aval(2)))
+#ifndef NO_4BYTE_REALS
+          ELSE IF (Vtype.eq.PIO_real) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(5)),         &
+     &                         REAL(Aval(2),r4))
+#endif
+          ELSE
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(5)),         &
+     &                         Aval(2))
+          END IF
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) TRIM(Vinfo(5)),               &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+          Aval(2)=0.0_r8
+        END IF
+      END IF
+!
+!  If applicable, define "valid_max" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(6))
+        IF (latt.gt.0) THEN
+          IF (Vtype.eq.PIO_int) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(6)),         &
+     &                         INT(Aval(3)))
+#ifndef NO_4BYTE_REALS
+          ELSE IF (Vtype.eq.PIO_real) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(6)),         &
+     &                         REAL(Aval(3),r4))
+#endif
+          ELSE
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(6)),         &
+     &                         Aval(3))
+          END IF
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) TRIM(Vinfo(6)),               &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+          Aval(3)=0.0_r8
+        END IF
+      END IF
+!
+!  If applicable, define "flag_values" and "flag_meanings" attributes
+!  for logical variables.
+!
+      IF (exit_flag.eq.NoError) THEN
+        IF ((LEN_TRIM(Vinfo(7)).gt.0).and.                              &
+     &      (LEN_TRIM(Vinfo(8)).gt.0)) THEN
+          text='T, F'
+          latt=LEN_TRIM(text)
+          status=PIO_put_att(pioFile, pioVar, 'flag_values',            &
+     &                       text(1:latt))
+          IF (status.eq.PIO_noerr) THEN
+            text=TRIM(Vinfo(7))//' '//TRIM(Vinfo(8))
+            latt=LEN_TRIM(text)
+            status=PIO_put_att(pioFile, pioVar, 'flag_meanings',        &
+     &                         text(1:latt))
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'flag_meanings (T/F)',      &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+          ELSE
+            IF (Master) WRITE (stdout,30) 'flag_values (T/F)',          &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "flag_values" and "flag_meanings" attributes
+!  for integer and floating point variables.
+!
+      IF (exit_flag.eq.NoError) THEN
+        IF ((LEN_TRIM(Vinfo( 9)).gt.0).and.                             &
+     &      (LEN_TRIM(Vinfo(10)).gt.0)) THEN
+          IF (Vtype.eq.PIO_int) THEN
+            status=PIO_put_att(pioFile, pioVar, 'flag_values',          &
+     &                         (/0,1/))
+#ifndef NO_4BYTE_REALS
+          ELSE IF (Vtype.eq.PIO_real) THEN
+            status=PIO_put_att(pioFile, pioVar, 'flag_values',          &
+     &                         (/0.0_r4, 1.0_r4/))
+#endif
+          ELSE
+            status=PIO_put_att(pioFile, pioVar, 'flag_values',          &
+     &                         (/0.0_r8, 1.0_r8/))
+          END IF
+          IF (status.eq.PIO_noerr) THEN
+            text=TRIM(Vinfo(9))//' '//TRIM(Vinfo(10))
+            latt=LEN_TRIM(text)
+            status=PIO_put_att(pioFile, pioVar, 'flag_meanings',        &
+     &                         text(1:latt))
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,30) 'flag_meanings',            &
+     &                                      TRIM(Vinfo(1)),             &
+     &                                      TRIM(ncname)
+              exit_flag=3
+              ioerror=status
+            END IF
+          ELSE
+            IF (Master) WRITE (stdout,30) 'flag_values',                &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "negative_value" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(11))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'negative_value',         &
+     &                       Vinfo(11)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'negative_value',             &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "positive_value" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(12))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'positive_value',         &
+     &                       Vinfo(12)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'positive_value',             &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define CF "positive" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(25))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'positive',               &
+     &                       Vinfo(25)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'positive',                   &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "cycle" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(13))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'cycle',                  &
+     &                       Vinfo(13)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'cycle',                      &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "positions" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(15))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'positions',              &
+     &                       Vinfo(15)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'positions',                  &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "time" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(16))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'time',                   &
+     &                       Vinfo(16)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'time',                       &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "missing_value" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(17))
+        IF (latt.gt.0) THEN
+          IF (Vtype.eq.PIO_int) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(17)),        &
+     &                         INT(Aval(4)))
+#ifndef NO_4BYTE_REALS
+          ELSE IF (Vtype.eq.PIO_real) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(17)),        &
+     &                         REAL(Aval(4),r4))
+#endif
+          ELSE
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(17)),        &
+     &                         Aval(4))
+          END IF
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) TRIM(Vinfo(17)),              &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+          Aval(4)=0.0_r8
+        END IF
+      END IF
+!
+!  If applicable, define "add_offset" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(18))
+        IF (latt.gt.0) THEN
+          IF (Vtype.eq.PIO_int) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(18)),        &
+     &                         INT(Aval(1)))
+#ifndef NO_4BYTE_REALS
+          ELSE IF (Vtype.eq.PIO_real) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(18)),        &
+     &                         REAL(Aval(1),r4))
+#endif
+          ELSE
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(18)),        &
+     &                         Aval(1))
+          END IF
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) TRIM(Vinfo(18)),              &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+          Aval(1)=0.0_r8
+        END IF
+      END IF
+!
+!  If applicable, define "_FillValue" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(24))
+        IF (latt.gt.0) THEN
+          IF (Vtype.eq.PIO_int) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(24)),        &
+     &                         INT(Aval(6)))
+#ifndef NO_4BYTE_REALS
+          ELSE IF (Vtype.eq.PIO_real) THEN
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(24)),        &
+     &                         REAL(Aval(6),r4))
+#endif
+          ELSE
+            status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(24)),        &
+     &                         Aval(6))
+          END IF
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) TRIM(Vinfo(24)),              &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+          Aval(6)=0.0_r8
+        END IF
+      END IF
+!
+!  If applicable, define "water_points" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(20))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'water_points',           &
+     &                       Vinfo(20)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'water_points',               &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "standard_name" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(21))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'standard_name',          &
+     &                       Vinfo(21)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'standard_name',              &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "coordinates" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(22))
+        IF (latt.gt.0) THEN
+          IF (spherical) THEN
+            IF (INT(Aval(5)).eq.r2dvar) THEN
+              text='lon_rho lat_rho'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.r3dvar) THEN
+              text='lon_rho lat_rho s_rho'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.w3dvar) THEN
+              text='lon_rho lat_rho s_w'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.b3dvar) THEN
+              text='lon_rho lat_rho'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.u2dvar) THEN
+              text='lon_u lat_u'
+              location='edge1'
+            ELSE IF (INT(Aval(5)).eq.u3dvar) THEN
+              text='lon_u lat_u s_rho'
+              location='edge1'
+            ELSE IF (INT(Aval(5)).eq.-u3dvar) THEN
+              text='lon_u lat_u s_w'
+              location='edge1'
+            ELSE IF (INT(Aval(5)).eq.v2dvar) THEN
+              text='lon_v lat_v'
+              location='edge2'
+            ELSE IF (INT(Aval(5)).eq.v3dvar) THEN
+              text='lon_v lat_v s_rho'
+              location='edge2'
+            ELSE IF (INT(Aval(5)).eq.-v3dvar) THEN
+              text='lon_v lat_v s_w'
+              location='edge2'
+            ELSE IF (INT(Aval(5)).eq.p2dvar) THEN
+              text='lon_psi lat_psi'
+              location='node'
+            ELSE IF (INT(Aval(5)).eq.p3dvar) THEN
+              text='lon_psi lat_psi s_rho'
+              location='node'
+            ELSE IF (INT(Aval(5)).eq.l3dvar) THEN
+              text='lon_rho lat_rho light'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.l4dvar) THEN
+              text='lon_rho lat_rho s_rho light'
+              location='face'
+            END IF
+          ELSE
+            IF (INT(Aval(5)).eq.r2dvar) THEN
+              text='x_rho y_rho'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.r3dvar) THEN
+              text='x_rho y_rho s_rho'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.w3dvar) THEN
+              text='x_rho y_rho s_w'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.b3dvar) THEN
+              text='x_rho y_rho'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.u2dvar) THEN
+              text='x_u y_u'
+              location='edge1'
+            ELSE IF (INT(Aval(5)).eq.u3dvar) THEN
+              text='x_u y_u s_rho'
+              location='edge1'
+            ELSE IF (INT(Aval(5)).eq.-u3dvar) THEN
+              text='x_u y_u s_w'
+              location='edge1'
+            ELSE IF (INT(Aval(5)).eq.v2dvar) THEN
+              text='x_v y_v'
+              location='edge2'
+            ELSE IF (INT(Aval(5)).eq.v3dvar) THEN
+              text='x_v y_v s_rho'
+              location='edge2'
+            ELSE IF (INT(Aval(5)).eq.-v3dvar) THEN
+              text='x_v y_v s_w'
+              location='edge2'
+            ELSE IF (INT(Aval(5)).eq.p2dvar) THEN
+              text='x_psi y_psi'
+              location='node'
+            ELSE IF (INT(Aval(5)).eq.p3dvar) THEN
+              text='x_psi y_psi s_rho'
+              location='node'
+            ELSE IF (INT(Aval(5)).eq.l3dvar) THEN
+              text='x_rho y_rho Nbands'
+              location='face'
+            ELSE IF (INT(Aval(5)).eq.l4dvar) THEN
+              text='x_rho y_rho s_rho Nbands'
+              location='face'
+            END IF
+          END IF
+
+          status=PIO_put_att(pioFile, pioVar, 'grid',                   &
+     &                       'grid')
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'grid',                       &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+!
+          status=PIO_put_att(pioFile, pioVar, 'location',               &
+     &                       TRIM(location))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'location',                   &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+!
+          latt=LEN_TRIM(text)
+          IF (((ABS(INT(Aval(5))).le.4).and.(nVdim.gt.2)).or.           &
+     &        ((ABS(INT(Aval(5))).gt.4).and.(nVdim.gt.3))) THEN
+            text=text(1:latt)//' ocean_time'
+            latt=LEN_TRIM(text)
+          END IF
+          status=PIO_put_att(pioFile, pioVar, TRIM(Vinfo(22)),          &
+     &                       text(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'coordinates',                &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+          Aval(5)=0.0_r8
+        END IF
+      END IF
+!
+!  If applicable, define "formula_terms" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(23))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'formula_terms',          &
+     &                       Vinfo(23)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'formula_terms',              &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+!
+!  If applicable, define "field" attribute (always last).
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(14))
+        IF (latt.gt.0) THEN
+          status=PIO_put_att(pioFile, pioVar, 'field',                  &
+     &                       Vinfo(14)(1:latt))
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) 'field',                      &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+
+#if defined MASKING && !defined WRITE_WATER
+!
+!  If land/sea masking, define "_FillValue" attribute since masking
+!  areas are overwritten with special value (spval) during output.
+!  Notice that the coordinate attribute is used to check which
+!  variables need the "_FillValue" attribute.
+!
+      IF (exit_flag.eq.NoError) THEN
+        latt=LEN_TRIM(Vinfo(22))
+        IF (PRESENT(SetFillVal)) THEN
+          LandFill=SetFillVal
+        ELSE
+          LandFill=(latt.gt.0).and.(nVdim.gt.2)
+        END IF
+        IF (LandFill) THEN
+          IF (Vtype.eq.PIO_double) THEN
+            status=PIO_put_att(pioFile, pioVar, '_FillValue',           &
+     &                         spval)
+# ifndef NO_4BYTE_REALS
+          ELSE IF (Vtype.eq.PIO_real) THEN
+            status=PIO_put_att(pioFile, pioVar, '_FillValue',           &
+     &                         REAL(spval,r4))
+# endif
+          END IF
+          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+            IF (Master) WRITE (stdout,30) '_FillValue',                 &
+     &                                    TRIM(Vinfo(1)),               &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            ioerror=status
+          END IF
+        END IF
+      END IF
+#endif
+!
+!  Clean information variables.
+!
+      DO i=1,SIZE(Vinfo)
+        DO j=1,LEN(Vinfo(1))
+          Vinfo(i)(j:j)=' '
+        END DO
+      END DO
+!
+ 10   FORMAT (/,' DEF_VAR_PIO - Grid ',i2.2,                            &
+     &          ', unable to define variable: ',a,/,                    &
+     &        15x,'in NetCDF file: ',a)
+ 20   FORMAT (/,' DEF_VAR_PIO - error while setting deflate',           &
+     &        ' parameters for variable: ',a,/,15x,'in NetCDF file: ',a)
+ 30   FORMAT (/,'DEF_VAR_NF90 - error while defining attribute: ',a,    &
+     &        ' for variable: ',a,/,15x,'in NetCDF file: ',a)
+!
+      RETURN
+      END FUNCTION def_var_pio
+#endif
 
       END MODULE def_var_mod

@@ -2,9 +2,9 @@
       MODULE inner2state_mod
 #if defined HESSIAN_FSV || defined HESSIAN_SO || defined HESSIAN_SV
 !
-!svn $Id: inner2state.F 1022 2020-05-13 03:03:15Z arango $
+!svn $Id: inner2state.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -15,6 +15,38 @@
 !  loop space span by assimilation to physical state space.            !
 !                                                                      !
 !=======================================================================
+!
+      USE mod_param
+      USE mod_parallel
+# ifdef ADJUST_BOUNDARY
+      USE mod_boundary
+# endif
+# if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
+      USE mod_forces
+# endif
+      USE mod_fourdvar
+      USE mod_grid
+      USE mod_iounits
+      USE mod_ncparam
+      USE mod_netcdf
+      USE mod_ocean
+# if defined PIO_LIB && defined DISTRIBUTE
+      USE mod_pio_netcdf
+# endif
+      USE mod_scalars
+      USE mod_stepping
+!
+# ifdef DISTRIBUTE
+      USE distribute_mod,       ONLY : mp_bcastf
+      USE distribute_mod,       ONLY : mp_bcasti
+# endif
+      USE state_addition_mod,   ONLY : state_addition
+      USE state_copy_mod,       ONLY : state_copy
+      USE state_dotprod_mod,    ONLY : state_dotprod
+      USE state_initialize_mod, ONLY : state_initialize
+      USE state_read_mod,       ONLY : state_read
+      USE state_scale_mod,      ONLY : state_scale
+      USE strings_mod,          ONLY : FoundError
 !
       implicit none
 !
@@ -30,28 +62,21 @@
       SUBROUTINE tl_inner2state (ng, tile, Lini, state)
 !***********************************************************************
 !
-      USE mod_param
-# ifdef ADJUST_BOUNDARY
-      USE mod_boundary
-# endif
-# if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
-      USE mod_forces
-# endif
-      USE mod_grid
-      USE mod_ocean
-      USE mod_scalars
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, Lini
-
+!
       real(r8), intent(in) :: state(Ninner)
 !
+!  Local variable declarations.
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", tl_inner2state"
 !
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iTLM, 2, __LINE__, __FILE__)
+      CALL wclock_on (ng, iTLM, 2, __LINE__, MyFile)
 # endif
       CALL tl_inner2state_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, LBij, UBij,         &
@@ -141,9 +166,9 @@
 # endif
      &                                             )
 # ifdef PROFILE
-      CALL wclock_off (ng, iTLM, 2, __LINE__, __FILE__)
+      CALL wclock_off (ng, iTLM, 2, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE tl_inner2state
 !
@@ -213,25 +238,6 @@
 # endif
      &                                       )
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_netcdf
-      USE mod_scalars
-!
-      USE state_addition_mod,   ONLY : state_addition
-      USE state_dotprod_mod,    ONLY : state_dotprod
-      USE state_initialize_mod, ONLY : state_initialize
-      USE state_scale_mod,      ONLY : state_scale
-      USE state_copy_mod,       ONLY : state_copy
-# ifdef DISTRIBUTE
-      USE distribute_mod,       ONLY : mp_bcastf
-      USE distribute_mod,       ONLY : mp_bcasti
-# endif
-      USE strings_mod,          ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -451,12 +457,16 @@
       logical, save :: first = .TRUE.
       logical, save :: first1 = .TRUE.
 # endif
-
+!
       character (len=256) :: ncname
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", tl_inner2state_tile"
 
 # include "set_bounds.h"
 !
-      SourceFile=__FILE__ // ", tl_inner2state_tile"
+      CalledFrom=MyFile
+      SourceFile=MyFile
 !
 !  Compute a Cholesky factorization of the tridiagonal matrix
 !  of inner-loop Lanczos vector coefficients of the form
@@ -501,6 +511,7 @@
       DO i=Ninner-1,1,-1
         work(i)=work(i)-zLanczos_offdiag(i)*work(i+1)
       END DO
+
 # ifdef LCZ_FINAL
 !
 !  If using the evolved Lanczos vectors, then we need to perform a
@@ -511,10 +522,18 @@
 !
 !  Determine if single or multiple Lanczos vector NetCDF files.
 !
-      CALL netcdf_get_ivar (ng, iTLM, TRIM(LCZ(ng)%name), 'ndefADJ',    &
-     &                      ndefLCZ)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      SELECT CASE (LCZ(ng)%IOtype)
+        CASE (io_nf90)
+          CALL netcdf_get_ivar (ng, iTLM, TRIM(LCZ(ng)%name),           &
+     &                          'ndefADJ', ndefLCZ)
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+        CASE (io_pio)
+          CALL pio_netcdf_get_ivar (ng, iTLM, TRIM(LCZ(ng)%name),       &
+     &                              'ndefADJ', ndefLCZ)
+#  endif
+      END SELECT
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
       IF (first) THEN
       first=.FALSE.
@@ -540,7 +559,7 @@
           DO i=1,Ninner
             GSmatrix(i,j)=0.0_r8
           END DO
-        END DO
+        END DO3
         DO j=1,Ninner
             GSmatrix(j,j)=1.0_r8
         END DO
@@ -559,10 +578,14 @@
         END DO
 !
         ncname=LCZ(ng)%name
-        CALL read_state (ng, tile, iTLM,                                &
+        CALL state_read (ng, tile, iTLM, LCZ(ng)%IOtype,                &
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   Lwrk, inner,                                   &
-     &                   ndefLCZ, LCZ(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLCZ, LCZ(ng)%ncid,                         &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                   LCZ(ng)%pioFile,                               &
+# endif
+     &                   TRIM(ncname),                                  &
 # ifdef MASKING
      &                   rmask, umask, vmask,                           &
 # endif
@@ -635,10 +658,14 @@
 !  linear state array index Lwrk.
 !
         ncname=LZE(ng)%name
-        CALL read_state (ng, tile, iTLM,                                &
+        CALL state_read (ng, tile, iTLM, LZE(ng)%IOtype,                &
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   Lwrk, rec,                                     &
-     &                   ndefLZE, LZE(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLZE, LZE(ng)%ncid,                         &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                   LZE(ng)%pioFile,                               &
+# endif
+     &                   TRIM(ncname),                                  &
 # ifdef MASKING
      &                   rmask, umask, vmask,                           &
 # endif
@@ -661,8 +688,7 @@
      &                   ad_ubar, ad_vbar,                              &
 # endif
      &                   ad_zeta)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Compute dot product.
 !
@@ -886,8 +912,7 @@
         END IF
         LZE(ng)%Rindex=inner-1
         CALL wrt_evolved (ng, Lini, Lini)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !   Build the full Gramm-Schmidt matrix from as the product of each
 !   sub-matrix.
@@ -919,10 +944,14 @@
       DO inner=1,Ninner
 !
         ncname=LZE(ng)%name
-        CALL read_state (ng, tile, iTLM,                                &
+        CALL state_read (ng, tile, iTLM, LZE(ng)%IOtype,                &
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   Lwrk, inner,                                   &
-     &                   ndefLZE, LZE(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLZE, LZE(ng)%ncid,                         &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                   LZE(ng)%pioFile,                               &
+# endif
+     &                   TRIM(ncname),                                  &
 # ifdef MASKING
      &                   rmask, umask, vmask,                           &
 # endif
@@ -948,10 +977,14 @@
         DO rec=1,Ninner
 !
         ncname=LZE(ng)%name
-        CALL read_state (ng, tile, iTLM,                                &
+        CALL state_read (ng, tile, iTLM, LZE(ng)%IOtype,                &
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   Lwrk, rec,                                     &
-     &                   ndefLZE, LZE(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLZE, LZE(ng)%ncid,                         &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                   LZE(ng)%pioFile,                               &
+# endif
+     &                   TRIM(ncname),                                  &
 # ifdef MASKING
      &                   rmask, umask, vmask,                           &
 # endif
@@ -974,8 +1007,7 @@
      &                   ad_ubar, ad_vbar,                              &
 # endif
      &                   ad_zeta)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Compute dot product.
 !
@@ -1073,17 +1105,33 @@
 # ifdef LCZ_FINAL
 !  Determine if single or multiple Lanczos vector NetCDF files.
 !
-      CALL netcdf_get_ivar (ng, iTLM, TRIM(LZE(ng)%name), 'ndefADJ',    &
-     &                      ndefLZE)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      SELECT CASE (LZE(ng)%IOtype)
+        CASE (io_nf90)
+          CALL netcdf_get_ivar (ng, iTLM, TRIM(LZE(ng)%name),           &
+     &                          'ndefADJ', ndefLZE)
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+        CASE (io_pio)
+          CALL pio_netcdf_get_ivar (ng, iTLM, TRIM(LZE(ng)%name),       &
+     &                             'ndefADJ', ndefLZE)
+#  endif
+      END SELECT
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # else
 !  Determine if single or multiple Lanczos vector NetCDF files.
 !
-      CALL netcdf_get_ivar (ng, iTLM, TRIM(LCZ(ng)%name), 'ndefADJ',    &
-     &                      ndefLCZ)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      SELECT CASE (LCZ(ng)%IOtype)
+        CASE (io_nf90)
+          CALL netcdf_get_ivar (ng, iTLM, TRIM(LCZ(ng)%name),           &
+     &                          'ndefADJ', ndefLCZ)
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+        CASE (io_pio)
+          CALL pio_netcdf_get_ivar (ng, iTLM, TRIM(LCZ(ng)%name),       &
+     &                              'ndefADJ', ndefLCZ)
+#  endif
+      END SELECT
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 !
 # ifdef LCZ_FINAL
@@ -1132,14 +1180,26 @@
 !  k inner-loops of the I4D-Var algorithm first outer loop. Load
 !  Lanczos vectors into TANGENT LINEAR STATE ARRAYS at index Lwrk.
 !
-        CALL read_state (ng, tile, iTLM,                                &
+        CALL state_read (ng, tile, iTLM,                                &
+# ifdef LCZ_FINAL
+     &                   LZE(ng)%IOtype,                                &
+# else
+     &                   LCZ(ng)%IOtype,                                &
+# endif
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   Lwrk, inner,                                   &
 # ifdef LCZ_FINAL
-     &                   ndefLZE, LZE(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLZE, LZE(ng)%ncid,                         &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                   LZE(ng)%pioFile,                               &
+#  endif
 # else
-     &                   ndefLCZ, LCZ(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLCZ, LCZ(ng)%ncid,                         &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                   LCZ(ng)%pioFile,                               &
+#  endif
 # endif
+     &                   TRIM(ncname),                                  &
 # ifdef MASKING
      &                   rmask, umask, vmask,                           &
 # endif
@@ -1162,8 +1222,7 @@
      &                   tl_ubar, tl_vbar,                              &
 # endif
      &                   tl_zeta)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         IF (inner.eq.1) THEN
           fac=0.0_r8
@@ -1192,10 +1251,8 @@
      &                           tl_ubar, tl_vbar,                      &
 # endif
      &                           tl_zeta)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
-
 !
 !  NOTE: In the case of WEAK_CONSTRAINT and TIME_CONV, tl_ubar, tl_vbar
 !        ad_ubar and ad_vbar are only passed as required but are not
@@ -1240,8 +1297,7 @@
      &                       tl_vbar, tl_vbar,                          &
 # endif
      &                       tl_zeta, tl_zeta)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       END DO
 # ifdef HESSIAN_FSV
@@ -1377,7 +1433,7 @@
      &                           tl_zeta)
 
 # endif
-
+!
       RETURN
       END SUBROUTINE tl_inner2state_tile
 !
@@ -1385,28 +1441,21 @@
       SUBROUTINE ad_inner2state (ng, tile, Lini, ad_state)
 !***********************************************************************
 !
-      USE mod_param
-# ifdef ADJUST_BOUNDARY
-      USE mod_boundary
-# endif
-# if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
-      USE mod_forces
-# endif
-      USE mod_grid
-      USE mod_ocean
-      USE mod_scalars
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, Lini
 !
       real(r8), intent(inout) :: ad_state(Ninner)
 !
+!  Local variable declarations.
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ad_inner2state"
 !
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iTLM, 2, __LINE__, __FILE__)
+      CALL wclock_on (ng, iTLM, 2, __LINE__, MyFile)
 # endif
       CALL ad_inner2state_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, LBij, UBij,         &
@@ -1493,9 +1542,9 @@
 # endif
      &                                  )
 # ifdef PROFILE
-      CALL wclock_off (ng, iTLM, 2, __LINE__, __FILE__)
+      CALL wclock_off (ng, iTLM, 2, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE ad_inner2state
 !
@@ -1562,20 +1611,6 @@
 # endif
      &                                       )
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_netcdf
-      USE mod_scalars
-      USE mod_stepping
-!
-      USE state_addition_mod, ONLY : state_addition
-      USE state_dotprod_mod, ONLY : state_dotprod
-      USE state_initialize_mod, ONLY : state_initialize
-      USE state_scale_mod, ONLY : state_scale
 !
 !  Imported variable declarations.
 !
@@ -1782,12 +1817,16 @@
       real(r8), dimension(0:NstateVar(ng)) :: dot
       real(r8), dimension(Ninner) :: DotProd
       real(r8), dimension(Ninner) :: bvector
-
+!
       character (len=256) :: ncname
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ad_inner2state_tile"
 
 # include "set_bounds.h"
 !
-      SourceFile=__FILE__ // ", ad_inner2state_tile"
+      CalledFrom=MyFile
+      SourceFile=MyFile
 !
 !  Clear ad_state array.
 !
@@ -1941,16 +1980,32 @@
 !  Determine if single or multiple Lanczos vector NetCDF files.
 # ifdef LCZ_FINAL
 !
-      CALL netcdf_get_ivar (ng, iADM, TRIM(LZE(ng)%name), 'ndefADJ',    &
-     &                      ndefLZE)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      SELECT CASE (LZE(ng)%IOtype)
+        CASE (io_nf90)
+          CALL netcdf_get_ivar (ng, iADM, TRIM(LZE(ng)%name),           &
+     &                          'ndefADJ', ndefLZE)
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+        CASE (io_pio)
+          CALL pio_netcdf_get_ivar (ng, iADM, TRIM(LZE(ng)%name),       &
+     &                              'ndefADJ', ndefLZE)
+#  endif
+      END SELECT
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # else
 !
-      CALL netcdf_get_ivar (ng, iADM, TRIM(LCZ(ng)%name), 'ndefADJ',    &
-     &                      ndefLCZ)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      SELECT CASE (LCZ(ng)%IOtype)
+        CASE (io_nf90)
+          CALL netcdf_get_ivar (ng, iADM, TRIM(LCZ(ng)%name),           &
+     &                          'ndefADJ', ndefLCZ)
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+        CASE (io_pio)
+          CALL pio_netcdf_get_ivar (ng, iADM, TRIM(LCZ(ng)%name),       &
+     &                              'ndefADJ', ndefLCZ)
+#  endif
+      END SELECT
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 !
       Lwrk=2
@@ -1989,14 +2044,26 @@
 !  k inner-loops of the I4D-Var algorithm first outer loop. Load
 !  Lanczos vectors into TANGENT LINEAR STATE ARRAYS at index Lwrk.
 !
-        CALL read_state (ng, tile, iADM,                                &
+        CALL state_read (ng, tile, iADM,                                &
+# ifdef LCZ_FINAL
+     &                   LZE(ng)%IOtype,                                &
+# else
+     &                   LCZ(ng)%IOtype,                                &
+# endif
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   Lwrk, inner,                                   &
 # ifdef LCZ_FINAL
-     &                   ndefLZE, LZE(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLZE, LZE(ng)%ncid,                         &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                   LZE(ng)%pioFile,                               &
+#  endif
 # else
-     &                   ndefLCZ, LCZ(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLCZ, LCZ(ng)%ncid,                         &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                   LCZ(ng)%pioFile,                               &
+#  endif
 # endif
+     &                   TRIM(ncname),                                  &
 # ifdef MASKING
      &                   rmask, umask, vmask,                           &
 # endif
@@ -2019,8 +2086,7 @@
      &                   tl_ubar, tl_vbar,                              &
 # endif
      &                   tl_zeta)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         CALL state_dotprod (ng, tile, iADM,                             &
      &                      LBi, UBi, LBj, UBj, LBij, UBij,             &
@@ -2100,16 +2166,6 @@
       SUBROUTINE ini_C_norm (ng, tile, Kinp, Ninp, StateNorm)
 !***********************************************************************
 !
-      USE mod_param
-# ifdef ADJUST_BOUNDARY
-      USE mod_boundary
-# endif
-# if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
-      USE mod_forces
-# endif
-      USE mod_grid
-      USE mod_ocean
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, Kinp, Ninp
@@ -2118,10 +2174,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ini_C_norm"
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iTLM, 2, __LINE__, __FILE__)
+      CALL wclock_on (ng, iTLM, 2, __LINE__, MyFile)
 # endif
       CALL ini_C_norm_tile (ng, tile,                                   &
      &                      LBi, UBi, LBj, UBj, LBij, UBij,             &
@@ -2212,9 +2271,9 @@
 # endif
      &                      OCEAN(ng) % zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, iTLM, 2, __LINE__, __FILE__)
+      CALL wclock_off (ng, iTLM, 2, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE ini_C_norm
 !
@@ -2285,20 +2344,6 @@
 # endif
      &                            zeta)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_netcdf
-      USE mod_scalars
-!
-      USE state_addition_mod,   ONLY : state_addition
-      USE state_dotprod_mod,    ONLY : state_dotprod
-      USE state_initialize_mod, ONLY : state_initialize
-      USE state_scale_mod,      ONLY : state_scale
-      USE strings_mod,          ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -2457,7 +2502,7 @@
       real(r8), intent(inout) :: tl_zeta(LBi:UBi,LBj:UBj,3)
 #  ifdef ADJUST_BOUNDARY
 #   ifdef SOLVE3D
-      real(r8), intent(inout) :: t_obc(LBij:UBij,N(ng),4,            &
+      real(r8), intent(inout) :: t_obc(LBij:UBij,N(ng),4,               &
      &                                    Nbrec(ng),2,NT(ng))
       real(r8), intent(inout) :: u_obc(LBij:UBij,N(ng),4,Nbrec(ng),2)
       real(r8), intent(inout) :: v_obc(LBij:UBij,N(ng),4,Nbrec(ng),2)
@@ -2471,7 +2516,7 @@
       real(r8), intent(inout) :: vstr(LBi:UBi,LBj:UBj,Nfrec(ng),2)
 #  endif
 #  if defined ADJUST_STFLUX && defined SOLVE3D
-      real(r8), intent(inout) :: tflux(LBi:UBi,LBj:UBj,              &
+      real(r8), intent(inout) :: tflux(LBi:UBi,LBj:UBj,                 &
      &                                    Nfrec(ng),2,NT(ng))
 #  endif
 #  ifdef SOLVE3D
@@ -2496,6 +2541,7 @@
 # ifdef SOLVE3D
       integer :: itrc, k
 # endif
+!
       real(r8) :: fac, fac1, fac2
       real(r8) :: zbeta
 
@@ -2506,11 +2552,16 @@
       real(r8) :: sum
       real(r8), dimension(Ninner) :: work1
 # endif
-
+!
       character (len=256) :: ncname
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ini_C_norm_tile"
 
 # include "set_bounds.h"
 !
+      CalledFrom=MyFile
+      SourceFile=MyFile
 !
 !-----------------------------------------------------------------------
 !  Compute tangent linear model initial conditions from the weighted
@@ -2520,20 +2571,37 @@
 !  Determine if single or multiple Lanczos vector NetCDF files.
 !
 # ifdef LCZ_FINAL
-      CALL netcdf_get_ivar (ng, iADM, TRIM(LZE(ng)%name), 'ndefADJ',    &
-     &                      ndefLZE)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      SELECT CASE (LZE(ng)%IOtype)
+        CASE (io_nf90)
+          CALL netcdf_get_ivar (ng, iADM, TRIM(LZE(ng)%name),           &
+     &                          'ndefADJ', ndefLZE)
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+        CASE (io_pio)
+          CALL pio_netcdf_get_ivar (ng, iADM, TRIM(LZE(ng)%name),       &
+     &                              'ndefADJ', ndefLZE)
+#  endif
+      END SELECT
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # else
-      CALL netcdf_get_ivar (ng, iADM, TRIM(LCZ(ng)%name), 'ndefADJ',    &
-     &                      ndefLCZ)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      SELECT CASE (LCZ(ng)%IOtype)
+        CASE (io_nf90)
+          CALL netcdf_get_ivar (ng, iADM, TRIM(LCZ(ng)%name),           &
+     &                          'ndefADJ', ndefLCZ)
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+        CASE (io_pio)
+          CALL pio_netcdf_get_ivar (ng, iADM, TRIM(LCZ(ng)%name),       &
+     &                              'ndefADJ', ndefLCZ)
+#  endif
+      END SELECT
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 !
       Lwrk1=1
       Lwrk2=2
       DO inner=1,Ninner
+
 # ifdef LCZ_FINAL
 !
 !  Determine Lanczos vector file to read.  The orthonormalized
@@ -2568,14 +2636,26 @@
 !  k inner-loops of the I4D-Var algorithm first outer loop. Load
 !  Lanczos vectors into ADJOINT LINEAR STATE ARRAYS at index Lwrk1.
 !
-        CALL read_state (ng, tile, iTLM,                                &
+        CALL state_read (ng, tile, iTLM,                                &
+# ifdef LCZ_FINAL
+     &                   LZE(ng)%IOtype,                                &
+# else
+     &                   LCZ(ng)%IOtype,                                &
+# endif
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   Lwrk1, inner,                                  &
 # ifdef LCZ_FINAL
-     &                   ndefLZE, LZE(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLZE, LZE(ng)%ncid,                         &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                   LZE(ng)%pioFile,                               &
+#  endif
 # else
-     &                   ndefLCZ, LCZ(ng)%ncid, TRIM(ncname),           &
+     &                   ndefLCZ, LCZ(ng)%ncid,                         &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                   LCZ(ng)%pioFile,                               &
+#  endif
 # endif
+     &                   TRIM(ncname),                                  &
 # ifdef MASKING
      &                   rmask, umask, vmask,                           &
 # endif
@@ -2598,8 +2678,7 @@
      &                   ad_ubar, ad_vbar,                              &
 # endif
      &                   ad_zeta)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Compute dot product between the tangent linear solution, x(0),
 !  and Lanczos vectors, q_i.
@@ -2753,14 +2832,26 @@
           ncname=LCZ(ng)%name
         END IF
 # endif
-        CALL read_state (ng, tile, iTLM,                                &
+        CALL state_read (ng, tile, iTLM,                                &
+# ifdef LCZ_FINAL
+     &                   LZE(ng)%IOtype,                                &
+# else
+     &                   LCZ(ng)%IOtype,                                &
+# endif
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   Lwrk1, inner,                                  &
 # ifdef LCZ_FINAL
-     &                   ndefLZE, LZE(ng)%ncid, ncname,                 &
+     &                   ndefLZE, LZE(ng)%ncid,                         &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                   LZE(ng)%pioFile,                               &
+#  endif
 # else
-     &                   ndefLCZ, LCZ(ng)%ncid, ncname,                 &
+     &                   ndefLCZ, LCZ(ng)%ncid,                         &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                   LCZ(ng)%pioFile,                               &
+#  endif
 # endif
+     &                   ncname,                                        &
 # ifdef MASKING
      &                   rmask, umask, vmask,                           &
 # endif
@@ -2783,8 +2874,7 @@
      &                   ad_ubar, ad_vbar,                              &
 # endif
      &                   ad_zeta)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Sum over all Lanczos vectors:
 !
@@ -2885,640 +2975,6 @@
 !
       RETURN
       END SUBROUTINE ini_C_norm_tile
-!
-!
-!***********************************************************************
-      SUBROUTINE read_state (ng, tile, model,                           &
-     &                       LBi, UBi, LBj, UBj, LBij, UBij,            &
-     &                       Lwrk, rec,                                 &
-     &                       ndef, ncfileid, ncname,                    &
-# ifdef MASKING
-     &                       rmask, umask, vmask,                       &
-# endif
-# ifdef ADJUST_BOUNDARY
-#  ifdef SOLVE3D
-     &                       s_t_obc, s_u_obc, s_v_obc,                 &
-#  endif
-     &                       s_ubar_obc, s_vbar_obc,                    &
-     &                       s_zeta_obc,                                &
-# endif
-# ifdef ADJUST_WSTRESS
-     &                       s_ustr, s_vstr,                            &
-# endif
-# if defined ADJUST_STFLUX && defined SOLVE3D
-     &                       s_tflux,                                   &
-# endif
-# ifdef SOLVE3D
-     &                       s_t, s_u, s_v,                             &
-# else
-     &                       s_ubar, s_vbar,                            &
-# endif
-     &                       s_zeta)
-!***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_netcdf
-      USE mod_scalars
-!
-# ifdef DISTRIBUTE
-      USE distribute_mod,     ONLY : mp_bcasti
-# endif
-#ifdef ADJUST_BOUNDARY
-      USE nf_fread2d_bry_mod, ONLY : nf_fread2d_bry
-# ifdef SOLVE3D
-      USE nf_fread3d_bry_mod, ONLY : nf_fread3d_bry
-# endif
-#endif
-      USE nf_fread2d_mod,     ONLY : nf_fread2d
-# ifdef SOLVE3D
-      USE nf_fread3d_mod,     ONLY : nf_fread3d
-# endif
-      USE strings_mod,        ONLY : FoundError
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: ng, tile, model
-      integer, intent(in) :: LBi, UBi, LBj, UBj, LBij, UBij
-      integer, intent(in) :: Lwrk, rec, ndef
-
-      integer, intent(inout) :: ncfileid
-
-      character (len=*), intent(in) :: ncname
-!
-# ifdef ASSUMED_SHAPE
-#  ifdef MASKING
-      real(r8), intent(in) :: rmask(LBi:,LBj:)
-      real(r8), intent(in) :: umask(LBi:,LBj:)
-      real(r8), intent(in) :: vmask(LBi:,LBj:)
-#  endif
-#  ifdef ADJUST_BOUNDARY
-#   ifdef SOLVE3D
-      real(r8), intent(inout) :: s_t_obc(LBij:,:,:,:,:,:)
-      real(r8), intent(inout) :: s_u_obc(LBij:,:,:,:,:)
-      real(r8), intent(inout) :: s_v_obc(LBij:,:,:,:,:)
-#   endif
-      real(r8), intent(inout) :: s_ubar_obc(LBij:,:,:,:)
-      real(r8), intent(inout) :: s_vbar_obc(LBij:,:,:,:)
-      real(r8), intent(inout) :: s_zeta_obc(LBij:,:,:,:)
-#  endif
-#  ifdef ADJUST_WSTRESS
-      real(r8), intent(inout) :: s_ustr(LBi:,LBj:,:,:)
-      real(r8), intent(inout) :: s_vstr(LBi:,LBj:,:,:)
-#  endif
-#  if defined ADJUST_STFLUX && defined SOLVE3D
-      real(r8), intent(inout) :: s_tflux(LBi:,LBj:,:,:,:)
-#  endif
-#  ifdef SOLVE3D
-      real(r8), intent(inout) :: s_t(LBi:,LBj:,:,:,:)
-      real(r8), intent(inout) :: s_u(LBi:,LBj:,:,:)
-      real(r8), intent(inout) :: s_v(LBi:,LBj:,:,:)
-#  else
-      real(r8), intent(inout) :: s_ubar(LBi:,LBj:,:)
-      real(r8), intent(inout) :: s_vbar(LBi:,LBj:,:)
-#  endif
-      real(r8), intent(inout) :: s_zeta(LBi:,LBj:,:)
-# else
-#  ifdef MASKING
-      real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: umask(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: vmask(LBi:UBi,LBj:UBj)
-#  endif
-#  ifdef ADJUST_BOUNDARY
-#   ifdef SOLVE3D
-      real(r8), intent(inout) :: s_t_obc(LBij:UBij,N(ng),4,             &
-     &                                   Nbrec(ng),2,NT(ng))
-      real(r8), intent(inout) :: s_u_obc(LBij:UBij,N(ng),4,Nbrec(ng),2)
-      real(r8), intent(inout) :: s_v_obc(LBij:UBij,N(ng),4,Nbrec(ng),2)
-#   endif
-      real(r8), intent(inout) :: s_ubar_obc(LBij:UBij,4,Nbrec(ng),2)
-      real(r8), intent(inout) :: s_vbar_obc(LBij:UBij,4,Nbrec(ng),2)
-      real(r8), intent(inout) :: s_zeta_obc(LBij:UBij,4,Nbrec(ng),2)
-#  endif
-#  ifdef ADJUST_WSTRESS
-      real(r8), intent(inout) :: s_ustr(LBi:UBi,LBj:UBj,Nfrec(ng),2)
-      real(r8), intent(inout) :: s_vstr(LBi:UBi,LBj:UBj,Nfrec(ng),2)
-#  endif
-#  if defined ADJUST_STFLUX && defined SOLVE3D
-      real(r8), intent(inout) :: s_tflux(LBi:UBi,LBj:UBj,               &
-     &                                   Nfrec(ng),2,NT(ng))
-#  endif
-#  ifdef SOLVE3D
-      real(r8), intent(inout) :: s_t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
-      real(r8), intent(inout) :: s_u(LBi:UBi,LBj:UBj,N(ng),2)
-      real(r8), intent(inout) :: s_v(LBi:UBi,LBj:UBj,N(ng),2)
-#  else
-      real(r8), intent(inout) :: s_ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(inout) :: s_vbar(LBi:UBi,LBj:UBj,3)
-#  endif
-      real(r8), intent(inout) :: s_zeta(LBi:UBi,LBj:UBj,3)
-# endif
-!
-!  Local variable declarations.
-!
-      integer :: i, ifield, j, k
-# ifdef SOLVE3D
-      integer :: itrc
-# endif
-      integer :: gtype, ncid, status, varid
-
-      integer, dimension(4) :: Vsize
-      integer, dimension(NV) :: vid
-
-      real(r8) :: Fmin, Fmax
-      real(dp) :: scale
-
-# include "set_bounds.h"
-!
-      SourceFile=__FILE__ // ", read_state"
-!
-!-----------------------------------------------------------------------
-!  Read in requested model state record. Load data into state array
-!  index Lwrk.
-!-----------------------------------------------------------------------
-!
-!  Determine file and variables ids.
-!
-      IF ((ndef.gt.0).or.(ncfileid.eq.-1)) THEN
-        CALL netcdf_open (ng, model, ncname, 0, ncid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) THEN
-          WRITE (stdout,10) TRIM(ncname)
-          RETURN
-        END IF
-        ncfileid=ncid
-      ELSE
-        ncid=ncfileid
-      END IF
-
-      DO i=1,4
-        Vsize(i)=0
-      END DO
-!
-!  Read in free-surface.
-!
-      gtype=r2dvar
-      scale=1.0_dp
-      CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idFsur),        &
-     &                       ncid, varid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
-
-      status=nf_fread2d(ng, model, ncname, ncid,                        &
-     &                  Vname(1,idFsur), varid,                         &
-     &                  rec, gtype, Vsize,                              &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  scale, Fmin, Fmax,                              &
-# ifdef MASKING
-     &                  rmask,                                          &
-# endif
-     &                  s_zeta(:,:,Lwrk))
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idFsur)), rec, TRIM(ncname)
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
-
-# ifdef ADJUST_BOUNDARY
-!
-!  Read in free-surface open boundaries.
-!
-      IF (ANY(Lobc(:,isFsur,ng))) THEN
-        ifield=idSbry(isFsur)
-        gtype=r2dvar
-        scale=1.0_dp
-        CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
-     &                         ncid, varid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-
-        status=nf_fread2d_bry (ng, model, ncname, ncid,                 &
-     &                         Vname(1,ifield), varid,                  &
-     &                         rec, gtype,                              &
-     &                         LBij, UBij, Nbrec(ng),                   &
-     &                         scale, Fmin, Fmax,                       &
-     &                         s_zeta_obc(:,:,:,Lwrk))
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
-          IF (Master) THEN
-            WRITE (stdout,20) TRIM(Vname(1,ifield)), rec, TRIM(ncname)
-          END IF
-          exit_flag=3
-          ioerror=status
-          RETURN
-        END IF
-      END IF
-# endif
-# ifndef SOLVE3D
-!
-!  Read in 2D U-momentum component.
-!
-      gtype=u2dvar
-      scale=1.0_dp
-      CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idUbar),        &
-     &                       ncid, varid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
-
-      status=nf_fread2d(ng, model, ncname, ncid,                        &
-     &                  Vname(1,idUbar), varid,                         &
-     &                  rec, gtype, Vsize,                              &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  scale, Fmin, Fmax,                              &
-#  ifdef MASKING
-     &                  umask,                                          &
-#  endif
-     &                  s_ubar(:,:,Lwrk))
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idUbar)), rec, TRIM(ncname)
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
-!
-!  Read in 2D V-momentum component.
-!
-      gtype=v2dvar
-      scale=1.0_dp
-      CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idVbar),        &
-     &                       ncid, varid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
-
-      status=nf_fread2d(ng, model, ncname, ncid,                        &
-     &                  Vname(1,idVbar), varid,                         &
-     &                  rec, gtype, Vsize,                              &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  scale, Fmin, Fmax,                              &
-#  ifdef MASKING
-     &                  vmask,                                          &
-#  endif
-     &                  s_vbar(:,:,Lwrk))
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idVbar)), rec, TRIM(ncname)
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
-# endif
-# ifdef ADJUST_BOUNDARY
-!
-!  Read in 2D U-momentum component open boundaries.
-!
-      IF (ANY(Lobc(:,isUbar,ng))) THEN
-        ifield=idSbry(isUbar)
-        gtype=u2dvar
-        scale=1.0_dp
-        CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
-     &                         ncid, varid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-
-        status=nf_fread2d_bry (ng, model, ncname, ncid,                 &
-     &                         Vname(1,ifield), varid,                  &
-     &                         rec, gtype,                              &
-     &                         LBij, UBij, Nbrec(ng),                   &
-     &                         scale, Fmin, Fmax,                       &
-     &                         s_ubar_obc(:,:,:,Lwrk))
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
-          IF (Master) THEN
-            WRITE (stdout,20) TRIM(Vname(1,ifield)), rec, TRIM(ncname)
-          END IF
-          exit_flag=3
-          ioerror=status
-          RETURN
-        END IF
-      END IF
-!
-!  Read in 2D V-momentum component open boundaries.
-!
-      IF (ANY(Lobc(:,isVbar,ng))) THEN
-        ifield=idSbry(isVbar)
-        gtype=u2dvar
-        scale=1.0_dp
-        CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
-     &                         ncid, varid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-
-        status=nf_fread2d_bry (ng, model, ncname, ncid,                 &
-     &                         Vname(1,ifield), varid,                  &
-     &                         rec, gtype,                              &
-     &                         LBij, UBij, Nbrec(ng),                   &
-     &                         scale, Fmin, Fmax,                       &
-     &                         s_vbar_obc(:,:,:,Lwrk))
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
-          IF (Master) THEN
-            WRITE (stdout,20) TRIM(Vname(1,ifield)), rec, TRIM(ncname)
-          END IF
-          exit_flag=3
-          ioerror=status
-          RETURN
-        END IF
-      END IF
-# endif
-# ifdef ADJUST_WSTRESS
-!
-!  Read surface momentum stress.
-!
-      gtype=u3dvar
-      scale=1.0_dp
-      CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idUsms),        &
-     &                       ncid, varid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
-
-      status=nf_fread3d(ng, model, ncname, ncid,                        &
-     &                  Vname(1,idUsms), varid,                         &
-     &                  rec, gtype, Vsize,                              &
-     &                  LBi, UBi, LBj, UBj, 1, Nfrec(ng),               &
-     &                  scale, Fmin, Fmax,                              &
-#  ifdef MASKING
-     &                  umask,                                          &
-#  endif
-     &                  s_ustr(:,:,:,Lwrk))
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idUsms)), rec, TRIM(ncname)
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
-
-      gtype=v3dvar
-      scale=1.0_dp
-      CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idVsms),        &
-     &                       ncid, varid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
-
-      status=nf_fread3d(ng, model, ncname, ncid,                        &
-     &                  Vname(1,idVsms), varid,                         &
-     &                  rec, gtype, Vsize,                              &
-     &                  LBi, UBi, LBj, UBj, 1, Nfrec(ng),               &
-     &                  scale, Fmin, Fmax,                              &
-#  ifdef MASKING
-     &                  vmask,                                          &
-#  endif
-     &                  s_vstr(:,:,:,Lwrk))
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idVsms)), rec, TRIM(ncname)
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
-# endif
-# ifdef SOLVE3D
-!
-!  Read in 3D U-momentum component.
-!
-      gtype=u3dvar
-      scale=1.0_dp
-      CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idUvel),        &
-     &                       ncid, varid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
-
-      status=nf_fread3d(ng, model, ncname, ncid,                        &
-     &                  Vname(1,idUvel), varid,                         &
-     &                  rec, gtype, Vsize,                              &
-     &                  LBi, UBi, LBj, UBj, 1, N(ng),                   &
-     &                  scale, Fmin, Fmax,                              &
-#  ifdef MASKING
-     &                  umask,                                          &
-#  endif
-     &                  s_u(:,:,:,Lwrk))
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idUvel)), rec, TRIM(ncname)
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
-
-# ifdef ADJUST_BOUNDARY
-!
-!  Read in 3D U-momentum component open boundaries.
-!
-      IF (ANY(Lobc(:,isUvel,ng))) THEN
-        ifield=idSbry(isUvel)
-        gtype=u3dvar
-        scale=1.0_dp
-        CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
-     &                         ncid, varid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-
-        status=nf_fread3d_bry (ng, model, ncname, ncid,                 &
-     &                         Vname(1,ifield), varid,                  &
-     &                         rec, gtype,                              &
-     &                         LBij, UBij, 1, N(ng), Nbrec(ng),         &
-     &                         scale, Fmin, Fmax,                       &
-     &                         s_u_obc(:,:,:,:,Lwrk))
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
-          IF (Master) THEN
-            WRITE (stdout,20) TRIM(Vname(1,ifield)), rec, TRIM(ncname)
-          END IF
-          exit_flag=3
-          ioerror=status
-          RETURN
-        END IF
-      END IF
-# endif
-!
-!  Read in 3D V-momentum component.
-!
-      gtype=v3dvar
-      scale=1.0_dp
-      CALL netcdf_inq_varid (ng, model, ncname, Vname(1,idVvel),        &
-     &                       ncid, varid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
-
-      status=nf_fread3d(ng, model, ncname, ncid,                        &
-     &                  Vname(1,idVvel), varid,                         &
-     &                  rec, gtype, Vsize,                              &
-     &                  LBi, UBi, LBj, UBj, 1, N(ng),                   &
-     &                  scale, Fmin, Fmax,                              &
-#  ifdef MASKING
-     &                  vmask,                                          &
-#  endif
-     &                  s_v(:,:,:,Lwrk))
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idVvel)), rec, TRIM(ncname)
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
-
-# ifdef ADJUST_BOUNDARY
-!
-!  Read in 3D V-momentum component open boundaries.
-!
-      IF (ANY(Lobc(:,isVvel,ng))) THEN
-        ifield=idSbry(isVvel)
-        gtype=u3dvar
-        scale=1.0_dp
-        CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),      &
-     &                         ncid, varid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-
-        status=nf_fread3d_bry (ng, model, ncname, ncid,                 &
-     &                         Vname(1,ifield), varid,                  &
-     &                         rec, gtype,                              &
-     &                         LBij, UBij, 1, N(ng), Nbrec(ng),         &
-     &                         scale, Fmin, Fmax,                       &
-     &                         s_v_obc(:,:,:,:,Lwrk))
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
-          IF (Master) THEN
-            WRITE (stdout,20) TRIM(Vname(1,ifield)), rec, TRIM(ncname)
-          END IF
-          exit_flag=3
-          ioerror=status
-          RETURN
-        END IF
-      END IF
-# endif
-!
-!  Read in tracers.
-!
-      gtype=r3dvar
-      scale=1.0_dp
-      DO itrc=1,NT(ng)
-        CALL netcdf_inq_varid (ng, model, ncname,                       &
-     &                         Vname(1,idTvar(itrc)), ncid, varid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-
-        status=nf_fread3d(ng, model, ncname, ncid,                      &
-     &                    Vname(1,idTvar(itrc)), varid,                 &
-     &                    rec, gtype, Vsize,                            &
-     &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
-     &                    scale, Fmin, Fmax,                            &
-#  ifdef MASKING
-     &                    rmask,                                        &
-#  endif
-     &                    s_t(:,:,:,Lwrk,itrc))
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
-          IF (Master) THEN
-            WRITE (stdout,20) TRIM(Vname(1,idTvar(itrc))), rec,         &
-     &                        TRIM(ncname)
-          END IF
-          exit_flag=3
-          ioerror=status
-          RETURN
-        END IF
-      END DO
-
-#  ifdef ADJUST_BOUNDARY
-!
-!  Read in tracers open boundaries.
-!
-      DO itrc=1,NT(ng)
-        IF (ANY(Lobc(:,isTvar(itrc),ng))) THEN
-          ifield=idSbry(isTvar(itrc))
-          gtype=r3dvar
-          scale=1.0_dp
-          CALL netcdf_inq_varid (ng, model, ncname, Vname(1,ifield),    &
-     &                           ncid, varid)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
-
-          status=nf_fread3d_bry (ng, model, ncname, ncid,               &
-     &                           Vname(1,ifield), varid,                &
-     &                           rec, gtype,                            &
-     &                           LBij, UBij, 1, N(ng), Nbrec(ng),       &
-     &                           scale, Fmin, Fmax,                     &
-     &                           s_t_obc(:,:,:,:,Lwrk,itrc))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,20) TRIM(Vname(1,ifield)), rec, TRIM(ncname)
-            END IF
-            exit_flag=3
-            ioerror=status
-            RETURN
-          END IF
-        END IF
-      END DO
-#  endif
-#  ifdef ADJUST_STFLUX
-!
-!  Read in surface tracers flux.
-!
-      gtype=r3dvar
-      scale=1.0_dp
-      DO itrc=1,NT(ng)
-        IF (Lstflux(itrc,ng)) THEN
-          CALL netcdf_inq_varid (ng, model, ncname,                     &
-     &                           Vname(1,idTsur(itrc)), ncid, varid)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
-
-          status=nf_fread3d(ng, model, ncname, ncid,                    &
-     &                      Vname(1,idTsur(itrc)), varid,               &
-     &                      rec, gtype, Vsize,                          &
-     &                      LBi, UBi, LBj, UBj, 1,Nfrec(ng),            &
-     &                      scale, Fmin, Fmax,                          &
-#   ifdef MASKING
-     &                      rmask,                                      &
-#   endif
-     &                      s_tflux(:,:,:,Lwrk,itrc))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))), rec,       &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=3
-            ioerror=status
-            RETURN
-          END IF
-        END IF
-      END DO
-#  endif
-# endif
-!
-!  If multiple files, close current gfile.
-!
-      IF (ndef.gt.0) THEN
-        CALL netcdf_close (ng, model, ncid, ncname, .FALSE.)
-      END IF
-!
- 10   FORMAT (' READ_STATE - unable to open NetCDF file: ',a)
- 20   FORMAT (' READ_STATE - error while reading variable: ',a,2x,      &
-     &        'at time record = ',i3,/,14x,'in NetCDF file: ',a)
-
-      RETURN
-      END SUBROUTINE read_state
 #endif
       END MODULE inner2state_mod
 

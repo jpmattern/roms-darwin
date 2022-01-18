@@ -2,9 +2,9 @@
       MODULE set_avg_mod
 #ifdef AVERAGES
 !
-!svn $Id: set_avg.F 1016 2020-04-27 02:06:37Z arango $
+!svn $Id: set_avg.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -23,10 +23,10 @@
 !=======================================================================
 !
       implicit none
-
+!
       PRIVATE
       PUBLIC :: set_avg
-
+!
       CONTAINS
 !
 !***********************************************************************
@@ -53,10 +53,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 5, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 5, __LINE__, MyFile)
 # endif
       CALL set_avg_tile (ng, tile,                                      &
      &                   LBi, UBi, LBj, UBj,                            &
@@ -96,8 +99,9 @@
 # endif
 
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 5, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 5, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE set_avg
 !

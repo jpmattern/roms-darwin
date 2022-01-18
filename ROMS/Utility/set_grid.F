@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE set_grid (ng, model)
 !
-!svn $Id: set_grid.F 1032 2020-07-14 15:14:34Z arango $
+!svn $Id: set_grid.F 1099 2022-01-06 21:01:01Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !================================================== Hernan G. Arango ===
@@ -22,13 +22,22 @@
 !
       USE analytical_mod
 #ifdef DISTRIBUTE
-      USE distribute_mod, ONLY : mp_bcasti
+      USE distribute_mod,       ONLY : mp_bcasti
 #endif
-      USE metrics_mod,    ONLY : metrics
+#ifdef TIDE_GENERATING_FORCES
+      USE equilibrium_tide_mod, ONLY : harmonic_constituents
+#endif
+#ifndef ANA_GRID
+      USE get_grid_mod,         ONLY : get_grid
+#endif
+#ifndef ANA_NUDGCOEF
+      USE get_nudgcoef_mod,     ONLY : get_nudgcoef
+#endif
+      USE metrics_mod,          ONLY : metrics
 #ifdef NESTING
-      USE nesting_mod,    ONLY : nesting
+      USE nesting_mod,          ONLY : nesting
 #endif
-      USE strings_mod,    ONLY : FoundError
+      USE strings_mod,          ONLY : FoundError
 !
       implicit none
 !
@@ -39,6 +48,9 @@
 !  Local variable declarations.
 !
       integer :: tile
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !-----------------------------------------------------------------------
 !  Set horizontal grid, bathymetry, and Land/Sea masking (if any).
@@ -60,14 +72,17 @@
 !$OMP BARRIER
 #else
 !$OMP MASTER
-      CALL get_grid (ng, model)
+# ifdef DISTRIBUTE
+      CALL get_grid (ng, MyRank, model)
+# else
+      CALL get_grid (ng, -1, model)
+# endif
 !$OMP END MASTER
 # ifdef DISTRIBUTE
       CALL mp_bcasti (ng, model, exit_flag)
 # endif
 !$OMP BARRIER
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &                   __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 
 #ifdef SOLVE3D
@@ -145,15 +160,29 @@
 # else
       IF (Lnudging(ng)) THEN
 !$OMP MASTER
-        CALL get_nudgcoef (ng, model)
+#  ifdef DISTRIBUTE
+        CALL get_nudgcoef (ng, MyRank, model)
+#  else
+        CALL get_nudgcoef (ng, -1, model)
+#  endif
 !$OMP END MASTER
 #  ifdef DISTRIBUTE
         CALL mp_bcasti (ng, model, exit_flag)
 #  endif
 !$OMP BARRIER
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
+# endif
+
+# ifdef TIDE_GENERATING_FORCES
+!
+!-----------------------------------------------------------------------
+!  If applying tide generating forces, compute harmonic constituent
+!  parameters of the equilibrium tide on Greenwich meridian for the
+!  reference tide date number.
+!-----------------------------------------------------------------------
+!
+      CALL harmonic_constituents (Lnodal)
 # endif
 #endif
 !

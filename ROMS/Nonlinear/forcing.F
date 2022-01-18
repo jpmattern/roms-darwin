@@ -6,9 +6,9 @@
     defined TL_RBL4DVAR
 
 !
-!svn $Id: forcing.F 1022 2020-05-13 03:03:15Z arango $
+!svn $Id: forcing.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -19,10 +19,10 @@
 !=======================================================================
 !
       implicit none
-
+!
       PRIVATE
       PUBLIC  :: forcing
-
+!
       CONTAINS
 !
 !***********************************************************************
@@ -66,7 +66,7 @@
      &                   COUPLING(ng) % Zt_avg1,                        &
 # endif
      &                   OCEAN(ng) % zeta)
-
+!
       RETURN
       END SUBROUTINE forcing
 !
@@ -160,8 +160,6 @@
 !
       IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
         IF (Master) WRITE (stdout,10) time_code(ng)
- 10     FORMAT (3x,'NL_FORCING   - added convolved adjoint impulse,',   &
-     &          t62,'t = ', a)
       END IF
 !
 !  Free-surface.
@@ -234,7 +232,10 @@
         END DO
       END DO
 # endif
-
+!
+ 10   FORMAT (2x,'NL_FORCING       - added convolved adjoint impulse,', &
+     &        t71,'t = ', a)
+!
       RETURN
       END SUBROUTINE forcing_tile
 #endif

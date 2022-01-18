@@ -3,9 +3,9 @@
 
 #ifdef WEAK_CONSTRAINT
 !
-!svn $Id: frc_weak.F 1017 2020-04-27 22:19:14Z arango $
+!svn $Id: frc_weak.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -48,10 +48,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 7, __LINE__, MyFile)
 # endif
       CALL frc_ADgather_tile (ng, tile,                                 &
      &                        LBi, UBi, LBj, UBj,                       &
@@ -78,8 +81,9 @@
      &                        OCEAN(ng) % f_vbarG)
 # endif
 # ifdef PROFILE
-      CALL wclock_off (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 7, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE frc_ADgather
 !
@@ -394,10 +398,10 @@
         END DO
       END DO
 # endif
-
+!
       RETURN
       END SUBROUTINE frc_ADgather_tile
-
+!
       SUBROUTINE frc_clear (ng, tile)
 !
 !=======================================================================
@@ -422,10 +426,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", frc_clear"
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 7, __LINE__, MyFile)
 # endif
       CALL frc_clear_tile (ng, tile,                                    &
      &                     LBi, UBi, LBj, UBj,                          &
@@ -440,8 +447,9 @@
      &                     OCEAN(ng) % f_vbarG)
 # endif
 # ifdef PROFILE
-      CALL wclock_off (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 7, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE frc_clear
 !
@@ -569,7 +577,7 @@
         END DO
       END DO
 # endif
-
+!
       RETURN
       END SUBROUTINE frc_clear_tile
 #endif

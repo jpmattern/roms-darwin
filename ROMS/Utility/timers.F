@@ -2,9 +2,9 @@
       RECURSIVE SUBROUTINE wclock_on (ng, model, region, line, routine)
 !
 
-!svn $Id: timers.F 1028 2020-06-01 00:24:59Z arango $
+!svn $Id: timers.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -64,6 +64,13 @@
 !-----------------------------------------------------------------------
 !  Initialize timing for all threads.
 !-----------------------------------------------------------------------
+#ifdef TRACING
+!
+      IF (Master) THEN
+        WRITE (stdout,'(a,a)') '==> Entering ', TRIM(routine)
+        CALL my_flush (stdout)
+      END IF
+#endif
 !
 !  Set number of subdivisions, same as for global reductions.
 !
@@ -196,7 +203,7 @@
 
       real(r8), parameter :: Tspv = 0.0_r8
       real(r8), allocatable :: Tend(:)
-      real(r8), dimension(0:Nregion) :: buffer
+      real(r8), dimension(0:Nregion) :: rbuffer
 
       character (len= 3), dimension(0:Nregion) :: op_handle
 #endif
@@ -205,6 +212,13 @@
 !-----------------------------------------------------------------------
 !  Compute elapsed wall time for all threads.
 !-----------------------------------------------------------------------
+#ifdef TRACING
+!
+      IF (Master) THEN
+        WRITE (stdout,'(a,a)') '<== Exiting  ', TRIM(routine)
+        CALL my_flush (stdout)
+      END IF
+#endif
 !
 !  Set number of subdivisions, same as for global reductions.
 !
@@ -308,12 +322,12 @@
           op_handle(0:Nregion)='SUM'      ! Gather all values using a
           DO imodel=1,4                   ! reduced sum between nodes
             DO iregion=0,Nregion
-              buffer(iregion)=Csum(iregion,imodel,ng)
+              rbuffer(iregion)=Csum(iregion,imodel,ng)
             END DO
-            CALL mp_reduce (ng, MyModel, Nregion+1, buffer(0:),         &
+            CALL mp_reduce (ng, MyModel, Nregion+1, rbuffer(0:),        &
      &                      op_handle(0:), MyCOMM)
             DO iregion=0,Nregion
-              Csum(iregion,imodel,ng)=buffer(iregion)
+              Csum(iregion,imodel,ng)=rbuffer(iregion)
             END DO
           END DO
 #endif
@@ -514,8 +528,8 @@
               END DO
             END DO
             IF (Master.and.(total.gt.0.0_r8)) THEN
-               WRITE (stdout,90) uppercase('mpi'),                         &
-     &                      'communications profile over all nested grids:'
+               WRITE (stdout,90) uppercase('mpi'),                      &
+     &                'communications profile over all nested grids:'
  90            FORMAT (/,1x,a,1x,a,/)
             END IF
             IF (total.gt.0.0_r8) THEN

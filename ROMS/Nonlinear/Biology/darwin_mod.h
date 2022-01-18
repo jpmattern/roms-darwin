@@ -1,3 +1,4 @@
+      MODULE mod_biology
 !
 !=======================================================================
 !                                                                      !
@@ -22,7 +23,7 @@
       integer, parameter :: nPhoto=1
       integer, parameter :: nPPplank=0
       integer, parameter :: nGRplank=0
-      
+
       integer, parameter :: iMinBact=0
       integer, parameter :: iMaxBact=0
       integer, parameter :: iMinPrey=1
@@ -37,7 +38,7 @@
       integer, parameter :: nPhoto=DARWIN_DIM_NPHOTO
       integer, parameter :: nPPplank=DARWIN_DIM_NPPPLANK
       integer, parameter :: nGRplank=DARWIN_DIM_NGRPLANK
-      
+
       integer, parameter :: iMinBact=DARWIN_INDEX_MINBACT
       integer, parameter :: iMaxBact=DARWIN_INDEX_MAXBACT
       integer, parameter :: iMinPrey=DARWIN_INDEX_MINPREY
@@ -61,7 +62,7 @@
       ! TODO move elsewhere?
 ! taken from GUD_SIZE.h
       !integer :: nplank
-      !integer :: nGroup, nlam, nopt 
+      !integer :: nGroup, nlam, nopt
       !integer :: nPhoto
       !integer :: nPPplank
       !integer :: nGRplank
@@ -69,7 +70,7 @@
       !integer :: iMinBact, iMaxBact
       !integer :: iMinPrey, iMaxPrey
       !integer :: iMinPred, iMaxPred
-! taken from GUD_INDICES.h 
+! taken from GUD_INDICES.h
       integer :: nNQuota, nPQuota, nSiQuota, nFeQuota
       integer :: iDIC
       integer :: iNH4
@@ -124,7 +125,7 @@
       integer :: iOnes
 #endif
 !#endif
-#if ! defined DARWIN_CDOM 
+#if ! defined DARWIN_CDOM
       integer :: laCDOM
 #endif
 #if defined BIO_SEDIMENTVARIABLES
@@ -164,8 +165,9 @@
 !  Biological parameters.
 !
 #include <darwin_mod_sub1.h>
+!
       CONTAINS
-
+!
       SUBROUTINE initialize_biology
 !
 !=======================================================================
@@ -184,7 +186,7 @@
 !-----------------------------------------------------------------------
 !
 
-      nChl=nPhoto      
+      nChl=nPhoto
 
 #ifdef DARWIN_NQUOTA
       nNQuota=nplank
@@ -252,7 +254,7 @@
       iO2=ic
       ic=ic+1
 #endif
-      eCARBON=ic-1     
+      eCARBON=ic-1
 #ifdef DARWIN_CDOM
       iCDOM=ic
       ic=ic+1
@@ -265,7 +267,7 @@
       in_=ic
       ic=ic+nNQuota
       en_=ic-1
-      
+
       ip_=ic
       ic=ic+nPQuota
       ep_=ic-1
@@ -273,7 +275,7 @@
       ife=ic
       ic=ic+nFeQuota
       efe=ic-1
-      
+
       isi=ic
       ic=ic+nSiQuota
       esi=ic-1
@@ -286,7 +288,7 @@
 ! for diagnotics
 ! taken from GUD_DIAGS.h
       idia=1
-      
+
       iPP=idia
       idia=idia+1
       iNfix=idia
@@ -340,7 +342,7 @@
 !      END IF
 # endif /*DIAGNOSTICS_BIO_MAPPING*/
 #endif /*DIAGNOSTICS_BIO*/
-#if ! defined DARWIN_CDOM 
+#if ! defined DARWIN_CDOM
       laCDOM=-1
 #endif
 !
@@ -368,27 +370,27 @@
 # if defined DARWIN_NQUOTA
 !     plankton N
       Nsed=Nsed+1
-      isedn=Nsed 
+      isedn=Nsed
 # endif
 # if defined DARWIN_PQUOTA
 !     plankton P
       Nsed=Nsed+1
-      isedp=Nsed 
+      isedp=Nsed
 # endif
 # if defined DARWIN_SIQUOTA
 !     plankton Si
       Nsed=Nsed+1
-      isedsi=Nsed 
+      isedsi=Nsed
 # endif
 # if defined DARWIN_FEQUOTA
 !     plankton Fe
       Nsed=Nsed+1
-      isedfe=Nsed 
+      isedfe=Nsed
 # endif
 # if defined DARWIN_CHLQUOTA
 !     plankton chl
       Nsed=Nsed+1
-      isedchl=Nsed 
+      isedchl=Nsed
 # endif
 #endif /*BIO_SEDIMENTVARIABLES*/
 !
@@ -445,7 +447,7 @@
         END IF
       END DO
 !
-!  Initialize group names. Better names are written to the variable 
+!  Initialize group names. Better names are written to the variable
 !  once input has been read (in darwin_inp.h).
 !
       DO i=1,nGroup
@@ -487,3 +489,5 @@
 
       RETURN
       END SUBROUTINE initialize_biology
+
+      END MODULE mod_biology

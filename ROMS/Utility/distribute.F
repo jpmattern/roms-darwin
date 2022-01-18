@@ -2,9 +2,9 @@
       MODULE distribute_mod
 #ifdef DISTRIBUTE
 !
-!svn $Id: distribute.F 1026 2020-05-20 02:05:37Z arango $
+!svn $Id: distribute.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -45,6 +45,12 @@
 !  Notice that the tile halo exchange can be found in "mp_exchange.F"  !
 !                                                                      !
 !=======================================================================
+!
+      USE mod_param
+      USE mod_parallel
+      USE mod_iounits
+      USE mod_ncparam
+      USE mod_scalars
 !
       implicit none
 !
@@ -93,6 +99,7 @@
       END INTERFACE mp_collect
 !
       INTERFACE mp_reduce
+        MODULE PROCEDURE mp_reduce_i8    ! integer reduction
 # ifdef SINGLE_PRECISION
         MODULE PROCEDURE mp_reduce_0dp   ! double-precision reduction
         MODULE PROCEDURE mp_reduce_1dp   ! double-precision reduction
@@ -118,11 +125,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
@@ -132,6 +134,9 @@
 !  Local variable declarations.
 !
       integer ::  MyCOMM, MyError
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_barrier"
 
 # ifdef PROFILE
 !
@@ -139,8 +144,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 72, __LINE__,                          &
-     &                __FILE__//":mp_barrier")
+      CALL wclock_on (ng, model, 72, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -168,10 +172,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 72, __LINE__,                         &
-     &                 __FILE__//":mp_barrier")
+      CALL wclock_off (ng, model, 72, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_barrier
 
@@ -198,13 +201,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
@@ -216,8 +212,11 @@
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastf_0dp"
 
 #  ifdef PROFILE
 !
@@ -225,8 +224,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastf")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 #  endif
 #  ifdef MPI
 !
@@ -264,10 +262,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastf")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastf_0dp
 !
@@ -292,26 +289,22 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       real(dp), intent(inout) :: A(:)
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastf_1dp"
 
 #  ifdef PROFILE
 !
@@ -319,9 +312,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastf")
-
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 #  endif
 #  ifdef MPI
 !
@@ -360,10 +351,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastf")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastf_1dp
 # endif
@@ -389,26 +379,22 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       real(r8), intent(inout) :: A
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastf_0d"
 
 # ifdef PROFILE
 !
@@ -416,8 +402,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastf")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -455,10 +440,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastf")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastf_0d
 !
@@ -483,26 +467,22 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       real(r8), intent(inout) :: A(:)
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastf_1d"
 
 # ifdef PROFILE
 !
@@ -510,9 +490,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastf")
-
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -551,10 +529,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastf")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastf_1d
 !
@@ -579,19 +556,12 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       real(r8), intent(inout) :: A(:,:)
 !
 !  Local variable declarations
@@ -599,8 +569,11 @@
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       integer :: Asize(2)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastf_2d"
 
 # ifdef PROFILE
 !
@@ -608,8 +581,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastf")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -650,10 +622,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastf")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastf_2d
 !
@@ -678,19 +649,12 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       real(r8), intent(inout) :: A(:,:,:)
 !
 !  Local variable declarations
@@ -698,8 +662,11 @@
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       integer :: Asize(3)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastf_3d"
 
 # ifdef PROFILE
 !
@@ -707,8 +674,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastf")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -750,10 +716,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastf")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastf_3d
 !
@@ -777,19 +742,12 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       real(r8), intent(inout) :: A(:,:,:,:)
 !
 !  Local variable declarations
@@ -797,8 +755,11 @@
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
 
       integer :: Asize(4)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastf_4d"
 
 # ifdef PROFILE
 !
@@ -806,8 +767,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastf")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -850,10 +810,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastf")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastf_4d
 !
@@ -878,12 +837,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
@@ -895,8 +848,11 @@
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcasti_0d"
 
 # ifdef PROFILE
 !
@@ -904,8 +860,9 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcasti")
+      IF (Lwclock) THEN
+        CALL wclock_on (ng, model, 64, __LINE__, MyFile)
+      END IF
 # endif
 # ifdef MPI
 !
@@ -943,10 +900,11 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcasti")
+      IF (Lwclock) THEN
+        CALL wclock_off (ng, model, 64, __LINE__, MyFile)
+      END IF
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcasti_0d
 !
@@ -971,13 +929,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
@@ -989,8 +940,11 @@
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcasti_1d"
 
 # ifdef PROFILE
 !
@@ -998,8 +952,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcasti")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1038,10 +991,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcasti")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcasti_1d
 !
@@ -1066,13 +1018,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
@@ -1085,8 +1030,11 @@
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
       integer :: Asize(2)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcasti_2d"
 
 # ifdef PROFILE
 !
@@ -1094,8 +1042,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcasti")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1136,10 +1083,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                __FILE__//":mp_bcasti")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcasti_2d
 !
@@ -1164,26 +1110,22 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       logical, intent(inout) :: A
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastl_0d"
 
 # ifdef PROFILE
 !
@@ -1191,8 +1133,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastl")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1230,10 +1171,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastl")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastl_0d
 !
@@ -1258,26 +1198,22 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       logical, intent(inout) :: A(:)
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastl_1d"
 
 # ifdef PROFILE
 !
@@ -1285,8 +1221,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastl")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1325,10 +1260,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastl")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastl_1d
 !
@@ -1353,27 +1287,23 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       logical, intent(inout) :: A(:,:)
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Npts, Serror
       integer :: Asize(2)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcastl_2d"
 
 # ifdef PROFILE
 !
@@ -1381,8 +1311,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcastl")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1423,10 +1352,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcastl")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcastl_2d
 !
@@ -1450,26 +1378,22 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(inout) :: A
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Nchars, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcasts_0d"
 
 # ifdef PROFILE
 !
@@ -1478,8 +1402,7 @@
 !-----------------------------------------------------------------------
 !
       IF (Lwclock) THEN
-        CALL wclock_on (ng, model, 64, __LINE__,                        &
-     &                  __FILE__//":mp_bcasts")
+        CALL wclock_on (ng, model, 64, __LINE__, MyFile)
       END IF
 # endif
 # ifdef MPI
@@ -1519,11 +1442,10 @@
 !-----------------------------------------------------------------------
 !
       IF (Lwclock) THEN
-        CALL wclock_off (ng, model, 64, __LINE__,                       &
-     &                   __FILE__//":mp_bcasts")
+        CALL wclock_off (ng, model, 64, __LINE__, MyFile)
       END IF
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcasts_0d
 !
@@ -1547,26 +1469,22 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(inout) :: A(:)
 !
 !  Local variable declarations
 !
       integer :: Asize, Lstr, MyCOMM, MyError, Nchars, Serror
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcasts_1d"
 
 # ifdef PROFILE
 !
@@ -1574,8 +1492,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcasts")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1615,10 +1532,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcasts")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcasts_1d
 !
@@ -1642,27 +1558,23 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(inout) :: A(:,:)
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Nchars, Serror
       integer :: Asize(2)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcasts_2d"
 
 # ifdef PROFILE
 !
@@ -1670,8 +1582,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcasts")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1712,10 +1623,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcasts")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcasts_2d
 !
@@ -1739,27 +1649,23 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(inout) :: A(:,:,:)
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Nchars, Serror
       integer :: Asize(3)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcasts_3d"
 
 # ifdef PROFILE
 !
@@ -1767,8 +1673,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcasts")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1810,10 +1715,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcasts")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_bcasts_3d
 !
@@ -1838,27 +1742,23 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
 
       integer, intent(in), optional :: InpComm
-
+!
       TYPE(T_IO), intent(inout) :: S(:)
 !
 !  Local variable declarations
 !
       integer :: Lstr, MyCOMM, MyError, Nchars, Npts, Serror
-      integer :: buffer(5)
-
+      integer :: ibuffer(5)
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_bcast_struc"
 
 # ifdef PROFILE
 !
@@ -1866,8 +1766,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 64, __LINE__,                          &
-     &                __FILE__//":mp_bcasts")
+      CALL wclock_on (ng, model, 64, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -1890,13 +1789,14 @@
 !
 !  Structure scalar integer variables.
 !
-      buffer(1)=S(ng)%Nfiles
-      buffer(2)=S(ng)%Fcount
-      buffer(3)=S(ng)%load
-      buffer(4)=S(ng)%Rindex
-      buffer(5)=S(ng)%ncid
+      ibuffer(1)=S(ng)%Nfiles
+      ibuffer(2)=S(ng)%Fcount
+      ibuffer(3)=S(ng)%load
+      ibuffer(4)=S(ng)%Rindex
+      ibuffer(5)=S(ng)%ncid
 !
-      CALL mpi_bcast (buffer, 5, MPI_INTEGER, MyMaster,                 &
+      Npts=5
+      CALL mpi_bcast (ibuffer, Npts, MPI_INTEGER, MyMaster,             &
      &                MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1907,11 +1807,11 @@
         exit_flag=2
         RETURN
       ELSE
-        S(ng)%Nfiles=buffer(1)
-        S(ng)%Fcount=buffer(2)
-        S(ng)%load  =buffer(3)
-        S(ng)%Rindex=buffer(4)
-        S(ng)%ncid  =buffer(5)
+        S(ng)%Nfiles=ibuffer(1)
+        S(ng)%Fcount=ibuffer(2)
+        S(ng)%load  =ibuffer(3)
+        S(ng)%Rindex=ibuffer(4)
+        S(ng)%ncid  =ibuffer(5)
       END IF
 !
 !  Variables IDs.
@@ -1946,7 +1846,7 @@
 !  Structure Filenames.
 !
       Nchars=LEN(S(ng)%head)
-      CALL mpi_bcast (S(ng)%head, Nchars, MPI_BYTE, MyMaster,            &
+      CALL mpi_bcast (S(ng)%head, Nchars, MPI_BYTE, MyMaster,           &
      &                MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1957,7 +1857,7 @@
       END IF
 !
       Nchars=LEN(S(ng)%base)
-      CALL mpi_bcast (S(ng)%base, Nchars, MPI_BYTE, MyMaster,            &
+      CALL mpi_bcast (S(ng)%base, Nchars, MPI_BYTE, MyMaster,           &
      &                MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1968,7 +1868,7 @@
       END IF
 !
       Nchars=LEN(S(ng)%name)
-      CALL mpi_bcast (S(ng)%name, Nchars, MPI_BYTE, MyMaster,            &
+      CALL mpi_bcast (S(ng)%name, Nchars, MPI_BYTE, MyMaster,           &
      &                MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1979,7 +1879,7 @@
       END IF
 !
       Nchars=LEN(S(ng)%files(1))*S(ng)%Nfiles
-      CALL mpi_bcast (S(ng)%files, Nchars, MPI_BYTE, MyMaster,            &
+      CALL mpi_bcast (S(ng)%files, Nchars, MPI_BYTE, MyMaster,          &
      &                MyCOMM, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -1995,9 +1895,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 64, __LINE__,                         &
-     &                 __FILE__//":mp_bcast_struc")
+      CALL wclock_off (ng, model, 64, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE mp_bcast_struc
 !
@@ -2034,36 +1934,33 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       logical, intent(in) :: update
-
+!
       integer, intent(in) :: ng, model, Imin, Imax
       integer, intent(in) :: LBi, UBi, LBk, UBk
-
+!
       real(r8), intent(inout) :: A(LBi:UBi,LBk:UBk)
 !
 !  Local variable declarations.
 !
       integer :: Ilen, Ioff, Lstr, MyError, Nnodes, Npts, Serror
       integer :: i, ik, k, kc, rank
-
+!
       real(r8), dimension((UBi-LBi+1)*(UBk-LBk+1)) :: Asend
 
-# ifdef BOUNDARY_ALLGATHER
+# if defined BOUNDARY_ALLGATHER
       real(r8), dimension((UBi-LBi+1)*(UBk-LBk+1),                      &
      &                    0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
-# else
+# elif defined BOUNDARY_ALLREDUCE
       real(r8), dimension((UBi-LBi+1)*(UBk-LBk+1)) :: Arecv
 # endif
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_boundary"
 
 # ifdef PROFILE
 !
@@ -2071,8 +1968,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 68, __LINE__,                          &
-     &                __FILE__//":mp_boundary")
+      CALL wclock_on (ng, model, 68, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -2114,7 +2010,7 @@
 !-----------------------------------------------------------------------
 !
 # ifdef MPI
-#  ifdef BOUNDARY_ALLGATHER
+#  if defined BOUNDARY_ALLGATHER
       CALL mpi_allgather (Asend, Npts, MP_FLOAT, Arecv, Npts, MP_FLOAT, &
      &                    OCN_COMM_WORLD, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
@@ -2127,7 +2023,7 @@
         exit_flag=2
         RETURN
       END IF
-#  else
+#  elif defined BOUNDARY_ALLREDUCE
       CALL mpi_allreduce (Asend, Arecv, Npts, MP_FLOAT, MPI_SUM,        &
      &                    OCN_COMM_WORLD, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
@@ -2147,7 +2043,7 @@
 !  Unpack data: reduction sum.
 !-----------------------------------------------------------------------
 !
-# ifdef BOUNDARY_ALLGATHER
+# if defined BOUNDARY_ALLGATHER
       Nnodes=NtileI(ng)*NtileJ(ng)-1
       ik=0
       DO k=LBk,UBk
@@ -2159,7 +2055,7 @@
           END DO
         END DO
       END DO
-# else
+# elif defined BOUNDARY_ALLREDUCE
       ik=0
       DO k=LBk,UBk
         DO i=LBi,UBi
@@ -2174,10 +2070,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 68, __LINE__,                         &
-     &                 __FILE__//":mp_boundary")
+      CALL wclock_off (ng, model, 68, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_boundary
 !
@@ -2206,19 +2101,12 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Npts
 
       integer, intent(in), optional :: InpComm
-
+!
       real(r8), intent(in) :: Aspv
 
       real(r8), intent(inout) :: A(:)
@@ -2229,16 +2117,19 @@
       integer :: i, rank, request
 
       integer, dimension(MPI_STATUS_SIZE) :: status
-
+!
 # if defined ASSEMBLE_ALLGATHER
       real(r8), dimension(Npts,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
 # elif defined ASSEMBLE_ALLREDUCE
       real(r8), dimension(Npts) :: Asend
-# else
+# elif defined ASSEMBLE_SENDRECV
       real(r8), allocatable :: Arecv(:)
 # endif
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_assemblef_1d"
 
 # ifdef PROFILE
 !
@@ -2246,8 +2137,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 70, __LINE__,                          &
-     &                __FILE__//":mp_assemble")
+      CALL wclock_on (ng, model, 70, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -2346,7 +2236,8 @@
         RETURN
       END IF
 
-# else
+# elif defined ASSEMBLE_SENDRECV
+
       IF (MyRank.eq.MyMaster) THEN
 !
 !  If master node, allocate and receive buffer.
@@ -2408,8 +2299,7 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 70, __LINE__,                         &
-     &                 __FILE__//":mp_assemble")
+      CALL wclock_off (ng, model, 70, __LINE__, MyFile)
 # endif
 !
  10   FORMAT (/,' MP_ASSEMBLEF_1D - inconsistent array size, Npts = ',  &
@@ -2420,7 +2310,7 @@
      &        'reduction.')
  30   FORMAT (/,' MP_ASSEMBLEF_1D - error during ',a,' call, Node = ',  &
      &        i3.3,' Error = ',i3,/,19x,a)
-
+!
       RETURN
       END SUBROUTINE mp_assemblef_1d
 !
@@ -2449,19 +2339,12 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Npts
 
       integer, intent(in), optional :: InpComm
-
+!
       real(r8), intent(in) :: Aspv
 
       real(r8), intent(inout) :: A(:,:)
@@ -2474,18 +2357,21 @@
       integer :: Asize(2)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
-
+!
 # if defined ASSEMBLE_ALLGATHER
       real(r8), dimension(Npts,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
       real(r8), dimension(Npts) :: Asend
 # elif defined ASSEMBLE_ALLREDUCE
       real(r8), dimension(Npts) :: Arecv, Asend
-# else
+# elif defined ASSEMBLE_SENDRECV
       real(r8), allocatable :: Arecv(:)
       real(r8), dimension(Npts) :: Asend
 # endif
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_assemblef_2d"
 
 # ifdef PROFILE
 !
@@ -2493,8 +2379,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 70, __LINE__,                          &
-     &                __FILE__//":mp_assemble")
+      CALL wclock_on (ng, model, 70, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -2604,7 +2489,7 @@
 !
       A=RESHAPE(Arecv, Asize)
 
-# else
+# elif defined ASSEMBLE_SENDRECV
 !
       IF (MyRank.eq.MyMaster) THEN
 !
@@ -2670,8 +2555,7 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 70, __LINE__,                         &
-     &                 __FILE__//":mp_assemble")
+      CALL wclock_off (ng, model, 70, __LINE__, MyFile)
 # endif
 !
  10   FORMAT (/,' MP_ASSEMBLEF_2D - inconsistent array size, Npts = ',  &
@@ -2682,7 +2566,7 @@
      &        'reduction.')
  30   FORMAT (/,' MP_ASSEMBLEF_2D - error during ',a,' call, Node = ',  &
      &        i3.3,' Error = ',i3,/,19x,a)
-
+!
       RETURN
       END SUBROUTINE mp_assemblef_2d
 !
@@ -2711,13 +2595,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Npts
@@ -2736,18 +2613,21 @@
       integer :: Asize(3)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
-
+!
 # if defined ASSEMBLE_ALLGATHER
       real(r8), dimension(Npts,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
       real(r8), dimension(Npts) :: Asend
 # elif defined ASSEMBLE_ALLREDUCE
       real(r8), dimension(Npts) :: Arecv, Asend
-# else
+# elif defined ASSEMBLE_SENDRECV
       real(r8), allocatable :: Arecv(:)
       real(r8), dimension(Npts) :: Asend
 # endif
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_assemblef_3d"
 
 # ifdef PROFILE
 !
@@ -2755,8 +2635,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 70, __LINE__,                          &
-     &                __FILE__//":mp_assemble")
+      CALL wclock_on (ng, model, 70, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -2867,7 +2746,7 @@
 !
       A=RESHAPE(Arecv, Asize)
 
-# else
+# elif defined ASSEMBLE_SENDRECV
 !
       IF (MyRank.eq.MyMaster) THEN
 !
@@ -2933,8 +2812,7 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 70, __LINE__,                         &
-     &                 __FILE__//":mp_assemble")
+      CALL wclock_off (ng, model, 70, __LINE__, MyFile)
 # endif
 !
  10   FORMAT (/,' MP_ASSEMBLEF_3D - inconsistent array size, Npts = ',  &
@@ -2945,7 +2823,7 @@
      &        'reduction.')
  30   FORMAT (/,' MP_ASSEMBLEF_3D - error during ',a,' call, Node = ',  &
      &        i3.3,' Error = ',i3,/,19x,a)
-
+!
       RETURN
       END SUBROUTINE mp_assemblef_3d
 !
@@ -2974,13 +2852,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Npts
@@ -3002,11 +2873,14 @@
       integer, dimension(Npts,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
 # elif defined ASSEMBLE_ALLREDUCE
       integer, dimension(Npts) :: Asend
-# else
+# elif defined ASSEMBLE_SENDRECV
       integer, allocatable :: Arecv(:)
 # endif
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_assemblei_1d"
 
 # ifdef PROFILE
 !
@@ -3014,8 +2888,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 70, __LINE__,                          &
-     &                __FILE__//":mp_assemble")
+      CALL wclock_on (ng, model, 70, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -3115,7 +2988,8 @@
         RETURN
       END IF
 
-# else
+# elif defined ASSEMBLE_SENDRECV
+
       IF (MyRank.eq.MyMaster) THEN
 !
 !  If master node, allocate and receive buffer.
@@ -3176,8 +3050,7 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 70, __LINE__,                         &
-     &                 __FILE__//":mp_assemble")
+      CALL wclock_off (ng, model, 70, __LINE__, MyFile)
 # endif
 !
  10   FORMAT (/,' MP_ASSEMBLEI_1D - inconsistent array size, Npts = ',  &
@@ -3187,7 +3060,7 @@
      &        /,19x,'a zero value is needed for global reduction.')
  30   FORMAT (/,' MP_ASSEMBLEI_1D - error during ',a,' call, Node = ',  &
      &        i3.3,' Error = ',i3,/,19x,a)
-
+!
       RETURN
       END SUBROUTINE mp_assemblei_1d
 !
@@ -3216,13 +3089,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Npts
@@ -3247,12 +3113,15 @@
       integer, dimension(Npts) :: Asend
 # elif defined ASSEMBLE_ALLREDUCE
       integer, dimension(Npts) :: Arecv, Asend
-# else
+# elif defined ASSEMBLE_SENDRECV
       integer, allocatable :: Arecv(:)
       integer, dimension(Npts) :: Asend
 # endif
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_assemblei_2d"
 
 # ifdef PROFILE
 !
@@ -3260,8 +3129,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 70, __LINE__,                          &
-     &                __FILE__//":mp_assemble")
+      CALL wclock_on (ng, model, 70, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -3372,7 +3240,7 @@
 !
       A=RESHAPE(Arecv, Asize)
 
-# else
+# elif defined ASSEMBLE_SENDRECV
 !
       IF (MyRank.eq.MyMaster) THEN
 !
@@ -3438,8 +3306,7 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 70, __LINE__,                         &
-     &                 __FILE__//":mp_assemble")
+      CALL wclock_off (ng, model, 70, __LINE__, MyFile)
 # endif
 !
  10   FORMAT (/,' MP_ASSEMBLEI_2D - inconsistent array size, Npts = ',  &
@@ -3449,7 +3316,7 @@
      &        /,19x,'a zero value is needed for global reduction.')
  30   FORMAT (/,' MP_ASSEMBLEI_2D - error during ',a,' call, Node = ',  &
      &        i3.3,' Error = ',i3,/,19x,a)
-
+!
       RETURN
       END SUBROUTINE mp_assemblei_2d
 !
@@ -3478,19 +3345,12 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Npts
 
       integer, intent(in), optional :: InpComm
-
+!
       real(r8), intent(in) :: Aspv
 
       real(r8), intent(inout) :: A(Npts)
@@ -3501,7 +3361,7 @@
       integer :: i, rank, request
 
       integer, dimension(MPI_STATUS_SIZE) :: status
-
+!
 # if defined COLLECT_ALLGATHER
       real(r8), dimension(Npts,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
 # elif defined COLLECT_ALLREDUCE
@@ -3509,8 +3369,11 @@
 # else
       real(r8), allocatable :: Arecv(:)
 # endif
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_collect_f"
 
 # ifdef PROFILE
 !
@@ -3518,8 +3381,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 69, __LINE__,                          &
-     &                __FILE__//":mp_collect")
+      CALL wclock_on (ng, model, 69, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -3663,10 +3525,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 69, __LINE__,                         &
-     &                 __FILE__//":mp_collect")
+      CALL wclock_off (ng, model, 69, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_collect_f
 !
@@ -3695,13 +3556,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Npts
@@ -3726,8 +3580,11 @@
 # else
       integer, allocatable :: Arecv(:)
 # endif
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_collect_i"
 
 # ifdef PROFILE
 !
@@ -3735,8 +3592,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 69, __LINE__,                          &
-     &                __FILE__//":mp_collect")
+      CALL wclock_on (ng, model, 69, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -3880,10 +3736,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 69, __LINE__,                         &
-     &                 __FILE__//":mp_collect")
+      CALL wclock_off (ng, model, 69, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_collect_i
 !
@@ -3927,22 +3782,14 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       logical, intent(in), optional :: SetFillVal
-
+!
       integer, intent(in) :: ng, model, tindex, gtype
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(out) :: Npts
-
+!
       real(dp), intent(in) :: Ascl
 
 # ifdef MASKING
@@ -3968,13 +3815,16 @@
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-
+!
       real(r8), dimension(TileSize(ng)) :: Asend
 
       real(r8), dimension(TileSize(ng),                                 &
      &                    NtileI(ng)*NtileJ(ng)-1) :: Arecv
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_gather2d"
 
 # ifdef PROFILE
 !
@@ -3982,8 +3832,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 66, __LINE__,                          &
-     &                __FILE__//":mp_gather2d")
+      CALL wclock_on (ng, model, 66, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -4214,10 +4063,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 66, __LINE__,                         &
-     &                 __FILE__//":mp_gather2d")
+      CALL wclock_off (ng, model, 66, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_gather2d
 !
@@ -4263,22 +4111,14 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       logical, intent(in), optional :: SetFillVal
-
+!
       integer, intent(in) :: ng, model, tindex, gtype
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk
       integer, intent(out) :: Npts
-
+!
       real(dp), intent(in) :: Ascl
 
 # ifdef MASKING
@@ -4291,6 +4131,7 @@
 !
 # ifdef MASKING
       logical :: LandFill
+!
 # endif
       integer :: Cgrid, ghost, rank
       integer :: Io, Ie, Jo, Je, Ioff, Joff, Koff
@@ -4304,13 +4145,16 @@
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-
+!
       real(r8), dimension(TileSize(ng)*(UBk-LBk+1)) :: Asend
 
       real(r8), dimension(TileSize(ng)*(UBk-LBk+1),                     &
      &                    NtileI(ng)*NtileJ(ng)-1) :: Arecv
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_gather3d"
 
 # ifdef PROFILE
 !
@@ -4318,8 +4162,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 66, __LINE__,                          &
-     &                __FILE__//":mp_gather3d")
+      CALL wclock_on (ng, model, 66, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -4571,10 +4414,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 66, __LINE__,                         &
-     &                 __FILE__//":mp_gather3d")
+      CALL wclock_off (ng, model, 66, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_gather3d
 !
@@ -4603,19 +4445,11 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
       integer, intent(in) :: Mstr, Mend, Asize
-
+!
       real(r8), intent(in)  :: A(Mstr:Mend)
       real(r8), intent(out) :: Awrk(Asize)
 !
@@ -4627,8 +4461,11 @@
       integer :: my_bounds(2)
       integer, dimension(MPI_STATUS_SIZE) :: status
       integer, dimension(2,0:NtileI(ng)*NtileJ(ng)-1) :: Abounds
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_gather_state"
 
 # ifdef PROFILE
 !
@@ -4636,8 +4473,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 66, __LINE__,                          &
-     &                __FILE__//":mp_gather_state")
+      CALL wclock_on (ng, model, 66, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -4646,9 +4482,10 @@
 !
 !  Collect data lower and upper bound dimensions.
 !
+      np=2
       my_bounds(1)=Mstr
       my_bounds(2)=Mend
-      CALL mpi_allgather (my_bounds, 2, MPI_INTEGER, Abounds, 2,        &
+      CALL mpi_allgather (my_bounds, np, MPI_INTEGER, Abounds, np,      &
      &                    MPI_INTEGER, OCN_COMM_WORLD, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -4719,15 +4556,15 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 66, __LINE__,                         &
-     &                 __FILE__//":mp_gather_state")
+      CALL wclock_off (ng, model, 66, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_gather_state
 !
-      FUNCTION mp_ncread1d (ng, model, ncid, ncvname, ncname, ncrec,    &
-     &                      LB1, UB1, Ascale, A)
+      FUNCTION mp_ncread1d (ng, model, ncid, ncvname, ncname,           &
+     &                      ncrec, LB1, UB1, Ascale, A)                 &
+     &                     RESULT (io_error)
 !
 !***********************************************************************
 !                                                                      !
@@ -4750,7 +4587,7 @@
 !  On Output:                                                          !
 !                                                                      !
 !     A            Field to read in (real).                            !
-!     mp_ncread1d  Error flag (integer).                               !
+!     io_error     Error flag (integer).                               !
 !                                                                      !
 !  Note: We cannot include "USE mod_netcdf" here because of cyclic     !
 !        dependency. Instead we need original NetCDF library module    !
@@ -4758,24 +4595,17 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
       USE netcdf
-      USE mod_scalars
-!
-      implicit none
 !
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, ncid, ncrec
       integer, intent(in) :: LB1, UB1
-
+!
       real(r8), intent(in) :: Ascale
 
       real(r8), intent(out) :: A(LB1:UB1)
-
+!
       character (len=*), intent(in) :: ncvname
       character (len=*), intent(in) :: ncname
 !
@@ -4783,16 +4613,18 @@
 !
       integer :: Lstr, MyError, Npts, Serror
       integer :: i, j, np, rank, request, varid
+      integer :: io_error
       integer :: ibuffer(2), my_bounds(2), start(1), total(1)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
       integer, dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: Asize
-
-      integer :: mp_ncread1d
-
+!
       real(r8), allocatable :: Asend(:)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_ncread1d_nf90"
 
 # ifdef PROFILE
 !
@@ -4800,22 +4632,22 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 67, __LINE__,                          &
-     &                __FILE__//":mp_ncread1d")
+      CALL wclock_on (ng, model, 67, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
 !  Read requested NetCDF file and scatter it to all nodes.
 !-----------------------------------------------------------------------
 !
-      mp_ncread1d=nf90_noerr
+      io_error=nf90_noerr
 !
 !  Collect data lower and upper bounds dimensions.
 !
+      np=2
       my_bounds(1)=LB1
       my_bounds(2)=UB1
-      CALL mpi_allgather (my_bounds, 2, MPI_INTEGER,                    &
-     &                    Asize, 2, MPI_INTEGER,                        &
+      CALL mpi_allgather (my_bounds, np, MPI_INTEGER,                   &
+     &                    Asize, np, MPI_INTEGER,                        &
      &                    OCN_COMM_WORLD, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -4861,21 +4693,21 @@
 !
 !  If master node, loop over all nodes and read buffers to send.
 !
-        mp_ncread1d=nf90_inq_varid(ncid, TRIM(ncvname), varid)
-        IF (mp_ncread1d.ne.nf90_noerr) THEN
+        io_error=nf90_inq_varid(ncid, TRIM(ncvname), varid)
+        IF (io_error.ne.nf90_noerr) THEN
           WRITE (stdout,20) TRIM(ncvname), TRIM(ncname)
           exit_flag=2
-          ioerror=mp_ncread1d
+          ioerror=io_error
         END IF
         IF (exit_flag.eq.NoError) THEN
           DO rank=0,NtileI(ng)*NtileJ(ng)-1
             start(1)=Asize(1,rank)
             total(1)=Asize(2,rank)-Asize(1,rank)+1
-            mp_ncread1d=nf90_get_var(ncid, varid,  Asend, start, total)
-            IF (mp_ncread1d.ne.nf90_noerr) THEN
+            io_error=nf90_get_var(ncid, varid,  Asend, start, total)
+            IF (io_error.ne.nf90_noerr) THEN
               WRITE (stdout,30) TRIM(ncvname), TRIM(ncname)
               exit_flag=2
-              ioerror=mp_ncread1d
+              ioerror=io_error
               EXIT
             END IF
 !
@@ -4929,22 +4761,22 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 67, __LINE__,                         &
-     &                 __FILE__//":mp_ncread1d")
+      CALL wclock_off (ng, model, 67, __LINE__, MyFile)
 # endif
-
- 10   FORMAT (/,' MP_NCREAD1D- error during ',a,' call, Node = ',       &
-     &          i3.3,' Error = ',i3,/,13x,a)
+!
+ 10   FORMAT (/,' MP_NCREAD1D - error during ',a,' call, Node = ',i0,   &
+     &        ' Error = ',i0,/,15x,a)
  20   FORMAT (/,' MP_NCREAD1D - error while inquiring ID for',          &
-     &          ' variable: ',a,/,13x,'in file: ',a)
- 30   FORMAT (/,' MP_NCREAD1D - error while reading variable: ',        &
-     &        a,/,13x,'in file: ',a)
-
+     &        ' variable: ',a,/,15x,'in file: ',a)
+ 30   FORMAT (/,' MP_NCREAD1D - error while reading variable: ',a,      &
+     &        /,15x,'in file: ',a)
+!
       RETURN
       END FUNCTION mp_ncread1d
-
-      FUNCTION mp_ncread2d (ng, model, ncid, ncvname, ncname, ncrec,    &
-     &                      LB1, UB1, LB2, UB2, Ascale, A)
+!
+      FUNCTION mp_ncread2d (ng, model, ncid, ncvname, ncname,           &
+     &                      ncrec, LB1, UB1, LB2, UB2, Ascale, A)       &
+     &                     RESULT (io_error)
 !
 !***********************************************************************
 !                                                                      !
@@ -4969,7 +4801,7 @@
 !  On Output:                                                          !
 !                                                                      !
 !     A            Field to read in (real).                            !
-!     mp_ncread2d  Error flag (integer).                               !
+!     io_error     Error flag (integer).                               !
 !                                                                      !
 !  Note: We cannot include "USE mod_netcdf" here because of cyclic     !
 !        dependency. Instead we need original NetCDF library module    !
@@ -4977,24 +4809,17 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
       USE netcdf
-      USE mod_scalars
-!
-      implicit none
 !
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, ncid, ncrec
       integer, intent(in) :: LB1, UB1, LB2, UB2
-
+!
       real(r8), intent(in) :: Ascale
 
       real(r8), intent(out) :: A(LB1:UB1,LB2:UB2)
-
+!
       character (len=*), intent(in) :: ncvname
       character (len=*), intent(in) :: ncname
 !
@@ -5002,16 +4827,18 @@
 !
       integer :: Lstr, MyError, Npts, Serror
       integer :: i, j, np, rank, request, varid
+      integer :: io_error
       integer :: ibuffer(2), my_bounds(4), start(2), total(2)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
       integer, dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: Asize
-
-      integer :: mp_ncread2d
-
+!
       real(r8), allocatable :: Asend(:)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_ncread2d_nf90"
 
 # ifdef PROFILE
 !
@@ -5019,24 +4846,24 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 67, __LINE__,                          &
-     &                __FILE__//":mp_ncread2d")
+      CALL wclock_on (ng, model, 67, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
 !  Read requested NetCDF file and scatter it to all nodes.
 !-----------------------------------------------------------------------
 !
-      mp_ncread2d=nf90_noerr
+      io_error=nf90_noerr
 !
 !  Collect data lower and upper bounds dimensions.
 !
+      np=4
       my_bounds(1)=LB1
       my_bounds(2)=UB1
       my_bounds(3)=LB2
       my_bounds(4)=UB2
-      CALL mpi_allgather (my_bounds, 4, MPI_INTEGER,                    &
-     &                    Asize, 4, MPI_INTEGER,                        &
+      CALL mpi_allgather (my_bounds, np, MPI_INTEGER,                   &
+     &                    Asize, np, MPI_INTEGER,                       &
      &                    OCN_COMM_WORLD, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -5085,11 +4912,11 @@
 !
 !  If master node, loop over all nodes and read buffers to send.
 !
-        mp_ncread2d=nf90_inq_varid(ncid, TRIM(ncvname), varid)
-        IF (mp_ncread2d.ne.nf90_noerr) THEN
+        io_error=nf90_inq_varid(ncid, TRIM(ncvname), varid)
+        IF (io_error.ne.nf90_noerr) THEN
           WRITE (stdout,20) TRIM(ncvname), TRIM(ncname)
           exit_flag=2
-          ioerror=mp_ncread2d
+          ioerror=io_error
         END IF
         IF (exit_flag.eq.NoError) THEN
           DO rank=0,NtileI(ng)*NtileJ(ng)-1
@@ -5097,11 +4924,11 @@
             total(1)=Asize(2,rank)-Asize(1,rank)+1
             start(2)=Asize(3,rank)
             total(2)=Asize(4,rank)-Asize(3,rank)+1
-            mp_ncread2d=nf90_get_var(ncid, varid,  Asend, start, total)
-            IF (mp_ncread2d.ne.nf90_noerr) THEN
+            io_error=nf90_get_var(ncid, varid,  Asend, start, total)
+            IF (io_error.ne.nf90_noerr) THEN
               WRITE (stdout,30) TRIM(ncvname), TRIM(ncname)
               exit_flag=2
-              ioerror=mp_ncread2d
+              ioerror=io_error
               EXIT
             END IF
 !
@@ -5158,22 +4985,22 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 67, __LINE__,                         &
-     &                 __FILE__//":mp_ncread2d")
+      CALL wclock_off (ng, model, 67, __LINE__, MyFile)
 # endif
-
- 10   FORMAT (/,' MP_NCREAD2D - error during ',a,' call, Node = ',      &
-     &          i3.3,' Error = ',i3,/,13x,a)
+!
+ 10   FORMAT (/,' MP_NCREAD2D - error during ',a,' call, Node = ',i0,   &
+     &        ' Error = ',i0,/,15x,a)
  20   FORMAT (/,' MP_NCREAD2D - error while inquiring ID for',          &
-     &          ' variable: ',a,/,13x,'in file: ',a)
- 30   FORMAT (/,' MP_NCREAD2D - error while reading variable: ',        &
-     &        a,/,13x,'in file: ',a)
-
+     &        ' variable: ',a,/,15x,'in file: ',a)
+ 30   FORMAT (/,' MP_NCREAD2D - error while reading variable: ',a,      &
+     &        /,15x,'in file: ',a)
+!
       RETURN
       END FUNCTION mp_ncread2d
-
-      FUNCTION mp_ncwrite1d (ng, model, ncid, ncvname, ncname, ncrec,   &
-     &                       LB1, UB1, Ascale, A)
+!
+      FUNCTION mp_ncwrite1d (ng, model, ncid, ncvname, ncname,          &
+     &                       ncrec, LB1, UB1, Ascale, A)                &
+     &                      RESULT (io_error)
 !
 !***********************************************************************
 !                                                                      !
@@ -5196,7 +5023,7 @@
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
-!     mp_ncwrite1d  Error flag (integer).                              !
+!     io_error      Error flag (integer).                              !
 !                                                                      !
 !  Note: We cannot include "USE mod_netcdf" here because of cyclic     !
 !        dependency. Instead we need original NetCDF library module    !
@@ -5204,20 +5031,13 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
       USE netcdf
-      USE mod_scalars
-!
-      implicit none
 !
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, ncid, ncrec
       integer, intent(in) :: LB1, UB1
-
+!
       real(r8), intent(in) :: Ascale
 
       real(r8), intent(in) :: A(LB1:UB1)
@@ -5229,16 +5049,18 @@
 !
       integer :: Lstr, MyError, Npts, Serror
       integer :: i, j, np, rank, request, varid
+      integer :: io_error
       integer :: ibuffer(2), my_bounds(2), start(1), total(1)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
       integer, dimension(2,0:NtileI(ng)*NtileJ(ng)-1) :: Asize
-
-      integer :: mp_ncwrite1d
-
+!
       real(r8), allocatable :: Arecv(:)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_ncwrite1d"
 
 # ifdef PROFILE
 !
@@ -5246,22 +5068,22 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 66, __LINE__,                          &
-     &                __FILE__//":mp_ncwrite1d")
+      CALL wclock_on (ng, model, 66, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
 !  Collect and write data into requested NetCDF file.
 !-----------------------------------------------------------------------
 !
-      mp_ncwrite1d=nf90_noerr
+      io_error=nf90_noerr
 !
 !  Collect data lower and upper bounds dimensions.
 !
+      np=2
       my_bounds(1)=LB1
       my_bounds(2)=UB1
-      CALL mpi_allgather (my_bounds, 2, MPI_INTEGER,                    &
-     &                    Asize, 2, MPI_INTEGER,                        &
+      CALL mpi_allgather (my_bounds, np, MPI_INTEGER,                   &
+     &                    Asize, np, MPI_INTEGER,                       &
      &                    OCN_COMM_WORLD, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -5293,18 +5115,18 @@
           np=np+1
           Arecv(np)=A(i)
         END DO
-        mp_ncwrite1d=nf90_inq_varid(ncid, TRIM(ncvname), varid)
-        IF (mp_ncwrite1d.eq.nf90_noerr) THEN
-          mp_ncwrite1d=nf90_put_var(ncid, varid, Arecv, start, total)
-          IF (mp_ncwrite1d.ne.nf90_noerr) THEN
+        io_error=nf90_inq_varid(ncid, TRIM(ncvname), varid)
+        IF (io_error.eq.nf90_noerr) THEN
+          io_error=nf90_put_var(ncid, varid, Arecv, start, total)
+          IF (io_error.ne.nf90_noerr) THEN
             WRITE (stdout,20) TRIM(ncvname), TRIM(ncname)
             exit_flag=3
-            ioerror=mp_ncwrite1d
+            ioerror=io_error
           END IF
         ELSE
           WRITE (stdout,30) TRIM(ncvname), TRIM(ncname)
           exit_flag=3
-          ioerror=mp_ncwrite1d
+          ioerror=io_error
         END IF
 !
 !  If master node, loop over other nodes and receive the data.
@@ -5331,11 +5153,11 @@
             DO i=1,np
               Arecv(i)=Arecv(i)*Ascale
             END DO
-            mp_ncwrite1d=nf90_put_var(ncid, varid, Arecv, start, total)
-            IF (mp_ncwrite1d.ne.nf90_noerr) THEN
+            io_error=nf90_put_var(ncid, varid, Arecv, start, total)
+            IF (io_error.ne.nf90_noerr) THEN
               WRITE (stdout,20) TRIM(ncvname), TRIM(ncname)
               exit_flag=3
-              ioerror=mp_ncwrite1d
+              ioerror=io_error
               EXIT
             END IF
           END DO
@@ -5381,22 +5203,22 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 66, __LINE__,                         &
-     &                 __FILE__//":mp_ncwrite1d")
+      CALL wclock_off (ng, model, 66, __LINE__, MyFile)
 # endif
-
- 10   FORMAT (/,' MP_NCWRITE1D - error during ',a,' call, Node = ',     &
-     &          i3.3,' Error = ',i3,/,13x,a)
- 20   FORMAT (/,' MP_NCWRITE1D - error while writing variable: ',       &
-     &        a,/,13x,'in file: ',a)
+!
+ 10   FORMAT (/,' MP_NCWRITE1D - error during ',a,' call, Node = ',i0,  &
+     &        ' Error = ',i0,/,21x,a)
+ 20   FORMAT (/,' MP_NCWRITE1D - error while writing variable: ',a,     &
+     &        /,16x,'in file: ',a)
  30   FORMAT (/,' MP_NCWRITE1D - error while inquiring ID for',         &
-     &        ' variable: ',a,/,13x,'in file: ',a)
-
+     &        ' variable: ',a,/,16x,'in file: ',a)
+!
       RETURN
       END FUNCTION mp_ncwrite1d
-
-      FUNCTION mp_ncwrite2d (ng, model, ncid, ncvname, ncname, ncrec,   &
-     &                       LB1, UB1, LB2, UB2, Ascale, A)
+!
+      FUNCTION mp_ncwrite2d (ng, model, ncid, ncvname, ncname,          &
+     &                       ncrec, LB1, UB1, LB2, UB2, Ascale, A)      &
+     &                      RESULT (io_error)
 !
 !***********************************************************************
 !                                                                      !
@@ -5421,7 +5243,7 @@
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
-!     mp_ncwrite2d  Error flag (integer).                              !
+!     io_error      Error flag (integer).                              !
 !                                                                      !
 !  Note: We cannot include "USE mod_netcdf" here because of cyclic     !
 !        dependency. Instead we need original NetCDF library module    !
@@ -5429,24 +5251,17 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
       USE netcdf
-      USE mod_scalars
-!
-      implicit none
 !
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, ncid, ncrec
       integer, intent(in) :: LB1, UB1, LB2, UB2
-
+!
       real(r8), intent(in) :: Ascale
 
       real(r8), intent(in) :: A(LB1:UB1,LB2:UB2)
-
+!
       character (len=*), intent(in) :: ncvname
       character (len=*), intent(in) :: ncname
 !
@@ -5454,16 +5269,18 @@
 !
       integer :: Lstr, MyError, Npts, Serror
       integer :: i, j, np, rank, request, varid
+      integer :: io_error
       integer :: ibuffer(2), my_bounds(4), start(2), total(2)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
       integer, dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: Asize
-
-      integer :: mp_ncwrite2d
-
+!
       real(r8), allocatable :: Arecv(:)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_ncwrite2d_nf90"
 
 # ifdef PROFILE
 !
@@ -5471,24 +5288,24 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 66, __LINE__,                          &
-     &                __FILE__//":mp_ncwrite2d")
+      CALL wclock_on (ng, model, 66, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
 !  Collect and write data into requested NetCDF file.
 !-----------------------------------------------------------------------
 !
-      mp_ncwrite2d=nf90_noerr
+      io_error=nf90_noerr
 !
 !  Collect data lower and upper bounds dimensions.
 !
+      np=4
       my_bounds(1)=LB1
       my_bounds(2)=UB1
       my_bounds(3)=LB2
       my_bounds(4)=UB2
-      CALL mpi_allgather (my_bounds, 4, MPI_INTEGER,                    &
-     &                    Asize, 4, MPI_INTEGER,                        &
+      CALL mpi_allgather (my_bounds, np, MPI_INTEGER,                   &
+     &                    Asize, np, MPI_INTEGER,                       &
      &                    OCN_COMM_WORLD, MyError)
       IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -5525,18 +5342,18 @@
             Arecv(np)=A(i,j)
           END DO
         END DO
-        mp_ncwrite2d=nf90_inq_varid(ncid, TRIM(ncvname), varid)
-        IF (mp_ncwrite2d.eq.nf90_noerr) THEN
-          mp_ncwrite2d=nf90_put_var(ncid, varid, Arecv, start, total)
-          IF (mp_ncwrite2d.ne.nf90_noerr) THEN
+        io_error=nf90_inq_varid(ncid, TRIM(ncvname), varid)
+        IF (io_error.eq.nf90_noerr) THEN
+          io_error=nf90_put_var(ncid, varid, Arecv, start, total)
+          IF (io_error.ne.nf90_noerr) THEN
             WRITE (stdout,20) TRIM(ncvname), TRIM(ncname)
             exit_flag=3
-            ioerror=mp_ncwrite2d
+            ioerror=io_error
           END IF
         ELSE
           WRITE (stdout,30) TRIM(ncvname), TRIM(ncname)
           exit_flag=3
-          ioerror=mp_ncwrite2d
+          ioerror=io_error
         END IF
 !
 !  If master node, loop over other nodes and receive the data.
@@ -5566,11 +5383,11 @@
             DO i=1,np
               Arecv(i)=Arecv(i)*Ascale
             END DO
-            mp_ncwrite2d=nf90_put_var(ncid, varid, Arecv, start, total)
-            IF (mp_ncwrite2d.ne.nf90_noerr) THEN
+            io_error=nf90_put_var(ncid, varid, Arecv, start, total)
+            IF (io_error.ne.nf90_noerr) THEN
               WRITE (stdout,20) TRIM(ncvname), TRIM(ncname)
               exit_flag=3
-              ioerror=mp_ncwrite2d
+              ioerror=io_error
               EXIT
             END IF
           END DO
@@ -5616,19 +5433,228 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 66, __LINE__,                         &
-     &                 __FILE__//":mp_ncwrite2d")
+      CALL wclock_off (ng, model, 66, __LINE__, MyFile)
 # endif
-
- 10   FORMAT (/,' MP_NCWRITE2D - error during ',a,' call, Node = ',     &
-     &          i3.3,' Error = ',i3,/,13x,a)
- 20   FORMAT (/,' MP_NCWRITE2D - error while writing variable: ',       &
-     &        a,/,13x,'in file: ',a)
+!
+ 10   FORMAT (/,' MP_NCWRITE2D - error during ',a,' call, Node = ',i0,  &
+     &        ' Error = ',i0,/,21x,a)
+ 20   FORMAT (/,' MP_NCWRITE2D - error while writing variable: ',a,     &
+     &        /,16x,'in file: ',a)
  30   FORMAT (/,' MP_NCWRITE2D - error while inquiring ID for',         &
-     &        ' variable: ',a,/,13x,'in file: ',a)
-
+     &        ' variable: ',a,/,16x,'in file: ',a)
+!
       RETURN
       END FUNCTION mp_ncwrite2d
+!
+      SUBROUTINE mp_reduce_i8 (ng, model, Asize, A, handle_op, InpComm)
+!
+!***********************************************************************
+!                                                                      !
+!  This routine collects and reduces requested 1D integer array        !
+!  variables from all nodes in the group.                              !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     ng         Nested grid number.                                   !
+!     model      Calling model identifier.                             !
+!     Asize      Number of scalar variables to reduce.                 !
+!     A          Vector of scalar variables to reduce.                 !
+!     handle_op  Reduction operation handle (string).  The following   !
+!                  reduction operations are supported:                 !
+!                  'MIN', 'MAX', 'SUM'                                 !
+!     InpComm    Communicator handle (integer, OPTIONAL).              !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     A          Vector of reduced scalar variables.                   !
+!                                                                      !
+!***********************************************************************
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, model, Asize
+
+      integer, intent(in), optional :: InpComm
+!
+      character (len=*), intent(in) :: handle_op(Asize)
+!
+      integer(i8b), intent(inout) :: A(Asize)
+!
+!  Local variable declarations.
+!
+      integer :: Lstr, MyCOMM, MyError, Serror
+      integer :: handle, i, rank, request
+
+      integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
+
+      integer, dimension(MPI_STATUS_SIZE) :: Rstatus
+      integer, dimension(MPI_STATUS_SIZE) :: Sstatus
+!
+      integer(i8b), dimension(Asize,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
+      integer(i8b), dimension(Asize) :: Areduce
+      integer(i8b), dimension(Asize) :: Asend
+!
+      character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_reduce_1di"
+
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn on time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_on (ng, model, 65, __LINE__, MyFile)
+#  endif
+#  ifdef MPI
+!
+!-----------------------------------------------------------------------
+!  Set distributed-memory communicator handle (context ID).
+!-----------------------------------------------------------------------
+!
+      IF (PRESENT(InpComm)) THEN
+        MyCOMM=InpComm
+      ELSE
+        MyCOMM=OCN_COMM_WORLD
+      END IF
+#  endif
+!
+!-----------------------------------------------------------------------
+!  Collect and reduce requested scalar variables.
+!-----------------------------------------------------------------------
+!
+!  Maximum automatic buffer memory size in bytes.
+!
+      BmemMax(ng)=MAX(BmemMax(ng), REAL((SIZE(Arecv)+                   &
+     &                                   2*Asize)*KIND(A),r8))
+!
+!  Pack data to reduce.
+!
+      DO i=1,Asize
+        Asend(i)=A(i)
+      END DO
+!
+!  Collect and reduce.
+!
+#  if defined REDUCE_ALLREDUCE
+      DO i=1,Asize
+        IF (handle_op(i)(1:3).eq.'MIN') THEN
+          handle=MPI_MIN
+        ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
+          handle=MPI_MAX
+        ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
+          handle=MPI_SUM
+        END IF
+        CALL mpi_allreduce (Asend(i), Areduce(i), 1, MPI_INTEGER,       &
+     &                      handle, MyCOMM, MyError)
+        IF (MyError.ne.MPI_SUCCESS) THEN
+          CALL mpi_error_string (MyError, string, Lstr, Serror)
+          Lstr=LEN_TRIM(string)
+          WRITE (stdout,10) 'MPI_ALLREDUCE', MyRank, MyError,           &
+     &                      string(1:Lstr)
+          exit_flag=2
+          RETURN
+        END IF
+      END DO
+#  elif defined REDUCE_ALLGATHER
+      CALL mpi_allgather (Asend, Asize, MPI_INTEGER,                    &
+     &                    Arecv, Asize, MPI_INTEGER,                    &
+     &                    MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_ALLGATHER', MyRank, MyError,             &
+     &                    string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+      DO i=1,Asize
+        Areduce(i)=Arecv(i,0)
+        DO rank=1,NtileI(ng)*NtileJ(ng)-1
+          IF (handle_op(i)(1:3).eq.'MIN') THEN
+            Areduce(i)=MIN(Areduce(i),Arecv(i,rank))
+          ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
+            Areduce(i)=MAX(Areduce(i),Arecv(i,rank))
+          ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
+            Areduce(i)=Areduce(i)+Arecv(i,rank)
+          END IF
+        END DO
+      END DO
+#  elif defined REDUCE_SENDRECV
+      IF (MyRank.eq.MyMaster) THEN
+        DO rank=1,NtileI(ng)*NtileJ(ng)-1
+          CALL mpi_irecv (Arecv(1,rank), Asize, MPI_INTEGER, rank,      &
+     &                    rank+500, MyCOMM, Rrequest(rank),             &
+     &                    MyError)
+        END DO
+        DO i=1,Asize
+          Areduce(i)=Asend(i)
+        END DO
+        DO rank=1,NtileI(ng)*NtileJ(ng)-1
+          CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
+          IF (MyError.ne.MPI_SUCCESS) THEN
+            CALL mpi_error_string (MyError, string, Lstr, Serror)
+            Lstr=LEN_TRIM(string)
+            WRITE (stdout,10) 'MPI_IRECV', rank, Rerror, string(1:Lstr)
+            exit_flag=2
+            RETURN
+          END IF
+          DO i=1,Asize
+            IF (handle_op(i)(1:3).eq.'MIN') THEN
+              Areduce(i)=MIN(Areduce(i),Arecv(i,rank))
+            ELSE IF (handle_op(i)(1:3).eq.'MAX') THEN
+              Areduce(i)=MAX(Areduce(i),Arecv(i,rank))
+            ELSE IF (handle_op(i)(1:3).eq.'SUM') THEN
+              Areduce(i)=Areduce(i)+Arecv(i,rank)
+            END IF
+          END DO
+        END DO
+      ELSE
+        CALL mpi_isend (Asend, Asize, MPI_INTEGER, MyMaster,            &
+     &                  MyRank+500, MyCOMM, request, MyError)
+        CALL mpi_wait (request, Sstatus, MyError)
+        IF (MyError.ne.MPI_SUCCESS) THEN
+          CALL mpi_error_string (MyError, string, Lstr, Serror)
+          Lstr=LEN_TRIM(string)
+          WRITE (stdout,10) 'MPI_ISEND', MyRank, Serror, string(1:Lstr)
+          exit_flag=2
+          RETURN
+        END IF
+      END IF
+!
+!  Broadcast reduced variables from process to all processes in the
+!  group.
+!
+      CALL mpi_bcast (Areduce, Asize, MPI_INTEGER, MyMaster,            &
+     &                MyCOMM, MyError)
+      IF (MyError.ne.MPI_SUCCESS) THEN
+        CALL mpi_error_string (MyError, string, Lstr, Serror)
+        Lstr=LEN_TRIM(string)
+        WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+ 10   FORMAT (/,' MP_REDUCE_I8 - error during ',a,' call, Node = ',     &
+     &        i3.3,' Error = ',i3,/,16x,a)
+!
+!  Unpack.
+!
+      DO i=1,Asize
+        A(i)=Areduce(i)
+      END DO
+#  ifdef PROFILE
+!
+!-----------------------------------------------------------------------
+!  Turn off time clocks.
+!-----------------------------------------------------------------------
+!
+      CALL wclock_off (ng, model, 65, __LINE__, MyFile)
+#  endif
+!
+      RETURN
+      END SUBROUTINE mp_reduce_i8
 
 # ifdef SINGLE_PRECISION
 !
@@ -5657,21 +5683,14 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Asize
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(in) :: handle_op
-
+!
       real(dp), intent(inout) :: A
 !
 !  Local variable declarations.
@@ -5683,12 +5702,15 @@
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-
+!
       real(dp) :: Areduce
       real(dp) :: Asend
       real(dp), dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_reduce_0dp"
 
 #  ifdef PROFILE
 !
@@ -5696,8 +5718,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 65, __LINE__,                          &
-     &                __FILE__//":mp_reduce")
+      CALL wclock_on (ng, model, 65, __LINE__, MyFile)
 #  endif
 #  ifdef MPI
 !
@@ -5763,7 +5784,7 @@
           Areduce=Areduce+Arecv(rank)
         END IF
       END DO
-#  else
+#  elif defined REDUCE_SENDRECV
       IF (MyRank.eq.MyMaster) THEN
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv(rank), Npts, MP_DOUBLE, rank,           &
@@ -5792,7 +5813,7 @@
         CALL mpi_isend (Asend, npts, MP_DOUBLE, MyMaster, MyRank+500,   &
      &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, Sstatus, MyError)
-        IF (Serror.ne.MPI_SUCCESS) THEN
+        IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
           Lstr=LEN_TRIM(string)
           WRITE (stdout,10) 'MPI_ISEND', MyRank, Serror, string(1:Lstr)
@@ -5806,7 +5827,7 @@
 !
       CALL mpi_bcast (Areduce, Npts, MP_DOUBLE, MyMaster,               &
      &                MyCOMM, MyError)
-      IF (Serror.ne.MPI_SUCCESS) THEN
+      IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
         WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
@@ -5826,10 +5847,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 65, __LINE__,                         &
-     &                 __FILE__//":mp_reduce")
+      CALL wclock_off (ng, model, 65, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE mp_reduce_0dp
 !
@@ -5858,21 +5878,14 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Asize
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(in) :: handle_op(Asize)
-
+!
       real(dp), intent(inout) :: A(Asize)
 !
 !  Local variable declarations.
@@ -5884,12 +5897,15 @@
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-
+!
       real(dp), dimension(Asize,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
       real(dp), dimension(Asize) :: Areduce
       real(dp), dimension(Asize) :: Asend
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_reduce_1dp"
 
 #  ifdef PROFILE
 !
@@ -5897,8 +5913,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 65, __LINE__,                          &
-     &                __FILE__//":mp_reduce")
+      CALL wclock_on (ng, model, 65, __LINE__, MyFile)
 #  endif
 #  ifdef MPI
 !
@@ -5974,7 +5989,7 @@
           END IF
         END DO
       END DO
-#  else
+#  elif defined REDUCE_SENDRECV
       IF (MyRank.eq.MyMaster) THEN
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv(1,rank), Asize, MP_DOUBLE, rank,        &
@@ -6007,7 +6022,7 @@
         CALL mpi_isend (Asend, Asize, MP_DOUBLE, MyMaster, MyRank+500,  &
      &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, Sstatus, MyError)
-        IF (Serror.ne.MPI_SUCCESS) THEN
+        IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
           Lstr=LEN_TRIM(string)
           WRITE (stdout,10) 'MPI_ISEND', MyRank, Serror, string(1:Lstr)
@@ -6021,7 +6036,7 @@
 !
       CALL mpi_bcast (Areduce, Asize, MP_DOUBLE, MyMaster,              &
      &                MyCOMM, MyError)
-      IF (Serror.ne.MPI_SUCCESS) THEN
+      IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
         WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
@@ -6043,10 +6058,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 65, __LINE__,                         &
-     &                 __FILE__//":mp_reduce")
+      CALL wclock_off (ng, model, 65, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE mp_reduce_1dp
 # endif
@@ -6076,21 +6090,14 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Asize
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(in) :: handle_op
-
+!
       real(r8), intent(inout) :: A
 !
 !  Local variable declarations.
@@ -6102,12 +6109,15 @@
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-
+!
       real(r8) :: Areduce
       real(r8) :: Asend
       real(r8), dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_reduce_0d"
 
 # ifdef PROFILE
 !
@@ -6115,8 +6125,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 65, __LINE__,                          &
-     &                __FILE__//":mp_reduce")
+      CALL wclock_on (ng, model, 65, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -6182,7 +6191,7 @@
           Areduce=Areduce+Arecv(rank)
         END IF
       END DO
-# else
+# elif defined REDUCE_SENDRECV
       IF (MyRank.eq.MyMaster) THEN
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv(rank), Npts, MP_FLOAT, rank,            &
@@ -6211,7 +6220,7 @@
         CALL mpi_isend (Asend, npts, MP_FLOAT, MyMaster, MyRank+500,    &
      &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, Sstatus, MyError)
-        IF (Serror.ne.MPI_SUCCESS) THEN
+        IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
           Lstr=LEN_TRIM(string)
           WRITE (stdout,10) 'MPI_ISEND', MyRank, Serror, string(1:Lstr)
@@ -6225,7 +6234,7 @@
 !
       CALL mpi_bcast (Areduce, Npts, MP_FLOAT, MyMaster,                &
      &                MyCOMM, MyError)
-      IF (Serror.ne.MPI_SUCCESS) THEN
+      IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
         WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
@@ -6245,10 +6254,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 65, __LINE__,                         &
-     &                 __FILE__//":mp_reduce")
+      CALL wclock_off (ng, model, 65, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_reduce_0d
 !
@@ -6277,21 +6285,14 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Asize
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(in) :: handle_op(Asize)
-
+!
       real(r8), intent(inout) :: A(Asize)
 !
 !  Local variable declarations.
@@ -6303,12 +6304,15 @@
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-
+!
       real(r8), dimension(Asize,0:NtileI(ng)*NtileJ(ng)-1) :: Arecv
       real(r8), dimension(Asize) :: Areduce
       real(r8), dimension(Asize) :: Asend
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_reduce_1d"
 
 # ifdef PROFILE
 !
@@ -6316,8 +6320,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 65, __LINE__,                          &
-     &                __FILE__//":mp_reduce")
+      CALL wclock_on (ng, model, 65, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -6393,7 +6396,7 @@
           END IF
         END DO
       END DO
-# else
+# elif defined REDUCE_SENDRECV
       IF (MyRank.eq.MyMaster) THEN
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
           CALL mpi_irecv (Arecv(1,rank), Asize, MP_FLOAT, rank,         &
@@ -6425,7 +6428,7 @@
         CALL mpi_isend (Asend, Asize, MP_FLOAT, MyMaster, MyRank+500,   &
      &                  MyCOMM, request, MyError)
         CALL mpi_wait (request, Sstatus, MyError)
-        IF (Serror.ne.MPI_SUCCESS) THEN
+        IF (MyError.ne.MPI_SUCCESS) THEN
           CALL mpi_error_string (MyError, string, Lstr, Serror)
           Lstr=LEN_TRIM(string)
           WRITE (stdout,10) 'MPI_ISEND', MyRank, Serror, string(1:Lstr)
@@ -6439,7 +6442,7 @@
 !
       CALL mpi_bcast (Areduce, Asize, MP_FLOAT, MyMaster,               &
      &                MyCOMM, MyError)
-      IF (Serror.ne.MPI_SUCCESS) THEN
+      IF (MyError.ne.MPI_SUCCESS) THEN
         CALL mpi_error_string (MyError, string, Lstr, Serror)
         Lstr=LEN_TRIM(string)
         WRITE (stdout,10) 'MPI_BCAST', MyRank, MyError, string(1:Lstr)
@@ -6461,10 +6464,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 65, __LINE__,                         &
-     &                 __FILE__//":mp_reduce")
+      CALL wclock_off (ng, model, 65, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_reduce_1d
 !
@@ -6497,32 +6499,28 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, Isize, Jsize
 
       integer, intent(in), optional :: InpComm
-
+!
       character (len=*), intent(in) :: handle_op(Jsize)
-
+!
       real(r8), intent(inout) :: A(Isize,Jsize)
 !
 !  Local variable declarations.
 !
       integer :: Lstr, MyCOMM, MyError, Serror
       integer :: handle, i, j
-
+!
       real(r8), dimension(2,Isize) :: Areduce
       real(r8), dimension(2,Isize) :: Asend
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_reduce2"
 
 # ifdef PROFILE
 !
@@ -6530,8 +6528,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 65, __LINE__,                          &
-     &                __FILE__//":mp_reduce2")
+      CALL wclock_on (ng, model, 65, __LINE__, MyFile)
 # endif
 # ifdef MPI
 !
@@ -6599,10 +6596,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 65, __LINE__,                         &
-     &                 __FILE__//":mp_reduce2")
+      CALL wclock_off (ng, model, 65, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_reduce2
 !
@@ -6649,14 +6645,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
@@ -6667,6 +6655,7 @@
       integer, intent(in) :: NWpts
       integer, intent(in) :: IJ_water(NWpts)
 # endif
+!
       real(r8), intent(inout) :: Amin, Amax
       real(r8), intent(inout) :: A(Npts+2)
       real(r8), intent(out) :: Awrk(LBi:UBi,LBj:UBj)
@@ -6678,10 +6667,13 @@
       integer :: Ilen, Jlen, IJlen
       integer :: Lstr, MyError, MySize, MyType, Serror, ghost
       integer :: i, ic, ij, j, jc, mc, nc
-
+!
       real(r8), dimension((Lm(ng)+2)*(Mm(ng)+2)) :: Arecv
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_scatter2d"
 
 # ifdef PROFILE
 !
@@ -6689,8 +6681,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 67, __LINE__,                          &
-     &                __FILE__//":mp_scatter2d")
+      CALL wclock_on (ng, model, 67, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -6872,10 +6863,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 67, __LINE__,                         &
-     &                 __FILE__//":mp_scatter2d")
+      CALL wclock_off (ng, model, 67, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_scatter2d
 !
@@ -6924,14 +6914,6 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
@@ -6942,6 +6924,7 @@
       integer, intent(in) :: NWpts
       integer, intent(in) :: IJ_water(NWpts)
 # endif
+!
       real(r8), intent(inout) :: Amin, Amax
       real(r8), intent(inout) :: A(Npts+2)
       real(r8), intent(out) :: Awrk(LBi:UBi,LBj:UBj,LBk:UBk)
@@ -6953,10 +6936,13 @@
       integer :: Ilen, Jlen, Klen, IJlen
       integer :: Lstr, MyError, MySize, MyType, Serror, ghost
       integer :: i, ic, ij, j, jc, k, kc, mc, nc
-
+!
       real(r8), dimension((Lm(ng)+2)*(Mm(ng)+2)*(UBk-LBk+1)) :: Arecv
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_scatter3d"
 
 # ifdef PROFILE
 !
@@ -6964,8 +6950,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 67, __LINE__,                          &
-     &                __FILE__//":mp_scatter3d")
+      CALL wclock_on (ng, model, 67, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -7160,10 +7145,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 67, __LINE__,                         &
-     &                 __FILE__//":mp_scatter3d")
+      CALL wclock_off (ng, model, 67, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_scatter3d
 !
@@ -7194,19 +7178,11 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model
       integer, intent(in) :: Mstr, Mend, Asize
-
+!
       real(r8), intent(inout)  :: A(Asize)
 
       real(r8), intent(out) :: Awrk(Mstr:Mend)
@@ -7219,10 +7195,13 @@
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
 
       integer, dimension(MPI_STATUS_SIZE) :: status
-
+!
       real(r8), allocatable :: Arecv(:)
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_scatter_state"
 
 # ifdef PROFILE
 !
@@ -7230,8 +7209,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 67, __LINE__,                          &
-     &                __FILE__//":mp_scatter_state")
+      CALL wclock_on (ng, model, 67, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -7328,10 +7306,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 67, __LINE__,                         &
-     &                 __FILE__//":mp_scatter_state")
+      CALL wclock_off (ng, model, 67, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_scatter_state
 !
@@ -7345,32 +7322,27 @@
 !                                                                      !
 !***********************************************************************
 !
-
-      USE mod_param
-      USE mod_parallel
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, gtype
       integer, intent(in) :: ILB, IUB, JLB, JUB, KLB, KUB
-
+!
       real(r8), intent(in) :: A(ILB:IUB,JLB:JUB,KLB:KUB)
-
+!
       character (len=*) :: name
 !
 !  Local variable declarations.
 !
       common /counter/ nc
       integer :: nc
-
+!
       logical, save :: first = .TRUE.
-
+!
       integer :: Imin, Imax, Ioff, Jmin, Jmax, Joff
       integer :: unit
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_dump"
 
 # include "set_bounds.h"
 !
@@ -7491,20 +7463,12 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, gtype
       integer, intent(in) :: LBiT, UBiT, LBjT, UBjT
       integer, intent(in) :: LBiG, UBiG, LBjG, UBjG
-
+!
       real(r8), intent(in)  :: Atiled(LBiT:UBiT,LBjT:UBjT)
       real(r8), intent(out) :: Aglobal(LBiG:UBiG,LBjG:UBjG)
 !
@@ -7514,12 +7478,15 @@
       integer :: i, j, np, rank
 
       integer,  dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: my_bounds
-
+!
       real(r8), dimension(TileSize(ng)) :: Asend
       real(r8), dimension(TileSize(ng)*                                 &
      &                    NtileI(ng)*NtileJ(ng)) :: Arecv
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_aggregate2d"
 
 # ifdef PROFILE
 !
@@ -7527,8 +7494,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 71, __LINE__,                          &
-     &                __FILE__//":mp_aggregate2d")
+      CALL wclock_on (ng, model, 71, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -7658,10 +7624,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 71, __LINE__,                         &
-     &                 __FILE__//":mp_aggregate2d")
+      CALL wclock_off (ng, model, 71, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_aggregate2d
 !
@@ -7702,21 +7667,13 @@
 !                                                                      !
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      implicit none
-!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, model, gtype
       integer, intent(in) :: LBiT, UBiT, LBjT, UBjT
       integer, intent(in) :: LBiG, UBiG, LBjG, UBjG
       integer, intent(in) :: LBk,  UBk
-
+!
       real(r8), intent(in)  :: Atiled(LBiT:UBiT,LBjT:UBjT,LBk:UBk)
       real(r8), intent(out) :: Aglobal(LBiG:UBiG,LBjG:UBjG,LBk:UBk)
 !
@@ -7726,13 +7683,16 @@
       integer :: i, j, k, np, rank
 
       integer,  dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: my_bounds
-
+!
       real(r8), dimension(TileSize(ng)*(UBk-LBk+1)) :: Asend
 
       real(r8), dimension(TileSize(ng)*(UBk-LBk+1)*                     &
      &                    NtileI(ng)*NtileJ(ng)) :: Arecv
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_aggregate3d"
 
 # ifdef PROFILE
 !
@@ -7740,8 +7700,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 71, __LINE__,                          &
-     &                __FILE__//":mp_aggregate3d")
+      CALL wclock_on (ng, model, 71, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -7877,10 +7836,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 71, __LINE__,                         &
-     &                 __FILE__//":mp_aggregate3d")
+      CALL wclock_off (ng, model, 71, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_aggregate3d
 #endif

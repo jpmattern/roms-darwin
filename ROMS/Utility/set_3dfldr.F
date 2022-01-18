@@ -2,9 +2,9 @@
       MODULE set_3dfldr_mod
 #if defined ADJOINT && defined SOLVE3D
 !
-!svn $Id: set_3dfldr.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: set_3dfldr.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -35,6 +35,7 @@
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange3d
 # endif
+      USE dateclock_mod,   ONLY : time_string
 !
 !  Imported variable declarations.
 !
@@ -56,11 +57,13 @@
 !  Local variable declarations.
 !
       logical :: LapplyBC, Lgrided, Lonerec
-
+!
       integer :: Tindex, gtype, i, it1, it2, j, k
-
+!
       real(dp) :: SecScale, fac, fac1, fac2
       real(r8) :: Fval
+!
+      character (len=22) :: DateString1, DateString2
 
 # include "set_bounds.h"
 !
@@ -93,6 +96,8 @@
       it2=Tindex
       fac1=ANINT((time(ng)-Tintrp(it2,ifield,ng))*SecScale,r8)
       fac2=ANINT((Tintrp(it1,ifield,ng)-time(ng))*SecScale,r8)
+!!    CALL time_string (Tintrp(it1,ifield,ng), DateString1)
+!!    CALL time_string (Tintrp(it2,ifield,ng), DateString2)
 !
 !  Load time-invariant data. Time interpolation is not necessary.
 !

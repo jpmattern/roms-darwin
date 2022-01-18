@@ -8,9 +8,9 @@
      &                               IminS, ImaxS, JminS, JmaxS,        &
      &                               Zscale, Z, tl_Z, tl_swdk)
 !
-!svn $Id: tl_lmd_swfrac.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: tl_lmd_swfrac.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -88,9 +88,9 @@
           tl_cff1=fac1(i)*tl_Z(i,j)*cff1
           cff2=EXP(Z(i,j)*fac2(i))
           tl_cff2=fac2(i)*tl_Z(i,j)*cff2
-!>        swdk(i,j)=cff1*fac3(i)+                                       &
-!>   &              cff2*(1.0_r8-fac3(i))
-!>
+!^        swdk(i,j)=cff1*fac3(i)+                                       &
+!^   &              cff2*(1.0_r8-fac3(i))
+!^
           tl_swdk(i,j)=tl_cff1*fac3(i)+                                 &
      &                 tl_cff2*(1.0_r8-fac3(i))
         END DO

@@ -4,9 +4,9 @@
 #if defined NONLINEAR && defined FLOATS && defined FLOAT_VWALK && \
     defined SOLVE3D
 !
-!svn $Id: vwalk_floats.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: vwalk_floats.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group         Mark Hadfield   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group         Mark Hadfield   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -51,10 +51,14 @@
 
       real(r8), intent(inout) :: nudg(Lstr:Lend)
 # endif
-
+!
+!  Local variable declarations.
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 10, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 10, __LINE__, MyFile)
 # endif
       CALL vwalk_floats_tile (ng, Lstr, Lend,                           &
      &                        nfm3(ng), nfm2(ng), nfm1(ng), nf(ng),     &
@@ -66,9 +70,9 @@
      &                        nudg,                                     &
      &                        DRIFTER(ng) % track)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 10, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 10, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE vwalk_floats
 
@@ -347,7 +351,7 @@
       DO l=Lstr,Lend
         nudg(l)=0.0_r8
       END DO
-
+!
       RETURN
       END SUBROUTINE vwalk_floats_tile
 #endif

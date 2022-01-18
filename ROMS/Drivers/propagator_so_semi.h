@@ -1,11 +1,11 @@
-      SUBROUTINE propagator (RunInterval, state, ad_state)
+      MODULE propagator_mod
 !
-!svn $Id: propagator_so_semi.h 995 2020-01-10 04:01:28Z arango $
-!************************************************** Hernan G. Arango ***
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!svn $Id: propagator_so_semi.h 1099 2022-01-06 21:01:01Z arango $
+!================================================== Hernan G. Arango ===
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
-!***********************************************************************
+!=======================================================================
 !                                                                      !
 !  Stochastic Optimals, Seminorm Estimation:                           !
 !                                                                      !
@@ -19,6 +19,19 @@
 !       analysis system based on the tangent linear and adjoint of a   !
 !       regional ocean model, Ocean Modelling, 7, 227-258.             !
 !                                                                      !
+!=======================================================================
+!
+      USE mod_kinds
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: propagator_so_semi
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE propagator_so_semi (RunInterval, state, ad_state)
 !***********************************************************************
 !
       USE mod_param
@@ -38,15 +51,18 @@
 !  Imported variable declarations.
 !
       real(dp), intent(in) :: RunInterval
-
+!
       TYPE (T_GST), intent(in) :: state(Ngrids)
       TYPE (T_GST), intent(inout) :: ad_state(Ngrids)
 !
 !  Local variable declarations.
 !
       logical, save :: FirstPass = .TRUE.
-
+!
       integer :: ng, tile
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !  Backward integration of adjoint model forced with the seminorm of
@@ -54,13 +70,10 @@
 !  the first iteration.
 !=======================================================================
 !
-!$OMP MASTER
       Nrun=Nrun+1
       DO ng=1,Ngrids
         SOrec(ng)=0
       END DO
-!$OMP END MASTER
-!$OMP BARRIER
 !
       FIRST_PASS : IF (FirstPass) THEN
         FirstPass=.FALSE.
@@ -69,14 +82,11 @@
 !
         DO ng=1,Ngrids
           CALL ad_initial (ng)
-!$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
 !
 !  Activate adjoint output.
 !
-!$OMP MASTER
         DO ng=1,Ngrids
           LdefADJ(ng)=.TRUE.
           LwrtADJ(ng)=.TRUE.
@@ -93,17 +103,13 @@
           DstrS(ng)=tdays(ng)
           DendS(ng)=DstrS(ng)
         END DO
-!$OMP END MASTER
-!$OMP BARRIER
 
 #ifdef SOLVE3D
         CALL ad_main3d (RunInterval)
 #else
         CALL ad_main2d (RunInterval)
 #endif
-!$OMP BARRIER
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       END IF FIRST_PASS
 !
@@ -124,14 +130,12 @@
      &                      ad_state(ng)%vector)
 # endif
         END DO
-!$OMP BARRIER
       END DO
 !
 !-----------------------------------------------------------------------
 !  Report iteration and trace or stochastic optimals matrix.
 !-----------------------------------------------------------------------
 !
-!$OMP MASTER
       IF (Master) THEN
         DO ng=1,Ngrids
           WRITE (stdout,20) ' PROPAGATOR - Grid: ', ng,                 &
@@ -140,11 +144,12 @@
      &                      Nconv(ng), 'TRnorm = ', TRnorm(ng)
         END DO
       END IF
-!$OMP END MASTER
-
+!
  10   FORMAT (/,1x,a,1x,'ROMS/TOMS: started time-stepping:',            &
      &        ' (Grid: ',i2.2,' TimeSteps: ',i8.8,' - ',i8.8,')')
  20   FORMAT (/,a,i2.2,a,i3.3,a,i3.3,/,42x,a,1p,e15.8)
-
+!
       RETURN
-      END SUBROUTINE propagator
+      END SUBROUTINE propagator_so_semi
+
+      END MODULE propagator_mod

@@ -6,9 +6,9 @@
    (defined POSTERIOR_ERROR_I || defined POSTERIOR_ERROR_F)
 
 !
-!svn $Id: posterior_var.F 1022 2020-05-13 03:03:15Z arango $
+!svn $Id: posterior_var.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -18,18 +18,8 @@
 !                                                                      !
 !=======================================================================
 !
-      implicit none
-
-      PRIVATE
-      PUBLIC :: posterior_var
-
-      CONTAINS
-!
-!***********************************************************************
-      SUBROUTINE posterior_var (ng, tile, model, outLoop)
-!***********************************************************************
-!
       USE mod_param
+      USE mod_parallel
 # ifdef ADJUST_BOUNDARY
       USE mod_boundary
 # endif
@@ -39,10 +29,34 @@
 # if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
       USE mod_forces
 # endif
+      USE mod_fourdvar
       USE mod_grid
+      USE mod_iounits
+      USE mod_ncparam
       USE mod_ocean
-      USE mod_stepping
       USE mod_scalars
+      USE mod_stepping
+!
+# ifdef DISTRIBUTE
+      USE distribute_mod,       ONLY : mp_bcastf, mp_bcasti
+      USE distribute_mod,       ONLY : mp_reduce
+# endif
+      USE state_addition_mod,   ONLY : state_addition
+      USE state_copy_mod,       ONLY : state_copy
+      USE state_initialize_mod, ONLY : state_initialize
+      USE state_product_mod,    ONLY : state_product
+      USE state_read_mod,       ONLY : state_read
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: posterior_var
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE posterior_var (ng, tile, model, outLoop)
+!***********************************************************************
 !
 !  Imported variable declarations.
 !
@@ -50,11 +64,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 83, __LINE__,                          &
-     &                __FILE__)
+      CALL wclock_on (ng, model, 83, __LINE__, MyFile)
 # endif
 !
       CALL posterior_var_tile (ng, tile, model,                         &
@@ -187,9 +203,9 @@
 # endif
      &                        OCEAN(ng) % ad_zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 83, __LINE__,                         &
-     &                 __FILE__)
+      CALL wclock_off (ng, model, 83, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE posterior_var
 !
@@ -290,23 +306,6 @@
 # endif
      &                               ad_zeta)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_ncparam
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_scalars
-
-# ifdef DISTRIBUTE
-!
-      USE distribute_mod, ONLY : mp_bcastf, mp_bcasti
-# endif
-      USE state_copy_mod, ONLY : state_copy
-      USE state_product_mod, ONLY : state_product
-      USE state_addition_mod, ONLY : state_addition
-      USE state_initialize_mod, ONLY : state_initialize
-      USE posterior_mod, ONLY : read_state
 !
 !  Imported variable declarations.
 !
@@ -593,6 +592,9 @@
 
 # include "set_bounds.h"
 !
+      CalledFrom=MyFile
+      SourceFile=MyFile
+!
 !-----------------------------------------------------------------------
 !  Computes the full (diagonal) posterior analysis error covariance
 # if defined POSTERIOR_ERROR_I
@@ -719,7 +721,7 @@
 !  Read vectors stored in hessian netcdf file using ad_var(L1) as
 !  temporary storage.
 !
-        CALL read_state (ng, tile, model,                               &
+        CALL state_read (ng, tile, model, HSS(ng)%IOtype,               &
      &                   LBi, UBi, LBj, UBj, LBij, UBij,                &
      &                   L1, rec,                                       &
      &                   0, HSS(ng)%ncid, ncname,                       &
@@ -859,7 +861,7 @@
 !  Read vectors stored in hessian netcdf file using ad_var(L2) as
 !  temporary storage.
 !
-          CALL read_state (ng, tile, model,                             &
+          CALL state_read (ng, tile, model, HSS(ng)%IOtype,             &
      &                     LBi, UBi, LBj, UBj, LBij, UBij,              &
      &                     L2, rec,                                     &
      &                     0, HSS(ng)%ncid, ncname,                     &
@@ -1040,7 +1042,7 @@
      &                   tl_ubar, tl_vbar,                              &
 # endif
      &                   tl_zeta)
-
+!
       RETURN
       END SUBROUTINE posterior_var_tile
 !
@@ -1090,18 +1092,6 @@
 # endif
      &                         s1_zeta)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_ncparam
-# if defined ADJUST_BOUNDARY || defined ADJUST_STFLUX || \
-     defined ADJUST_WSTRESS
-      USE mod_scalars
-# endif
-# ifdef DISTRIBUTE
-!
-      USE distribute_mod, ONLY : mp_reduce
-# endif
 !
 !  Imported variable declarations.
 !
@@ -1750,7 +1740,7 @@
 #  endif
 
 # endif
-
+!
       RETURN
       END SUBROUTINE analysis_var
 #endif

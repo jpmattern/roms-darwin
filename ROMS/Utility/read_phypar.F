@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE read_PhyPar (model, inp, out, Lwrite)
 !
-!svn $Id: read_phypar.F 1036 2020-07-29 05:39:53Z arango $
+!svn $Id: read_phypar.F 1103 2022-01-13 03:38:35Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -29,6 +29,9 @@
       USE mod_nesting
 #endif
       USE mod_netcdf
+#if defined PIO_LIB && defined DISTRIBUTE
+      USE mod_pio_netcdf
+#endif
       USE mod_scalars
 #if defined SEDIMENT || defined BBL_MODEL
       USE mod_sediment
@@ -40,6 +43,9 @@
       USE mod_strings
 !
       USE inp_decode_mod
+#if defined DISTRIBUTE && defined PIO_LIB
+      USE set_pio_mod
+#endif
 !
       USE dateclock_mod, ONLY : ref_clock
       USE strings_mod,   ONLY : FoundError
@@ -48,8 +54,9 @@
 !
 !  Imported variable declarations
 !
-      logical, intent(in) :: Lwrite
-      integer, intent(in) :: model, inp, out
+      logical, intent(inout) :: Lwrite
+!
+      integer, intent(in)    :: model, inp, out
 !
 !  Local variable declarations.
 !
@@ -73,7 +80,7 @@
       logical, allocatable :: Ladsen(:)
 # endif
 #endif
-
+!
       integer :: Npts, Nval, i, itrc, ivar, k, lstr, ng, nl, status
       integer :: ifield, ifile, igrid, itracer, nline, max_Ffiles
       integer :: ibcfile, iclmfile
@@ -86,7 +93,7 @@
       integer, allocatable :: Ncount(:,:)
       integer, allocatable :: NBCcount(:,:)
       integer, allocatable :: NCLMcount(:,:)
-
+!
       real(dp), allocatable :: Dtracer(:,:)
       real(r8), allocatable :: Rtracer(:,:)
       real(r8), allocatable :: tracer(:,:)
@@ -97,12 +104,16 @@
       real(r8) :: Rvalue(1)
 
       real(dp), dimension(nRval) :: Rval
-
+!
       character (len=1  ), parameter :: blank = ' '
-      character (len=40 ) :: KeyWord, text
+      character (len=40 ) :: KeyWord
       character (len=50 ) :: label
+      character (len=80 ) :: text
       character (len=256) :: fname, line
       character (len=256), dimension(nCval) :: Cval
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !-----------------------------------------------------------------------
 !  Initialize.
@@ -159,11 +170,16 @@
                 exit_flag=5
                 RETURN
               END IF
-              got_Ngrids=.TRUE.
-              CALL allocate_param       ! Start allocating variables in
-              CALL allocate_parallel    ! modules that solely depend on
-              CALL allocate_iounits     ! the number of nested grids
-              CALL allocate_stepping
+              got_Ngrids=.TRUE.                ! Allocating variables in
+              CALL allocate_param              ! modules that solely
+              CALL allocate_parallel (Ngrids)  ! depend on the number
+              CALL allocate_iounits (Ngrids)   ! nested grids
+              CALL allocate_stepping (Ngrids)
+#if defined PIO_LIB && defined DISTRIBUTE
+              IF (.not.associated(var_desc)) THEN
+                allocate ( var_desc(Mvars) )
+              END IF
+#endif
 #if defined FOUR_DVAR || defined VERIFICATION
               CALL allocate_fourdvar
 #endif
@@ -399,8 +415,8 @@
      &                       itracer, 1, NAT+NPT,                       &
      &                       Vname(1,idTvar(itrc)),                     &
      &                       Hadvection)
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             CASE ('Vadvection')
               IF (itracer.lt.(NAT+NPT)) THEN
                 itracer=itracer+1
@@ -412,8 +428,8 @@
      &                       itracer, 1, NAT+NPT,                       &
      &                       Vname(1,idTvar(itrc)),                     &
      &                       Vadvection)
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
 # if defined ADJOINT || defined TANGENT || defined TL_IOMS
             CASE ('ad_Hadvection')
               IF (itracer.lt.(NAT+NPT)) THEN
@@ -426,8 +442,8 @@
      &                       itracer, 1, NAT+NPT,                       &
      &                       Vname(1,idTvar(itrc)),                     &
      &                       ad_Hadvection)
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             CASE ('ad_Vadvection')
               IF (itracer.lt.(NAT+NPT)) THEN
                 itracer=itracer+1
@@ -439,8 +455,8 @@
      &                       itracer, 1, NAT+NPT,                       &
      &                       Vname(1,idTvar(itracer)),                  &
      &                       ad_Vadvection)
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
 # endif
 #endif
             CASE ('LBC(isFsur)')
@@ -640,6 +656,19 @@
               Npts=load_i(Nval, Rval, Ngrids, ndefHIS)
             CASE ('NQCK')
               Npts=load_i(Nval, Rval, Ngrids, nQCK)
+#if defined FORWARD_FLUXES && \
+   (defined BULK_FLUXES    || defined FRC_COUPLING)
+              DO ng=1,Ngrids
+                IF (nQCK(ng).le.0) THEN
+                  WRITE (text,'(a,i2.2,a)') 'nQCK(', ng, ') = '
+                  IF (Master) WRITE (out,260) TRIM(text), nQCK(ng),     &
+     &               'must be greater than zero because the QCK '//     &
+     &               'file is used as surface forcing basic state.'
+                  exit_flag=5
+                  RETURN
+                END IF
+              END DO
+#endif
             CASE ('NDEFQCK')
               Npts=load_i(Nval, Rval, Ngrids, ndefQCK)
             CASE ('NTSAVG')
@@ -674,18 +703,32 @@
             CASE ('NOBC')
               Npts=load_i(Nval, Rval, Ngrids, nOBC)
 #ifdef ADJUST_BOUNDARY
+# ifdef RBL4DVAR_FCT_SENSITIVITY
+              DO ng=1,Ngrids
+                Nbrec(ng)=1+ntimes_ana(ng)/nOBC(ng)
+              END DO
+              allocate ( OBC_time(MAXVAL(Nbrec),Ngrids) )
+# else
               DO ng=1,Ngrids
                 Nbrec(ng)=1+ntimes(ng)/nOBC(ng)
               END DO
               allocate ( OBC_time(MAXVAL(Nbrec),Ngrids) )
+# endif
 #endif
             CASE ('NSFF')
               Npts=load_i(Nval, Rval, Ngrids, nSFF)
 #if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
+# ifdef RBL4DVAR_FCT_SENSITIVITY
+              DO ng=1,Ngrids
+                Nfrec(ng)=1+ntimes_ana(ng)/nSFF(ng)
+              END DO
+              allocate ( SF_time(MAXVAL(Nfrec),Ngrids) )
+# else
               DO ng=1,Ngrids
                 Nfrec(ng)=1+ntimes(ng)/nSFF(ng)
               END DO
               allocate ( SF_time(MAXVAL(Nfrec),Ngrids) )
+# endif
 #endif
             CASE ('LmultiGST')
               Npts=load_l(Nval, Cval, 1, Lvalue)
@@ -938,6 +981,11 @@
             CASE ('BVF_BAK')
               Npts=load_r(Nval, Rval, 1, Rvalue)
               bvf_bak=Rvalue(1)
+#ifdef TIDE_GENERATING_FORCES
+            CASE ('Lnodal')
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              Lnodal=Lvalue(1)
+#endif
             CASE ('DSTART')
               Npts=load_r(Nval, Rval, 1, Dvalue)
               dstart=Dvalue(1)
@@ -954,12 +1002,12 @@
                 DO itrc=1,NAT
                   Tnudg(itrc,ng)=Dtracer(itrc,ng)
                 END DO
-# ifdef T_PASSIVE
+#ifdef T_PASSIVE
                 DO i=1,NPT
                   itrc=inert(i)
                   Tnudg(itrc,ng)=Dtracer(NAT+i,ng)
                 END DO
-# endif
+#endif
               END DO
             CASE ('ZNUDG')
               Npts=load_r(Nval, Rval, Ngrids, Znudg)
@@ -3121,6 +3169,190 @@
               Nuser=Ivalue(1)
             CASE ('USER')
               Npts=load_r(Nval, Rval, MAX(1,Nuser), user)
+            CASE ('INP_LIB')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+#if defined PIO_LIB && defined DISTRIBUTE
+              inp_lib=Ivalue(1)
+              IF ((inp_lib.lt.1).or.(inp_lib.gt.2)) THEN
+                IF (Master) WRITE (out,260) 'inp_lib = ',               &
+     &                                      inp_lib,                    &
+     &                                      'Must be either 1 or 2'
+                exit_flag=5
+                RETURN
+              END IF
+#else
+              inp_lib=1
+#endif
+            CASE ('OUT_LIB')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+#if defined PIO_LIB && defined DISTRIBUTE
+              out_lib=Ivalue(1)
+              IF ((inp_lib.lt.1).or.(inp_lib.gt.2)) THEN
+                IF (Master) WRITE (out,260) 'out_lib = ',               &
+     &                                      out_lib,                    &
+     &                                      'Must be either 1 or 2'
+                exit_flag=5
+                RETURN
+              END IF
+#else
+              out_lib=1
+#endif
+#if defined PIO_LIB && defined DISTRIBUTE
+            CASE ('PIO_METHOD')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              IF ((Ivalue(1).lt.0).or.(Ivalue(1).gt.4)) THEN
+                IF (Master) WRITE (out,260) 'pio_method = ',            &
+     &                                      Ivalue(1),                  &
+     &                                      'Must be between 1 and 4'
+              ELSE
+                SELECT CASE (Ivalue(1))
+                  CASE (0)
+                    TypeCDF5=.TRUE.                ! CDF-5, not portable
+                    pio_method=PIO_iotype_pnetcdf
+                    pio_MethodName='PnetCDF'
+                  CASE (1)
+                    TypeCDF5=.FALSE.               ! NetCDF-3 64-bit
+                    pio_method=PIO_iotype_pnetcdf
+                    pio_MethodName='PnetCDF'
+                  CASE (2)
+                    pio_method=PIO_iotype_netcdf
+                    pio_MethodName='NetCDF'
+                  CASE (3)
+                    pio_method=PIO_iotype_netcdf4c
+                    pio_MethodName='NetCDF4c'
+                  CASE (4)
+                    pio_method=PIO_iotype_netcdf4p
+                    pio_MethodName='NetCDF4p'
+                END SELECT
+              END IF
+            CASE ('PIO_IOTASKS')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              pio_NumIOtasks=Ivalue(1)
+              IF ((pio_NumIOtasks.lt.1).or.                             &
+     &            (pio_NumIOtasks.gt.numthreads)) THEN
+                IF (Master) WRITE (out,260) 'pio_NumIOtasks = ',        &
+     &                                      pio_NumIOtasks,             &
+     &                      'Must be between 1 and NtileI*NtileJ'
+                exit_flag=5
+                RETURN
+              END IF
+            CASE ('PIO_STRIDE')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              pio_stride=Ivalue(1)
+              IF ((pio_stride.lt.1).or.                                 &
+                  (pio_stride*pio_NumIOtasks.gt.numthreads)) THEN
+                IF (Master) WRITE (out,260) 'pio_stride = ',            &
+     &                                      pio_stride,                 &
+     &             'Must be greater than 0 and not exceed NtileI*NtileJ'
+                exit_flag=5
+                RETURN
+              END IF
+            CASE ('PIO_BASE')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              pio_base=Ivalue(1)
+              IF (pio_base.lt.0) THEN
+                IF (Master) WRITE (out,260) 'pio_base = ',              &
+     &                                      pio_base,                   &
+     &                                      'Is usually 0 or greater'
+                exit_flag=5
+                RETURN
+              ELSE
+                IF ((numthreads.eq.1).and.(pio_base.ne.0)) THEN
+                  IF (Master) WRITE (out,260) 'pio_base = ',            &
+     &                                         pio_base,                &
+     &                    'Reset to 0 since running on a single process'
+                  pio_base=0          ! reset since offset is not needed
+                END IF
+              END IF
+            CASE ('PIO_AGGREG')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              pio_aggregator=Ivalue(1)
+              IF (pio_aggregator.lt.1) THEN
+                IF (Master) WRITE (out,260) 'pio_aggregator = ',        &
+     &                                      pio_aggregator,             &
+     &                                      'Must be greater than 0'
+                exit_flag=5
+                RETURN
+              END IF
+            CASE ('PIO_REARR')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              IF ((Ivalue(1).lt.1).or.(Ivalue(1).gt.2)) THEN
+                IF (Master) WRITE (out,260) 'pio_rearranger = ',        &
+     &                                      Ivalue(1),                  &
+     &                                      'Must be 1 or 2'
+                exit_flag=5
+                RETURN
+              ELSE
+                SELECT CASE (Ivalue(1))
+                  CASE (1)
+                    pio_rearranger=PIO_rearr_box
+                  CASE (2)
+                    pio_rearranger=PIO_rearr_subset
+                END SELECT
+              END IF
+            CASE ('PIO_REARRCOM')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              IF ((Ivalue(1).lt.0).or.(Ivalue(1).gt.1)) THEN
+                IF (Master) WRITE (out,260) 'pio_rearr_opt_comm = ',    &
+     &                                      Ivalue(1),                  &
+     &                                      'Must be 0 or 1'
+                exit_flag=5
+                RETURN
+              ELSE
+                SELECT CASE (Ivalue(1))
+                  CASE (0)
+                    pio_rearr_comm=PIO_rearr_comm_p2p
+                  CASE (1)
+                    pio_rearr_comm=PIO_rearr_comm_coll
+                END SELECT
+              END IF
+            CASE ('PIO_REARRDIR')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              IF ((Ivalue(1).lt.0).or.(Ivalue(1).gt.3)) THEN
+                IF (Master) WRITE (out,260) 'pio_rearr_opt_fcd = ',     &
+     &                                      Ivalue(1),                  &
+     &                                      'Must be between 0 and 3'
+                exit_flag=5
+                RETURN
+              ELSE
+                SELECT CASE (Ivalue(1))
+                  CASE (0)
+                    pio_rearr_fcd=PIO_rearr_comm_fc_2d_enable
+                  CASE (1)
+                    pio_rearr_fcd=PIO_rearr_comm_fc_1d_comp2io
+                  CASE (2)
+                    pio_rearr_fcd=PIO_rearr_comm_fc_1d_io2comp
+                  CASE (3)
+                    pio_rearr_fcd=PIO_rearr_comm_fc_2d_disable
+                END SELECT
+              END IF
+            CASE ('PIO_C2I_HS')
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              pio_rearr_C2I_HS=Lvalue(1)
+            CASE ('PIO_C2I_Send')
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              pio_rearr_C2I_iS=Lvalue(1)
+            CASE ('PIO_C2I_Preq')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              IF (Ivalue(1).lt.0) THEN
+                pio_rearr_C2I_PR=PIO_rearr_comm_unlimited_pend_req
+              ELSE
+                pio_rearr_C2I_PR=Ivalue(1)
+              END IF
+            CASE ('PIO_I2C_HS')
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              pio_rearr_I2C_HS=Lvalue(1)
+            CASE ('PIO_I2C_Send')
+              Npts=load_l(Nval, Cval, 1, Lvalue)
+              pio_rearr_I2C_iS=Lvalue(1)
+            CASE ('PIO_I2C_Preq')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              IF (Ivalue(1).lt.0) THEN
+                pio_rearr_I2C_PR=PIO_rearr_comm_unlimited_pend_req
+              ELSE
+                pio_rearr_I2C_PR=Ivalue(1)
+              END IF
+#endif
             CASE ('NC_SHUFFLE')
               Npts=load_i(Nval, Rval, 1, Ivalue)
               shuffle=Ivalue(1)
@@ -3133,102 +3365,102 @@
             CASE ('DAINAME')
               label='DAI - Data Assimilation Initial/Restart fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, DAI)
+     &                      Ngrids, Nfiles, out_lib, DAI)
             CASE ('GSTNAME')
               label='GST - generalized stability theory analysis'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, GST)
+     &                      Ngrids, Nfiles, out_lib, GST)
             CASE ('RSTNAME')
               label='RST - restart fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, RST)
+     &                      Ngrids, Nfiles, out_lib, RST)
             CASE ('HISNAME')
               label='HIS - nonlinear model history fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, HIS)
+     &                      Ngrids, Nfiles, out_lib, HIS)
             CASE ('QCKNAME')
               label='QCK - nonlinear model quicksave fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, QCK)
+     &                      Ngrids, Nfiles, out_lib, QCK)
             CASE ('TLMNAME')
               label='TLM - tangent linear model history fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, TLM)
+     &                      Ngrids, Nfiles, out_lib, TLM)
             CASE ('TLFNAME')
               label='TLF - tangent linear model impulse forcing'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, TLF)
+     &                      Ngrids, Nfiles, out_lib, TLF)
             CASE ('ADJNAME')
               label='ADM - adjoint model history fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, ADM)
+     &                      Ngrids, Nfiles, out_lib, ADM)
             CASE ('AVGNAME')
               label='AVG - time-averaged history fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, AVG)
+     &                      Ngrids, Nfiles, out_lib, AVG)
             CASE ('HARNAME')
               label='HAR - least-squares detiding harmonics'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, HAR)
+     &                      Ngrids, Nfiles, out_lib, HAR)
             CASE ('DIANAME')
               label='DIA - time-averaged diagnostics fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, DIA)
+     &                      Ngrids, Nfiles, out_lib, DIA)
             CASE ('STANAME')
               label='STA - stations time-series'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, STA)
+     &                      Ngrids, Nfiles, out_lib, STA)
             CASE ('FLTNAME')
               label='FLT - Lagragian particles trajectories'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, FLT)
+     &                      Ngrids, Nfiles, out_lib, FLT)
             CASE ('GRDNAME')
               label='GRD - application grid'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, GRD)
+     &                      Ngrids, Nfiles, inp_lib, GRD)
             CASE ('ININAME')
               label='INI - nonlinear model initial conditions'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, INI)
+     &                      Ngrids, Nfiles, inp_lib, INI)
             CASE ('IRPNAME')
               label='IRP - representer model initial conditions'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, IRP)
+     &                      Ngrids, Nfiles, inp_lib, IRP)
             CASE ('ITLNAME')
               label='ITL - tangent linear model initial conditions'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, ITL)
+     &                      Ngrids, Nfiles, inp_lib, ITL)
             CASE ('IADNAME')
               label='IAD - adjoint model initial conditions'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, IAD)
+     &                      Ngrids, Nfiles, inp_lib, IAD)
             CASE ('FWDNAME')
               label='FWD - basic state forward trajectory'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, FWD)
+     &                      Ngrids, Nfiles, inp_lib, FWD)
             CASE ('ADSNAME')
               label='ADS - adjoint sensitivity functional'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, ADS)
+     &                      Ngrids, Nfiles, inp_lib, ADS)
 #ifdef RBL4DVAR_FCT_SENSITIVITY
 # ifndef OBS_SPACE
             CASE ('FOInameA')
               label='FOIA - adjoint sensitivity functional A'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, FOIA)
+     &                      Ngrids, Nfiles, inp_lib, FOIA)
             CASE ('FOInameB')
               label='FOIB - adjoint sensitivity functional B'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, FOIB)
+     &                      Ngrids, Nfiles, inp_lib, FOIB)
 # endif
             CASE ('FCTnameA')
               label='FCTA - forecast state forward trajectory A'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, FCTA)
+     &                      Ngrids, Nfiles, inp_lib, FCTA)
             CASE ('FCTnameB')
               label='FCTB - forecast state forward trajectory B'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, FCTB)
+     &                      Ngrids, Nfiles, inp_lib, FCTB)
 #endif
             CASE ('NGCNAME')
               DO i=1,LEN(NGCname)
@@ -3248,8 +3480,14 @@
               max_Ffiles=MAXVAL(nBCfiles)
               allocate ( BRY(max_Ffiles,Ngrids) )
               allocate ( BRYids(max_Ffiles,Ngrids) )
+# if defined PIO_LIB && defined DISTRIBUTE
+              allocate ( BRYdesc(max_Ffiles,Ngrids) )
+# endif
               allocate ( NBCcount(max_Ffiles,Ngrids) )
               BRYids(1:max_Ffiles,1:Ngrids)=-1
+# if defined PIO_LIB && defined DISTRIBUTE
+              BRYdesc(1:max_Ffiles,1:Ngrids)%fh=-1
+# endif
               NBCcount(1:max_Ffiles,1:Ngrids)=0
             CASE ('BRYNAME')
               label='BRY - lateral open boundary conditions'
@@ -3265,7 +3503,7 @@
               END DO
               Npts=load_s2d(Nval, Cval, Cdim, line, label, ibcfile,     &
      &                      igrid, Ngrids, nBCfiles, NBCcount,          &
-     &                      max_Ffiles, BRY)
+     &                      max_Ffiles, inp_lib, BRY)
             CASE ('NCLMFILES')
               Npts=load_i(Nval, Rval, Ngrids, nCLMfiles)
               DO ng=1,Ngrids
@@ -3280,14 +3518,20 @@
               max_Ffiles=MAXVAL(nCLMfiles)
               allocate ( CLM(max_Ffiles,Ngrids) )
               allocate ( CLMids(max_Ffiles,Ngrids) )
+# if defined PIO_LIB && defined DISTRIBUTE
+              allocate ( CLMdesc(max_Ffiles,Ngrids) )
+# endif
               allocate ( NCLMcount(max_Ffiles,Ngrids) )
               CLMids(1:max_Ffiles,1:Ngrids)=-1
+# if defined PIO_LIB && defined DISTRIBUTE
+              CLMdesc(1:max_Ffiles,1:Ngrids)%fh=-1
+# endif
               NCLMcount(1:max_Ffiles,1:Ngrids)=0
             CASE ('CLMNAME')
               label='CLM - climatology fields'
               DO ng=1,Ngrids
                 IF (nCLMfiles(ng).lt.0) THEN
-                  IF (Master) WRITE (out,290) 'nCLMfiles = ',         &
+                  IF (Master) WRITE (out,290) 'nCLMfiles = ',           &
      &                                        nCLMfiles(ng),            &
      &              'KeyWord ''NCLMFILES'' unread or misssing from '//  &
      &              'input script ''roms.in''.'
@@ -3297,20 +3541,21 @@
               END DO
               Npts=load_s2d(Nval, Cval, Cdim, line, label, iclmfile,    &
      &                      igrid, Ngrids, nCLMfiles, NCLMcount,        &
-     &                      max_Ffiles, CLM)
+     &                      max_Ffiles, inp_lib, CLM)
             CASE ('NUDNAME')
               label='NUD - nudging coefficients'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, NUD)
+     &                      Ngrids, Nfiles, inp_lib, NUD)
             CASE ('SSFNAME')
               label='SSF - Sources/Sinks forcing fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, SSF)
-# if defined SSH_TIDES || defined UV_TIDES
+     &                      Ngrids, Nfiles, inp_lib, SSF)
+# if defined SSH_TIDES || defined UV_TIDES || \
+     defined TIDE_GENERATING_FORCES
             CASE ('TIDENAME')
               label='TIDE - Tidal forcing fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, TIDE)
+     &                      Ngrids, Nfiles, inp_lib, TIDE)
 # endif
             CASE ('NFFILES')
               Npts=load_i(Nval, Rval, Ngrids, nFfiles)
@@ -3325,8 +3570,14 @@
               max_Ffiles=MAXVAL(nFfiles)
               allocate ( FRC(max_Ffiles,Ngrids) )
               allocate ( FRCids(max_Ffiles,Ngrids) )
+# if defined PIO_LIB && defined DISTRIBUTE
+              allocate ( FRCdesc(max_Ffiles,Ngrids) )
+# endif
               allocate ( Ncount(max_Ffiles,Ngrids) )
               FRCids(1:max_Ffiles,1:Ngrids)=-1
+# if defined PIO_LIB && defined DISTRIBUTE
+              FRCdesc(1:max_Ffiles,1:Ngrids)%fh=-1
+# endif
               Ncount(1:max_Ffiles,1:Ngrids)=0
             CASE ('FRCNAME')
               label='FRC - forcing fields'
@@ -3342,7 +3593,7 @@
               END DO
               Npts=load_s2d(Nval, Cval, Cdim, line, label, ifile,       &
      &                      igrid, Ngrids, nFfiles, Ncount, max_Ffiles, &
-     &                      FRC)
+     &                      inp_lib, FRC)
             CASE ('APARNAM')
               DO i=1,LEN(aparnam)
                 aparnam(i:i)=blank
@@ -3374,8 +3625,7 @@
               END DO
               USRname=TRIM(ADJUSTL(Cval(Nval)))
           END SELECT
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END DO
   10  IF (Master) WRITE (out,50) line
@@ -3421,60 +3671,62 @@
         END IF
       END IF
 #endif
-!
-!  Check if both point sources methodologies are activated.  Only one
-!  method is allowed for a particular grid.  Otherwise, the point
-!  source will be applies twice.
-!
-      DO ng=1,Ngrids
-       IF (LuvSrc(ng).and.LwSrc(ng)) THEN
-         IF (Master) THEN
-           WRITE (out,260) 'LuvSrc', LuvSrc(ng),                        &
-     &           'Because LwSrc  is also ON; only one method is legal.'
-           WRITE (out,260) 'LwSrc', LwSrc(ng),                          &
-     &           'Because LuvSrc is also ON; only one method is legal.'
-         END IF
-         exit_flag=4
-         RETURN
-       END IF
-     END DO
 
 #ifdef SP4DVAR
 !
 !  Check if the number of split time intervals (Nsaddle) in the saddle-
 !  point 4D-Var is legal for a simulation.
 !
-     DO ng=1,Ngrids
-       IF (MOD((ntimes(ng)/nHIS(ng)),Nsaddle).ne.0) THEN
-         IF (Master) THEN
-           WRITE (out,350) 'Nsaddle = ', Nsaddle, ng,                   &
-    &                      'ntimes/nHIS = ', ntimes(ng)/nHIS(ng),       &
-    &                      'MOD(ntimes/nHis,Nsaddle) = ',               &
-    &                      MOD((ntimes(ng)/nHIS(ng)),Nsaddle),          &
-    &                      'must be zero for legal computations.',      &
-    &                      'Revise input parameters.'
-         END IF
-         exit_flag=4
-         RETURN
-       END IF
-     END DO
+      DO ng=1,Ngrids
+        IF (MOD((ntimes(ng)/nHIS(ng)),Nsaddle).ne.0) THEN
+          IF (Master) THEN
+            WRITE (out,350) 'Nsaddle = ', Nsaddle, ng,                  &
+     &                      'ntimes/nHIS = ', ntimes(ng)/nHIS(ng),      &
+     &                      'MOD(ntimes/nHis,Nsaddle) = ',              &
+     &                      MOD((ntimes(ng)/nHIS(ng)),Nsaddle),         &
+     &                      'must be zero for legal computations.',     &
+     &                      'Revise input parameters.'
+          END IF
+          exit_flag=4
+          RETURN
+        END IF
+      END DO
 #endif
 
-#if defined BULK_FLUXES && defined NL_BULK_FLUXES
+# if defined FORWARD_FLUXES && \
+    (defined BULK_FLUXES    || defined FRC_COUPLING)
 !
 !  Make sure that logical output switches are activated for wind
-!  stress and surface active tracers fluxes when using fluxes from
-!  the nonlinear model via (bulk_flux).
+!  stress, shortwave radiation, and surface active tracers fluxes
+!  when using fluxes from the nonlinear model via (bulk_flux).
 !
       DO ng=1,Ngrids
-        Hout(idUsms,ng)=.TRUE.
-        Hout(idVsms,ng)=.TRUE.
+        Qout(idUsms,ng)=.TRUE.
+        Qout(idVsms,ng)=.TRUE.
+# ifdef ATM_PRESS
+        Qout(idPair,ng)=.TRUE.
+# endif
 # ifdef SOLVE3D
-        Hout(idTsur(itemp),ng)=.TRUE.
-#  ifdef EMINUSP
-        Hout(idEmPf,ng)=.TRUE.
+        Qout(idSrad,ng)=.TRUE.
+        Qout(idTsur(itemp),ng)=.TRUE.
+#  if defined EMINUSP || defined FRC_COUPLING
+        Qout(idEmPf,ng)=.TRUE.
 #  endif
 # endif
+      END DO
+#endif
+
+#if defined FORWARD_MIXING && defined SOLVE3D    && \
+   (defined GLS_MIXING     || defined LMD_MIXING || \
+    defined MY25_MIXING)
+!
+!  Make sure that logical output switches are activated for vertical
+!  diffusion and viscosity mixing coefficients.
+!
+      DO ng=1,Ngrids
+        Hout(idSdif,ng)=.TRUE.
+        Hout(idTdif,ng)=.TRUE.
+        Hout(idVvis,ng)=.TRUE.
       END DO
 #endif
 
@@ -3827,16 +4079,24 @@
 #ifdef AVERAGES
         IF ((nAVG(ng).gt.0).and.(ndefAVG(ng).gt.0)) THEN
           OutFiles=ntimes(ng)/ndefAVG(ng)
+          IF ((nAVG(ng).eq.ndefAVG(ng)).or.                             &
+     &        (MOD(ntimes(ng),ndefAVG(ng)).ge.nAVG(ng))) THEN
+            OutFiles=Outfiles+1
+          END IF
           CALL edit_file_struct (ng, OutFiles, AVG)
           AVG(ng)%load=0       ! because delayed creation of NetCDF file
-        END IF                 ! due to time-aveeraging
+        END IF                 ! due to time-averaging
 #endif
 #ifdef DIAGNOSTICS
         IF ((nDIA(ng).gt.0).and.(ndefDIA(ng).gt.0)) THEN
           OutFiles=ntimes(ng)/ndefDIA(ng)
+          IF ((nDIA(ng).eq.ndefDIA(ng)).or.                             &
+     &        (MOD(ntimes(ng),ndefDIA(ng)).ge.nDIA(ng))) THEN
+            OutFiles=Outfiles+1
+          END IF
           CALL edit_file_struct (ng, OutFiles, DIA)
           DIA(ng)%load=0       ! because delayed creation of NetCDF file
-        END IF                 ! due to time-aveeraging
+        END IF                 ! due to time-averaging
 #endif
 #if defined TANGENT || defined TL_IOMS
         IF ((nTLM(ng).gt.0).and.(ndefTLM(ng).gt.0)) THEN
@@ -3850,13 +4110,13 @@
 #endif
       END DO
 
-#ifdef BULK_FLUXES
+#ifdef FORWARD_FLUXES
 !
 !  Allocate and initialize BLK I/O structure with the same values as
-!  HIS.
+!  QCK.
 !
       DO ng=1,Ngrids
-        OutFiles=HIS(ng)%Nfiles
+        OutFiles=QCK(ng)%Nfiles
         allocate ( BLK(ng)%Nrec(OutFiles) )
         allocate ( BLK(ng)%time_min(OutFiles) )
         allocate ( BLK(ng)%time_max(OutFiles) )
@@ -3873,6 +4133,17 @@
         BLK(ng)%time_min=0.0_dp
         BLK(ng)%time_max=0.0_dp
         BLK(ng)%label='BLK - nonlinear model bulk fluxes'
+        lstr=LEN(BLK(ng)%name)
+        DO i=1,lstr
+          BLK(ng)%head(i:i)=blank
+          BLK(ng)%base(i:i)=blank
+          BLK(ng)%name(i:i)=blank
+        END DO
+        DO k=1,OutFiles
+          DO i=1,lstr
+            BLK(ng)%files(k)(i:i)=blank
+          END DO
+        END DO
       END DO
 #endif
 !
@@ -3880,12 +4151,46 @@
 !  Report input parameters.
 !-----------------------------------------------------------------------
 !
+#if defined PIO_LIB && defined DISTRIBUTE
+# ifdef ASYNCHRONOUS_SCORPIO
+!
+!  If SCORPIO library and asynchronous I/O, split the distributed-
+!  memory communicator into disjointed computational and dedicated
+!  I/O processes. (HGA: It doesn't work. There are bugs in the
+!  SCORPIO library).
+!
+      CALL set_pio_async
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+!
+!  Initialize PIO system for either synchronous or asynchronous I/O.
+!
+      CALL initialize_pio
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Reset Lwrite switch since the Master may have changed when splitting
+!  the initial communicator.
+!
+      Lwrite=Master
+!
+!  Report to standard output.
+!
+#endif
       IF (Master.and.Lwrite) THEN
         lstr=INDEX(my_fflags, 'free')-2
         IF (lstr.le.0) lstr=LEN_TRIM(my_fflags)
         WRITE (out,60) TRIM(title), TRIM(my_os), TRIM(my_cpu),          &
      &                 TRIM(my_fort), TRIM(my_fc), my_fflags(1:lstr),   &
 #ifdef DISTRIBUTE
+# if defined PIO_LIB          && \
+    (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)
+     &                 PEER_COMM_WORLD, PeerSize,                       &
+     &                 OCN_COMM_WORLD, numthreads,                      &
+     &                 IO_COMM_WORLD, pio_NumIOtasks, TRIM(CioRanks),   &
+#  ifdef ASYNCHRONOUS_SCORPIO
+     &                 INTER_COMM_WORLD,                                &
+#  endif
+# endif
 # ifdef DISJOINTED
      &                 FULL_COMM_WORLD, FullSize, NsubGroups,           &
      &                 FORK_COMM_WORLD, ForkSize,                       &
@@ -3894,7 +4199,10 @@
      &                 TASK_COMM_WORLD, TaskSize,                       &
      &                 0, (FullSize/TaskSize)-1,                        &
 #  endif
-# else
+# endif
+# if !(defined PIO_LIB           && \
+       (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)) && \
+     !defined DISJOINTED
      &                 OCN_COMM_WORLD, numthreads,                      &
 # endif
      &                 TRIM(Iname),                                     &
@@ -3906,7 +4214,7 @@
      &                 TRIM(Rdir), TRIM(Hdir), TRIM(Hfile), TRIM(Adir)
 !
 #if defined GIT_VERSION
-        WRITE(out,'(/1x,2a)') 'Git Version      : ', GIT_VERSION
+        WRITE(out,'(/1x,2a)') 'Git Version       : ', GIT_VERSION
 #endif
         DO ng=1,Ngrids
 !
@@ -3916,7 +4224,10 @@
 #ifdef DISTRIBUTE
           WRITE (out,70) ng, Lm(ng), Mm(ng), N(ng), numthreads,         &
      &                   NtileI(ng), NtileJ(ng)
-
+          maxPETs=numthreads                           ! regular unsplit
+          nPETs=NtileI(ng)*NtileJ(ng)                  ! values
+          label='NtileI * NtileJ ='
+!
 # ifdef SP4DVAR
 #  ifdef DISJOINTED
 #   ifdef CONCURRENT_KERNEL
@@ -3933,10 +4244,17 @@
           nPETs=NtileI(ng)*NtileJ(ng)
           label='NtileI * NtileJ ='
 #  endif
-# else
-          maxPETs=numthreads
-          nPETs=NtileI(ng)*NtileJ(ng)
-          label='NtileI * NtileJ ='
+# endif
+# if defined PIO_LIB          && defined DISTRIBUTE            && \
+    (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)
+          maxPETs=PeerSize
+          IF ((inp_lib.eq.io_pio).or.(out_lib.eq.io_pio)) THEN
+            nPETs=(NtileI(ng)*NtileJ(ng))+pio_NumIOtasks
+            label='(NtileI * NtileJ) + pio_NumIOtasks ='
+          ELSE
+            nPETs=(NtileI(ng)*NtileJ(ng))
+            label='NtileI * NtileJ ='
+          END IF
 # endif
           IF (nPETs.ne.maxPETs) THEN
             WRITE (out,80) ng, TRIM(label), nPETS, maxPETs
@@ -4456,6 +4774,10 @@
 #if defined SOLVE3D && (defined FOUR_DVAR || defined PROPAGATOR)
           WRITE (out,200) bvf_bak, 'bvf_bak',                           &
      &          'Background Brunt-Vaisala frequency squared (1/s2).'
+#endif
+#ifdef TIDE_GENERATING_FORCES
+          WRITE (out,170) Lnodal, 'Lnodal',                             &
+     &          'Switch to apply a 18.5-year lunar nodal correction.'
 #endif
           WRITE (out,140) dstart, 'dstart',                             &
      &          'Time-stamp assigned to model initialization (days).'
@@ -5100,7 +5422,7 @@
      &         'Hout(idSrad)',                                          &
      &         'Write out shortwave radiation flux.'
 # endif
-# ifdef BULK_FLUXES
+# if defined BULK_FLUXES || defined FRC_COUPLING
             IF (Hout(idLrad,ng)) WRITE (out,170) Hout(idLrad,ng),       &
      &         'Hout(idLrad)',                                          &
      &         'Write out longwave radiation flux.'
@@ -5110,10 +5432,12 @@
             IF (Hout(idShea,ng)) WRITE (out,170) Hout(idShea,ng),       &
      &         'Hout(idShea)',                                          &
      &         'Write out sensible heat flux.'
-#  ifdef EMINUSP
+#  if defined EMINUSP || defined FRC_COUPLING
             IF (Hout(idEmPf,ng)) WRITE (out,170) Hout(idEmPf,ng),       &
      &         'Hout(idEmPf)',                                          &
      &         'Write out E-P flux.'
+#  endif
+#  ifdef EMINUSP
             IF (Hout(idevap,ng)) WRITE (out,170) Hout(idevap,ng),       &
      &         'Hout(idevap)',                                          &
      &         'Write out evaporation rate.'
@@ -5413,7 +5737,7 @@
      &         'Qout(idSrad)',                                          &
      &         'Write out shortwave radiation flux.'
 # endif
-# ifdef BULK_FLUXES
+# if defined BULK_FLUXES || defined FRC_COUPLING
             IF (Qout(idLrad,ng)) WRITE (out,170) Qout(idLrad,ng),       &
      &         'Qout(idLrad)',                                          &
      &         'Write out longwave radiation flux.'
@@ -5423,10 +5747,12 @@
             IF (Qout(idShea,ng)) WRITE (out,170) Qout(idShea,ng),       &
      &         'Qout(idShea)',                                          &
      &         'Write out sensible heat flux.'
-#  ifdef EMINUSP
+#  if defined EMINUSP || defined FRC_COUPLING
             IF (Qout(idEmPf,ng)) WRITE (out,170) Qout(idEmPf,ng),       &
      &         'Qout(idEmPf)',                                          &
      &         'Write out E-P flux.'
+#  endif
+#  ifdef EMINUSP
             IF (Qout(idevap,ng)) WRITE (out,170) Qout(idevap,ng),       &
      &         'Qout(idevap)',                                          &
      &         'Write out evaporation rate.'
@@ -6023,6 +6349,97 @@
 # endif
           END IF
 #endif
+          WRITE (out,'(1x)')
+          IF (inp_lib.eq.io_nf90) THEN
+            WRITE (out,120) inp_lib, 'inp_lib',                         &
+     &            'Using standard NetCDF library for input files.'
+#if defined PIO_LIB && defined DISTRIBUTE
+          ELSE IF (inp_lib.eq.io_pio) THEN
+            WRITE (out,120) inp_lib, 'inp_lib',                         &
+     &            'Using Parallel-IO (PIO) library for input files.'
+#endif
+          END IF
+          IF (out_lib.eq.io_nf90) THEN
+            WRITE (out,120) out_lib, 'out_lib',                         &
+     &            'Using standard NetCDF library for output files.'
+#if defined PIO_LIB && defined DISTRIBUTE
+          ELSE IF (inp_lib.eq.io_pio) THEN
+            WRITE (out,120) out_lib, 'out_lib',                         &
+     &            'Using Parallel-IO (PIO) library for output files.'
+#endif
+          END IF
+#if defined PIO_LIB && defined DISTRIBUTE
+          SELECT CASE (pio_method)
+            CASE (0)
+              text='Parallel read and write of PnetCDF files (CDF-5).'
+            CASE (PIO_iotype_pnetcdf)
+              text='Parallel read and write of PnetCDF files (NetCDF3).'
+            CASE (PIO_iotype_netcdf)
+              text='Serial read and write of NetCDF3 files.'
+            CASE (PIO_iotype_netcdf4c)
+              text='Parallel read and serial write of compressed '//    &
+     &             'NetCDF4 (HDF5) files.'
+            CASE (PIO_iotype_netcdf4p)
+              text='Parallel read and write of NETCDF4 (HDF5) files.'
+          END SELECT
+
+          WRITE (out,120) pio_method, 'pio_method', TRIM(text)
+
+          WRITE (out,120) pio_NumIOtasks, 'pio_NumIOtasks',             &
+     &          'Number of mpi-processors used for I/O.'
+
+          WRITE (out,120) pio_stride, 'pio_stride',                     &
+     &          'Stride step in the mpi-rank between I/O tasks.'
+
+          WRITE (out,120) pio_base, 'pio_base',                         &
+     &          'Offset for the first I/O task.'
+
+          WRITE (out,120) pio_aggregator, 'pio_aggregator',             &
+     &          'Number of mpi-aggregators for intra-communications.'
+
+          SELECT CASE (pio_rearranger)
+            CASE (PIO_rearr_box)
+              text='Box rearrangement method.'
+            CASE (PIO_rearr_subset)
+              text='Subset rearrangement method.'
+          END SELECT
+          WRITE (out,120) pio_rearranger, 'pio_rearranger', TRIM(text)
+
+          SELECT CASE (pio_rearr_comm)
+            CASE (PIO_rearr_comm_p2p)
+              text='Point-to-Point rearranger communications.'
+            CASE (PIO_rearr_comm_coll)
+              text='Collective rearranger communications.'
+          END SELECT
+          WRITE (out,120) pio_rearr_comm, 'pio_rearr_comm', TRIM(text)
+
+          SELECT CASE (pio_rearr_fcd)
+            CASE (PIO_rearr_comm_fc_2d_enable)
+              text='Enabled C2I flow control, and vice versa.'
+            CASE (PIO_rearr_comm_fc_1d_comp2io)
+              text='Enabled C2I flow control only.'
+            CASE (PIO_rearr_comm_fc_1d_io2comp)
+              text='Enabled I2C flow control only.'
+            CASE (PIO_rearr_comm_fc_2d_disable)
+              text='Disabled flow control'
+          END SELECT
+          WRITE (out,120) pio_rearr_fcd, 'pio_rearr_fcd', TRIM(text)
+
+          WRITE (out,170) pio_rearr_C2I_HS, 'pio_rearr_C2I_HS',         &
+     &          'Enabled C2I rearranger handshake.'
+          WRITE (out,170) pio_rearr_I2C_HS, 'pio_rearr_I2C_HS',         &
+     &          'Enabled I2C rearranger handshake.'
+
+          WRITE (out,170) pio_rearr_C2I_iS, 'pio_rearr_C2I_iS',         &
+     &          'Enabled C2I rearranger mpi-Isends.'
+          WRITE (out,170) pio_rearr_I2C_iS, 'pio_rearr_I2C_iS',         &
+     &          'Enabled I2C rearranger mpi-Isends.'
+
+          WRITE (out,120) pio_rearr_C2I_PR, 'pio_rearr_C2I_PR',         &
+     &          'Maximum C2I rearranger pending requests.'
+          WRITE (out,120) pio_rearr_I2C_PR, 'pio_rearr_I2C_PR',         &
+     &          'Maximum I2C rearranger pending requests.'
+#endif
 #if defined HDF5 && defined DEFLATE
           WRITE (out,120) shuffle, 'shuffle',                           &
      &          'NetCDF-4/HDF5 file format shuffle filer flag.'
@@ -6031,11 +6448,15 @@
           WRITE (out,120) deflate_level, 'deflate_level',               &
      &          'NetCDF-4/HDF5 file format deflate level parameter.'
 #endif
+        END DO
+      END IF
 !
 !-----------------------------------------------------------------------
 !  Report output/input files and check availability of input files.
 !-----------------------------------------------------------------------
 !
+      DO ng=1,Ngrids
+        IF (Master.and.Lwrite) THEN
           WRITE (out,220)
 #if !defined CORRELATION
 # if defined FOUR_DVAR || defined ENKF_RESTART
@@ -6124,46 +6545,64 @@
      &                    TRIM(Iname)
 # endif
 #endif
+        END IF
 #ifndef ANA_GRID
-          fname=GRD(ng)%name
-          IF (.not.find_file(ng, fname, 'GRDNAME')) GO TO 30
-          WRITE (out,230) '                 Input Grid File:  ',        &
-     &                    TRIM(fname)
+        fname=GRD(ng)%name
+        IF (.not.find_file(ng, out, fname, 'GRDNAME')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '                 Input Grid File:  ', TRIM(fname)
+        END IF
 #endif
 #if !defined CORRELATION
 # ifdef NESTING
-          fname=NGCname
-          IF (.not.find_file(ng, fname, 'NGCNAME')) GO TO 30
-          WRITE (out,230) '  Nesting grid connectivity File:  ',        &
-     &                    TRIM(fname)
+        fname=NGCname
+        IF (.not.find_file(ng, out, fname, 'NGCNAME')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '  Nesting grid connectivity File:  ', TRIM(fname)
+        END IF
 # endif
 #endif
 #ifdef INI_FILE
 # ifdef NONLINEAR
-          fname=INI(ng)%name
-          IF (.not.find_file(ng, fname, 'ININAME')) GO TO 30
-          WRITE (out,230) '    Input Nonlinear Initial File:  ',        &
-     &                    TRIM(fname)
+        fname=INI(ng)%name
+        IF (.not.find_file(ng, out, fname, 'ININAME')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+            '    Input Nonlinear Initial File:  ', TRIM(fname)
+        END IF
 # endif
 # if !defined CORRELATION
 #  if defined TANGENT && \
      !(defined FOUR_DVAR         || defined I4DVAR_ANA_SENSITIVITY || \
-       defined OPT_OBSERVATIONS  || defined SANITY_CHECK           || \
-       defined SENSITIVITY_4DVAR || defined TLM_CHECK)
-          fname=ITL(ng)%name
-          IF (.not.find_file(ng, fname, 'ITLNAME')) GO TO 30
-          WRITE (out,230) '      Input Tangent Initial File:  ',        &
-     &                    TRIM(fname)
+       defined JEDI              || defined OPT_OBSERVATIONS       || \
+       defined SANITY_CHECK      || defined SENSITIVITY_4DVAR      || \
+       defined TLM_CHECK)
+        fname=ITL(ng)%name
+        IF (.not.find_file(ng, out, fname, 'ITLNAME')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '      Input Tangent Initial File:  ', TRIM(fname)
+        END IF
 #  endif
 #  if defined WEAK_CONSTRAINT          && \
     !(defined RBL4DVAR                 || \
       defined RBL4DVAR_ANA_SENSITIVITY || \
       defined RBL4DVAR_FCT_SENSITIVITY || \
+      defined R_SYMMETRY               || \
       defined SP4DVAR)
-          fname=IRP(ng)%name
-          IF (.not.find_file(ng, fname, 'IRPNAME')) GO TO 30
-          WRITE (out,230) '  Input Representer Initial File:  ',        &
-     &                    TRIM(fname)
+        fname=IRP(ng)%name
+        IF (.not.find_file(ng, out, fname, 'IRPNAME')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '  Input Representer Initial File:  ', TRIM(fname)
+        END IF
 #  endif
 #  if defined ADJOINT && \
      !(defined AD_SENSITIVITY         || defined FOUR_DVAR         || \
@@ -6172,166 +6611,216 @@
        defined SANITY_CHECK           || defined SENSITIVITY_4DVAR || \
        defined SO_SEMI                || defined STOCHASTIC_OPT    || \
        defined HESSIAN_SV             || defined HESSIAN_SO        || \
-       defined HESSIAN_FSV)
-          fname=IAD(ng)%name
-          IF (.not.find_file(ng, fname, 'IADNAME')) GO TO 30
-          WRITE (out,230) '      Input Adjoint Initial File:  ',        &
-     &                    TRIM(fname)
+       defined HESSIAN_FSV            || defined JEDI)
+        fname=IAD(ng)%name
+        IF (.not.find_file(ng, out, fname, 'IADNAME')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '      Input Adjoint Initial File:  ', TRIM(fname)
+        END IF
 #  endif
 # endif
 #endif
 #if !defined CORRELATION
 # ifndef ANA_PSOURCE
-          IF (LuvSrc(ng).or.LwSrc(ng).or.(ANY(LtracerSrc(:,ng)))) THEN
-            fname=SSF(ng)%name
-            IF (.not.find_file(ng, fname, 'SSFNAME')) GO TO 30
-            WRITE (out,230) '        Input Sources/Sinks File:  ',      &
-     &                      TRIM(fname)
+        IF (LuvSrc(ng).or.LwSrc(ng).or.(ANY(LtracerSrc(:,ng)))) THEN
+          fname=SSF(ng)%name
+          IF (.not.find_file(ng, out, fname, 'SSFNAME')) THEN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          ELSE
+            IF (Master.and.Lwrite) WRITE (out,230)                      &
+     &        '        Input Sources/Sinks File:  ', TRIM(fname)
           END IF
+        END IF
 # endif
 # if defined SSH_TIDES || defined UV_TIDES
-          IF (ng.eq.1) THEN               ! only tidal forcing on grid 1
-            fname=TIDE(ng)%name
-            IF (.not.find_file(ng, fname, 'TIDENAME')) GO TO 30
-            WRITE (out,230) '              Tidal Forcing File:  ',      &
-     &                      TRIM(fname)
+        IF (ng.eq.1) THEN                 ! only tidal forcing on grid 1
+          fname=TIDE(ng)%name
+          IF (.not.find_file(ng, out, fname, 'TIDENAME')) THEN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          ELSE
+            IF (Master.and.Lwrite) WRITE (out,230)                      &
+     &        '              Tidal Forcing File:  ', TRIM(fname)
           END IF
+        END IF
 # endif
 # ifdef FRC_FILE
-          DO i=1,nFfiles(ng)
-            DO ifile=1,FRC(i,ng)%Nfiles
-              fname=FRC(i,ng)%files(ifile)
-              IF (.not.find_file(ng, fname, 'FRCNAME')) GO TO 30
+        DO i=1,nFfiles(ng)
+          DO ifile=1,FRC(i,ng)%Nfiles
+            fname=FRC(i,ng)%files(ifile)
+            IF (.not.find_file(ng, out, fname, 'FRCNAME')) THEN
+              IF (FoundError(exit_flag, NoError, __LINE__, MyFile))     &
+     &          RETURN
+            ELSE
               IF (ifile.eq.1) THEN
-                WRITE (out,310) '           Input Forcing File ', i,    &
-     &                          ':  ', TRIM(fname)
+                IF (Master.and.Lwrite) WRITE (out,310)                  &
+     &            '           Input Forcing File ', i,':  ', TRIM(fname)
               ELSE
-                WRITE (out,'(37x,a)') TRIM(fname)
+                IF (Master.and.Lwrite) WRITE (out,'(37x,a)') TRIM(fname)
               END IF
-            END DO
-          END DO
-# endif
-          DO i=1,nCLMfiles(ng)
-            IF (CLM_FILE(ng)) THEN
-              DO ifile=1,CLM(i,ng)%Nfiles
-                fname=CLM(i,ng)%files(ifile)
-                IF (.not.find_file(ng, fname, 'CLMNAME')) GO TO 30
-                IF (ifile.eq.1) THEN
-                  WRITE (out,310) '       Input Climatology File ', i,  &
-     &                            ':  ', TRIM(fname)
-                ELSE
-                  WRITE (out,'(37x,a)') TRIM(fname)
-                END IF
-              END DO
             END IF
           END DO
-# ifndef ANA_NUDGCOEF
-          IF (LnudgeM2CLM(ng).or.LnudgeM3CLM(ng).or.                    &
-     &        (ANY(LnudgeTCLM(:,ng)))) THEN
-            fname=NUD(ng)%name
-            IF (.not.find_file(ng, fname, 'NUDNAME')) GO TO 30
-            WRITE (out,230) '   Input Nudge Coefficients File:  ',      &
-     &                      TRIM(fname)
-          END IF
+        END DO
 # endif
-# if defined FORWARD_READ && !(defined FOUR_DVAR || defined PICARD_TEST)
-          DO ifile=1,FWD(ng)%Nfiles
-            fname=FWD(ng)%files(ifile)
-            IF (.not.find_file(ng, fname, 'FWDNAME')) GO TO 30
+        DO i=1,nCLMfiles(ng)
+          IF (CLM_FILE(ng)) THEN
+            DO ifile=1,CLM(i,ng)%Nfiles
+              fname=CLM(i,ng)%files(ifile)
+              IF (.not.find_file(ng, out, fname, 'CLMNAME')) THEN
+                IF (FoundError(exit_flag, NoError, __LINE__, MyFile))   &
+     &            RETURN
+              ELSE
+                IF (ifile.eq.1) THEN
+                  IF (Master.and.Lwrite) WRITE (out,310)                &
+     &              '       Input Climatology File ',i,':  ',TRIM(fname)
+                ELSE
+                    IF (Master.and.Lwrite) WRITE (out,'(37x,a)')        &
+     &                                           TRIM(fname)
+                END IF
+              END IF
+            END DO
+          END IF
+        END DO
+# ifndef ANA_NUDGCOEF
+        IF (LnudgeM2CLM(ng).or.LnudgeM3CLM(ng).or.                      &
+     &     (ANY(LnudgeTCLM(:,ng)))) THEN
+          fname=NUD(ng)%name
+          IF (.not.find_file(ng, out, fname, 'NUDNAME')) THEN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          ELSE
+            IF (Master.and.Lwrite) WRITE (out,230)                      &
+     &        '   Input Nudge Coefficients File:  ', TRIM(fname)
+          END IF
+        END IF
+# endif
+# if defined FORWARD_READ && \
+   !(defined FOUR_DVAR    || defined JEDI || defined PICARD_TEST)
+        DO ifile=1,FWD(ng)%Nfiles
+          fname=FWD(ng)%files(ifile)
+          IF (.not.find_file(ng, out, fname, 'FWDNAME')) THEN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          ELSE
             IF (ifile.eq.1) THEN
-              WRITE (out,230) '        Input Forward State File:  ',    &
-     &                        TRIM(fname)
+              IF (Master.and.Lwrite) WRITE (out,230)                    &
+     &          '        Input Forward State File:  ', TRIM(fname)
             ELSE
               WRITE (out,'(37x,a)') TRIM(fname)
             END IF
-          END DO
+          END IF
+        END DO
 # endif
 # if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
      defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
      defined SO_SEMI
 #  ifndef OBS_SPACE
-          fname=ADS(ng)%name
-          IF (.not.find_file(ng, fname, 'ADSNAME')) GO TO 30
-          WRITE (out,230) '  Input Adjoint Sensitivity File:  ',        &
-     &                    TRIM(fname)
+        fname=ADS(ng)%name
+        IF (.not.find_file(ng, out, fname, 'ADSNAME')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '  Input Adjoint Sensitivity File:  ', TRIM(fname)
+        END IF
 #  endif
 # endif
 !
-          IF (ObcData(ng)) THEN
-            DO i=1,nBCfiles(ng)
-              DO ifile=1,BRY(i,ng)%Nfiles
-                fname=BRY(i,ng)%files(ifile)
-                IF (.not.find_file(ng, fname, 'BRYNAME')) GO TO 30
+        IF (ObcData(ng)) THEN
+          DO i=1,nBCfiles(ng)
+            DO ifile=1,BRY(i,ng)%Nfiles
+              fname=BRY(i,ng)%files(ifile)
+              IF (.not.find_file(ng, out, fname, 'BRYNAME')) THEN
+                IF (FoundError(exit_flag, NoError, __LINE__, MyFile))   &
+     &            RETURN
+              ELSE
                 IF (ifile.eq.1) THEN
-                  WRITE (out,310) '  Input Lateral Boundary File ', i,  &
-     &                            ':  ', TRIM(fname)
+                  IF (Master.and.Lwrite) WRITE (out,310)                &
+     &              '  Input Lateral Boundary File ',  i, ':  ',        &
+     &              TRIM(fname)
                 ELSE
-                  WRITE (out,'(37x,a)') TRIM(fname)
+                  IF (Master.and.Lwrite) WRITE (out,'(37x,a)')          &
+     &                                         TRIM(fname)
                 END IF
-              END DO
+              END IF
             END DO
-          END IF
+          END DO
+        END IF
 # ifdef STATIONS
-          fname=sposnam
-          IF (.not.find_file(ng, fname, 'SPOSNAM')) GO TO 30
-          WRITE (out,230) '          Station positions File:  ',        &
-     &                    TRIM(fname)
+        fname=sposnam
+        IF (.not.find_file(ng, out, fname, 'SPOSNAM')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '          Station positions File:  ', TRIM(fname)
+        END IF
 # endif
 #endif
 #ifdef FOUR_DVAR
-          fname=aparnam
-          IF (.not.find_file(ng, fname, 'APARNAM')) GO TO 30
-          WRITE (out,230) '    Assimilation Parameters File:  ',        &
-     &                    TRIM(fname)
+        fname=aparnam
+        IF (.not.find_file(ng, out, fname, 'APARNAM')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '    Assimilation Parameters File:  ', TRIM(fname)
+        END IF
 #endif
 #if !defined CORRELATION
 # ifdef FLOATS
-          fname=fposnam
-          IF (.not.find_file(ng, fname, 'FPOSNAM')) GO TO 30
-          WRITE (out,230) '   Initial Floats Positions File:  ',        &
-     &                    TRIM(fname)
+        fname=fposnam
+        IF (.not.find_file(ng, out, fname, 'FPOSNAM')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '   Initial Floats Positions File:  ', TRIM(fname)
+        END IF
 # endif
 # ifdef BIOLOGY
-          fname=bparnam
-          IF (.not.find_file(ng, fname, 'BPARNAM')) GO TO 30
-          WRITE (out,230) '         Biology Parameters File:  ',        &
-     &                    TRIM(fname)
+        fname=bparnam
+        IF (.not.find_file(ng, out, fname, 'BPARNAM')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '         Biology Parameters File:  ', TRIM(fname)
+        END IF
 # endif
 #endif
-          fname=varname
-          IF (.not.find_file(ng, fname, 'VARNAME')) GO TO 30
-          WRITE (out,230) 'ROMS I/O variables Metadata File:  ',        &
-     &                    TRIM(fname)
-          GO TO 40
-  30      IF (Master) THEN
-            IF (LEN_TRIM(fname).eq.0) THEN
-              WRITE (out,270) ng, 'Oops unassigned file name. '//       &
-     &                            'Check standard input script...'
-            ELSE
-              WRITE (out,270) ng, TRIM(fname)
-            END IF
-          END IF
-          exit_flag=4
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
-  40      CONTINUE
-        END DO
-        IF (Nuser.gt.0) THEN
-          WRITE (out,230) '          Input/Output USER File:  ',        &
-     &                    TRIM(USRname)
+        fname=varname
+        IF (.not.find_file(ng, out, fname, 'VARNAME')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      'ROMS I/O variables Metadata File:  ', TRIM(fname)
         END IF
+      END DO
+      IF (Nuser.gt.0) THEN
+        IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &    '          Input/Output USER File:  ',  TRIM(USRname)
+      END IF
 !
 !-----------------------------------------------------------------------
 !  Report generic USER parameters.
 !-----------------------------------------------------------------------
 !
-        IF (Nuser.gt.0) THEN
+      IF (Nuser.gt.0) THEN
+        IF (Master.and.Lwrite) THEN
           WRITE (out,240)
           DO i=1,Nuser
             WRITE (out,250) user(i), i, i
           END DO
         END IF
       END IF
+
+#if !defined ANA_TIDES              && \
+    (defined TIDE_GENERATING_FORCES || \
+     defined SSH_TIDES              || defined UV_TIDES)
+!
+!-----------------------------------------------------------------------
+!  Check and report tidal reference date for zero phase.
+!-----------------------------------------------------------------------
+!
+      DO ng=1,Ngrids
+        CALL tides_date (ng)
+      END DO
+#endif
 
 #if defined WEAK_CONSTRAINT   && \
    (defined POSTERIOR_EOFS    || defined POSTERIOR_ERROR_F || \
@@ -6374,7 +6863,7 @@
         IF (ABS(RunTimeSec(1)-RunTimeSec(ng)).ne.0.0_r8) THEN
           IF (Master) THEN
             WRITE (out,340)  1, RunTimeSec( 1), RunTimeDay( 1),         &
-    &                       ng, RunTimeSec(ng), RunTimeDay(ng)
+     &                       ng, RunTimeSec(ng), RunTimeDay(ng)
           END IF
           exit_flag=5
           RETURN
@@ -6424,6 +6913,16 @@
      &        /,1x,'Compiler command  : ',a,                            &
      &        /,1x,'Compiler flags    : ',a,                            &
 #ifdef DISTRIBUTE
+# if defined PIO_LIB          && \
+    (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)
+     &        /,1x,'Peer Communicator : ',i0,',  PET size = ',i0,       &
+     &        /,1x,'OCN  Communicator : ',i0,',  PET size = ',i0,       &
+     &        /,1x,'I/O  Communicator : ',i0,',  PET size = ',i0,       &
+     &        2x,'(Peer Ranks: ',a,')',                                 &
+#  ifdef ASYNCHRONOUS_SCORPIO
+     &        /,1x,'InterCommunicator : ',i0,                           &
+#  endif
+# endif
 # ifdef DISJOINTED
      &        /,1x,'Full Communicator : ',i0,',  PET size = ',i0,       &
      &         ',  Disjointed Subgroups = ',i0,                         &
@@ -6433,24 +6932,24 @@
      &        /,1x,'Task Communicator : ',i0,',  PET size = ',i0,       &
      &         ',  Color Range = ',i0,' to ',i0,                        &
 #  endif
-              /,                                                        &
-# else
+# endif
+# if !(defined PIO_LIB           && \
+       (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)) && \
+     !defined DISJOINTED
      &        /,1x,'OCN Communicator  : ',i0,',  PET size = ',i0,/,     &
 # endif
      &        /,1x,'Input Script      : ',a,/,                          &
-#else
-     &        /,                                                        &
 #endif
 #ifdef GIT_URL
-     &        /,1x,'GIT Root URL     : ',a,                             &
-     &        /,1x,'GIT Revision     : ',a,                             &
+     &        /,1x,'GIT Root URL      : ',a,                            &
+     &        /,1x,'GIT Revision      : ',a,                            &
 #endif
-     &        /,1x,'SVN Root URL     : ',a,                             &
-     &        /,1x,'SVN Revision     : ',a,/,                           &
-     &        /,1x,'Local Root       : ',a,                             &
-     &        /,1x,'Header Dir       : ',a,                             &
-     &        /,1x,'Header file      : ',a,                             &
-     &        /,1x,'Analytical Dir   : ',a)
+     &        /,1x,'SVN Root URL      : ',a,                            &
+     &        /,1x,'SVN Revision      : ',a,/,                          &
+     &        /,1x,'Local Root        : ',a,                            &
+     &        /,1x,'Header Dir        : ',a,                            &
+     &        /,1x,'Header file       : ',a,                            &
+     &        /,1x,'Analytical Dir    : ',a)
   70  FORMAT (/,' Resolution, Grid ',i2.2,': ',i0,'x',i0,'x',i0,        &
      &        ',',2x,'Parallel Nodes: ',i0,',',2x,'Tiling: ',i0,        &
      &        'x',i0)
@@ -6492,8 +6991,6 @@
      &        i4,/,15x,a)
  265  FORMAT (/,' READ_PHYPAR - Invalid input parameter, ',a,           &
      &        1p,e11.4,/,15x,a)
- 270  FORMAT (/,' READ_PHYPAR - Grid ',i2.2,                            &
-     &        ', could not find input file:  ',a)
  280  FORMAT (/,' READ_PHYPAR - Variable index not yet loaded, ', a)
  290  FORMAT (/,' READ_PHYPAR - Invalid dimension parameter, ',a,i0,    &
      &        /,15x,a)

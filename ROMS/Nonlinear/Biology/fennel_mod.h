@@ -1,7 +1,8 @@
+      MODULE mod_biology
 !
-!svn $Id: fennel_mod.h 1038 2020-09-29 01:54:25Z arango $
+!svn $Id: fennel_mod.h 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -160,9 +161,9 @@
       real(r8), allocatable :: ZooMin(:)             ! mmol_N/m3
       real(r8), allocatable :: ZooMR(:)              ! 1/day
       real(r8), allocatable :: pCO2air(:)            ! ppmv
-
+!
       CONTAINS
-
+!
       SUBROUTINE initialize_biology
 !
 !=======================================================================
@@ -524,6 +525,8 @@
       iOxyg=ic+1
       ic=ic+1
 # endif
-
+!
       RETURN
       END SUBROUTINE initialize_biology
+
+      END MODULE mod_biology

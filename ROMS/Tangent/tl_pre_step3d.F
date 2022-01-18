@@ -3,9 +3,9 @@
 #if defined TANGENT && defined SOLVE3D
 # define NEUMANN
 !
-!svn $Id: tl_pre_step3d.F 1029 2020-07-11 02:11:09Z arango $
+!svn $Id: tl_pre_step3d.F 1103 2022-01-13 03:38:35Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -59,10 +59,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iTLM, 22, __LINE__, __FILE__)
+      CALL wclock_on (ng, iTLM, 22, __LINE__, MyFile)
 # endif
       CALL tl_pre_step3d_tile (ng, tile,                                &
      &                         LBi, UBi, LBj, UBj,                      &
@@ -124,9 +127,9 @@
      &                         OCEAN(ng) % v,                           &
      &                         OCEAN(ng) % tl_v)
 # ifdef PROFILE
-      CALL wclock_off (ng, iTLM, 22, __LINE__, __FILE__)
+      CALL wclock_off (ng, iTLM, 22, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE tl_pre_step3d
 !
@@ -383,19 +386,19 @@
             tl_FX(i,j)=tl_z_w(i,j,N(ng))-tl_z_w(i,j,k)
           END DO
         END DO
-!>      CALL lmd_swfrac_tile (ng, tile,                                 &
-!>   &                        LBi, UBi, LBj, UBj,                       &
-!>   &                        IminS, ImaxS, JminS, JmaxS,               &
-!>   &                        -1.0_r8, FX, FE)
-!>
+!^      CALL lmd_swfrac_tile (ng, tile,                                 &
+!^   &                        LBi, UBi, LBj, UBj,                       &
+!^   &                        IminS, ImaxS, JminS, JmaxS,               &
+!^   &                        -1.0_r8, FX, FE)
+!^
         CALL tl_lmd_swfrac_tile (ng, tile,                              &
      &                           LBi, UBi, LBj, UBj,                    &
      &                           IminS, ImaxS, JminS, JmaxS,            &
      &                           -1.0_r8, FX, tl_FX, tl_FE)
         DO j=Jstr,Jend
           DO i=Istr,Iend
-!>          swdk(i,j,k)=FE(i,j)
-!>
+!^          swdk(i,j,k)=FE(i,j)
+!^
             tl_swdk(i,j,k)=tl_FE(i,j)
           END DO
         END DO
@@ -418,10 +421,10 @@
 !
             DO j=Jstr,Jend
               DO i=Istr,Iend+1
-!>              FX(i,j)=Huon(i,j,k)*                                    &
-!>   &                  0.5_r8*(t(i-1,j,k,nstp,itrc)+                   &
-!>   &                          t(i  ,j,k,nstp,itrc))
-!>
+!^              FX(i,j)=Huon(i,j,k)*                                    &
+!^   &                  0.5_r8*(t(i-1,j,k,nstp,itrc)+                   &
+!^   &                          t(i  ,j,k,nstp,itrc))
+!^
                 tl_FX(i,j)=0.5_r8*                                      &
      &                     (tl_Huon(i,j,k)*                             &
      &                      (t(i-1,j,k,nstp,itrc)+                      &
@@ -433,10 +436,10 @@
             END DO
             DO j=Jstr,Jend+1
               DO i=Istr,Iend
-!>              FE(i,j)=Hvom(i,j,k)*                                    &
-!>   &                  0.5_r8*(t(i,j-1,k,nstp,itrc)+                   &
-!>   &                          t(i,j  ,k,nstp,itrc))
-!>
+!^              FE(i,j)=Hvom(i,j,k)*                                    &
+!^   &                  0.5_r8*(t(i,j-1,k,nstp,itrc)+                   &
+!^   &                          t(i,j  ,k,nstp,itrc))
+!^
                 tl_FE(i,j)=0.5_r8*                                      &
      &                     (tl_Hvom(i,j,k)*                             &
      &                      (t(i,j-1,k,nstp,itrc)+                      &
@@ -460,9 +463,9 @@
      &                  tl_Huon(i,j,k)
                 tl_cff2=(0.5_r8+SIGN(0.5_r8,-Huon(i,j,k)))*             &
      &                  tl_Huon(i,j,k)
-!>              FX(i,j)=cff1*t(i-1,j,k,nstp,itrc)+                      &
-!>   &                  cff2*t(i  ,j,k,nstp,itrc)
-!>
+!^              FX(i,j)=cff1*t(i-1,j,k,nstp,itrc)+                      &
+!^   &                  cff2*t(i  ,j,k,nstp,itrc)
+!^
                 tl_FX(i,j)=tl_cff1*t(i-1,j,k,nstp,itrc)+                &
      &                     cff1*tl_t(i-1,j,k,nstp,itrc)+                &
      &                     tl_cff2*t(i  ,j,k,nstp,itrc)+                &
@@ -477,9 +480,9 @@
      &                  tl_Hvom(i,j,k)
                 tl_cff2=(0.5_r8+SIGN(0.5_r8,-Hvom(i,j,k)))*             &
      &                  tl_Hvom(i,j,k)
-!>              FE(i,j)=cff1*t(i,j-1,k,nstp,itrc)+                      &
-!>   &                  cff2*t(i,j  ,k,nstp,itrc)
-!>
+!^              FE(i,j)=cff1*t(i,j-1,k,nstp,itrc)+                      &
+!^   &                  cff2*t(i,j  ,k,nstp,itrc)
+!^
                 tl_FE(i,j)=tl_cff1*t(i,j-1,k,nstp,itrc)+                &
      &                     cff1*tl_t(i,j-1,k,nstp,itrc)+                &
      &                     tl_cff2*t(i,j  ,k,nstp,itrc)+                &
@@ -556,12 +559,12 @@
             DO j=Jstr,Jend
               DO i=Istr,Iend+1
                 IF (tl_Hadvection(itrc,ng)%UPSTREAM3) THEN
-!>                FX(i,j)=Huon(i,j,k)*0.5_r8*                           &
-!>   &                    (t(i-1,j,k,nstp,itrc)+                        &
-!>   &                     t(i  ,j,k,nstp,itrc))-                       &
-!>   &                    cff1*(curv(i-1,j)*MAX(Huon(i,j,k),0.0_r8)+    &
-!>   &                          curv(i  ,j)*MIN(Huon(i,j,k),0.0_r8))
-!>
+!^                FX(i,j)=Huon(i,j,k)*0.5_r8*                           &
+!^   &                    (t(i-1,j,k,nstp,itrc)+                        &
+!^   &                     t(i  ,j,k,nstp,itrc))-                       &
+!^   &                    cff1*(curv(i-1,j)*MAX(Huon(i,j,k),0.0_r8)+    &
+!^   &                          curv(i  ,j)*MIN(Huon(i,j,k),0.0_r8))
+!^
                   tl_FX(i,j)=0.5_r8*                                    &
      &                       (tl_Huon(i,j,k)*                           &
      &                        (t(i-1,j,k,nstp,itrc)+                    &
@@ -581,12 +584,12 @@
                 ELSE IF ((tl_Hadvection(itrc,ng)%AKIMA4).or.            &
      &                   (tl_Hadvection(itrc,ng)%CENTERED4).or.         &
      &                   (tl_Hadvection(itrc,ng)%SPLIT_U3)) THEN
-!>                FX(i,j)=Huon(i,j,k)*0.5_r8*                           &
-!>   &                    (t(i-1,j,k,nstp,itrc)+                        &
-!>   &                     t(i  ,j,k,nstp,itrc)-                        &
-!>   &                     cff2*(grad(i  ,j)-                           &
-!>   &                           grad(i-1,j)))
-!>
+!^                FX(i,j)=Huon(i,j,k)*0.5_r8*                           &
+!^   &                    (t(i-1,j,k,nstp,itrc)+                        &
+!^   &                     t(i  ,j,k,nstp,itrc)-                        &
+!^   &                     cff2*(grad(i  ,j)-                           &
+!^   &                           grad(i-1,j)))
+!^
                   tl_FX(i,j)=0.5_r8*                                    &
      &                       (tl_Huon(i,j,k)*                           &
      &                        (t(i-1,j,k,nstp,itrc)+                    &
@@ -663,12 +666,12 @@
             DO j=Jstr,Jend+1
               DO i=Istr,Iend
                 IF (tl_Hadvection(itrc,ng)%UPSTREAM3) THEN
-!>                FE(i,j)=Hvom(i,j,k)*0.5_r8*                           &
-!>   &                    (t(i,j-1,k,nstp,itrc)+                        &
-!>   &                     t(i,j  ,k,nstp,itrc))-                       &
-!>   &                    cff1*(curv(i,j-1)*MAX(Hvom(i,j,k),0.0_r8)+    &
-!>   &                          curv(i,j  )*MIN(Hvom(i,j,k),0.0_r8))
-!>
+!^                FE(i,j)=Hvom(i,j,k)*0.5_r8*                           &
+!^   &                    (t(i,j-1,k,nstp,itrc)+                        &
+!^   &                     t(i,j  ,k,nstp,itrc))-                       &
+!^   &                    cff1*(curv(i,j-1)*MAX(Hvom(i,j,k),0.0_r8)+    &
+!^   &                          curv(i,j  )*MIN(Hvom(i,j,k),0.0_r8))
+!^
                   tl_FE(i,j)=0.5_r8*                                    &
      &                       (tl_Hvom(i,j,k)*                           &
      &                        (t(i,j-1,k,nstp,itrc)+                    &
@@ -688,12 +691,12 @@
                 ELSE IF ((tl_Hadvection(itrc,ng)%AKIMA4).or.            &
      &                   (tl_Hadvection(itrc,ng)%CENTERED4).or.         &
      &                   (tl_Hadvection(itrc,ng)%SPLIT_U3)) THEN
-!>                FE(i,j)=Hvom(i,j,k)*0.5_r8*                           &
-!>   &                    (t(i,j-1,k,nstp,itrc)+                        &
-!>   &                     t(i,j  ,k,nstp,itrc)-                        &
-!>   &                     cff2*(grad(i,j  )-                           &
-!>   &                           grad(i,j-1)))
-!>
+!^                FE(i,j)=Hvom(i,j,k)*0.5_r8*                           &
+!^   &                    (t(i,j-1,k,nstp,itrc)+                        &
+!^   &                     t(i,j  ,k,nstp,itrc)-                        &
+!^   &                     cff2*(grad(i,j  )-                           &
+!^   &                           grad(i,j-1)))
+!^
                   tl_FE(i,j)=0.5_r8*                                    &
      &                       (tl_Hvom(i,j,k)*                           &
      &                        (t(i,j-1,k,nstp,itrc)+                    &
@@ -713,6 +716,9 @@
 !  Apply tracers point sources to the horizontal advection terms,
 !  if any.
 !
+!    Dsrc(is) = 0,  flow across grid cell u-face (positive or negative)
+!    Dsrc(is) = 1,  flow across grid cell v-face (positive or negative)
+!
           IF (LuvSrc(ng)) THEN
             DO is=1,Nsrc(ng)
               Isrc=SOURCES(ng)%Isrc(is)
@@ -721,30 +727,30 @@
      &            ((Jstr.le.Jsrc).and.(Jsrc.le.Jend+1))) THEN
                 IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
                   IF (LtracerSrc(itrc,ng)) THEN
-!>                  FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                    &
-!>   &                            SOURCES(ng)%Tsrc(is,k,itrc)
-!>
+!^                  FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                    &
+!^   &                            SOURCES(ng)%Tsrc(is,k,itrc)
+!^
                     tl_FX(Isrc,Jsrc)=tl_Huon(Isrc,Jsrc,k)*              &
      &                               SOURCES(ng)%Tsrc(is,k,itrc)+       &
      &                               Huon(Isrc,Jsrc,k)*                 &
      &                               SOURCES(ng)%tl_Tsrc(is,k,itrc)
                   ELSE
-!>                  FX(Isrc,Jsrc)=0.0_r8
-!>
+!^                  FX(Isrc,Jsrc)=0.0_r8
+!^
                     tl_FX(Isrc,Jsrc)=0.0_r8
                   END IF
-                ELSE
+                ELSE IF (INT(SOURCES(ng)%Dsrc(is)).eq.1) THEN
                   IF (LtracerSrc(itrc,ng)) THEN
-!>                  FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                    &
-!>   &                            SOURCES(ng)%Tsrc(is,k,itrc)
-!>
+!^                  FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                    &
+!^   &                            SOURCES(ng)%Tsrc(is,k,itrc)
+!^
                     tl_FE(Isrc,Jsrc)=tl_Hvom(Isrc,Jsrc,k)*              &
      &                               SOURCES(ng)%Tsrc(is,k,itrc)+       &
      &                               Hvom(Isrc,Jsrc,k)*                 &
      &                               SOURCES(ng)%tl_Tsrc(is,k,itrc)
                   ELSE
-!>                  FE(Isrc,Jsrc)=0.0_r8
-!>
+!^                  FE(Isrc,Jsrc)=0.0_r8
+!^
                     tl_FE(Isrc,Jsrc)=0.0_r8
                   END IF
                 END IF
@@ -775,12 +781,12 @@
           END IF
           DO j=Jstr,Jend
             DO i=Istr,Iend
-!>            t(i,j,k,3,itrc)=Hz(i,j,k)*(cff1*t(i,j,k,nstp,itrc)+       &
-!>   &                                   cff2*t(i,j,k,nnew,itrc))-      &
-!>   &                        cff*pm(i,j)*pn(i,j)*                      &
-!>   &                        (FX(i+1,j)-FX(i,j)+                       &
-!>   &                         FE(i,j+1)-FE(i,j))
-!>
+!^            t(i,j,k,3,itrc)=Hz(i,j,k)*(cff1*t(i,j,k,nstp,itrc)+       &
+!^   &                                   cff2*t(i,j,k,nnew,itrc))-      &
+!^   &                        cff*pm(i,j)*pn(i,j)*                      &
+!^   &                        (FX(i+1,j)-FX(i,j)+                       &
+!^   &                         FE(i,j+1)-FE(i,j))
+!^
               tl_t(i,j,k,3,itrc)=tl_Hz(i,j,k)*                          &
      &                           (cff1*t(i,j,k,nstp,itrc)+              &
      &                            cff2*t(i,j,k,nnew,itrc))+             &
@@ -815,10 +821,10 @@
           DO k=1,N(ng)
             DO j=Jstr,Jend
               DO i=Istr,Iend
-!>              t(i,j,k,3,iage)=t(i,j,k,3,iage)+                        &
-!>   &                          cff*Hz(i,j,k)*                          &
-!>   &                          t(i,j,k,nnew,inert(itrc))
-!>
+!^              t(i,j,k,3,iage)=t(i,j,k,3,iage)+                        &
+!^   &                          cff*Hz(i,j,k)*                          &
+!^   &                          t(i,j,k,nnew,inert(itrc))
+!^
                 tl_t(i,j,k,3,iage)=tl_t(i,j,k,3,iage)+                  &
      &                             cff*                                 &
      &                             (Hz(i,j,k)*                          &
@@ -883,13 +889,13 @@
 !
             DO i=Istr,Iend
 #  ifdef NEUMANN
-!>            FC(i,0)=1.5_r8*t(i,j,1,nstp,itrc)
-!>
+!^            FC(i,0)=1.5_r8*t(i,j,1,nstp,itrc)
+!^
               tl_FC(i,0)=1.5_r8*tl_t(i,j,1,nstp,itrc)
               CF(i,1)=0.5_r8
 #  else
-!>            FC(i,0)=2.0_r8*t(i,j,1,nstp,itrc)
-!>
+!^            FC(i,0)=2.0_r8*t(i,j,1,nstp,itrc)
+!^
               tl_FC(i,0)=2.0_r8*tl_t(i,j,1,nstp,itrc)
               CF(i,1)=1.0_r8
 #  endif
@@ -917,16 +923,16 @@
             END DO
             DO i=Istr,Iend
 #  ifdef NEUMANN
-!>            FC(i,N(ng))=(3.0_r8*t(i,j,N(ng),nstp,itrc)-               &
-!>   &                     FC(i,N(ng)-1))/(2.0_r8-CF(i,N(ng)))
-!>
+!^            FC(i,N(ng))=(3.0_r8*t(i,j,N(ng),nstp,itrc)-               &
+!^   &                     FC(i,N(ng)-1))/(2.0_r8-CF(i,N(ng)))
+!^
               tl_FC(i,N(ng))=(3.0_r8*tl_t(i,j,N(ng),nstp,itrc)-         &
      &                        tl_FC(i,N(ng)-1))/                        &
      &                       (2.0_r8-CF(i,N(ng)))
 #  else
-!>            FC(i,N(ng))=(2.0_r8*t(i,j,N(ng),nstp,itrc)-               &
-!>   &                     FC(i,N(ng)-1))/(1.0_r8-CF(i,N(ng)))
-!>
+!^            FC(i,N(ng))=(2.0_r8*t(i,j,N(ng),nstp,itrc)-               &
+!^   &                     FC(i,N(ng)-1))/(1.0_r8-CF(i,N(ng)))
+!^
               tl_FC(i,N(ng))=(2.0_r8*tl_t(i,j,N(ng),nstp,itrc)-         &
      &                        tl_FC(i,N(ng)-1))/                        &
      &                       (1.0_r8-CF(i,N(ng)))
@@ -934,21 +940,21 @@
             END DO
             DO k=N(ng)-1,0,-1
               DO i=Istr,Iend
-!>              FC(i,k)=FC(i,k)-CF(i,k+1)*FC(i,k+1)
-!>
+!^              FC(i,k)=FC(i,k)-CF(i,k+1)*FC(i,k+1)
+!^
                 tl_FC(i,k)=tl_FC(i,k)-CF(i,k+1)*tl_FC(i,k+1)
-!>              FC(i,k+1)=W(i,j,k+1)*FC(i,k+1)
-!>
+!^              FC(i,k+1)=W(i,j,k+1)*FC(i,k+1)
+!^
                 tl_FC(i,k+1)=tl_W(i,j,k+1)*FC(i,k+1)+                   &
      &                       W(i,j,k+1)*tl_FC(i,k+1)
               END DO
             END DO
             DO i=Istr,Iend
-!>            FC(i,N(ng))=0.0_r8
-!>
+!^            FC(i,N(ng))=0.0_r8
+!^
               tl_FC(i,N(ng))=0.0_r8
-!>            FC(i,0)=0.0_r8
-!>
+!^            FC(i,0)=0.0_r8
+!^
               tl_FC(i,0)=0.0_r8
             END DO
 !
@@ -1071,9 +1077,9 @@
                 cff2=MIN(W(i,j,k),0.0_r8)
                 tl_cff1=(0.5_r8+SIGN(0.5_r8, W(i,j,k)))*tl_W(i,j,k)
                 tl_cff2=(0.5_r8+SIGN(0.5_r8,-W(i,j,k)))*tl_W(i,j,k)
-!>              FC(i,k)=cff1*t(i,j,k  ,nstp,itrc)+                      &
-!>   &                  cff2*t(i,j,k+1,nstp,itrc)
-!>
+!^              FC(i,k)=cff1*t(i,j,k  ,nstp,itrc)+                      &
+!^   &                  cff2*t(i,j,k+1,nstp,itrc)
+!^
                 tl_FC(i,k)=tl_cff1*t(i,j,k  ,nstp,itrc)+                &
      &                     cff1*tl_t(i,j,k  ,nstp,itrc)+                &
      &                     tl_cff2*t(i,j,k+1,nstp,itrc)+                &
@@ -1082,17 +1088,17 @@
             END DO
             DO i=Istr,Iend
 #  ifdef SED_MORPH
-!>            FC(i,0)=W(i,j,0)*t(i,j,1,nstp,itrc)
-!>
+!^            FC(i,0)=W(i,j,0)*t(i,j,1,nstp,itrc)
+!^
               tl_FC(i,0)=tl_W(i,j,0)*t(i,j,1,nstp,itrc)+                &
      &                   W(i,j,0)*tl_t(i,j,1,nstp,itrc)
    else
-!>            FC(i,0)=0.0_r8
-!>
+!^            FC(i,0)=0.0_r8
+!^
               tl_FC(i,0)=0.0_r8
 #  endif
-!>            FC(i,N(ng))=0.0_r8
-!>
+!^            FC(i,N(ng))=0.0_r8
+!^
               tl_FC(i,N(ng))=0.0_r8
             END DO
 !
@@ -1214,10 +1220,10 @@
           DO k=1,N(ng)
             DO i=Istr,Iend
               cff1=cff*pm(i,j)*pn(i,j)
-!>            t(i,j,k,3,itrc)=DC(i,k)*                                  &
-!>   &                        (t(i,j,k,3,itrc)-                         &
-!>   &                         cff1*(FC(i,k)-FC(i,k-1)))
-!>
+!^            t(i,j,k,3,itrc)=DC(i,k)*                                  &
+!^   &                        (t(i,j,k,3,itrc)-                         &
+!^   &                         cff1*(FC(i,k)-FC(i,k-1)))
+!^
               tl_t(i,j,k,3,itrc)=tl_DC(i,k)*                            &
      &                           (t(i,j,k,3,itrc)*Hz(i,j,k)-            &
      &                            cff1*(FC(i,k)-FC(i,k-1)))+            &
@@ -1246,10 +1252,10 @@
             DO i=Istr,Iend
               cff=1.0_r8/(z_r(i,j,k+1)-z_r(i,j,k))
               tl_cff=-cff*cff*(tl_z_r(i,j,k+1)-tl_z_r(i,j,k))
-!>            FC(i,k)=cff3*cff*Akt(i,j,k,ltrc)*                         &
-!>   &                (t(i,j,k+1,nstp,itrc)-                            &
-!>   &                 t(i,j,k  ,nstp,itrc))
-!>
+!^            FC(i,k)=cff3*cff*Akt(i,j,k,ltrc)*                         &
+!^   &                (t(i,j,k+1,nstp,itrc)-                            &
+!^   &                 t(i,j,k  ,nstp,itrc))
+!^
               tl_FC(i,k)=cff3*                                          &
      &                   (cff*(tl_Akt(i,j,k,ltrc)*                      &
      &                         (t(i,j,k+1,nstp,itrc)-                   &
@@ -1273,9 +1279,9 @@
           IF (itrc.le.NAT) THEN
             DO k=1,N(ng)-1
               DO i=Istr,Iend
-!>              FC(i,k)=FC(i,k)-                                        &
-!>   &                  dt(ng)*Akt(i,j,k,itrc)*ghats(i,j,k,itrc)
-!>
+!^              FC(i,k)=FC(i,k)-                                        &
+!^   &                  dt(ng)*Akt(i,j,k,itrc)*ghats(i,j,k,itrc)
+!^
                 tl_FC(i,k)=tl_FC(i,k)-                                  &
      &                     dt(ng)*(tl_Akt(i,j,k,itrc)*                  &
      &                             ghats(i,j,k,itrc)+                   &
@@ -1293,13 +1299,13 @@
           IF (itrc.eq.itemp) THEN
             DO k=1,N(ng)-1
               DO i=Istr,Iend
-!>              FC(i,k)=FC(i,k)+                                        &
-!>   &                  dt(ng)*srflx(i,j)*                              &
+!^              FC(i,k)=FC(i,k)+                                        &
+!^   &                  dt(ng)*srflx(i,j)*                              &
 #   ifdef WET_DRY
-!>   &                  rmask_wet(i,j)*                                 &
+!^   &                  rmask_wet(i,j)*                                 &
 #   endif
-!>   &                  swdk(i,j,k)
-!>
+!^   &                  swdk(i,j,k)
+!^
                 tl_FC(i,k)=tl_FC(i,k)+                                  &
      &                     dt(ng)*srflx(i,j)*                           &
 #   ifdef WET_DRY_NOT_YET
@@ -1314,11 +1320,11 @@
 !  Apply bottom and surface tracer flux conditions.
 !
           DO i=Istr,Iend
-!>          FC(i,0)=dt(ng)*btflx(i,j,itrc)
-!>
+!^          FC(i,0)=dt(ng)*btflx(i,j,itrc)
+!^
             tl_FC(i,0)=dt(ng)*tl_btflx(i,j,itrc)
-!>          FC(i,N(ng))=dt(ng)*stflx(i,j,itrc)
-!>
+!^          FC(i,N(ng))=dt(ng)*stflx(i,j,itrc)
+!^
             tl_FC(i,N(ng))=dt(ng)*tl_stflx(i,j,itrc)
           END DO
 !
@@ -1331,8 +1337,8 @@
      &                Hz(i,j,k)*tl_t(i,j,k,nstp,itrc)
               cff2=FC(i,k)-FC(i,k-1)
               tl_cff2=tl_FC(i,k)-tl_FC(i,k-1)
-!>            t(i,j,k,nnew,itrc)=cff1+cff2
-!>
+!^            t(i,j,k,nnew,itrc)=cff1+cff2
+!^
               tl_t(i,j,k,nnew,itrc)=tl_cff1+tl_cff2
 #  ifdef DIAGNOSTICS_TS
 !!            DiaTwrk(i,j,k,itrc,iTrate)=cff1
@@ -1360,9 +1366,9 @@
      &                  z_r(i,j,k  )-z_r(i-1,j,k  ))
             tl_cff=-cff*cff*(tl_z_r(i,j,k+1)+tl_z_r(i-1,j,k+1)-         &
      &                       tl_z_r(i,j,k  )-tl_z_r(i-1,j,k  ))
-!>          FC(i,k)=cff3*cff*(u(i,j,k+1,nstp)-u(i,j,k,nstp))*           &
-!>   &                       (Akv(i,j,k)+Akv(i-1,j,k))
-!>
+!^          FC(i,k)=cff3*cff*(u(i,j,k+1,nstp)-u(i,j,k,nstp))*           &
+!^   &                       (Akv(i,j,k)+Akv(i-1,j,k))
+!^
             tl_FC(i,k)=cff3*                                            &
      &                 (cff*((tl_u(i,j,k+1,nstp)-tl_u(i,j,k,nstp))*     &
      &                       (Akv(i,j,k)+Akv(i-1,j,k))+                 &
@@ -1377,18 +1383,18 @@
 !
         DO i=IstrU,Iend
 # ifdef BODYFORCE
-!>        FC(i,0)=0.0_r8
-!>
+!^        FC(i,0)=0.0_r8
+!^
           tl_FC(i,0)=0.0_r8
-!>        FC(i,N(ng))=0.0_r8
-!>
+!^        FC(i,N(ng))=0.0_r8
+!^
           tl_FC(i,N(ng))=0.0_r8
 # else
-!>        FC(i,0)=dt(ng)*bustr(i,j)
-!>
+!^        FC(i,0)=dt(ng)*bustr(i,j)
+!^
           tl_FC(i,0)=dt(ng)*tl_bustr(i,j)
-!>        FC(i,N(ng))=dt(ng)*sustr(i,j)
-!>
+!^        FC(i,N(ng))=dt(ng)*sustr(i,j)
+!^
           tl_FC(i,N(ng))=dt(ng)*tl_sustr(i,j)
 # endif
         END DO
@@ -1407,17 +1413,17 @@
 # endif
           DO k=1,N(ng)
             DO i=IstrU,Iend
-!>            cff1=u(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i-1,j,k))
-!>
+!^            cff1=u(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i-1,j,k))
+!^
               tl_cff1=0.5_r8*(tl_u(i,j,k,nstp)*                         &
      &                        (Hz(i,j,k)+Hz(i-1,j,k))+                  &
      &                        u(i,j,k,nstp)*                            &
      &                        (tl_Hz(i,j,k)+tl_Hz(i-1,j,k)))
-!>            cff2=FC(i,k)-FC(i,k-1)
-!>
+!^            cff2=FC(i,k)-FC(i,k-1)
+!^
               tl_cff2=tl_FC(i,k)-tl_FC(i,k-1)
-!>            u(i,j,k,nnew)=cff1+cff2
-!>
+!^            u(i,j,k,nnew)=cff1+cff2
+!^
               tl_u(i,j,k,nnew)=tl_cff1+tl_cff2
 # ifdef DIAGNOSTICS_UV
 !!            DO idiag=1,M3pgrd
@@ -1435,20 +1441,20 @@
 # endif
           DO k=1,N(ng)
             DO i=IstrU,Iend
-!>            cff1=u(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i-1,j,k))
-!>
+!^            cff1=u(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i-1,j,k))
+!^
               tl_cff1=0.5_r8*(tl_u(i,j,k,nstp)*                         &
      &                        (Hz(i,j,k)+Hz(i-1,j,k))+                  &
      &                        u(i,j,k,nstp)*                            &
      &                        (tl_Hz(i,j,k)+tl_Hz(i-1,j,k)))
-!>            cff2=FC(i,k)-FC(i,k-1)
-!>
+!^            cff2=FC(i,k)-FC(i,k-1)
+!^
               tl_cff2=tl_FC(i,k)-tl_FC(i,k-1)
               cff3=0.5_r8*DC(i,0)
-!>            u(i,j,k,nnew)=cff1-                                       &
-!>   &                      cff3*ru(i,j,k,indx)+                        &
-!>   &                      cff2
-!>
+!^            u(i,j,k,nnew)=cff1-                                       &
+!^   &                      cff3*ru(i,j,k,indx)+                        &
+!^   &                      cff2
+!^
               tl_u(i,j,k,nnew)=tl_cff1-                                 &
      &                         cff3*tl_ru(i,j,k,indx)+                  &
      &                         tl_cff2
@@ -1470,20 +1476,20 @@
           cff2=16.0_r8/12.0_r8
           DO k=1,N(ng)
             DO i=IstrU,Iend
-!>            cff3=u(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i-1,j,k))
-!>
+!^            cff3=u(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i-1,j,k))
+!^
               tl_cff3=0.5_r8*(tl_u(i,j,k,nstp)*                         &
      &                        (Hz(i,j,k)+Hz(i-1,j,k))+                  &
      &                        u(i,j,k,nstp)*                            &
      &                        (tl_Hz(i,j,k)+tl_Hz(i-1,j,k)))
-!>            cff4=FC(i,k)-FC(i,k-1)
-!>
+!^            cff4=FC(i,k)-FC(i,k-1)
+!^
               tl_cff4=tl_FC(i,k)-tl_FC(i,k-1)
-!>            u(i,j,k,nnew)=cff3+                                       &
-!>   &                      DC(i,0)*(cff1*ru(i,j,k,nrhs)-               &
-!>   &                               cff2*ru(i,j,k,indx))+              &
-!>   &                      cff4
-!>
+!^            u(i,j,k,nnew)=cff3+                                       &
+!^   &                      DC(i,0)*(cff1*ru(i,j,k,nrhs)-               &
+!^   &                               cff2*ru(i,j,k,indx))+              &
+!^   &                      cff4
+!^
               tl_u(i,j,k,nnew)=tl_cff3+                                 &
      &                         DC(i,0)*(cff1*tl_ru(i,j,k,nrhs)-         &
      &                                  cff2*tl_ru(i,j,k,indx))+        &
@@ -1523,9 +1529,9 @@
      &                    z_r(i,j,k  )-z_r(i,j-1,k  ))
               tl_cff=-cff*cff*(tl_z_r(i,j,k+1)+tl_z_r(i,j-1,k+1)-       &
      &                         tl_z_r(i,j,k  )-tl_z_r(i,j-1,k  ))
-!>            FC(i,k)=cff3*cff*(v(i,j,k+1,nstp)-v(i,j,k,nstp))*         &
-!>   &                         (Akv(i,j,k)+Akv(i,j-1,k))
-!>
+!^            FC(i,k)=cff3*cff*(v(i,j,k+1,nstp)-v(i,j,k,nstp))*         &
+!^   &                         (Akv(i,j,k)+Akv(i,j-1,k))
+!^
               tl_FC(i,k)=cff3*                                          &
      &                   (cff*((tl_v(i,j,k+1,nstp)-tl_v(i,j,k,nstp))*   &
      &                         (Akv(i,j,k)+Akv(i,j-1,k))+               &
@@ -1540,18 +1546,18 @@
 !
           DO i=Istr,Iend
 # ifdef BODYFORCE
-!>          FC(i,0)=0.0_r8
-!>
+!^          FC(i,0)=0.0_r8
+!^
             tl_FC(i,0)=0.0_r8
-!>          FC(i,N(ng))=0.0_r8
-!>
+!^          FC(i,N(ng))=0.0_r8
+!^
             tl_FC(i,N(ng))=0.0_r8
 # else
-!>          FC(i,0)=dt(ng)*bvstr(i,j)
-!>
+!^          FC(i,0)=dt(ng)*bvstr(i,j)
+!^
             tl_FC(i,0)=dt(ng)*tl_bvstr(i,j)
-!>          FC(i,N(ng))=dt(ng)*svstr(i,j)
-!>
+!^          FC(i,N(ng))=dt(ng)*svstr(i,j)
+!^
             tl_FC(i,N(ng))=dt(ng)*tl_svstr(i,j)
 # endif
           END DO
@@ -1569,17 +1575,17 @@
 # endif
             DO k=1,N(ng)
               DO i=Istr,Iend
-!>              cff1=v(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i,j-1,k))
-!>
+!^              cff1=v(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i,j-1,k))
+!^
                 tl_cff1=0.5_r8*(tl_v(i,j,k,nstp)*                       &
      &                          (Hz(i,j,k)+Hz(i,j-1,k))+                &
      &                          v(i,j,k,nstp)*                          &
      &                          (tl_Hz(i,j,k)+tl_Hz(i,j-1,k)))
-!>              cff2=FC(i,k)-FC(i,k-1)
-!>
+!^              cff2=FC(i,k)-FC(i,k-1)
+!^
                 tl_cff2=tl_FC(i,k)-tl_FC(i,k-1)
-!>              v(i,j,k,nnew)=cff1+cff2
-!>
+!^              v(i,j,k,nnew)=cff1+cff2
+!^
                 tl_v(i,j,k,nnew)=tl_cff1+tl_cff2
 # ifdef DIAGNOSTICS_UV
 !!              DO idiag=1,M3pgrd
@@ -1597,20 +1603,20 @@
 # endif
             DO k=1,N(ng)
               DO i=Istr,Iend
-!>              cff1=v(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i,j-1,k))
-!>
+!^              cff1=v(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i,j-1,k))
+!^
                 tl_cff1=0.5_r8*(tl_v(i,j,k,nstp)*                       &
      &                          (Hz(i,j,k)+Hz(i,j-1,k))+                &
      &                          v(i,j,k,nstp)*                          &
      &                          (tl_Hz(i,j,k)+tl_Hz(i,j-1,k)))
-!>              cff2=FC(i,k)-FC(i,k-1)
-!>
+!^              cff2=FC(i,k)-FC(i,k-1)
+!^
                 tl_cff2=tl_FC(i,k)-tl_FC(i,k-1)
                 cff3=0.5_r8*DC(i,0)
-!>              v(i,j,k,nnew)=cff1-                                     &
-!>   &                        cff3*rv(i,j,k,indx)+                      &
-!>   &                        cff2
-!>
+!^              v(i,j,k,nnew)=cff1-                                     &
+!^   &                        cff3*rv(i,j,k,indx)+                      &
+!^   &                        cff2
+!^
                 tl_v(i,j,k,nnew)=tl_cff1-                               &
      &                           cff3*tl_rv(i,j,k,indx)+                &
      &                           tl_cff2
@@ -1632,20 +1638,20 @@
             cff2=16.0_r8/12.0_r8
             DO k=1,N(ng)
               DO i=Istr,Iend
-!>              cff3=v(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i,j-1,k))
-!>
+!^              cff3=v(i,j,k,nstp)*0.5_r8*(Hz(i,j,k)+Hz(i,j-1,k))
+!^
                 tl_cff3=0.5_r8*(tl_v(i,j,k,nstp)*                       &
      &                          (Hz(i,j,k)+Hz(i,j-1,k))+                &
      &                          v(i,j,k,nstp)*                          &
      &                          (tl_Hz(i,j,k)+tl_Hz(i,j-1,k)))
-!>              cff4=FC(i,k)-FC(i,k-1)
-!>
+!^              cff4=FC(i,k)-FC(i,k-1)
+!^
                 tl_cff4=tl_FC(i,k)-tl_FC(i,k-1)
-!>              v(i,j,k,nnew)=cff3+                                     &
-!>   &                        DC(i,0)*(cff1*rv(i,j,k,nrhs)-             &
-!>   &                                 cff2*rv(i,j,k,indx))+            &
-!>   &                        cff4
-!>
+!^              v(i,j,k,nnew)=cff3+                                     &
+!^   &                        DC(i,0)*(cff1*rv(i,j,k,nrhs)-             &
+!^   &                                 cff2*rv(i,j,k,indx))+            &
+!^   &                        cff4
+!^
                 tl_v(i,j,k,nnew)=tl_cff3+                               &
      &                           DC(i,0)*(cff1*tl_rv(i,j,k,nrhs)-       &
      &                                    cff2*tl_rv(i,j,k,indx))+      &
@@ -1682,12 +1688,12 @@
         IF (LtracerCLM(itrc,ng).and.LnudgeTCLM(itrc,ng)) THEN
           ic=ic+1
         END IF
-!>      CALL t3dbc_tile (ng, tile, itrc, ic,                            &
-!>   &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &
-!>   &                   IminS, ImaxS, JminS, JmaxS,                    &
-!>   &                   nstp, 3,                                       &
-!>   &                   t)
-!>
+!^      CALL t3dbc_tile (ng, tile, itrc, ic,                            &
+!^   &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &
+!^   &                   IminS, ImaxS, JminS, JmaxS,                    &
+!^   &                   nstp, 3,                                       &
+!^   &                   t)
+!^
         CALL tl_t3dbc_tile (ng, tile, itrc, ic,                         &
      &                      LBi, UBi, LBj, UBj, N(ng), NT(ng),          &
      &                      IminS, ImaxS, JminS, JmaxS,                 &
@@ -1695,10 +1701,10 @@
      &                      tl_t)
 
         IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-!>        CALL exchange_r3d_tile (ng, tile,                             &
-!>   &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
-!>   &                            t(:,:,:,3,itrc))
-!>
+!^        CALL exchange_r3d_tile (ng, tile,                             &
+!^   &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
+!^   &                            t(:,:,:,3,itrc))
+!^
           CALL exchange_r3d_tile (ng, tile,                             &
      &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
      &                            tl_t(:,:,:,3,itrc))
@@ -1706,12 +1712,12 @@
       END DO
 
 #  ifdef DISTRIBUTE
-!>    CALL mp_exchange4d (ng, tile, iNLM, 1,                            &
-!>   &                    LBi, UBi, LBj, UBj, 1, N(ng), 1, NT(ng),      &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    t(:,:,:,3,:))
-!>
+!^    CALL mp_exchange4d (ng, tile, iNLM, 1,                            &
+!^   &                    LBi, UBi, LBj, UBj, 1, N(ng), 1, NT(ng),      &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    t(:,:,:,3,:))
+!^
       CALL mp_exchange4d (ng, tile, iTLM, 1,                            &
      &                    LBi, UBi, LBj, UBj, 1, N(ng), 1, NT(ng),      &
      &                    NghostPoints,                                 &
@@ -1719,7 +1725,7 @@
      &                    tl_t(:,:,:,3,:))
 #  endif
 # endif
-
+!
       RETURN
       END SUBROUTINE tl_pre_step3d_tile
 #endif

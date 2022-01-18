@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE mod_parallel
 !
-!svn $Id: mod_parallel.F 1017 2020-04-27 22:19:14Z arango $
+!svn $Id: mod_parallel.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -12,13 +12,27 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param
+      USE mod_kinds
 !
       implicit none
 
 #ifdef MPI
+!
       include 'mpif.h'
 #endif
+!
+      PUBLIC :: allocate_parallel
+      PUBLIC :: deallocate_parallel
+      PUBLIC :: initialize_parallel
+
+#if defined DISTRIBUTE && defined DISJOINTED
+      PUBLIC :: split_communicator
+      PUBLIC :: assign_communicator
+#endif
+!
+!-----------------------------------------------------------------------
+!  Define variables in module.
+!-----------------------------------------------------------------------
 !
 !  Switch to identify master processor. In serial and shared-memory
 !  applications it is always true.
@@ -109,10 +123,14 @@
 !
       integer :: MyMaster = 0
 
-#if defined DISTRIBUTE && defined DISJOINTED
+#ifdef DISTRIBUTE
+# if defined DISJOINTED        || \
+    (defined PIO_LIB           && \
+     (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO))
 !
 !  Split communicator parameters.
 !
+#  if defined DISJOINTED
       logical :: FullMaster     ! full communicator master process
 
       integer :: ForkColor = -1 ! Fork split criteria: FullRank/ForkSize
@@ -123,6 +141,13 @@
       integer :: TaskColor = -1 ! Task split criteria: FullRank/TaskSize
       integer :: TaskKey        ! Task split rank ordering: FullRank
       integer :: TaskSize       ! number of processes in TASK_COMM_WORLD
+#  endif
+#  if defined PIO_LIB          && \
+     (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)
+      integer :: PeerRank       ! process rank in PEER_COMM_WORLD
+      integer :: PeerSize       ! number of processes in PEER_COMM_WORLD
+#  endif
+# endif
 #endif
 !
 !  Rank of the parallel local process.
@@ -139,6 +164,12 @@
 !
 !  Distributed-memory group communicator handles.
 !
+#  if defined PIO_LIB          && defined DISTRIBUTE           && \
+     (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)
+      integer :: PEER_COMM_WORLD            ! PIO full communicator
+      integer :: INTER_COMM_WORLD           ! PIO inter-communicator
+      integer :: IO_COMM_WORLD              ! I/O dedicated communicator
+#  endif
 #  ifdef DISJOINTED
       integer :: FULL_COMM_WORLD            ! full communicator
       integer :: FORK_COMM_WORLD            ! fork communicator
@@ -171,7 +202,7 @@
 !
       CONTAINS
 !
-      SUBROUTINE allocate_parallel
+      SUBROUTINE allocate_parallel (Ngrids)
 !
 !=======================================================================
 !                                                                      !
@@ -181,6 +212,10 @@
 !=======================================================================
 !
       USE mod_strings, ONLY: Nregion
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: Ngrids
 !
 !-----------------------------------------------------------------------
 !  Allocate and initialize module variables.
@@ -237,6 +272,32 @@
 
       RETURN
       END SUBROUTINE allocate_parallel
+!
+      SUBROUTINE deallocate_parallel
+!
+!=======================================================================
+!                                                                      !
+!  This routine deallocates variables in the module.                   !
+!                                                                      !
+!=======================================================================
+!
+!-----------------------------------------------------------------------
+!  Deallocate variables in module.
+!-----------------------------------------------------------------------
+!
+!$OMP PARALLEL
+      IF (allocated(first_tile)) deallocate ( first_tile )
+      IF (allocated(last_tile))  deallocate ( last_tile )
+!
+      IF (allocated(proc))       deallocate ( proc )
+      IF (allocated(Cstr))       deallocate ( Cstr )
+      IF (allocated(Cend))       deallocate ( Cend )
+!$OMP END PARALLEL
+
+      IF (allocated(Csum))       deallocate ( Csum )
+!
+      RETURN
+      END SUBROUTINE deallocate_parallel
 !
       SUBROUTINE initialize_parallel
 !

@@ -2,9 +2,9 @@
       MODULE mod_tides
 #if defined SSH_TIDES || defined UV_TIDES
 !
-!svn $Id: mod_tides.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: mod_tides.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -72,9 +72,17 @@
 !=======================================================================
 !
         USE mod_kinds
-
+!
         implicit none
-
+!
+        PUBLIC :: allocate_tides
+        PUBLIC :: deallocate_tides
+        PUBLIC :: initialize_tides
+!
+!-----------------------------------------------------------------------
+!  Define T_TIDES structure.
+!-----------------------------------------------------------------------
+!
         TYPE T_TIDES
 
           real(r8), pointer :: Tperiod(:)
@@ -121,11 +129,11 @@
 # endif
 
         END TYPE T_TIDES
-
+!
         TYPE (T_TIDES), allocatable :: TIDES(:)
-
+!
       CONTAINS
-
+!
       SUBROUTINE allocate_tides (ng, LBi, UBi, LBj, UBj)
 !
 !=======================================================================
@@ -140,6 +148,9 @@
       USE mod_iounits
       USE mod_ncparam
       USE mod_netcdf
+# if defined PIO_LIB && defined DISTRIBUTE
+      USE mod_pio_netcdf
+# endif
       USE mod_scalars
       USE mod_stepping
 !
@@ -157,6 +168,14 @@
 
       real(r8) :: size2d
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", allocate_tides"
+
+# if defined PIO_LIB && defined DISTRIBUTE
+!
+      TYPE (Var_desc_t)  :: my_pioVar
+# endif
+!
 !-----------------------------------------------------------------------
 !  Allocate module variables.
 !-----------------------------------------------------------------------
@@ -169,14 +188,26 @@
       IF (LprocessTides(ng)) THEN
         MTC=0
         foundit=.FALSE.
-        CALL netcdf_inq_var (ng, iNLM, TIDE(ng)%name,                   &
-     &                       MyVarName = TRIM(Vname(1,idTper)),         &
-     &                       SearchVar = foundit,                       &
-     &                       VarID = Vid,                               &
-     &                       nVardim = nvdim,                           &
-     &                       nVarAtt = nvatt)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__//", allocate_tides")) RETURN
+        SELECT CASE (TIDE(ng)%IOtype)
+          CASE (io_nf90)
+            CALL netcdf_inq_var (ng, iNLM, TIDE(ng)%name,               &
+     &                           MyVarName = Vname(1,idTper),           &
+     &                           SearchVar = foundit,                   &
+     &                           VarID = Vid,                           &
+     &                           nVardim = nvdim,                       &
+     &                           nVarAtt = nvatt)
+
+# if defined PIO_LIB && defined DISTRIBUTE
+          CASE (io_pio)
+            CALL pio_netcdf_inq_var (ng, iNLM, TIDE(ng)%name,           &
+     &                               MyVarName = Vname(1,idTper),       &
+     &                               SearchVar = foundit,               &
+     &                               pioVar = my_pioVar,                &
+     &                               nVardim = nvdim,                   &
+     &                               nVarAtt = nvatt)
+# endif
+        END SELECT
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Set maximum number of tidal components.  Allocate and initialize
 !  TIDE I/O structure. Notice that in nested applications, all the
@@ -306,10 +337,164 @@
       END IF
 #  endif
 # endif
-
+!
       RETURN
       END SUBROUTINE allocate_tides
+!
+      SUBROUTINE deallocate_tides (ng)
+!
+!=======================================================================
+!                                                                      !
+!  This routine allocates all variables in the module for all nested   !
+!  grids.                                                              !
+!                                                                      !
+!=======================================================================
+!
+      USE mod_param
+      USE mod_ncparam
 
+# ifdef SUBOBJECT_DEALLOCATION
+!
+      USE destroy_mod, ONLY : destroy
+# endif
+!
+! Inported variable declarations.
+!
+      integer, intent(in) :: ng
+!
+!  Local variable declarations.
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", deallocate_tides"
+
+
+# ifdef SUBOBJECT_DEALLOCATION
+!
+!-----------------------------------------------------------------------
+!  Deallocate each variable in the derived-type T_TIDES structure
+!  separately.
+!-----------------------------------------------------------------------
+!
+      IF (.not.destroy(ng, TIDES(ng)%Tperiod, MyFile,                   &
+     &                 __LINE__, 'TIDES(ng)%Tperiod')) RETURN
+
+#  if defined SSH_TIDES
+      IF (.not.destroy(ng, TIDES(ng)%SSH_Tamp, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%SSH_Tamp')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%SSH_Tphase, MyFile,                &
+     &                 __LINE__, 'TIDES(ng)%SSH_Tphase')) RETURN
+#  endif
+
+#  if defined UV_TIDES
+      IF (.not.destroy(ng, TIDES(ng)%UV_Tangle, MyFile,                 &
+     &                 __LINE__, 'TIDES(ng)%UV_Tangle')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%UV_Tmajor, MyFile,                 &
+     &                 __LINE__, 'TIDES(ng)%UV_Tmajor')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%UV_Tminor, MyFile,                 &
+     &                 __LINE__, 'TIDES(ng)%UV_Tminor')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%UV_Tphase, MyFile,                 &
+     &                 __LINE__, 'TIDES(ng)%UV_Tphase')) RETURN
+#  endif
+
+#  if defined AVERAGES && defined AVERAGES_DETIDE
+!
+!  Allocate variables used for the least-squares detiding of
+!  time-averaged fields.
+!
+      IF (.not.destroy(ng, TIDES(ng)%CosOmega, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%CosOmega')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%SinOmega, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%SinOmega')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%CosW_avg, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%CosW_avg')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%CosW_sum, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%CosW_sum')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%SinW_avg, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%SinW_avg')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%SinW_sum, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%SinW_sum')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%CosWCosW, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%CosWCosW')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%SinWSinW, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%SinWSinW')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%SinWCosW, MyFile,                  &
+     &                 __LINE__, 'TIDES(ng)%SinWCosW')) RETURN
+
+      IF (Aout(idFsuD,ng)) THEN
+        IF (.not.destroy(ng, TIDES(ng)%zeta_detided, MyFile,            &
+     &                   __LINE__, 'TIDES(ng)%zeta_detided')) RETURN
+
+        IF (.not.destroy(ng, TIDES(ng)%zeta_tide, MyFile,               &
+     &                   __LINE__, 'TIDES(ng)%zeta_tide')) RETURN
+      END IF
+
+      IF (Aout(idu2dD,ng)) THEN
+        IF (.not.destroy(ng, TIDES(ng)%ubar_detided, MyFile,            &
+     &                   __LINE__, 'TIDES(ng)%ubar_detided')) RETURN
+
+        IF (.not.destroy(ng, TIDES(ng)%ubar_tide, MyFile,               &
+     &                   __LINE__, 'TIDES(ng)%ubar_tide')) RETURN
+      END IF
+
+      IF (Aout(idv2dD,ng)) THEN
+        IF (.not.destroy(ng, TIDES(ng)%vbar_detided, MyFile,            &
+     &                   __LINE__, 'TIDES(ng)%vbar_detided')) RETURN
+
+        IF (.not.destroy(ng, TIDES(ng)%vbar_tide, MyFile,               &
+     &                   __LINE__, 'TIDES(ng)%vbar_tide')) RETURN
+      END IF
+
+#   ifdef SOLVE3D
+      IF (Aout(idu3dD,ng)) THEN
+        IF (.not.destroy(ng, TIDES(ng)%u_detided, MyFile,               &
+     &                   __LINE__, 'TIDES(ng)%u_detided')) RETURN
+
+        IF (.not.destroy(ng, TIDES(ng)%u_tide, MyFile,                  &
+     &                   __LINE__, 'TIDES(ng)%u_tide')) RETURN
+      END IF
+
+      IF (Aout(idv3dD,ng)) THEN
+        IF (.not.destroy(ng, TIDES(ng)%v_detided, MyFile,               &
+     &                   __LINE__, 'TIDES(ng)%v_detided')) RETURN
+
+        IF (.not.destroy(ng, TIDES(ng)%v_tide, MyFile,                  &
+     &                   __LINE__, 'TIDES(ng)%v_tide')) RETURN
+      END IF
+
+      IF (ANY(Aout(idTrcD(:),ng))) THEN
+        IF (.not.destroy(ng, TIDES(ng)%t_detided, MyFile,               &
+     &                   __LINE__, 'TIDES(ng)%t_detided')) RETURN
+
+        IF (.not.destroy(ng, TIDES(ng)%t_tide, MyFile,                  &
+     &                   __LINE__, 'TIDES(ng)%t_tide')) RETURN
+      END IF
+#   endif
+#  endif
+# endif
+!
+!-----------------------------------------------------------------------
+!  Deallocate derived-type TIDES structure.
+!-----------------------------------------------------------------------
+!
+      IF (ng.eq.Ngrids) THEN
+        IF (allocated(TIDES)) deallocate ( TIDES )
+      END IF
+!
+      RETURN
+      END SUBROUTINE deallocate_tides
+!
       SUBROUTINE initialize_tides (ng, tile)
 !
 !=======================================================================
@@ -530,7 +715,7 @@
       END IF
 #  endif
 # endif
-
+!
       RETURN
       END SUBROUTINE initialize_tides
 #endif

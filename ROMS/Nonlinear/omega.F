@@ -2,9 +2,9 @@
       MODULE omega_mod
 #ifdef SOLVE3D
 !
-!svn $Id: omega.F 1029 2020-07-11 02:11:09Z arango $
+!svn $Id: omega.F 1103 2022-01-13 03:38:35Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -42,10 +42,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 13, __LINE__, __FILE__)
+      CALL wclock_on (ng, model, 13, __LINE__, MyFile)
 # endif
       CALL omega_tile (ng, tile, model,                                 &
      &                 LBi, UBi, LBj, UBj,                              &
@@ -60,9 +63,9 @@
      &                 GRID(ng) % z_w,                                  &
      &                 OCEAN(ng) % W)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 13, __LINE__, __FILE__)
+      CALL wclock_off (ng, model, 13, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE omega
 !
@@ -165,19 +168,23 @@
 !  sum to obtain the correct net Qbar given in user input - J. Levin
 !  (Jupiter Intelligence Inc.) and J. Wilkin
 !
+!    Dsrc(is) = 2,  flow across grid cell w-face (positive or negative)
+!
         IF (LwSrc(ng)) THEN
           DO is=1,Nsrc(ng)
-            ii=SOURCES(ng)%Isrc(is)
-            jj=SOURCES(ng)%Jsrc(is)
-            IF (((IstrR.le.ii).and.(ii.le.IendR)).and.                  &
-     &          ((JstrR.le.jj).and.(jj.le.JendR)).and.                  &
-     &          (j.eq.jj)) THEN
-              DO k=1,N(ng)
-                W(ii,jj,k)=W(ii,jj,k-1)-                                &
-     &                     (Huon(ii+1,jj,k)-Huon(ii,jj,k)+              &
-     &                      Hvom(ii,jj+1,k)-Hvom(ii,jj,k))+             &
-     &                     SOURCES(ng)%Qsrc(is,k)
-              END DO
+            IF (INT(SOURCES(ng)%Dsrc(is)).eq.2) THEN
+              ii=SOURCES(ng)%Isrc(is)
+              jj=SOURCES(ng)%Jsrc(is)
+              IF (((IstrR.le.ii).and.(ii.le.IendR)).and.                &
+     &            ((JstrR.le.jj).and.(jj.le.JendR)).and.                &
+     &            (j.eq.jj)) THEN
+                DO k=1,N(ng)
+                  W(ii,jj,k)=W(ii,jj,k-1)-                              &
+     &                       (Huon(ii+1,jj,k)-Huon(ii,jj,k)+            &
+     &                        Hvom(ii,jj+1,k)-Hvom(ii,jj,k))+           &
+     &                       SOURCES(ng)%Qsrc(is,k)
+                END DO
+              END IF
             END IF
           END DO
         END IF
@@ -216,7 +223,7 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    W)
 # endif
-
+!
       RETURN
       END SUBROUTINE omega_tile
 !
@@ -284,7 +291,7 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    Wscl)
 # endif
-
+!
       RETURN
       END SUBROUTINE scale_omega
 #endif

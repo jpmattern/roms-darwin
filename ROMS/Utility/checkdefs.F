@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE checkdefs
 !
-!svn $Id: checkdefs.F 1038 2020-09-29 01:54:25Z arango $
+!svn $Id: checkdefs.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -25,16 +25,22 @@
 !
 !  Local variable declarations.
 !
-      integer :: iatms = 0
-      integer :: ibbl = 0
-      integer :: ibiology = 0
-      integer :: idriver = 0
-      integer :: ivelHadv = 0
-      integer :: ivelVadv = 0
-      integer :: ivmix = 0
-      integer :: nearshore = 0
-
+      integer :: iatms, ibbl, ibiology, idriver
+      integer :: ivelHadv, ivelVadv, ivmix, nearshore
       integer :: is, lstr, ng
+!
+!-----------------------------------------------------------------------
+!  Initialze counters
+!-----------------------------------------------------------------------
+!
+      iatms = 0
+      ibbl = 0
+      ibiology = 0
+      idriver = 0
+      ivelHadv = 0
+      ivelVadv = 0
+      ivmix = 0
+      nearshore = 0
 !
 !-----------------------------------------------------------------------
 !  Report activated C-preprocessing options.
@@ -65,6 +71,13 @@
      &   'Writing out time-averaged adjoint model fields'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+13)=' AD_AVERAGES,'
+#endif
+#if defined AD_OUTPUT_STATE && defined ADJOINT
+!
+      IF (Master) WRITE (stdout,20) 'AD_OUTPUT_STATE',                  &
+     &   'Writing full adjoint state solution by adding time levels'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+17)=' AD_OUTPUT_STATE,'
 #endif
 #if defined ADD_FSOBC && defined SSH_TIDES
 !
@@ -527,12 +540,12 @@
      &   'Using mpi_allreduce in mp_assemble routine'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+20)=' ASSEMBLE_ALLGATHER,'
-# else
+# elif defined ASSEMBLE_SENDRECV
 !
-      IF (Master) WRITE (stdout,20) '!ASSEMBLE_ALL...',                 &
+      IF (Master) WRITE (stdout,20) 'ASSEMBLE_SENDRECV',                &
      &   'Using mpi_isend/mpi_recv in mp_assemble routine'
       is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+18)=' !ASSEMBLE_ALL...,'
+      Coptions(is:is+19)=' ASSEMBLE_SENDRECV,'
 # endif
 #endif
 #ifdef ASSUMED_SHAPE
@@ -542,10 +555,24 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+15)=' ASSUMED_SHAPE,'
 #endif
+#if defined ASYNCHRONOUS_PIO && defined PIO_LIB && defined DISTRIBUTE
+!
+      IF (Master) WRITE (stdout,20) 'ASYNCHRONOUS_PIO',                 &
+     &   'PIO library with disjointed dedicated I/O processes'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' ASYNCHRONOUS_PIO,'
+#endif
+#if defined ASYNCHRONOUS_SCORPIO && defined PIO_LIB && defined DISTRIBUTE
+!
+      IF (Master) WRITE (stdout,20) 'ASYNCHRONOUS_SCORPIO',             &
+     &   'SCORPIO library with disjointed dedicated I/O processes'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+22)=' ASYNCHRONOUS_SCORPIO,'
+#endif
 #ifdef ATM_PRESS
 !
       IF (Master) WRITE (stdout,20) 'ATM_PRESS',                        &
-     &   'Impose atmospheric pressure onto sea surface'
+     &   'Impose inverse barometer effect in pressure gradient term'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+11)=' ATM_PRESS,'
 #endif
@@ -645,7 +672,7 @@
 #ifdef CHECKSUM
 !
       IF (Master) WRITE (stdout,20) 'CHECKSUM',                         &
-     &   'Report checksum (hash) values when processing I/O'
+     &   'Report order-invariant checksum (hash) when processing I/O'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' CHECKSUM,'
 #endif
@@ -665,11 +692,11 @@
      &   'Using mpi_allgather in mp_boundary routine'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+20)=' BOUNDARY_ALLGATHER,'
-# else
-      IF (Master) WRITE (stdout,20) '!BOUNDARY_ALLGATHER',              &
+# elif defined BOUNDARY_ALLREDUCE
+      IF (Master) WRITE (stdout,20) 'BOUNDARY_ALLREDUCE',               &
      &   'Using mpi_allreduce in mp_boundary routine'
       is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+11)=' !BOUNDARY_ALLGATHER,'
+      Coptions(is:is+20)=' BOUNDARY_ALLREDUCE,'
 # endif
 #endif
 #ifdef BULK_FLUXES
@@ -746,7 +773,7 @@
 #endif
 #ifdef COAMPS_COUPLING
 !
-      IF (Master) WRITE (stdout,20) 'COAMPS_COUPLING',                   &
+      IF (Master) WRITE (stdout,20) 'COAMPS_COUPLING',                  &
      &   'Atmosphere coupling with COAMPS'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+17)=' COAMPS_COUPLING,'
@@ -765,12 +792,12 @@
      &   'Using mpi_allreduce in mp_collect routine'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+19)=' COLLECT_ALLGATHER,'
-# else
+# elif defined COLLECT_SENDRECV
 !
-      IF (Master) WRITE (stdout,20) '!COLLECT_ALL...',                  &
+      IF (Master) WRITE (stdout,20) 'COLLECT_SENDRECV',                 &
      &   'Using mpi_isend/mpi_recv in mp_collect routine'
       is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+17)=' !COLLECT_ALL...,'
+      Coptions(is:is+18)=' COLLECT_SENDRECV,'
 # endif
 #endif
 #if defined CONCURRENT_KERNEL && defined DISJOINTED && \
@@ -995,6 +1022,14 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' ENSEMBLE,'
 #endif
+#if defined ESM_SETRUNCLOCK && defined MODEL_COUPLING && \
+    defined ESMF_LIB
+!
+      IF (Master) WRITE (stdout,20) 'ESM_SETRUNCLOCK',                     &
+     &   'Sets coupled component specialized SetRunClock method'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+17)=' ESM_SETRUNCLOCK,'
+#endif
 #if defined EVOLVED_LCZ && defined FOUR_DVAR
 !
       IF (Master) WRITE (stdout,20) 'EVOLVED_LCZ',                      &
@@ -1052,6 +1087,13 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+12)=' FORCING_SV,'
       idriver=idriver+1
+#endif
+#if defined FORWARD_FLUXES
+!
+      IF (Master) WRITE (stdout,20) 'FORWARD_FLUXES',                   &
+     &   'Using nonlinear model Forward fluxes for Tangent/Adjoint'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+16)=' FORWARD_FLUXES,'
 #endif
 #if defined FORWARD_MIXING && defined SOLVE3D
 !
@@ -1230,6 +1272,12 @@
      &   'Initialize automatic arrays in step2d for debugging'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+22)=' INITIALIZE_AUTOMATIC,'
+#endif
+#ifdef JEDI
+      IF (Master) WRITE (stdout,20) 'JEDI',                             &
+     &   'Joint Effort for Data Assimilation Integration'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+6)=' JEDI,'
 #endif
 #if defined LIMIT_BSTRESS && defined SOLVE3D  && !defined BBL_MODEL
 !
@@ -1568,13 +1616,6 @@
       Coptions(is:is+15)=' NESTING_DEBUG,'
 # endif
 #endif
-#if defined NL_BULK_FLUXES
-!
-      IF (Master) WRITE (stdout,20) 'NL_BULK_FLUXES',                   &
-     &   'Using bulk fluxes computed by nonlinear model'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+16)=' NL_BULK_FLUXES,'
-#endif
 #if defined NLM_OUTER && defined WEAK_CONSTRAINT
 !
       IF (Master) WRITE (stdout,20) 'NLM_OUTER',                        &
@@ -1814,6 +1855,13 @@
       Coptions(is:is+13)=' PICARD TEST,'
       idriver=idriver+1
 #endif
+#if defined PIO_LIB && defined DISTRIBUTE
+!
+      IF (Master) WRITE (stdout,20) 'PIO_LIB',                          &
+     &   'Using Parallel-IO from the PIO library'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+9)=' PIO_LIB,'
+#endif
 #ifdef PJ_GRADP
 !
       IF (Master) WRITE (stdout,20) 'PJ_GRADP',                         &
@@ -1848,6 +1896,14 @@
      &   'Phytoplanckton growth limited by Phosphorus'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+5)=' P04,'
+#endif
+#if defined PRIOR_BULK_FLUXES && defined BULK_FLUXES && \
+    defined FOUR_DVAR
+!
+      IF (Master) WRITE (stdout,20) 'PRIOR_BULK_FLUXES',                &
+     &   'Impose prior surface fluxes in other outer loops and analysis'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+19)=' PRIOR_BULK_FLUXES,'
 #endif
 #ifdef POSITIVE_ZERO
 !
@@ -2055,12 +2111,12 @@
      &   'Using mpi_allreduce in mp_reduce routine'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+18)=' REDUCE_ALLREDUCE,'
-# else
+# elif defined REDUCE_SENDRECV
 !
-      IF (Master) WRITE (stdout,20) '!REDUCE_ALL...',                   &
+      IF (Master) WRITE (stdout,20) 'REDUCE_SENDRECV',                  &
      &   'Using mpi_isend/mpi_recv in mp_reduce routine'
       is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+16)=' !REDUCE_ALL...,'
+      Coptions(is:is+17)=' REDUCE_SENDRECV,'
 # endif
 #endif
 #ifdef REGCM_COUPLING
@@ -2087,6 +2143,13 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+20)=' REGRESS_STARTCLOCK,'
 #endif
+#ifdef REGRID_SHAPIRO
+!
+      IF (Master) WRITE (stdout,20) 'REGRID_SHAPIRO',                   &
+     &   'Applying Shapiro filter to regridded data'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+16)=' REGRID_SHAPIRO,'
+#endif
 #if defined RIVER_DON && defined BIO_FENNEL
 !
       IF (Master) WRITE (stdout,20) 'RIVER_DON',                        &
@@ -2097,7 +2160,7 @@
 #ifdef ROMS_STDOUT
 !
       IF (Master) WRITE (stdout,20) 'ROMS_STDOUT',                      &
-     &   'Red tide biological model'
+     &   "Writes ROMS standard output into 'log.roms' file"
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+13)=' ROMS_STDOUT,'
 #endif
@@ -2418,7 +2481,7 @@
 #if defined SSH_TIDES
 !
       IF (Master) WRITE (stdout,20) 'SSH_TIDES',                        &
-     &   'Add tidal elevation to SSH climatology'
+     &   'Adding tidal elevation to SSH climatology'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+11)=' SSH_TIDES,'
 #endif
@@ -2521,6 +2584,13 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+23)=' SURFACE_DO_SATURATION,'
 #endif
+#if defined SUBOBJECT_DEALLOCATION
+!
+      IF (Master) WRITE (stdout,20) 'SUBOBJECT_DEALLOCATION',           &
+     &   'Deallocate each variable in structure objects separately'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+24)=' SUBOBJECT_DEALLOCATION,'
+#endif
 #if defined SUPPRESS_REPORT && defined SPLIT_4DVAR
 !
       IF (Master) WRITE (stdout,20) 'SUPPRESS_REPORT',                  &
@@ -2556,6 +2626,13 @@
      &   'Tangent Linear Model'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+9)=' TANGENT,'
+#endif
+#ifdef TIDE_GENERATING_FORCES
+!
+      IF (Master) WRITE (stdout,20) 'TIDE_GENERATING_FORCES',           &
+     &   'Adding astronomical TGF term to pressure gradient'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+24)=' TIDE_GENERATING_FORCES,'
 #endif
 #if defined TIME_CONV && defined WEAK_CONSTRAINT
 !
@@ -2613,6 +2690,13 @@
      &   'Tangent Linear Model Linearization Check'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+11)=' TLM_CHECK,'
+#endif
+#if defined TRACING && defined PROFILE
+!
+      IF (Master) WRITE (stdout,20) 'TRACING',                          &
+     &   'Tracing sequence of routine calls for debugging'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+9)=' TRACING,'
 #endif
 #ifdef SOLVE3D
 # if defined T_PASSIVE
@@ -3200,8 +3284,8 @@
             EXIT
           END IF
         END DO
- 210    FORMAT (/,' CHECKDEFS - cannot activate option: ',a,           &
-     &          /,13x,'in serial with partitions or shared-memory...', &
+ 210    FORMAT (/,' CHECKDEFS - cannot activate option: ',a,            &
+     &          /,13x,'in serial with partitions or shared-memory...',  &
      &          /,13x,'Use distributed-memory (MPI) in parallel runs.')
       END IF
 #endif
@@ -3272,9 +3356,9 @@
             EXIT
           END IF
         END DO
- 260    FORMAT (/,' CHECKDEFS - cannot activate option: ',a,           &
-     &          /,13x,'in serial with partitions or shared-memory...', &
-     &          /,13x,'There bugs in shared-memory that need fixing.', &
+ 260    FORMAT (/,' CHECKDEFS - cannot activate option: ',a,            &
+     &          /,13x,'in serial with partitions or shared-memory...',  &
+     &          /,13x,'There bugs in shared-memory that need fixing.',  &
      &          /,13x,'Use distributed-memory (MPI) in parallel runs.')
       END IF
 #endif
@@ -3289,6 +3373,26 @@
         exit_flag=5
       END IF
 #endif
-
+#if defined TIDE_GENERATING_FORCES && \
+   (defined ANA_GRID               && !defined SPHERICAL)
+!
+!  Stop if activating tide generating forces on analytical Cartesian
+!  grids. This forcing is only for spherical grids since the (lon,lat)
+!  is required to compute the equilibrium tide harmonics that depend
+!  on the geographical location with respect to the Moon and Sun.
+!
+      IF (Master) THEN
+        WRITE (stdout,280) uppercase('tide_generating_forces')
+            exit_flag=5
+            EXIT
+          END IF
+        END DO
+ 280    FORMAT (/,' CHECKDEFS - cannot activate option: ',a,            &
+     &          /,13x,'in analytical Cartesian grids applications...',  &
+     &          /,13x,'The grid (lon,lat) is needed to compute the',    &
+     &          /,13x,'equilibrium tide harmonics.')
+      END IF
+#endif
+!
       RETURN
       END SUBROUTINE checkdefs

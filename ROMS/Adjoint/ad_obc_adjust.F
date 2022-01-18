@@ -3,9 +3,9 @@
 
 #ifdef ADJUST_BOUNDARY
 !
-!svn $Id: ad_obc_adjust.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: ad_obc_adjust.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -44,19 +44,22 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 7, __LINE__, MyFile)
 # endif
       CALL ad_obc_adjust_tile (ng, tile,                                &
      &                         LBi, UBi, LBj, UBj, LBij, UBij,          &
      &                         IminS, ImaxS, JminS, JmaxS,              &
      &                         Linp)
 # ifdef PROFILE
-      CALL wclock_off (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 7, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE ad_obc_adjust
 !
@@ -122,13 +125,13 @@
      &      Lobc(iwest,isUbar,ng).and.                                  &
      &    DOMAIN(ng)%Western_Edge(tile)) THEN
         DO j=Jstr,Jend
-!>        BOUNDARY(ng)%tl_ubar_west(j)=fac1*                            &
-!>   &                                 BOUNDARY(ng)%tl_ubar_obc(j,      &
-!>   &                                   iwest,it1,Linp)+               &
-!>   &                                 fac2*                            &
-!>   &                                 BOUNDARY(ng)%tl_ubar_obc(j,      &
-!>   &                                   iwest,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_ubar_west(j)=fac1*                            &
+!^   &                                 BOUNDARY(ng)%tl_ubar_obc(j,      &
+!^   &                                   iwest,it1,Linp)+               &
+!^   &                                 fac2*                            &
+!^   &                                 BOUNDARY(ng)%tl_ubar_obc(j,      &
+!^   &                                   iwest,it2,Linp)
+!^
           BOUNDARY(ng)%ad_ubar_obc(j,iwest,it1,Linp)=                   &
      &            BOUNDARY(ng)%ad_ubar_obc(j,iwest,it1,Linp)+           &
      &            fac1*                                                 &
@@ -145,13 +148,13 @@
      &      Lobc(ieast,isUbar,ng).and.                                  &
      &    DOMAIN(ng)%Eastern_Edge(tile)) THEN
         DO j=Jstr,Jend
-!>        BOUNDARY(ng)%tl_ubar_east(j)=fac1*                            &
-!>   &                                 BOUNDARY(ng)%tl_ubar_obc(j,      &
-!>   &                                   ieast,it1,Linp)+               &
-!>   &                                 fac2*                            &
-!>   &                                 BOUNDARY(ng)%tl_ubar_obc(j,      &
-!>   &                                   ieast,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_ubar_east(j)=fac1*                            &
+!^   &                                 BOUNDARY(ng)%tl_ubar_obc(j,      &
+!^   &                                   ieast,it1,Linp)+               &
+!^   &                                 fac2*                            &
+!^   &                                 BOUNDARY(ng)%tl_ubar_obc(j,      &
+!^   &                                   ieast,it2,Linp)
+!^
           BOUNDARY(ng)%ad_ubar_obc(j,ieast,it1,Linp)=                   &
      &            BOUNDARY(ng)%ad_ubar_obc(j,ieast,it1,Linp)+           &
      &            fac1*                                                 &
@@ -168,13 +171,13 @@
      &      Lobc(isouth,isUbar,ng).and.                                 &
      &    DOMAIN(ng)%Southern_Edge(tile)) THEN
         DO i=IstrU,Iend
-!>        BOUNDARY(ng)%tl_ubar_south(i)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_ubar_obc(i,     &
-!>   &                                    isouth,it1,Linp)+             &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_ubar_obc(i,     &
-!>   &                                    isouth,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_ubar_south(i)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_ubar_obc(i,     &
+!^   &                                    isouth,it1,Linp)+             &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_ubar_obc(i,     &
+!^   &                                    isouth,it2,Linp)
+!^
           BOUNDARY(ng)%ad_ubar_obc(i,isouth,it1,Linp)=                  &
      &            BOUNDARY(ng)%ad_ubar_obc(i,isouth,it1,Linp)+          &
      &            fac1*                                                 &
@@ -191,13 +194,13 @@
      &      Lobc(inorth,isUbar,ng).and.                                 &
      &    DOMAIN(ng)%Northern_Edge(tile)) THEN
         DO i=IstrU,Iend
-!>        BOUNDARY(ng)%tl_ubar_north(i)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_ubar_obc(i,     &
-!>   &                                    inorth,it1,Linp)+             &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_ubar_obc(i,     &
-!>   &                                    inorth,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_ubar_north(i)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_ubar_obc(i,     &
+!^   &                                    inorth,it1,Linp)+             &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_ubar_obc(i,     &
+!^   &                                    inorth,it2,Linp)
+!^
           BOUNDARY(ng)%ad_ubar_obc(i,inorth,it1,Linp)=                  &
      &            BOUNDARY(ng)%ad_ubar_obc(i,inorth,it1,Linp)+          &
      &            fac1*                                                 &
@@ -216,13 +219,13 @@
      &      Lobc(iwest,isVbar,ng).and.                                  &
      &    DOMAIN(ng)%Western_Edge(tile)) THEN
         DO j=JstrV,Jend
-!>        BOUNDARY(ng)%tl_vbar_west(j)=fac1*                            &
-!>   &                                 BOUNDARY(ng)%tl_vbar_obc(j,      &
-!>   &                                   iwest,it1,Linp)+               &
-!>   &                                 fac2*                            &
-!>   &                                 BOUNDARY(ng)%tl_vbar_obc(j,      &
-!>   &                                   iwest,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_vbar_west(j)=fac1*                            &
+!^   &                                 BOUNDARY(ng)%tl_vbar_obc(j,      &
+!^   &                                   iwest,it1,Linp)+               &
+!^   &                                 fac2*                            &
+!^   &                                 BOUNDARY(ng)%tl_vbar_obc(j,      &
+!^   &                                   iwest,it2,Linp)
+!^
           BOUNDARY(ng)%ad_vbar_obc(j,iwest,it1,Linp)=                   &
      &            BOUNDARY(ng)%ad_vbar_obc(j,iwest,it1,Linp)+           &
      &            fac1*                                                 &
@@ -239,13 +242,13 @@
      &      Lobc(ieast,isVbar,ng).and.                                  &
      &    DOMAIN(ng)%Eastern_Edge(tile)) THEN
         DO j=JstrV,Jend
-!>        BOUNDARY(ng)%tl_vbar_east(j)=fac1*                            &
-!>   &                                 BOUNDARY(ng)%tl_vbar_obc(j,      &
-!>   &                                   ieast,it1,Linp)+               &
-!>   &                                 fac2*                            &
-!>   &                                 BOUNDARY(ng)%tl_vbar_obc(j,      &
-!>   &                                   ieast,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_vbar_east(j)=fac1*                            &
+!^   &                                 BOUNDARY(ng)%tl_vbar_obc(j,      &
+!^   &                                   ieast,it1,Linp)+               &
+!^   &                                 fac2*                            &
+!^   &                                 BOUNDARY(ng)%tl_vbar_obc(j,      &
+!^   &                                   ieast,it2,Linp)
+!^
           BOUNDARY(ng)%ad_vbar_obc(j,ieast,it1,Linp)=                   &
      &            BOUNDARY(ng)%ad_vbar_obc(j,ieast,it1,Linp)+           &
      &            fac1*                                                 &
@@ -262,13 +265,13 @@
      &      Lobc(isouth,isVbar,ng).and.                                 &
      &    DOMAIN(ng)%Southern_Edge(tile)) THEN
         DO i=Istr,Iend
-!>        BOUNDARY(ng)%tl_vbar_south(i)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_vbar_obc(i,     &
-!>   &                                    isouth,it1,Linp)+             &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_vbar_obc(i,     &
-!>   &                                    isouth,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_vbar_south(i)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_vbar_obc(i,     &
+!^   &                                    isouth,it1,Linp)+             &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_vbar_obc(i,     &
+!^   &                                    isouth,it2,Linp)
+!^
           BOUNDARY(ng)%ad_vbar_obc(i,isouth,it1,Linp)=                  &
      &            BOUNDARY(ng)%ad_vbar_obc(i,isouth,it1,Linp)+          &
      &            fac1*                                                 &
@@ -285,13 +288,13 @@
      &      Lobc(inorth,isVbar,ng).and.                                 &
      &    DOMAIN(ng)%Northern_Edge(tile)) THEN
         DO i=Istr,Iend
-!>        BOUNDARY(ng)%tl_vbar_north(i)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_vbar_obc(i,     &
-!>   &                                    inorth,it1,Linp)+             &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_vbar_obc(i,     &
-!>   &                                    inorth,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_vbar_north(i)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_vbar_obc(i,     &
+!^   &                                    inorth,it1,Linp)+             &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_vbar_obc(i,     &
+!^   &                                    inorth,it2,Linp)
+!^
           BOUNDARY(ng)%ad_vbar_obc(i,inorth,it1,Linp)=                  &
      &            BOUNDARY(ng)%ad_vbar_obc(i,inorth,it1,Linp)+          &
      &            fac1*                                                 &
@@ -311,13 +314,13 @@
      &      Lobc(iwest,isFsur,ng).and.                                  &
      &    DOMAIN(ng)%Western_Edge(tile)) THEN
         DO j=Jstr,Jend
-!>        BOUNDARY(ng)%tl_zeta_west(j)=fac1*                            &
-!>   &                                 BOUNDARY(ng)%tl_zeta_obc(j,      &
-!>   &                                   iwest,it1,Linp)+               &
-!>   &                                 fac2*
-!>   &                                 BOUNDARY(ng)%tl_zeta_obc(j,
-!>   &                                   iwest,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_zeta_west(j)=fac1*                            &
+!^   &                                 BOUNDARY(ng)%tl_zeta_obc(j,      &
+!^   &                                   iwest,it1,Linp)+               &
+!^   &                                 fac2*
+!^   &                                 BOUNDARY(ng)%tl_zeta_obc(j,
+!^   &                                   iwest,it2,Linp)
+!^
           BOUNDARY(ng)%ad_zeta_obc(j,iwest,it1,Linp)=                   &
      &            BOUNDARY(ng)%ad_zeta_obc(j,iwest,it1,Linp)+           &
      &            fac1*                                                 &
@@ -334,13 +337,13 @@
      &      Lobc(ieast,isFsur,ng).and.                                  &
      &    DOMAIN(ng)%Eastern_Edge(tile)) THEN
         DO j=Jstr,Jend
-!>        BOUNDARY(ng)%tl_zeta_east(j)=fac1*                            &
-!>   &                                 BOUNDARY(ng)%tl_zeta_obc(j,      &
-!>   &                                   ieast,it1,Linp)+               &
-!>   &                                 fac2*                            &
-!>   &                                 BOUNDARY(ng)%tl_zeta_obc(j,      &
-!>   &                                   ieast,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_zeta_east(j)=fac1*                            &
+!^   &                                 BOUNDARY(ng)%tl_zeta_obc(j,      &
+!^   &                                   ieast,it1,Linp)+               &
+!^   &                                 fac2*                            &
+!^   &                                 BOUNDARY(ng)%tl_zeta_obc(j,      &
+!^   &                                   ieast,it2,Linp)
+!^
           BOUNDARY(ng)%ad_zeta_obc(j,ieast,it1,Linp)=                   &
      &            BOUNDARY(ng)%ad_zeta_obc(j,ieast,it1,Linp)+           &
      &            fac1*                                                 &
@@ -357,13 +360,13 @@
      &      Lobc(isouth,isFsur,ng).and.                                 &
      &      DOMAIN(ng)%Southern_Edge(tile)) THEN
         DO i=Istr,Iend
-!>        BOUNDARY(ng)%tl_zeta_south(i)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_zeta_obc(i,     &
-!>   &                                    isouth,it1,Linp)+             &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_zeta_obc(i,     &
-!>   &                                    isouth,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_zeta_south(i)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_zeta_obc(i,     &
+!^   &                                    isouth,it1,Linp)+             &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_zeta_obc(i,     &
+!^   &                                    isouth,it2,Linp)
+!^
           BOUNDARY(ng)%ad_zeta_obc(i,isouth,it1,Linp)=                  &
      &            BOUNDARY(ng)%ad_zeta_obc(i,isouth,it1,Linp)+          &
      &            fac1*                                                 &
@@ -380,13 +383,13 @@
      &      Lobc(inorth,isFsur,ng).and.                                 &
      &    DOMAIN(ng)%Northern_Edge(tile)) THEN
         DO i=Istr,Iend
-!>        BOUNDARY(ng)%tl_zeta_north(i)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_zeta_obc(i,     &
-!>   &                                    inorth,it1,Linp)+             &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_zeta_obc(i,     &
-!>   &                                    inorth,it2,Linp)
-!>
+!^        BOUNDARY(ng)%tl_zeta_north(i)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_zeta_obc(i,     &
+!^   &                                    inorth,it1,Linp)+             &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_zeta_obc(i,     &
+!^   &                                    inorth,it2,Linp)
+!^
           BOUNDARY(ng)%ad_zeta_obc(i,inorth,it1,Linp)=                  &
      &            BOUNDARY(ng)%ad_zeta_obc(i,inorth,it1,Linp)+          &
      &            fac1*                                                 &
@@ -408,13 +411,13 @@
      &    DOMAIN(ng)%Western_Edge(tile)) THEN
         DO k=1,N(ng)
           DO j=Jstr,Jend
-!>          BOUNDARY(ng)%tl_u_west(j,k)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_u_obc(j,k,      &
-!>   &                                    iwest,it1,Linp)+              &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_u_obc(j,k,      &
-!>   &                                    iwest,it2,Linp)
-!>
+!^          BOUNDARY(ng)%tl_u_west(j,k)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_u_obc(j,k,      &
+!^   &                                    iwest,it1,Linp)+              &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_u_obc(j,k,      &
+!^   &                                    iwest,it2,Linp)
+!^
             BOUNDARY(ng)%ad_u_obc(j,k,iwest,it1,Linp)=                  &
      &              BOUNDARY(ng)%ad_u_obc(j,k,iwest,it1,Linp)+          &
      &              fac1*                                               &
@@ -433,13 +436,13 @@
      &    DOMAIN(ng)%Eastern_Edge(tile)) THEN
         DO k=1,N(ng)
           DO j=Jstr,Jend
-!>          BOUNDARY(ng)%tl_u_east(j,k)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_u_obc(j,k,      &
-!>   &                                    ieast,it1,Linp)+              &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_u_obc(j,k,      &
-!>   &                                    ieast,it2,Linp)
-!>
+!^          BOUNDARY(ng)%tl_u_east(j,k)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_u_obc(j,k,      &
+!^   &                                    ieast,it1,Linp)+              &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_u_obc(j,k,      &
+!^   &                                    ieast,it2,Linp)
+!^
             BOUNDARY(ng)%ad_u_obc(j,k,ieast,it1,Linp)=                  &
      &              BOUNDARY(ng)%ad_u_obc(j,k,ieast,it1,Linp)+          &
      &              fac1*                                               &
@@ -458,13 +461,13 @@
      &    DOMAIN(ng)%Southern_Edge(tile)) THEN
         DO k=1,N(ng)
           DO i=IstrU,Iend
-!>          BOUNDARY(ng)%tl_u_south(i,k)=fac1*                          &
-!>   &                                   BOUNDARY(ng)%tl_u_obc(i,k,     &
-!>   &                                     isouth,it1,Linp)+            &
-!>   &                                   fac2*                          &
-!>   &                                   BOUNDARY(ng)%tl_u_obc(i,k,     &
-!>   &                                     isouth,it2,Linp)
-!>
+!^          BOUNDARY(ng)%tl_u_south(i,k)=fac1*                          &
+!^   &                                   BOUNDARY(ng)%tl_u_obc(i,k,     &
+!^   &                                     isouth,it1,Linp)+            &
+!^   &                                   fac2*                          &
+!^   &                                   BOUNDARY(ng)%tl_u_obc(i,k,     &
+!^   &                                     isouth,it2,Linp)
+!^
             BOUNDARY(ng)%ad_u_obc(i,k,isouth,it1,Linp)=                 &
      &              BOUNDARY(ng)%ad_u_obc(i,k,isouth,it1,Linp)+         &
      &              fac1*                                               &
@@ -483,13 +486,13 @@
      &    DOMAIN(ng)%Northern_Edge(tile)) THEN
         DO k=1,N(ng)
           DO i=IstrU,Iend
-!>          BOUNDARY(ng)%tl_u_north(i,k)=fac1*                          &
-!>   &                                   BOUNDARY(ng)%tl_u_obc(i,k,     &
-!>   &                                     inorth,it1,Linp)+            &
-!>   &                                   fac2*                          &
-!>   &                                   BOUNDARY(ng)%tl_u_obc(i,k,     &
-!>   &                                     inorth,it2,Linp)
-!>
+!^          BOUNDARY(ng)%tl_u_north(i,k)=fac1*                          &
+!^   &                                   BOUNDARY(ng)%tl_u_obc(i,k,     &
+!^   &                                     inorth,it1,Linp)+            &
+!^   &                                   fac2*                          &
+!^   &                                   BOUNDARY(ng)%tl_u_obc(i,k,     &
+!^   &                                     inorth,it2,Linp)
+!^
             BOUNDARY(ng)%ad_u_obc(i,k,inorth,it1,Linp)=                 &
      &              BOUNDARY(ng)%ad_u_obc(i,k,inorth,it1,Linp)+         &
      &              fac1*                                               &
@@ -510,13 +513,13 @@
      &    DOMAIN(ng)%Western_Edge(tile)) THEN
         DO k=1,N(ng)
           DO j=JstrV,Jend
-!>          BOUNDARY(ng)%tl_v_west(j,k)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_v_obc(j,k,      &
-!>   &                                    iwest,it1,Linp)+              &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_v_obc(j,k,      &
-!>   &                                    iwest,it2,Linp)
-!>
+!^          BOUNDARY(ng)%tl_v_west(j,k)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_v_obc(j,k,      &
+!^   &                                    iwest,it1,Linp)+              &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_v_obc(j,k,      &
+!^   &                                    iwest,it2,Linp)
+!^
             BOUNDARY(ng)%ad_v_obc(j,k,iwest,it1,Linp)=                  &
      &              BOUNDARY(ng)%ad_v_obc(j,k,iwest,it1,Linp)+          &
      &              fac1*                                               &
@@ -535,13 +538,13 @@
      &    DOMAIN(ng)%Eastern_Edge(tile)) THEN
         DO k=1,N(ng)
           DO j=JstrV,Jend
-!>          BOUNDARY(ng)%tl_v_east(j,k)=fac1*                           &
-!>   &                                  BOUNDARY(ng)%tl_v_obc(j,k,      &
-!>   &                                    ieast,it1,Linp)+              &
-!>   &                                  fac2*                           &
-!>   &                                  BOUNDARY(ng)%tl_v_obc(j,k,      &
-!>   &                                    ieast,it2,Linp)
-!>
+!^          BOUNDARY(ng)%tl_v_east(j,k)=fac1*                           &
+!^   &                                  BOUNDARY(ng)%tl_v_obc(j,k,      &
+!^   &                                    ieast,it1,Linp)+              &
+!^   &                                  fac2*                           &
+!^   &                                  BOUNDARY(ng)%tl_v_obc(j,k,      &
+!^   &                                    ieast,it2,Linp)
+!^
             BOUNDARY(ng)%ad_v_obc(j,k,ieast,it1,Linp)=                  &
      &              BOUNDARY(ng)%ad_v_obc(j,k,ieast,it1,Linp)+          &
      &              fac1*                                               &
@@ -560,13 +563,13 @@
      &    DOMAIN(ng)%Southern_Edge(tile)) THEN
         DO k=1,N(ng)
           DO i=Istr,Iend
-!>          BOUNDARY(ng)%tl_v_south(i,k)=fac1*                          &
-!>   &                                   BOUNDARY(ng)%tl_v_obc(i,k,     &
-!>   &                                     isouth,it1,Linp)+            &
-!>   &                                   fac2*                          &
-!>   &                                   BOUNDARY(ng)%tl_v_obc(i,k,     &
-!>   &                                     isouth,it2,Linp)
-!>
+!^          BOUNDARY(ng)%tl_v_south(i,k)=fac1*                          &
+!^   &                                   BOUNDARY(ng)%tl_v_obc(i,k,     &
+!^   &                                     isouth,it1,Linp)+            &
+!^   &                                   fac2*                          &
+!^   &                                   BOUNDARY(ng)%tl_v_obc(i,k,     &
+!^   &                                     isouth,it2,Linp)
+!^
             BOUNDARY(ng)%ad_v_obc(i,k,isouth,it1,Linp)=                 &
      &              BOUNDARY(ng)%ad_v_obc(i,k,isouth,it1,Linp)+         &
      &              fac1*                                               &
@@ -585,13 +588,13 @@
      &    DOMAIN(ng)%Northern_Edge(tile)) THEN
         DO k=1,N(ng)
           DO i=Istr,Iend
-!>          BOUNDARY(ng)%tl_v_north(i,k)=fac1*                          &
-!>   &                                   BOUNDARY(ng)%tl_v_obc(i,k,     &
-!>   &                                     inorth,it1,Linp)+            &
-!>   &                                   fac2*                          &
-!>   &                                   BOUNDARY(ng)%tl_v_obc(i,k,     &
-!>   &                                     inorth,it2,Linp)
-!>
+!^          BOUNDARY(ng)%tl_v_north(i,k)=fac1*                          &
+!^   &                                   BOUNDARY(ng)%tl_v_obc(i,k,     &
+!^   &                                     inorth,it1,Linp)+            &
+!^   &                                   fac2*                          &
+!^   &                                   BOUNDARY(ng)%tl_v_obc(i,k,     &
+!^   &                                     inorth,it2,Linp)
+!^
             BOUNDARY(ng)%ad_v_obc(i,k,inorth,it1,Linp)=                 &
      &              BOUNDARY(ng)%ad_v_obc(i,k,inorth,it1,Linp)+         &
      &              fac1*                                               &
@@ -613,13 +616,13 @@
      &      DOMAIN(ng)%Western_Edge(tile)) THEN
           DO k=1,N(ng)
             DO j=Jstr,Jend
-!>            BOUNDARY(ng)%tl_t_west(j,k,it)=fac1*                      &
-!>   &                                       BOUNDARY(ng)%tl_t_obc(j,   &
-!>   &                                         k,iwest,it1,Linp,it)+    &
-!>   &                                       fac2*                      &
-!>   &                                       BOUNDARY(ng)%tl_t_obc(j,   &
-!>   &                                         k,iwest,it2,Linp,it)
-!>
+!^            BOUNDARY(ng)%tl_t_west(j,k,it)=fac1*                      &
+!^   &                                       BOUNDARY(ng)%tl_t_obc(j,   &
+!^   &                                         k,iwest,it1,Linp,it)+    &
+!^   &                                       fac2*                      &
+!^   &                                       BOUNDARY(ng)%tl_t_obc(j,   &
+!^   &                                         k,iwest,it2,Linp,it)
+!^
               BOUNDARY(ng)%ad_t_obc(j,k,iwest,it1,Linp,it)=             &
      &                BOUNDARY(ng)%ad_t_obc(j,k,iwest,it1,Linp,it)+     &
      &                fac1*                                             &
@@ -638,13 +641,13 @@
      &      DOMAIN(ng)%Eastern_Edge(tile)) THEN
           DO k=1,N(ng)
             DO j=Jstr,Jend
-!>            BOUNDARY(ng)%tl_t_east(j,k,it)=fac1*                      &
-!>   &                                       BOUNDARY(ng)%tl_t_obc(j,   &
-!>   &                                         k,ieast,it1,Linp,it)+    &
-!>   &                                       fac2*                      &
-!>   &                                       BOUNDARY(ng)%tl_t_obc(j,   &
-!>   &                                         k,ieast,it2,Linp,it)
-!>
+!^            BOUNDARY(ng)%tl_t_east(j,k,it)=fac1*                      &
+!^   &                                       BOUNDARY(ng)%tl_t_obc(j,   &
+!^   &                                         k,ieast,it1,Linp,it)+    &
+!^   &                                       fac2*                      &
+!^   &                                       BOUNDARY(ng)%tl_t_obc(j,   &
+!^   &                                         k,ieast,it2,Linp,it)
+!^
               BOUNDARY(ng)%ad_t_obc(j,k,ieast,it1,Linp,it)=             &
      &                BOUNDARY(ng)%ad_t_obc(j,k,ieast,it1,Linp,it)+     &
      &                fac1*                                             &
@@ -663,13 +666,13 @@
      &      DOMAIN(ng)%Southern_Edge(tile)) THEN
           DO k=1,N(ng)
             DO i=Istr,Iend
-!>            BOUNDARY(ng)%tl_t_south(i,k,it)=fac1*                     &
-!>   &                                        BOUNDARY(ng)%tl_t_obc(i,  &
-!>   &                                          k,isouth,it1,Linp,it)+  &
-!>   &                                        fac2*                     &
-!>   &                                        BOUNDARY(ng)%tl_t_obc(i,  &
-!>   &                                          k,isouth,it2,Linp,it)
-!>
+!^            BOUNDARY(ng)%tl_t_south(i,k,it)=fac1*                     &
+!^   &                                        BOUNDARY(ng)%tl_t_obc(i,  &
+!^   &                                          k,isouth,it1,Linp,it)+  &
+!^   &                                        fac2*                     &
+!^   &                                        BOUNDARY(ng)%tl_t_obc(i,  &
+!^   &                                          k,isouth,it2,Linp,it)
+!^
               BOUNDARY(ng)%ad_t_obc(i,k,isouth,it1,Linp,it)=            &
      &                BOUNDARY(ng)%ad_t_obc(i,k,isouth,it1,Linp,it)+    &
      &                fac1*                                             &
@@ -688,13 +691,13 @@
      &      DOMAIN(ng)%Northern_Edge(tile)) THEN
           DO k=1,N(ng)
             DO i=Istr,Iend
-!>            BOUNDARY(ng)%tl_t_north(i,k,it)=fac1*
-!>   &                                        BOUNDARY(ng)%tl_t_obc(i,  &
-!>   &                                          k,inorth,it1,Linp,it)+  &
-!>   &                                        fac2*                     &
-!>   &                                        BOUNDARY(ng)%tl_t_obc(i,  &
-!>   &                                          k,inorth,it2,Linp,it)
-!>
+!^            BOUNDARY(ng)%tl_t_north(i,k,it)=fac1*
+!^   &                                        BOUNDARY(ng)%tl_t_obc(i,  &
+!^   &                                          k,inorth,it1,Linp,it)+  &
+!^   &                                        fac2*                     &
+!^   &                                        BOUNDARY(ng)%tl_t_obc(i,  &
+!^   &                                          k,inorth,it2,Linp,it)
+!^
               BOUNDARY(ng)%ad_t_obc(i,k,inorth,it1,Linp,it)=            &
      &                BOUNDARY(ng)%ad_t_obc(i,k,inorth,it1,Linp,it)+    &
      &                fac1*                                             &
@@ -709,7 +712,7 @@
         END IF
       END DO
 # endif
-
+!
       RETURN
       END SUBROUTINE ad_obc_adjust_tile
 
@@ -728,10 +731,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ad_obc2d_adjust"
+!
 #  include "tile.h"
 !
 #  ifdef PROFILE
-      CALL wclock_on (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 7, __LINE__, MyFile)
 #  endif
       CALL ad_obc2d_adjust_tile (ng, tile,                              &
      &                           LBi, UBi, LBj, UBj, LBij, UBij,        &
@@ -746,7 +752,7 @@
      &                           GRID(ng) % ad_Hz,                      &
      &                           GRID(ng) % ad_Hz_bry)
 #  ifdef PROFILE
-      CALL wclock_off (ng, iADM, 7, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 7, __LINE__, MyFile)
 #  endif
 
       RETURN
@@ -859,48 +865,48 @@
             CF(0)=CF(0)+DC(k)*BOUNDARY(ng)%u_west(j,k)
           END DO
           cff1=1.0_r8/DC(0)
-!>        BOUNDARY(ng)%tl_ubar_west(j)=tl_cff2
-!>
+!^        BOUNDARY(ng)%tl_ubar_west(j)=tl_cff2
+!^
           ad_cff2=BOUNDARY(ng)%ad_ubar_west(j)
           BOUNDARY(ng)%ad_ubar_west(j)=0.0_r8
 #  ifdef MASKING
-!>        tl_cff2=tl_cff2*umask(i,j)
-!>
+!^        tl_cff2=tl_cff2*umask(i,j)
+!^
           ad_cff2=ad_cff2*umask(i,j)
 #  endif
-!>        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
-!>
+!^        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
+!^
           ad_cff1=ad_cff1+CF(0)*ad_cff2
           ad_CF(0)=ad_CF(0)+ad_cff2*cff1
           ad_cff2=0.0_r8
-!>        tl_cff1=-cff1*cff1*tl_DC(0)
-!>
+!^        tl_cff1=-cff1*cff1*tl_DC(0)
+!^
           ad_DC(0)=ad_DC(0)-cff1*cff1*ad_cff1
           ad_cff1=0.0_r8
           DO k=N(ng),1,-1
-!>          tl_CF(0)=tl_CF(0)+                                          &
-!>   &               tl_DC(k)*BOUNDARY(ng)%u_west(j,k)+                 &
-!>   &               DC(k)*BOUNDARY(ng)%tl_u_west(j,k)
-!>
+!^          tl_CF(0)=tl_CF(0)+                                          &
+!^   &               tl_DC(k)*BOUNDARY(ng)%u_west(j,k)+                 &
+!^   &               DC(k)*BOUNDARY(ng)%tl_u_west(j,k)
+!^
             ad_DC(k)=ad_DC(k)+BOUNDARY(ng)%u_west(j,k)*ad_CF(0)
             BOUNDARY(ng)%ad_u_west(j,k)=BOUNDARY(ng)%ad_u_west(j,k)+    &
      &                                  DC(k)*ad_CF(0)
-!>          tl_DC(0)=tl_DC(0)+tl_DC(k)
-!>
+!^          tl_DC(0)=tl_DC(0)+tl_DC(k)
+!^
             ad_DC(k)=ad_DC(k)+ad_DC(0)
-!>          tl_DC(k)=0.5_r8*(tl_Hz_bry(j,k,iwest)+                      &
-!>   &                       tl_Hz(i+1,j,k))
-!>
+!^          tl_DC(k)=0.5_r8*(tl_Hz_bry(j,k,iwest)+                      &
+!^   &                       tl_Hz(i+1,j,k))
+!^
             adfac=0.5_r8*ad_DC(k)
             ad_Hz(i+1,j,k)=ad_Hz(i+1,j,k)+adfac
             ad_Hz_bry(j,k,iwest)=ad_Hz_bry(j,k,iwest)+adfac
             ad_DC(k)=0.0_r8
           END DO
-!>        tl_DC(0)=0.0_r8
-!>
+!^        tl_DC(0)=0.0_r8
+!^
           ad_DC(0)=0.0_r8
-!>        tl_CF(0)=0.0_r8
-!>
+!^        tl_CF(0)=0.0_r8
+!^
           ad_CF(0)=0.0_r8
         END DO
       END IF
@@ -919,48 +925,48 @@
             CF(0)=CF(0)+DC(k)*BOUNDARY(ng)%u_east(j,k)
           END DO
           cff1=1.0_r8/DC(0)
-!>        BOUNDARY(ng)%tl_ubar_east(j)=tl_cff2
-!>
+!^        BOUNDARY(ng)%tl_ubar_east(j)=tl_cff2
+!^
           ad_cff2=ad_cff2+BOUNDARY(ng)%ad_ubar_east(j)
           BOUNDARY(ng)%ad_ubar_east(j)=0.0_r8
 #  ifdef MASKING
-!>        tl_cff2=tl_cff2*umask(i,j)
-!>
+!^        tl_cff2=tl_cff2*umask(i,j)
+!^
           ad_cff2=ad_cff2*umask(i,j)
 #  endif
-!>        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
-!>
+!^        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
+!^
           ad_CF(0)=ad_CF(0)+cff1*ad_cff2
           ad_cff1=ad_cff1+CF(0)*ad_cff2
           ad_cff2=0.0_r8
-!>        tl_cff1=-cff1*cff1*tl_DC(0)
-!>
+!^        tl_cff1=-cff1*cff1*tl_DC(0)
+!^
           ad_DC(0)=ad_DC(0)-cff1*cff1*ad_cff1
           ad_cff1=0.0_r8
           DO k=N(ng),1,-1
-!>          tl_CF(0)=tl_CF(0)+                                          &
-!>   &               tl_DC(k)*BOUNDARY(ng)%u_east(j,k)+                 &
-!>   &               DC(k)*BOUNDARY(ng)%tl_u_east(j,k)
-!>
+!^          tl_CF(0)=tl_CF(0)+                                          &
+!^   &               tl_DC(k)*BOUNDARY(ng)%u_east(j,k)+                 &
+!^   &               DC(k)*BOUNDARY(ng)%tl_u_east(j,k)
+!^
             ad_DC(k)=ad_DC(k)+BOUNDARY(ng)%u_east(j,k)*ad_CF(0)
             BOUNDARY(ng)%ad_u_east(j,k)=BOUNDARY(ng)%ad_u_east(j,k)+    &
      &                                  DC(k)*ad_CF(0)
-!>          tl_DC(0)=tl_DC(0)+tl_DC(k)
-!>
+!^          tl_DC(0)=tl_DC(0)+tl_DC(k)
+!^
             ad_DC(k)=ad_DC(k)+ad_DC(0)
-!>          tl_DC(k)=0.5_r8*(tl_Hz(i-1,j,k)+                            &
-!>   &                       tl_Hz_bry(j,k,ieast))
-!>
+!^          tl_DC(k)=0.5_r8*(tl_Hz(i-1,j,k)+                            &
+!^   &                       tl_Hz_bry(j,k,ieast))
+!^
             adfac=0.5_r8*ad_DC(k)
             ad_Hz(i-1,j,k)=ad_Hz(i-1,j,k)+adfac
             ad_Hz_bry(j,k,ieast)=ad_Hz_bry(j,k,ieast)+adfac
             ad_DC(k)=0.0_r8
           END DO
-!>        tl_DC(0)=0.0_r8
-!>
+!^        tl_DC(0)=0.0_r8
+!^
           ad_DC(0)=0.0_r8
-!>        tl_CF(0)=0.0_r8
-!>
+!^        tl_CF(0)=0.0_r8
+!^
           ad_CF(0)=0.0_r8
         END DO
       END IF
@@ -979,48 +985,48 @@
             CF(0)=CF(0)+DC(k)*BOUNDARY(ng)%u_south(i,k)
           END DO
           cff1=1.0_r8/DC(0)
-!>        BOUNDARY(ng)%tl_ubar_south(i)=tl_cff2
-!>
+!^        BOUNDARY(ng)%tl_ubar_south(i)=tl_cff2
+!^
           ad_cff2=ad_cff2+BOUNDARY(ng)%ad_ubar_south(i)
           BOUNDARY(ng)%ad_ubar_south(i)=0.0_r8
 #  ifdef MASKING
-!>        tl_cff2=tl_cff2*umask(i,j)
-!>
+!^        tl_cff2=tl_cff2*umask(i,j)
+!^
           ad_cff2=ad_cff2*umask(i,j)
 #  endif
-!>        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
-!>
+!^        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
+!^
           ad_cff1=ad_cff1+CF(0)*ad_cff2
           ad_CF(0)=ad_CF(0)+cff1*ad_cff2
           ad_cff2=0.0_r8
-!>        tl_cff1=-cff1*cff1*tl_DC(0)
-!>
+!^        tl_cff1=-cff1*cff1*tl_DC(0)
+!^
           ad_DC(0)=ad_DC(0)-cff1*cff1*ad_cff1
           ad_cff1=0.0_r8
           DO k=N(ng),1,-1
-!>          tl_CF(0)=tl_CF(0)+                                          &
-!>   &               tl_DC(k)*BOUNDARY(ng)%u_south(i,k)+                &
-!>   &               DC(k)*BOUNDARY(ng)%tl_u_south(i,k)
-!>
+!^          tl_CF(0)=tl_CF(0)+                                          &
+!^   &               tl_DC(k)*BOUNDARY(ng)%u_south(i,k)+                &
+!^   &               DC(k)*BOUNDARY(ng)%tl_u_south(i,k)
+!^
             ad_DC(k)=ad_DC(k)+BOUNDARY(ng)%u_south(i,k)*ad_CF(0)
             BOUNDARY(ng)%ad_u_south(i,k)=BOUNDARY(ng)%ad_u_south(i,k)+  &
      &                                   DC(k)*ad_CF(0)
-!>          tl_DC(0)=tl_DC(0)+tl_DC(k)
-!>
+!^          tl_DC(0)=tl_DC(0)+tl_DC(k)
+!^
             ad_DC(k)=ad_DC(k)+ad_DC(0)
-!>          tl_DC(k)=0.5_r8*(tl_Hz_bry(i-1,k,isouth)+                   &
-!>   &                       tl_Hz_bry(i  ,k,isouth))
-!>
+!^          tl_DC(k)=0.5_r8*(tl_Hz_bry(i-1,k,isouth)+                   &
+!^   &                       tl_Hz_bry(i  ,k,isouth))
+!^
             adfac=0.5_r8*ad_DC(k)
             ad_Hz_bry(i-1,k,isouth)=ad_Hz_bry(i-1,k,isouth)+adfac
             ad_Hz_bry(i  ,k,isouth)=ad_Hz_bry(i  ,k,isouth)+adfac
             ad_DC(k)=0.0_r8
           END DO
-!>        tl_DC(0)=0.0_r8
-!>
+!^        tl_DC(0)=0.0_r8
+!^
           ad_DC(0)=0.0_r8
-!>        tl_CF(0)=0.0_r8
-!>
+!^        tl_CF(0)=0.0_r8
+!^
           ad_CF(0)=0.0_r8
         END DO
       END IF
@@ -1039,49 +1045,49 @@
             CF(0)=CF(0)+DC(k)*BOUNDARY(ng)%u_north(i,k)
           END DO
           cff1=1.0_r8/DC(0)
-!>        BOUNDARY(ng)%tl_ubar_north(i)=tl_cff2
-!>
+!^        BOUNDARY(ng)%tl_ubar_north(i)=tl_cff2
+!^
           ad_cff2=ad_cff2+BOUNDARY(ng)%ad_ubar_north(i)
           BOUNDARY(ng)%ad_ubar_north(i)=0.0_r8
 #  ifdef MASKING
-!>        tl_cff2=tl_cff2*umask(i,j)
-!>
+!^        tl_cff2=tl_cff2*umask(i,j)
+!^
           ad_cff2=ad_cff2*umask(i,j)
 #  endif
-!>        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
-!>
+!^        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
+!^
           ad_CF(0)=ad_CF(0)+cff1*ad_cff2
           ad_cff1=ad_cff1+CF(0)*ad_cff2
           ad_cff2=0.0_r8
-!>        tl_cff1=-cff1*cff1*tl_DC(0)
-!>
+!^        tl_cff1=-cff1*cff1*tl_DC(0)
+!^
           ad_DC(0)=ad_DC(0)-cff1*cff1*ad_cff1
           ad_cff1=0.0_r8
           DO k=N(ng),1,-1
-!>          tl_CF(0)=tl_CF(0)+                                          &
-!>   &               tl_DC(k)*BOUNDARY(ng)%u_north(i,k)+                &
-!>   &               DC(k)*BOUNDARY(ng)%tl_u_north(i,k)
-!>
+!^          tl_CF(0)=tl_CF(0)+                                          &
+!^   &               tl_DC(k)*BOUNDARY(ng)%u_north(i,k)+                &
+!^   &               DC(k)*BOUNDARY(ng)%tl_u_north(i,k)
+!^
             ad_DC(k)=ad_DC(k)+BOUNDARY(ng)%u_north(i,k)*ad_CF(0)
             BOUNDARY(ng)%ad_u_north(i,k)=BOUNDARY(ng)%ad_u_north(i,k)+  &
      &                                   DC(k)*ad_CF(0)
             ad_CF(0)=0.0_r8
-!>          tl_DC(0)=tl_DC(0)+tl_DC(k)
-!>
+!^          tl_DC(0)=tl_DC(0)+tl_DC(k)
+!^
             ad_DC(k)=ad_DC(k)+ad_DC(0)
-!>          tl_DC(k)=0.5_r8*(tl_Hz_bry(i-1,k,inorth)+                   &
-!>   &                       tl_Hz_bry(i  ,k,inorth))
-!>
+!^          tl_DC(k)=0.5_r8*(tl_Hz_bry(i-1,k,inorth)+                   &
+!^   &                       tl_Hz_bry(i  ,k,inorth))
+!^
             adfac=0.5_r8*ad_DC(k)
             ad_Hz_bry(i-1,k,inorth)=ad_Hz_bry(i-1,k,inorth)+adfac
             ad_Hz_bry(i  ,k,inorth)=ad_Hz_bry(i  ,k,inorth)+adfac
             ad_DC(k)=0.0_r8
           END DO
-!>        tl_DC(0)=0.0_r8
-!>
+!^        tl_DC(0)=0.0_r8
+!^
           ad_DC(0)=0.0_r8
-!>        tl_CF(0)=0.0_r8
-!>
+!^        tl_CF(0)=0.0_r8
+!^
           ad_CF(0)=0.0_r8
         END DO
       END IF
@@ -1103,48 +1109,48 @@
             CF(0)=CF(0)+DC(k)*BOUNDARY(ng)%v_west(j,k)
           END DO
           cff1=1.0_r8/DC(0)
-!>        BOUNDARY(ng)%tl_vbar_west(j)=tl_cff2
-!>
+!^        BOUNDARY(ng)%tl_vbar_west(j)=tl_cff2
+!^
           ad_cff2=ad_cff2+BOUNDARY(ng)%ad_vbar_west(j)
           BOUNDARY(ng)%ad_vbar_west(j)=0.0_r8
 #  ifdef MASKING
-!>        tl_cff2=tl_cff2*vmask(i,j)
-!>
+!^        tl_cff2=tl_cff2*vmask(i,j)
+!^
           ad_cff2=ad_cff2*vmask(i,j)
 #  endif
-!>        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
-!>
+!^        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
+!^
           ad_CF(0)=ad_CF(0)+cff1*ad_cff2
           ad_cff1=ad_cff1+CF(0)*ad_cff2
           ad_cff2=0.0_r8
-!>        tl_cff1=-cff1*cff1*tl_DC(0)
-!>
+!^        tl_cff1=-cff1*cff1*tl_DC(0)
+!^
           ad_DC(0)=ad_DC(0)-cff1*cff1*ad_cff1
           ad_cff1=0.0_r8
           DO k=N(ng),1,-1
-!>          tl_CF(0)=tl_CF(0)+                                          &
-!>   &               tl_DC(k)*BOUNDARY(ng)%v_west(j,k)+                 &
-!>   &               DC(k)*BOUNDARY(ng)%tl_v_west(j,k)
-!>
+!^          tl_CF(0)=tl_CF(0)+                                          &
+!^   &               tl_DC(k)*BOUNDARY(ng)%v_west(j,k)+                 &
+!^   &               DC(k)*BOUNDARY(ng)%tl_v_west(j,k)
+!^
             BOUNDARY(ng)%ad_v_west(j,k)=BOUNDARY(ng)%ad_v_west(j,k)+    &
      &                                  DC(k)*ad_CF(0)
             ad_DC(k)=ad_DC(k)+BOUNDARY(ng)%v_west(j,k)*ad_CF(0)
-!>          tl_DC(0)=tl_DC(0)+tl_DC(k)
-!>
+!^          tl_DC(0)=tl_DC(0)+tl_DC(k)
+!^
             ad_DC(k)=ad_DC(k)+ad_DC(0)
-!>          tl_DC(k)=0.5_r8*(tl_Hz_bry(j-1,k,iwest)+                    &
-!>   &                       tl_Hz_bry(j  ,k,iwest))
-!>
+!^          tl_DC(k)=0.5_r8*(tl_Hz_bry(j-1,k,iwest)+                    &
+!^   &                       tl_Hz_bry(j  ,k,iwest))
+!^
             adfac=0.5_r8*ad_DC(k)
             ad_Hz_bry(j-1,k,iwest)=ad_Hz_bry(j-1,k,iwest)+adfac
             ad_Hz_bry(j  ,k,iwest)=ad_Hz_bry(j  ,k,iwest)+adfac
             ad_DC(k)=0.0_r8
           END DO
-!>        tl_CF(0)=0.0_r8
-!>
+!^        tl_CF(0)=0.0_r8
+!^
           ad_CF(0)=0.0_r8
-!>        tl_DC(0)=0.0_r8
-!>
+!^        tl_DC(0)=0.0_r8
+!^
           ad_DC(0)=0.0_r8
         END DO
       END IF
@@ -1163,49 +1169,49 @@
             CF(0)=CF(0)+DC(k)*BOUNDARY(ng)%v_east(j,k)
           END DO
           cff1=1.0_r8/DC(0)
-!>        BOUNDARY(ng)%tl_vbar_east(j)=tl_cff2
-!>
+!^        BOUNDARY(ng)%tl_vbar_east(j)=tl_cff2
+!^
           ad_cff2=ad_cff2+BOUNDARY(ng)%ad_vbar_east(j)
           BOUNDARY(ng)%ad_vbar_east(j)=0.0_r8
 #  ifdef MASKING
-!>        tl_cff2=tl_cff2*vmask(i,j)
-!>
+!^        tl_cff2=tl_cff2*vmask(i,j)
+!^
           ad_cff2=ad_cff2*vmask(i,j)
 #  endif
-!>        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
-!>
+!^        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
+!^
           ad_CF(0)=ad_CF(0)+cff1*ad_cff2
           ad_cff1=ad_cff1+CF(0)*ad_cff2
           ad_cff2=0.0_r8
-!>        tl_cff1=-cff1*cff1*tl_DC(0)
-!>
+!^        tl_cff1=-cff1*cff1*tl_DC(0)
+!^
           ad_DC(0)=ad_DC(0)-cff1*cff1*ad_cff1
           ad_cff1=0.0_r8
           DO k=N(ng),1,-1
-!>          tl_CF(0)=tl_CF(0)+                                          &
-!>   &               tl_DC(k)*BOUNDARY(ng)%v_east(j,k)+                 &
-!>   &               DC(k)*BOUNDARY(ng)%tl_v_east(j,k)
-!>
+!^          tl_CF(0)=tl_CF(0)+                                          &
+!^   &               tl_DC(k)*BOUNDARY(ng)%v_east(j,k)+                 &
+!^   &               DC(k)*BOUNDARY(ng)%tl_v_east(j,k)
+!^
             BOUNDARY(ng)%ad_v_east(j,k)=BOUNDARY(ng)%ad_v_east(j,k)+    &
      &                                  DC(k)*ad_CF(0)
             ad_DC(k)=ad_DC(k)+BOUNDARY(ng)%v_east(j,k)*ad_CF(0)
-!>          tl_DC(0)=tl_DC(0)+tl_DC(k)
-!>
+!^          tl_DC(0)=tl_DC(0)+tl_DC(k)
+!^
             ad_DC(k)=ad_DC(k)+ad_DC(0)
             ad_DC(0)=0.0_r8
-!>          tl_DC(k)=0.5_r8*(tl_Hz_bry(j-1,k,ieast)+                    &
-!>   &                       tl_Hz_bry(j  ,k,ieast))
-!>
+!^          tl_DC(k)=0.5_r8*(tl_Hz_bry(j-1,k,ieast)+                    &
+!^   &                       tl_Hz_bry(j  ,k,ieast))
+!^
             adfac=0.5_r8*ad_DC(k)
             ad_Hz_bry(j-1,k,ieast)=ad_Hz_bry(j-1,k,ieast)+adfac
             ad_Hz_bry(j  ,k,ieast)=ad_Hz_bry(j  ,k,ieast)+adfac
             ad_DC(k)=0.0_r8
           END DO
-!>        tl_DC(0)=0.0_r8
-!>
+!^        tl_DC(0)=0.0_r8
+!^
           ad_DC(0)=0.0_r8
-!>        tl_CF(0)=0.0_r8
-!>
+!^        tl_CF(0)=0.0_r8
+!^
           ad_CF(0)=0.0_r8
         END DO
       END IF
@@ -1224,48 +1230,48 @@
             CF(0)=CF(0)+DC(k)*BOUNDARY(ng)%v_south(i,k)
           END DO
           cff1=1.0_r8/DC(0)
-!>        BOUNDARY(ng)%tl_vbar_south(i)=tl_cff2
-!>
+!^        BOUNDARY(ng)%tl_vbar_south(i)=tl_cff2
+!^
           ad_cff2=ad_cff2+BOUNDARY(ng)%ad_vbar_south(i)
           BOUNDARY(ng)%ad_vbar_south(i)=0.0_r8
 #  ifdef MASKING
-!>        tl_cff2=tl_cff2*vmask(i,j)
-!>
+!^        tl_cff2=tl_cff2*vmask(i,j)
+!^
           ad_cff2=ad_cff2*vmask(i,j)
 #  endif
-!>        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
-!>
+!^        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
+!^
           ad_CF(0)=ad_CF(0)+cff1*ad_cff2
           ad_cff1=ad_cff1+CF(0)*ad_cff2
           ad_cff2=0.0_r8
-!>        tl_cff1=-cff1*cff1*tl_DC(0)
-!>
+!^        tl_cff1=-cff1*cff1*tl_DC(0)
+!^
           ad_DC(0)=ad_DC(0)-cff1*cff1*ad_cff1
           ad_cff1=0.0_r8
           DO k=N(ng),1,-1
-!>          tl_CF(0)=tl_CF(0)+                                          &
-!>   &               tl_DC(k)*BOUNDARY(ng)%v_south(i,k)+                &
-!>   &               DC(k)*BOUNDARY(ng)%tl_v_south(i,k)
-!>
+!^          tl_CF(0)=tl_CF(0)+                                          &
+!^   &               tl_DC(k)*BOUNDARY(ng)%v_south(i,k)+                &
+!^   &               DC(k)*BOUNDARY(ng)%tl_v_south(i,k)
+!^
             BOUNDARY(ng)%ad_v_south(i,k)=BOUNDARY(ng)%ad_v_south(i,k)+  &
      &                                   DC(k)*ad_CF(0)
             ad_DC(k)=ad_DC(k)+BOUNDARY(ng)%v_south(i,k)*ad_CF(0)
-!>          tl_DC(0)=tl_DC(0)+tl_DC(k)
-!>
+!^          tl_DC(0)=tl_DC(0)+tl_DC(k)
+!^
             ad_DC(k)=ad_DC(k)+ad_DC(0)
-!>          tl_DC(k)=0.5_r8*(tl_Hz_bry(i,k,isouth)+                     &
-!>   &                       tl_Hz(i+1,j,k))
-!>
+!^          tl_DC(k)=0.5_r8*(tl_Hz_bry(i,k,isouth)+                     &
+!^   &                       tl_Hz(i+1,j,k))
+!^
             adfac=0.5_r8*ad_DC(k)
             ad_Hz_bry(i,k,isouth)=ad_Hz_bry(i,k,isouth)+adfac
             ad_Hz(i+1,j,k)=ad_Hz(i+1,j,k)+adfac
             ad_DC(k)=0.0_r8
           END DO
-!>        tl_DC(0)=0.0_r8
-!>
+!^        tl_DC(0)=0.0_r8
+!^
           ad_DC(0)=0.0_r8
-!>        tl_CF(0)=0.0_r8
-!>
+!^        tl_CF(0)=0.0_r8
+!^
           ad_CF(0)=0.0_r8
         END DO
       END IF
@@ -1284,52 +1290,52 @@
             CF(0)=CF(0)+DC(k)*BOUNDARY(ng)%v_north(i,k)
           END DO
           cff1=1.0_r8/DC(0)
-!>        BOUNDARY(ng)%tl_vbar_north(i)=tl_cff2
-!>
+!^        BOUNDARY(ng)%tl_vbar_north(i)=tl_cff2
+!^
           ad_cff2=ad_cff2+BOUNDARY(ng)%ad_vbar_north(i)
           BOUNDARY(ng)%ad_vbar_north(i)=0.0_r8
 #  ifdef MASKING
-!>        tl_cff2=tl_cff2*vmask(i,j)
-!>
+!^        tl_cff2=tl_cff2*vmask(i,j)
+!^
           ad_cff2=ad_cff2*vmask(i,j)
 #  endif
-!>        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
-!>
+!^        tl_cff2=tl_CF(0)*cff1+CF(0)*tl_cff1
+!^
           ad_CF(0)=ad_CF(0)+cff1*ad_cff2
           ad_cff1=ad_cff1+CF(0)*ad_cff2
           ad_cff2=0.0_r8
-!>        tl_cff1=-cff1*cff1*tl_DC(0)
-!>
+!^        tl_cff1=-cff1*cff1*tl_DC(0)
+!^
           ad_DC(0)=ad_DC(0)-cff1*cff1*ad_cff1
           ad_cff1=0.0_r8
           DO k=N(ng),1,-1
-!>          tl_CF(0)=tl_CF(0)+                                          &
-!>   &               tl_DC(k)*BOUNDARY(ng)%v_north(i,k)+                &
-!>   &               DC(k)*BOUNDARY(ng)%tl_v_north(i,k)
-!>
+!^          tl_CF(0)=tl_CF(0)+                                          &
+!^   &               tl_DC(k)*BOUNDARY(ng)%v_north(i,k)+                &
+!^   &               DC(k)*BOUNDARY(ng)%tl_v_north(i,k)
+!^
             BOUNDARY(ng)%ad_v_north(i,k)=BOUNDARY(ng)%ad_v_north(i,k)+  &
      &                                   DC(k)*ad_CF(0)
             ad_DC(k)=ad_DC(k)+BOUNDARY(ng)%v_north(i,k)*ad_CF(0)
-!>          tl_DC(0)=tl_DC(0)+tl_DC(k)
-!>
+!^          tl_DC(0)=tl_DC(0)+tl_DC(k)
+!^
             ad_DC(k)=ad_DC(k)+ad_DC(0)
-!>          tl_DC(k)=0.5_r8*(tl_Hz(i,j-1,k)+                            &
-!>   &                       tl_Hz_bry(i,k,inorth))
-!>
+!^          tl_DC(k)=0.5_r8*(tl_Hz(i,j-1,k)+                            &
+!^   &                       tl_Hz_bry(i,k,inorth))
+!^
             adfac=0.5_r8*ad_DC(k)
             ad_Hz_bry(i,k,inorth)=ad_Hz_bry(i,k,inorth)+adfac
             ad_Hz(i,j-1,k)=ad_Hz(i,j-1,k)+adfac
             ad_DC(k)=0.0_r8
           END DO
-!>        tl_DC(0)=0.0_r8
-!>
+!^        tl_DC(0)=0.0_r8
+!^
           ad_DC(0)=0.0_r8
-!>        tl_CF(0)=0.0_r8
-!>
+!^        tl_CF(0)=0.0_r8
+!^
           ad_CF(0)=0.0_r8
         END DO
       END IF
-
+!
       RETURN
       END SUBROUTINE ad_obc2d_adjust_tile
 # endif

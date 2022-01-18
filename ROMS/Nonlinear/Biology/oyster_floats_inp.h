@@ -1,8 +1,8 @@
       SUBROUTINE read_FltBioPar (model, inp, out, Lwrite)
 !
-!svn $Id: oyster_floats_inp.h 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: oyster_floats_inp.h 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -283,7 +283,7 @@
   40  FORMAT (/,' READ_FloatsBioPar - Error while processing line: ',/, &
      &        a)
   50  FORMAT (/,' READ_FloatsBioPar - Error reading look table: ',a)
-  60  FORMAT (/,/,' Biological Floats Behavior Parameters, Grid: ',i2.2, &
+  60  FORMAT (/,/,' Biological Floats Behavior Parameters, Grid: ',i2.2,&
      &        /,  ' ===============================================',/)
   70  FORMAT (1p,e11.4,2x,a,t32,a)
   80  FORMAT (1x,i10,2x,a,t32,a)

@@ -1,8 +1,8 @@
-      MODULE ocean_control_mod
+      MODULE roms_kernel_mod
 !
-!svn $Id: correlation.h 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: correlation.h 1103 2022-01-13 03:38:35Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -45,15 +45,50 @@
 !                                                                      !
 !=======================================================================
 !
+      USE mod_param
+      USE mod_parallel
+      USE mod_arrays
+      USE mod_fourdvar
+      USE mod_iounits
+      USE mod_ncparam
+      USE mod_scalars
+      USE mod_stepping
+!
+#ifdef BALANCE_OPERATOR
+      USE ad_balance_mod,     ONLY : ad_balance
+#endif
+      USE ad_convolution_mod, ONLY : ad_convolution
+      USE ad_def_his_mod,     ONLY : ad_def_his
+      USE ad_variability_mod, ONLY : ad_variability
+      USE ad_wrt_his_mod,     ONLY : ad_wrt_his
+      USE analytical_mod,     ONLY : ana_perturb
+      USE close_io_mod,       ONLY : close_inp, close_out
+      USE def_norm_mod,       ONLY : def_norm
+      USE get_state_mod,      ONLY : get_state
+      USE ini_adjust_mod,     ONLY : load_ADtoTL
+      USE ini_adjust_mod,     ONLY : load_TLtoAD
+      USE inp_par_mod,        ONLY : inp_par
+      USE normalization_mod,  ONLY : normalization
+      USE strings_mod,        ONLY : FoundError
+#ifdef BALANCE_OPERATOR
+      USE tl_balance_mod,     ONLY : tl_balance
+#endif
+      USE tl_convolution_mod, ONLY : tl_convolution
+      USE tl_variability_mod, ONLY : tl_variability
+      USE strings_mod,        ONLY : FoundError
+      USE wrt_rst_mod,        ONLY : wrt_rst
+#if defined BALANCE_OPERATOR && defined ZETA_ELLIPTIC
+      USE zeta_balance_mod,   ONLY : balance_ref, biconj
+#endif
+!
       implicit none
-
-      PRIVATE
-      PUBLIC  :: ROMS_initialize
-      PUBLIC  :: ROMS_run
-      PUBLIC  :: ROMS_finalize
-
+!
+      PUBLIC :: ROMS_initialize
+      PUBLIC :: ROMS_run
+      PUBLIC :: ROMS_finalize
+!
       CONTAINS
-
+!
       SUBROUTINE ROMS_initialize (first, mpiCOMM)
 !
 !=======================================================================
@@ -63,27 +98,16 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
-      USE inp_par_mod,       ONLY : inp_par
-      USE normalization_mod, ONLY : normalization
-      USE strings_mod,       ONLY : FoundError
-!
 !  Imported variable declarations.
 !
       logical, intent(inout) :: first
-
+!
       integer, intent(in), optional :: mpiCOMM
 !
 !  Local variable declarations.
 !
       logical :: allocate_vars = .TRUE.
-
+!
 #ifdef DISTRIBUTE
       integer :: MyError, MySize
 #endif
@@ -92,6 +116,9 @@
 #ifdef _OPENMP
       integer :: my_threadnum
 #endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ROMS_initialize"
 
 #ifdef DISTRIBUTE
 !
@@ -128,14 +155,12 @@
 !  grids and dimension parameters are known.
 !
         CALL inp_par (iNLM)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Set domain decomposition tile partition range.  This range is
 !  computed only once since the "first_tile" and "last_tile" values
 !  are private for each parallel thread/node.
 !
-!$OMP PARALLEL
 #if defined _OPENMP
       MyThread=my_threadnum()
 #elif defined DISTRIBUTE
@@ -148,7 +173,6 @@
         first_tile(ng)=MyThread*chunk_size
         last_tile (ng)=first_tile(ng)+chunk_size-1
       END DO
-!$OMP END PARALLEL
 !
 !  Initialize internal wall clocks. Notice that the timings does not
 !  includes processing standard input because several parameters are
@@ -160,22 +184,16 @@
         END IF
 !
         DO ng=1,Ngrids
-!$OMP PARALLEL
           DO thread=THREAD_RANGE
-            CALL wclock_on (ng, iNLM, 0, __LINE__, __FILE__)
+            CALL wclock_on (ng, iNLM, 0, __LINE__, MyFile)
           END DO
-!$OMP END PARALLEL
         END DO
 !
 !  Allocate and initialize modules variables.
 !
-!$OMP PARALLEL
-        CALL mod_arrays (allocate_vars)
-!$OMP END PARALLEL
-!
-!  Allocate and initialize observation arrays.
-!
-        CALL initialize_fourdvar
+        CALL ROMS_allocate_arrays (allocate_vars)
+        CALL ROMS_initialize_arrays
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       END IF
 !
@@ -183,11 +201,8 @@
 !  Initialize metrics over all nested grids, if applicable.
 !-----------------------------------------------------------------------
 !
-!$OMP PARALLEL
       CALL initial
-!$OMP END PARALLEL
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Adjust "time" variable since we are not time-stepping.
 !
@@ -210,9 +225,8 @@
       Tindex=1
       DO ng=1,Ngrids
         IF (LdefNRM(1,ng).or.LwrtNRM(1,ng)) THEN
-          CALL get_state (ng, 10, 10, STD(1,ng)%name, STDrec, Tindex)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL get_state (ng, 10, 10, STD(1,ng), STDrec, Tindex)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END DO
 !
@@ -223,9 +237,8 @@
       Tindex=2
       DO ng=1,Ngrids
         IF ((LdefNRM(2,ng).or.LwrtNRM(2,ng)).and.(NSA.eq.2)) THEN
-          CALL get_state (ng, 11, 11, STD(2,ng)%name, STDrec, Tindex)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL get_state (ng, 11, 11, STD(2,ng), STDrec, Tindex)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END DO
 
@@ -237,9 +250,8 @@
       Tindex=1
       DO ng=1,Ngrids
         IF (LdefNRM(3,ng).or.LwrtNRM(3,ng)) THEN
-          CALL get_state (ng, 12, 12, STD(3,ng)%name, STDrec, Tindex)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL get_state (ng, 12, 12, STD(3,ng), STDrec, Tindex)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END DO
 #endif
@@ -251,9 +263,8 @@
       Tindex=1
       DO ng=1,Ngrids
         IF (LdefNRM(4,ng).or.LwrtNRM(4,ng)) THEN
-          CALL get_state (ng, 13, 13, STD(4,ng)%name, STDrec, Tindex)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL get_state (ng, 13, 13, STD(4,ng), STDrec, Tindex)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END DO
 #endif
@@ -270,44 +281,37 @@
         IF (ANY(LwrtNRM(:,ng))) THEN
           IF (LdefNRM(1,ng).or.LwrtNRM(1,ng)) THEN
             CALL def_norm (ng, iNLM, 1)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 
           IF ((LdefNRM(2,ng).or.LwrtNRM(2,ng)).and.(NSA.eq.2)) THEN
             CALL def_norm (ng, iNLM, 2)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 #ifdef ADJUST_BOUNDARY
           IF (LdefNRM(3,ng).or.LwrtNRM(3,ng)) THEN
             CALL def_norm (ng, iNLM, 3)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 #endif
 #if defined ADJUST_WSTRESS || defined ADJUST_STFLUX
           IF (LdefNRM(4,ng).or.LwrtNRM(4,ng)) THEN
             CALL def_norm (ng, iNLM, 4)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 #endif
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
-!$OMP PARALLEL
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL normalization (ng, tile, 2)
           END DO
-!$OMP END PARALLEL
           LdefNRM(1:4,ng)=.FALSE.
           LwrtNRM(1:4,ng)=.FALSE.
         END IF
       END DO
-
+!
       RETURN
       END SUBROUTINE ROMS_initialize
-
+!
       SUBROUTINE ROMS_run (RunInterval)
 !
 !=======================================================================
@@ -315,31 +319,6 @@
 !  This routine computes background-error correlations.                !
 !                                                                      !
 !=======================================================================
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_scalars
-      USE mod_stepping
-!
-#ifdef BALANCE_OPERATOR
-      USE ad_balance_mod,     ONLY : ad_balance
-#endif
-      USE ad_convolution_mod, ONLY : ad_convolution
-      USE ad_variability_mod, ONLY : ad_variability
-      USE analytical_mod,     ONLY : ana_perturb
-      USE ini_adjust_mod,     ONLY : load_ADtoTL
-      USE ini_adjust_mod,     ONLY : load_TLtoAD
-#ifdef BALANCE_OPERATOR
-      USE tl_balance_mod,     ONLY : tl_balance
-#endif
-      USE tl_convolution_mod, ONLY : tl_convolution
-      USE tl_variability_mod, ONLY : tl_variability
-#if defined BALANCE_OPERATOR && defined ZETA_ELLIPTIC
-      USE zeta_balance_mod,   ONLY : balance_ref, biconj
-#endif
-      USE strings_mod,        ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -353,6 +332,9 @@
       integer :: Lbck = 1
 #endif
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ROMS_run"
+!
 !-----------------------------------------------------------------------
 !  Test correlation model.
 !-----------------------------------------------------------------------
@@ -362,9 +344,8 @@
 !  Read background state, use initial conditions.
 !
       DO ng=1,Ngrids
-        CALL get_state (ng, iNLM, 9, INI(ng)%name, Lbck, Lbck)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        CALL get_state (ng, iNLM, 9, INI(ng), Lbck, Lbck)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 
 # ifdef ZETA_ELLIPTIC
@@ -374,12 +355,10 @@
 !
       IF (balance(isFsur)) THEN
         DO ng=1,Ngrids
-!$OMP PARALLEL
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL balance_ref (ng, tile, Lbck)
             CALL biconj (ng, tile, iNLM, Lbck)
           END DO
-!$OMP END PARALLEL
           wrtZetaRef(ng)=.TRUE.
         END DO
       END IF
@@ -396,7 +375,6 @@
 
       DO ng=1,Ngrids
         Lnew(ng)=1
-!$OMP PARALLEL
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL ana_perturb (ng, tile, iADM)
 #ifdef BALANCE_OPERATOR
@@ -405,7 +383,6 @@
 #endif
           CALL ad_convolution (ng, tile, Lnew(ng), Lweak, 2)
         END DO
-!$OMP END PARALLEL
 
         ADmodel=.FALSE.
 !
@@ -413,7 +390,6 @@
 !  Then, apply tangent linear convolution.
 !
         add=.FALSE.
-!$OMP PARALLEL
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL load_ADtoTL (ng, tile, Lnew(ng), Lnew(ng), add)
           CALL tl_convolution (ng, tile, Lnew(ng), Lweak, 2)
@@ -423,7 +399,6 @@
 #endif
           CALL load_TLtoAD (ng, tile, Lnew(ng), Lnew(ng), add)
         END DO
-!$OMP END PARALLEL
       END DO
 !
 !  Write out background error correlation in adjoint history NetCDF
@@ -438,22 +413,24 @@
         LwrtADJ(ng)=.TRUE.
         LwrtState2d(ng)=.TRUE.
         CALL ad_def_his (ng, LdefADJ(ng))
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
         Ladjusted(ng)=.TRUE.
 #endif
-        CALL ad_wrt_his (ng)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+#ifdef DISTRIBUTE
+        CALL ad_wrt_his (ng, MyRank)
+#else
+        CALL ad_wrt_his (ng, -1)
+#endif
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
         Ladjusted(ng)=.FALSE.
 #endif
       END DO
-
+!
       RETURN
       END SUBROUTINE ROMS_run
-
+!
       SUBROUTINE ROMS_finalize
 !
 !=======================================================================
@@ -462,15 +439,12 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_scalars
-!
 !  Local variable declarations.
 !
       integer :: Fcount, ng, thread
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ROMS_finalize"
 !
 !-----------------------------------------------------------------------
 !  If blowing-up, save latest model state into RESTART NetCDF file.
@@ -491,7 +465,11 @@
             END IF
             blowup=exit_flag
             exit_flag=NoError
-            CALL wrt_rst (ng)
+#ifdef DISTRIBUTE
+            CALL wrt_rst (ng, MyRank)
+#else
+            CALL wrt_rst (ng, -1)
+#endif
           END IF
         END DO
       END IF
@@ -509,18 +487,14 @@
       END IF
 !
       DO ng=1,Ngrids
-!$OMP PARALLEL
         DO thread=THREAD_RANGE
-          CALL wclock_off (ng, iNLM, 0, __LINE__, __FILE__)
+          CALL wclock_off (ng, iNLM, 0, __LINE__, MyFile)
         END DO
-!$OMP END PARALLEL
       END DO
 !
 !  Report dynamic memory and automatic memory requirements.
 !
-!$OMP PARALLEL
       CALL memory
-!$OMP END PARALLEL
 !
 !  Close IO files.
 !
@@ -528,8 +502,8 @@
         CALL close_inp (ng, iNLM)
       END DO
       CALL close_out
-
+!
       RETURN
       END SUBROUTINE ROMS_finalize
 
-      END MODULE ocean_control_mod
+      END MODULE roms_kernel_mod

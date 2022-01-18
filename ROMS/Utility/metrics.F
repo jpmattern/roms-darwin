@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE metrics_mod
 !
-!svn $Id: metrics.F 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: metrics.F 1099 2022-01-06 21:01:01Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -57,6 +57,11 @@
      &                   GRID(ng) % angler,                             &
      &                   GRID(ng) % CosAngler,                          &
      &                   GRID(ng) % SinAngler,                          &
+#if defined TIDE_GENERATING_FORCES
+     &                   GRID(ng) % Cos2Lat,                            &
+     &                   GRID(ng) % SinLat2,                            &
+     &                   GRID(ng) % latr,                               &
+#endif
 #ifdef SOLVE3D
 # ifdef ICESHELF
      &                   GRID(ng) % zice,                               &
@@ -109,6 +114,9 @@
      &                         pmask, rmask,                            &
 #endif
      &                         angler, CosAngler, SinAngler,            &
+#if defined TIDE_GENERATING_FORCES
+     &                         Cos2Lat, SinLat2, latr,                  &
+#endif
 #ifdef SOLVE3D
 # ifdef ICESHELF
      &                         zice,                                    &
@@ -171,7 +179,9 @@
       real(r8), intent(in) :: f(LBi:,LBj:)
       real(r8), intent(in) :: pm(LBi:,LBj:)
       real(r8), intent(in) :: pn(LBi:,LBj:)
-
+# if defined TIDE_GENERATING_FORCES
+      real(r8), intent(in) :: latr(LBi:,LBj:)
+# endif
       real(r8), intent(inout) :: h(LBi:,LBj:)
 # ifdef MASKING
       real(r8), intent(inout) :: pmask(LBi:,LBj:)
@@ -216,6 +226,10 @@
       real(r8), intent(out) :: pmon_v(LBi:,LBj:)
       real(r8), intent(out) :: CosAngler(LBi:,LBj:)
       real(r8), intent(out) :: SinAngler(LBi:,LBj:)
+# if defined TIDE_GENERATING_FORCES
+      real(r8), intent(out) :: Cos2Lat(LBi:,LBj:)
+      real(r8), intent(out) :: SinLat2(LBi:,LBj:)
+# endif
 # ifdef SOLVE3D
       real(r8), intent(out) :: Hz(LBi:,LBj:,:)
       real(r8), intent(out) :: z_r(LBi:,LBj:,:)
@@ -225,7 +239,9 @@
       real(r8), intent(in) :: f(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: pn(LBi:UBi,LBj:UBj)
-
+# if defined TIDE_GENERATING_FORCES
+      real(r8), intent(in) :: latr(LBi:UBi,LBj:UBj)
+# endif
       real(r8), intent(inout) :: h(LBi:UBi,LBj:UBj)
 # ifdef MASKING
       real(r8), intent(inout) :: pmask(LBi:UBi,LBj:UBj)
@@ -270,6 +286,10 @@
       real(r8), intent(out) :: pmon_v(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: CosAngler(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: SinAngler(LBi:UBi,LBj:UBj)
+# if defined TIDE_GENERATING_FORCES
+      real(r8), intent(out) :: Cos2Lat(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: SinLat2(LBi:UBi,LBj:UBj)
+# endif
 # ifdef SOLVE3D
       real(r8), intent(out) :: Hz(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(out) :: z_r(LBi:UBi,LBj:UBj,N(ng))
@@ -288,6 +308,9 @@
       real(r8), parameter :: Uscale = 0.1_r8
 #endif
       real(r8) :: cff, cff1, cff2
+#if defined TIDE_GENERATING_FORCES
+      real(r8) :: cosphi, phi
+#endif
 #ifdef NESTING
       real(r8) :: SecScale
 #endif
@@ -318,10 +341,10 @@
 
 #ifdef DISTRIBUTE
 # ifdef MASKING
-      real(dp), dimension(20) :: buffer
+      real(dp), dimension(20) :: rbuffer
       character (len=3), dimension(20) :: op_handle
 # else
-      real(dp), dimension(14) :: buffer
+      real(dp), dimension(14) :: rbuffer
       character (len=3), dimension(14) :: op_handle
 # endif
 #endif
@@ -620,6 +643,40 @@
      &                    CosAngler, SinAngler)
 #endif
 
+#if defined TIDE_GENERATING_FORCES
+!
+!-----------------------------------------------------------------------
+! Compute squared cosine of latitude and sine of twice latitude.
+!-----------------------------------------------------------------------
+!
+      DO j=JstrT,JendT
+        DO i=IstrT,IendT
+          phi=latr(i,j)*deg2rad
+          cosphi=COS(phi)
+          Cos2Lat(i,j)=cosphi*cosphi                     ! COS2(latr)
+          SinLat2(i,j)=SIN(2.0_r8*phi)                   ! SIN(2*latr)
+        END DO
+      END DO
+!
+!  Exchange boundary information.
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Cos2Lat)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          SinLat2)
+      END IF
+
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
+     &                    Cos2Lat, SinLat2)
+# endif
+#endif
+
 #if defined DIFF_GRID || defined DIFF_3DCOEF || \
     defined VISC_GRID || defined VISC_3DCOEF
 !
@@ -894,107 +951,107 @@
       IF (tile_count.eq.NSUB) THEN
         tile_count=0
 #ifdef DISTRIBUTE
-        buffer(1)=Cg_min(ng)
+        rbuffer(1)=Cg_min(ng)
         op_handle(1)='MIN'
-        buffer(2)=Cg_max(ng)
+        rbuffer(2)=Cg_max(ng)
         op_handle(2)='MAX'
-        buffer(3)=Cg_Cor(ng)
+        rbuffer(3)=Cg_Cor(ng)
         op_handle(3)='MAX'
-        buffer(4)=grdmax(ng)
+        rbuffer(4)=grdmax(ng)
         op_handle(4)='MAX'
-        buffer(5)=DXmin(ng)
+        rbuffer(5)=DXmin(ng)
         op_handle(5)='MIN'
-        buffer(6)=DXmax(ng)
+        rbuffer(6)=DXmax(ng)
         op_handle(6)='MAX'
-        buffer(7)=DYmin(ng)
+        rbuffer(7)=DYmin(ng)
         op_handle(7)='MIN'
-        buffer(8)=DYmax(ng)
+        rbuffer(8)=DYmax(ng)
         op_handle(8)='MAX'
 # ifdef SOLVE3D
-        buffer(9)=DZmin(ng)
+        rbuffer(9)=DZmin(ng)
         op_handle(9)='MIN'
-        buffer(10)=DZmax(ng)
+        rbuffer(10)=DZmax(ng)
         op_handle(10)='MAX'
 # else
-        buffer(9)=0.0_r8
+        rbuffer(9)=0.0_r8
         op_handle(9)='MIN'
-        buffer(10)=0.0_r8
+        rbuffer(10)=0.0_r8
         op_handle(10)='MAX'
 # endif
 # ifdef DIFF_3DCOEF
-        buffer(11)=DiffMin(ng)
+        rbuffer(11)=DiffMin(ng)
         op_handle(11)='MIN'
-        buffer(12)=DiffMax(ng)
+        rbuffer(12)=DiffMax(ng)
         op_handle(12)='MAX'
 # else
-        buffer(11)=0.0_dp
+        rbuffer(11)=0.0_dp
         op_handle(11)='MIN'
-        buffer(12)=0.0_dp
+        rbuffer(12)=0.0_dp
         op_handle(12)='MAX'
 # endif
 # ifdef VISC_3DCOEF
-        buffer(13)=ViscMin(ng)
+        rbuffer(13)=ViscMin(ng)
         op_handle(13)='MIN'
-        buffer(14)=ViscMax(ng)
+        rbuffer(14)=ViscMax(ng)
         op_handle(14)='MAX'
 # else
-        buffer(13)=0.0_dp
+        rbuffer(13)=0.0_dp
         op_handle(13)='MIN'
-        buffer(14)=0.0_dp
+        rbuffer(14)=0.0_dp
         op_handle(14)='MAX'
 # endif
 # ifdef MASKING
-        buffer(15)=DXminW(ng)
+        rbuffer(15)=DXminW(ng)
         op_handle(15)='MIN'
-        buffer(16)=DXmaxW(ng)
+        rbuffer(16)=DXmaxW(ng)
         op_handle(16)='MAX'
-        buffer(17)=DYminW(ng)
+        rbuffer(17)=DYminW(ng)
         op_handle(17)='MIN'
-        buffer(18)=DYmaxW(ng)
+        rbuffer(18)=DYmaxW(ng)
         op_handle(18)='MAX'
 #  ifdef SOLVE3D
-        buffer(19)=DZminW(ng)
+        rbuffer(19)=DZminW(ng)
         op_handle(19)='MIN'
-        buffer(20)=DZmaxW(ng)
+        rbuffer(20)=DZmaxW(ng)
         op_handle(20)='MAX'
 #  else
-        buffer(19)=0.0_dp
+        rbuffer(19)=0.0_dp
         op_handle(19)='MIN'
-        buffer(20)=0.0_dp
+        rbuffer(20)=0.0_dp
         op_handle(20)='MAX'
 #  endif
-        CALL mp_reduce (ng, model, 20, buffer, op_handle)
+        CALL mp_reduce (ng, model, 20, rbuffer, op_handle)
 # else
-        CALL mp_reduce (ng, model, 14, buffer, op_handle)
+        CALL mp_reduce (ng, model, 14, rbuffer, op_handle)
 # endif
-        Cg_min(ng)=buffer(1)
-        Cg_max(ng)=buffer(2)
-        Cg_Cor(ng)=buffer(3)
-        grdmax(ng)=buffer(4)
-        DXmin(ng)=buffer(5)
-        DXmax(ng)=buffer(6)
-        DYmin(ng)=buffer(7)
-        DYmax(ng)=buffer(8)
+        Cg_min(ng)=rbuffer(1)
+        Cg_max(ng)=rbuffer(2)
+        Cg_Cor(ng)=rbuffer(3)
+        grdmax(ng)=rbuffer(4)
+        DXmin(ng)=rbuffer(5)
+        DXmax(ng)=rbuffer(6)
+        DYmin(ng)=rbuffer(7)
+        DYmax(ng)=rbuffer(8)
 # ifdef SOLVE3D
-        DZmin(ng)=buffer(9)
-        DZmax(ng)=buffer(10)
+        DZmin(ng)=rbuffer(9)
+        DZmax(ng)=rbuffer(10)
 # endif
 # ifdef DIFF_3DCOEF
-        DiffMin(ng)=buffer(11)
-        DiffMax(ng)=buffer(12)
+        DiffMin(ng)=rbuffer(11)
+        DiffMax(ng)=rbuffer(12)
 # endif
 # ifdef VISC_3DCOEF
-        ViscMin(ng)=buffer(13)
-        ViscMax(ng)=buffer(14)
+        ViscMin(ng)=rbuffer(13)
+        ViscMax(ng)=rbuffer(14)
 # endif
 # ifdef MASKING
-        DXminW(ng)=buffer(15)
-        DXmaxW(ng)=buffer(16)
-        DYminW(ng)=buffer(17)
-        DYmaxW(ng)=buffer(18)
+        DXminW(ng)=rbuffer(15)
+        DXmaxW(ng)=rbuffer(16)
+        DYminW(ng)=rbuffer(17)
+        DYmaxW(ng)=rbuffer(18)
 #  ifdef SOLVE3D
-        DZminW(ng)=buffer(19)
-        DZmaxW(ng)=buffer(20)
+        DZminW(ng)=rbuffer(19)
+        DZmaxW(ng)=rbuffer(20)
 #  endif
 # endif
 #endif
@@ -1099,8 +1156,8 @@
         DO cr=1,Ncontact
           dg=donor_grid(cr)
           rg=receiver_grid(cr)
-          IF (RefinedGrid(rg).and.                                        &
-     &        (RefineScale(rg).gt.0).and.                                 &
+          IF (RefinedGrid(rg).and.                                      &
+     &        (RefineScale(rg).gt.0).and.                               &
      &         DXmax(dg).gt.DXmax(rg)) THEN
             CoarserDonor(rg)=dg
           END IF
@@ -1114,8 +1171,8 @@
         DO cr=1,Ncontact
           dg=donor_grid(cr)
           rg=receiver_grid(cr)
-          IF (RefinedGrid(dg).and.                                        &
-     &        (RefineScale(dg).gt.0).and.                                 &
+          IF (RefinedGrid(dg).and.                                      &
+     &        (RefineScale(dg).gt.0).and.                               &
      &        DXmax(dg).gt.DXmax(rg)) THEN
             FinerDonor(dg)=rg
           END IF

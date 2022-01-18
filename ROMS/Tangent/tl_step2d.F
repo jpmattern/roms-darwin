@@ -1,10 +1,9 @@
 #include "cppdefs.h"
-      MODULE tl_step2d_mod
 #ifdef TANGENT
 !
-!svn $Id: tl_step2d.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: tl_step2d.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -18,14 +17,8 @@
 !                                                                      !
 !=======================================================================
 !
-      implicit none
-!
-      PRIVATE
-      PUBLIC  :: tl_step2d
-
-      CONTAINS
-
 # include "tl_step2d_LF_AM3.h"
-
-#endif
+#else
+      MODULE tl_step2d_mod
       END MODULE tl_step2d_mod
+#endif

@@ -2,9 +2,9 @@
       MODULE ad_omega_mod
 #if defined ADJOINT && defined SOLVE3D
 !
-!svn $Id: ad_omega.F 1029 2020-07-11 02:11:09Z arango $
+!svn $Id: ad_omega.F 1103 2022-01-13 03:38:35Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -20,10 +20,10 @@
 !=======================================================================
 !
       implicit none
-
+!
       PRIVATE
       PUBLIC  :: ad_omega
-
+!
       CONTAINS
 !
 !***********************************************************************
@@ -44,10 +44,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 13, __LINE__, __FILE__)
+      CALL wclock_on (ng, model, 13, __LINE__, MyFile)
 # endif
       CALL ad_omega_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -67,8 +70,9 @@
      &                    OCEAN(ng) % W,                                &
      &                    OCEAN(ng) % ad_W)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 13, __LINE__, __FILE__)
+      CALL wclock_off (ng, model, 13, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE ad_omega
 !
@@ -169,22 +173,22 @@
 !  Set lateral boundary conditions.
 !
 # ifdef DISTRIBUTE
-!>    CALL mp_exchange3d (ng, tile, model, 1,                           &
-!>   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    tl_W)
-!>
+!^    CALL mp_exchange3d (ng, tile, model, 1,                           &
+!^   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    tl_W)
+!^
       CALL ad_mp_exchange3d (ng, tile, model, 1,                        &
      &                       LBi, UBi, LBj, UBj, 0, N(ng),              &
      &                       NghostPoints,                              &
      &                       EWperiodic(ng), NSperiodic(ng),            &
      &                       ad_W)
 # endif
-!>    CALL bc_w3d_tile (ng, tile,                                       &
-!>   &                  LBi, UBi, LBj, UBj, 0, N(ng),                   &
-!>   &                  tl_W)
-!>
+!^    CALL bc_w3d_tile (ng, tile,                                       &
+!^   &                  LBi, UBi, LBj, UBj, 0, N(ng),                   &
+!^   &                  tl_W)
+!^
       CALL ad_bc_w3d_tile (ng, tile,                                    &
      &                     LBi, UBi, LBj, UBj, 0, N(ng),                &
      &                     ad_W)
@@ -228,19 +232,23 @@
 !  sum to obtain the correct net Qbar given in user input - J. Levin
 !  (Jupiter Intelligence Inc.) and J. Wilkin
 !
+!    Dsrc(is) = 2,  flow across grid cell w-face (positive or negative)
+!
         IF (LwSrc(ng)) THEN
           DO is=1,Nsrc(ng)
-            ii=SOURCES(ng)%Isrc(is)
-            jj=SOURCES(ng)%Jsrc(is)
-            IF (((IstrR.le.ii).and.(ii.le.IendR)).and.                  &
-     &          ((JstrR.le.jj).and.(jj.le.JendR)).and.                  &
-     &          (j.eq.jj)) THEN
-              DO k=1,N(ng)
-                W(ii,jj,k)=W(ii,jj,k-1)-                                &
-     &                     (Huon(ii+1,jj,k)-Huon(ii,jj,k)+              &
-     &                      Hvom(ii,jj+1,k)-Hvom(ii,jj,k))+             &
-     &                     SOURCES(ng)%Qsrc(is,k)
-              END DO
+            IF (INT(SOURCES(ng)%Dsrc(is)).eq.2) THEN
+              ii=SOURCES(ng)%Isrc(is)
+              jj=SOURCES(ng)%Jsrc(is)
+              IF (((IstrR.le.ii).and.(ii.le.IendR)).and.                &
+     &            ((JstrR.le.jj).and.(jj.le.JendR)).and.                &
+     &            (j.eq.jj)) THEN
+                DO k=1,N(ng)
+                  W(ii,jj,k)=W(ii,jj,k-1)-                              &
+     &                       (Huon(ii+1,jj,k)-Huon(ii,jj,k)+            &
+     &                        Hvom(ii,jj+1,k)-Hvom(ii,jj,k))+           &
+     &                       SOURCES(ng)%Qsrc(is,k)
+                END DO
+              END IF
             END IF
           END DO
         END IF
@@ -255,16 +263,16 @@
 !  Notice that barotropic mass flux divergence is not used directly.
 !
         DO i=Istr,Iend
-!>        tl_W(i,j,N(ng))=0.0_r8
-!>
+!^        tl_W(i,j,N(ng))=0.0_r8
+!^
           ad_W(i,j,N(ng))=0.0_r8
         END DO
         DO k=N(ng)-1,1,-1
           DO i=Istr,Iend
-!>          tl_W(i,j,k)=tl_W(i,j,k)-                                    &
-!>   &                  tl_wrk(i)*(z_w(i,j,k)-z_w(i,j,0))-              &
-!>   &                  wrk(i)*(tl_z_w(i,j,k)-tl_z_w(i,j,0))
-!>
+!^          tl_W(i,j,k)=tl_W(i,j,k)-                                    &
+!^   &                  tl_wrk(i)*(z_w(i,j,k)-z_w(i,j,0))-              &
+!^   &                  wrk(i)*(tl_z_w(i,j,k)-tl_z_w(i,j,0))
+!^
             adfac=wrk(i)*ad_W(i,j,k)
             ad_wrk(i)=ad_wrk(i)-                                        &
      &                ad_W(i,j,k)*(z_w(i,j,k)-z_w(i,j,0))
@@ -274,13 +282,13 @@
         END DO
         DO i=Istr,Iend
           cff=1.0_r8/(z_w(i,j,N(ng))-z_w(i,j,0))
-!>        tl_wrk(i)=tl_cff*W(i,j,N(ng))+cff*tl_W(i,j,N(ng))
-!>
+!^        tl_wrk(i)=tl_cff*W(i,j,N(ng))+cff*tl_W(i,j,N(ng))
+!^
           ad_W(i,j,N(ng))=ad_W(i,j,N(ng))+cff*ad_wrk(i)
           ad_cff=ad_cff+W(i,j,N(ng))*ad_wrk(i)
           ad_wrk(i)=0.0_r8
-!>        tl_cff=-cff*cff*(tl_z_w(i,j,N(ng))-tl_z_w(i,j,0))
-!>
+!^        tl_cff=-cff*cff*(tl_z_w(i,j,N(ng))-tl_z_w(i,j,0))
+!^
           adfac=-cff*cff*ad_cff
           ad_z_w(i,j,0    )=ad_z_w(i,j,0    )-adfac
           ad_z_w(i,j,N(ng))=ad_z_w(i,j,N(ng))+adfac
@@ -289,49 +297,53 @@
 !
 !  Adjoint of apply mass point sources (volume vertical influx), if any.
 !
+!    Dsrc(is) = 2,  flow across grid cell w-face (positive or negative)
+!
         IF (LwSrc(ng)) THEN
           DO is=1,Nsrc(ng)
-            ii=SOURCES(ng)%Isrc(is)
-            jj=SOURCES(ng)%Jsrc(is)
-            IF (((IstrR.le.ii).and.(ii.le.IendR)).and.                  &
-     &          ((JstrR.le.jj).and.(jj.le.JendR)).and.                  &
-     &          (j.eq.jj)) THEN
-!>            DO k=1,N(ng)
-!>
-              DO k=N(ng),1,-1
-!>              tl_W(ii,jj,k)=tl_W(ii,jj,k-1)-                          &
-!>   &                        (tl_Huon(ii+1,jj,k)-tl_Huon(ii,jj,k)+     &
-!>   &                         tl_Hvom(ii,jj+1,k)-tl_Hvom(ii,jj,k))+    &
-!>   &                        SOURCES(ng)%tl_Qsrc(is,k)
-!>
-                ad_W(ii,jj,k-1)=ad_W(ii,jj,k-1)+ad_W(ii,jj,k)
-                ad_Huon(ii  ,jj,k)=ad_Huon(ii  ,jj,k)+ad_W(ii,jj,k)
-                ad_Huon(ii+1,jj,k)=ad_Huon(ii+1,jj,k)-ad_W(ii,jj,k)
-                ad_Hvom(ii,jj  ,k)=ad_Hvom(ii,jj  ,k)+ad_W(ii,jj,k)
-                ad_Hvom(ii,jj+1,k)=ad_Hvom(ii,jj+1,k)-ad_W(ii,jj,k)
-                SOURCES(ng)%ad_Qsrc(is,k)=SOURCES(ng)%ad_Qsrc(is,k)+    &
-     &                                    ad_W(ii,jj,k)
+            IF (INT(SOURCES(ng)%Dsrc(is)).eq.2) THEN
+              ii=SOURCES(ng)%Isrc(is)
+              jj=SOURCES(ng)%Jsrc(is)
+              IF (((IstrR.le.ii).and.(ii.le.IendR)).and.                &
+     &            ((JstrR.le.jj).and.(jj.le.JendR)).and.                &
+     &            (j.eq.jj)) THEN
+!^              DO k=1,N(ng)
+!^
+                DO k=N(ng),1,-1
+!^                tl_W(ii,jj,k)=tl_W(ii,jj,k-1)-                        &
+!^   &                          (tl_Huon(ii+1,jj,k)-tl_Huon(ii,jj,k)+   &
+!^   &                           tl_Hvom(ii,jj+1,k)-tl_Hvom(ii,jj,k))+  &
+!^   &                          SOURCES(ng)%tl_Qsrc(is,k)
+!^
+                  ad_W(ii,jj,k-1)=ad_W(ii,jj,k-1)+ad_W(ii,jj,k)
+                  ad_Huon(ii  ,jj,k)=ad_Huon(ii  ,jj,k)+ad_W(ii,jj,k)
+                  ad_Huon(ii+1,jj,k)=ad_Huon(ii+1,jj,k)-ad_W(ii,jj,k)
+                  ad_Hvom(ii,jj  ,k)=ad_Hvom(ii,jj  ,k)+ad_W(ii,jj,k)
+                  ad_Hvom(ii,jj+1,k)=ad_Hvom(ii,jj+1,k)-ad_W(ii,jj,k)
+                  SOURCES(ng)%ad_Qsrc(is,k)=SOURCES(ng)%ad_Qsrc(is,k)+  &
+     &                                      ad_W(ii,jj,k)
 !
 !  We have to do this here so that we do not double count ad_W(ii,jj,k)
 !  in the next loop. It is okay here since the loop is counting
 !  backwards in k, and ad_W is cleared after the net loop.
 !
-                ad_W(ii,jj,k)=0.0_r8
-              END DO
+                  ad_W(ii,jj,k)=0.0_r8
+                END DO
+              END IF
             END IF
           END DO
         END IF
 !
 !  Adjoint of code added to clear tl_W to be consistent with adjoint.
 !
-!>      DO k=1,N(ng)
-!>
+!^      DO k=1,N(ng)
+!^
         DO k=N(ng),1,-1
           DO i=Istr,Iend
-!>          tl_W(i,j,k)=tl_W(i,j,k-1)-                                  &
-!>   &                  (tl_Huon(i+1,j,k)-tl_Huon(i,j,k)+               &
-!>   &                   tl_Hvom(i,j+1,k)-tl_Hvom(i,j,k))
-!>
+!^          tl_W(i,j,k)=tl_W(i,j,k-1)-                                  &
+!^   &                  (tl_Huon(i+1,j,k)-tl_Huon(i,j,k)+               &
+!^   &                   tl_Hvom(i,j+1,k)-tl_Hvom(i,j,k))
+!^
             ad_W(i,j,k-1)=ad_W(i,j,k-1)+ad_W(i,j,k)
             ad_Huon(i  ,j,k)=ad_Huon(i  ,j,k)+ad_W(i,j,k)
             ad_Huon(i+1,j,k)=ad_Huon(i+1,j,k)-ad_W(i,j,k)
@@ -341,8 +353,8 @@
         END DO
         DO k=1,N(ng)
           DO i=Istr,Iend
-!>          tl_W(i,j,k)=0.0_r8
-!>
+!^          tl_W(i,j,k)=0.0_r8
+!^
             ad_W(i,j,k)=0.0_r8
           END DO
         END DO
@@ -351,16 +363,16 @@
 !
         DO i=Istr,Iend
 # if defined SEDIMENT_NOT_YET && defined SED_MORPH_NOT_YET
-!>        tl_W(i,j,0)=-cff1*(tl_bed_thick(i,j,nstp)-                    &
-!>   &                       tl_bed_thick(i,j,nnew))*omn(i,j)
-!>
+!^        tl_W(i,j,0)=-cff1*(tl_bed_thick(i,j,nstp)-                    &
+!^   &                       tl_bed_thick(i,j,nnew))*omn(i,j)
+!^
           adfac=cff1*omn(i,j)*ad_W(i,j,0)
           ad_bed_thick(i,j,nnew)=ad_bed_thick(i,j,nnew)+adfac
           ad_bed_thick(i,j,nstp)=ad_bed_thick(i,j,nstp)+adfac
           ad_W(i,j,0)=0.0_r8
 # else
-!>        tl_W(i,j,0)=0.0_r8
-!>
+!^        tl_W(i,j,0)=0.0_r8
+!^
           ad_W(i,j,0)=0.0_r8
 # endif
         END DO
@@ -390,7 +402,7 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    W)
 # endif
-
+!
       RETURN
       END SUBROUTINE ad_omega_tile
 #endif

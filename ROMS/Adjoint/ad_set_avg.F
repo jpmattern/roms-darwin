@@ -2,9 +2,9 @@
       MODULE ad_set_avg_mod
 #if defined AD_AVERAGES && defined ADJOINT
 !
-!svn $Id: ad_set_avg.F 1022 2020-05-13 03:03:15Z arango $
+!svn $Id: ad_set_avg.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -15,10 +15,10 @@
 !=======================================================================
 !
       implicit none
-
+!
       PRIVATE
       PUBLIC :: ad_set_avg
-
+!
       CONTAINS
 !
 !***********************************************************************
@@ -34,10 +34,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iADM, 5, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 5, __LINE__, MyFile)
 # endif
       CALL ad_set_avg_tile (ng, tile,                                   &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -55,8 +58,9 @@
 # endif
 
 # ifdef PROFILE
-      CALL wclock_off (ng, iADM, 5, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 5, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE ad_set_avg
 !
@@ -1291,7 +1295,7 @@
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgstf(i,j)=rfac(i,j)*                        &
-    &                                 AVERAGE(ng)%avgstf(i,j)
+     &                                AVERAGE(ng)%avgstf(i,j)
             END DO
           END DO
         END IF
@@ -1312,7 +1316,7 @@
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgsrf(i,j)=rfac(i,j)*                        &
-    &                                 AVERAGE(ng)%avgsrf(i,j)
+     &                                AVERAGE(ng)%avgsrf(i,j)
             END DO
           END DO
         END IF
@@ -1451,7 +1455,7 @@
         END DO
 # endif
       END IF
-
+!
       RETURN
       END SUBROUTINE ad_set_avg_tile
 #endif

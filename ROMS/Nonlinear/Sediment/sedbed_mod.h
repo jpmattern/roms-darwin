@@ -1,7 +1,8 @@
+      MODULE mod_sedbed
 !
-!svn $Id: sedbed_mod.h 995 2020-01-10 04:01:28Z arango $
+!svn $Id: sedbed_mod.h 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group        John C. Warner   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group        John C. Warner   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -63,6 +64,14 @@
       USE mod_kinds
 !
       implicit none
+!
+      PUBLIC :: allocate_sedbed
+      PUBLIC :: deallocate_sedbed
+      PUBLIC :: initialize_sedbed
+!
+!-----------------------------------------------------------------------
+!  Define T_SEDBED structure.
+!-----------------------------------------------------------------------
 !
       TYPE T_SEDBED
 !
@@ -144,11 +153,11 @@
 #endif
 
       END TYPE T_SEDBED
-
+!
       TYPE (T_SEDBED), allocatable :: SEDBED(:)
-
+!
       CONTAINS
-
+!
       SUBROUTINE allocate_sedbed (ng, LBi, UBi, LBj, UBj)
 !
 !=======================================================================
@@ -252,10 +261,186 @@
       allocate ( SEDBED(ng) % ad_settling_flux(LBi:UBi,LBj:UBj,NST) )
 # endif
 #endif
-
+!
       RETURN
       END SUBROUTINE allocate_sedbed
+!
+      SUBROUTINE deallocate_sedbed (ng)
+!
+!=======================================================================
+!                                                                      !
+!  This routine deallocates all variables in the module for all nested !
+!  grids.                                                              !
+!                                                                      !
+!=======================================================================
+!
+      USE mod_param,   ONLY : Ngrids
+#ifdef SUBOBJECT_DEALLOCATION
+      USE destroy_mod, ONLY : destroy
+#endif
 
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng
+
+#ifdef SUBOBJECT_DEALLOCATION
+!
+!-----------------------------------------------------------------------
+!  Deallocate each variable in the derived-type T_BBL structure
+!  separately.
+!-----------------------------------------------------------------------
+!
+!  Nonlinear model state.
+!
+# if defined BEDLOAD     && \
+    defined AVERAGES    || \
+   (defined AD_AVERAGES && defined ADJOINT) || \
+   (defined RP_AVERAGES && defined TL_IOMS) || \
+   (defined TL_AVERAGES && defined TANGENT)
+      IF (.not.destroy(ng, SEDBED(ng)%avgbedldu, MyFile,                &
+     &                 __LINE__, 'SEDBED(ng)%avgbedldu')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%avgbedldv, MyFile,                &
+     &                 __LINE__, 'SEDBED(ng)%avgbedldv')) RETURN
+# endif
+
+# if defined SEDIMENT
+      IF (.not.destroy(ng, SEDBED(ng)%bed, MyFile,                      &
+     &                 __LINE__, 'SEDBED(ng)%bed')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%bed_frac, MyFile,                 &
+     &                 __LINE__, 'SEDBED(ng)%bed_frac')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%bed_mass, MyFile,                 &
+     &                 __LINE__, 'SEDBED(ng)%bed_mass')) RETURN
+# endif
+
+# if defined SEDIMENT && defined SED_MORPH
+      IF (.not.destroy(ng, SEDBED(ng)%bed_thick0, MyFile,               &
+     &                 __LINE__, 'SEDBED(ng)%bed_thick0')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%bed_thick, MyFile,                &
+     &                 __LINE__, 'SEDBED(ng)%bed_thick')) RETURN
+# endif
+
+# ifdef BEDLOAD
+      IF (.not.destroy(ng, SEDBED(ng)%bedldu, MyFile,                   &
+     &                 __LINE__, 'SEDBED(ng)%bedldu')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%bedldv, MyFile,                   &
+     &                 __LINE__, 'SEDBED(ng)%bedldv')) RETURN
+# endif
+
+      IF (.not.destroy(ng, SEDBED(ng)%bottom, MyFile,                   &
+     &                 __LINE__, 'SEDBED(ng)%bottom')) RETURN
+
+# if defined SEDIMENT && defined SUSPLOAD
+      IF (.not.destroy(ng, SEDBED(ng)%ero_flux, MyFile,                 &
+     &                 __LINE__, 'SEDBED(ng)%ero_flux')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%settling_flux, MyFile,            &
+     &                 __LINE__, 'SEDBED(ng)%settling_flux')) RETURN
+# endif
+
+# if defined TANGENT || defined TL_IOMS
+!
+!  Tangent linear model state.
+!
+#  if defined SEDIMENT
+      IF (.not.destroy(ng, SEDBED(ng)%tl_bed, MyFile,                   &
+     &                 __LINE__, 'SEDBED(ng)%tl_bed')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%tl_bed_frac, MyFile,              &
+     &                 __LINE__, 'SEDBED(ng)%tl_bed_frac')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%tl_bed_mass, MyFile,              &
+     &                 __LINE__, 'SEDBED(ng)%tl_bed_mass')) RETURN
+#  endif
+
+#  if defined SEDIMENT && defined SED_MORPH
+      IF (.not.destroy(ng, SEDBED(ng)%tl_bed_thick0, MyFile,            &
+     &                 __LINE__, 'SEDBED(ng)%tl_bed_thick0')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%tl_bed_thick, MyFile,             &
+     &                 __LINE__, 'SEDBED(ng)%tl_bed_thick')) RETURN
+#  endif
+
+#  ifdef BEDLOAD
+      IF (.not.destroy(ng, SEDBED(ng)%tl_bedldu, MyFile,                &
+     &                 __LINE__, 'SEDBED(ng)%tl_bedldu')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%tl_bedldv, MyFile,                &
+     &                 __LINE__, 'SEDBED(ng)%tl_bedldv')) RETURN
+#  endif
+
+      IF (.not.destroy(ng, SEDBED(ng)%bottom, MyFile,                   &
+     &                 __LINE__, 'SEDBED(ng)%bottom')) RETURN
+
+#  if defined SEDIMENT && defined SUSPLOAD
+      IF (.not.destroy(ng, SEDBED(ng)%tl_ero_flux, MyFile,              &
+     &                 __LINE__, 'SEDBED(ng)%tl_ero_flux')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%tl_settling_flux, MyFile,         &
+     &                 __LINE__, 'SEDBED(ng)%tl_settling_flux')) RETURN
+#  endif
+# endif
+
+# ifdef ADJOINT
+!
+!  Adjoint model state.
+!
+#  if defined SEDIMENT
+      IF (.not.destroy(ng, SEDBED(ng)%ad_bed, MyFile,                   &
+     &                 __LINE__, 'SEDBED(ng)%ad_bed')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%ad_bed_frac, MyFile,              &
+     &                 __LINE__, 'SEDBED(ng)%ad_bed_frac')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%ad_bed_mass, MyFile,              &
+     &                 __LINE__, 'SEDBED(ng)%ad_bed_mass')) RETURN
+#  endif
+
+#  if defined SEDIMENT && defined SED_MORPH
+      IF (.not.destroy(ng, SEDBED(ng)%ad_bed_thick0, MyFile,            &
+     &                 __LINE__, 'SEDBED(ng)%ad_bed_thick0')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%ad_bed_thick, MyFile,             &
+     &                 __LINE__, 'SEDBED(ng)%ad_bed_thick')) RETURN
+#  endif
+
+#  ifdef BEDLOAD
+      IF (.not.destroy(ng, SEDBED(ng)%ad_bedldu, MyFile,                &
+     &                 __LINE__, 'SEDBED(ng)%ad_bedldu')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%ad_bedldv, MyFile,                &
+     &                 __LINE__, 'SEDBED(ng)%ad_bedldv')) RETURN
+#  endif
+
+      IF (.not.destroy(ng, SEDBED(ng)%bottom, MyFile,                   &
+     &                 __LINE__, 'SEDBED(ng)%bottom')) RETURN
+
+#  if defined SEDIMENT && defined SUSPLOAD
+      IF (.not.destroy(ng, SEDBED(ng)%ad_ero_flux, MyFile,              &
+     &                 __LINE__, 'SEDBED(ng)%ad_ero_flux')) RETURN
+
+      IF (.not.destroy(ng, SEDBED(ng)%ad_settling_flux, MyFile,         &
+     &                 __LINE__, 'SEDBED(ng)%ad_settling_flux')) RETURN
+#  endif
+# endif
+#endif
+!
+!-----------------------------------------------------------------------
+!  Deallocate derived-type SEDBED structure.
+!-----------------------------------------------------------------------
+!
+      IF (ng.eq.Ngrids) THEN
+        IF (allocated(SEDBED)) deallocate ( SEDBED )
+      END IF
+!
+      RETURN
+      END SUBROUTINE deallocate_sedbed
+!
       SUBROUTINE initialize_sedbed (ng, tile, model)
 !
 !=======================================================================
@@ -508,6 +693,8 @@
         END DO
       END IF
 #endif
-
+!
       RETURN
       END SUBROUTINE initialize_sedbed
+
+      END MODULE mod_sedbed

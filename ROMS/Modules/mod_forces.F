@@ -1,29 +1,29 @@
 #include "cppdefs.h"
       MODULE mod_forces
 !
-!svn $Id: mod_forces.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: mod_forces.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
 !                                                                      !
 !  Surface momentum stresses.                                          !
 !                                                                      !
-!  sustr        Kinematic surface momentum flux (wind stress) in       !
-!                 the XI-direction (m2/s2) at horizontal U-points.     !
+!  sustr        Surface momentum flux (wind stress) in the             !
+!                 XI-direction (m2/s2) at horizontal U-points.         !
 !  sustrG       Latest two-time snapshots of input "sustr" grided      !
 !                 data used for interpolation.                         !
-!  svstr        Kinematic surface momentum flux (wind stress) in       !
-!                 the ETA-direction (m2/s2) at horizontal V-points.    !
+!  svstr        Surface momentum flux (wind stress) in the             !
+!                 ETA-direction (m2/s2) at horizontal V-points.        !
 !  svstrG       Latest two-time snapshots of input "svstr" grided      !
 !                 data used for interpolation.                         !
 !                                                                      !
 !  Bottom momentum stresses.                                           !
 !                                                                      !
-!  bustr        Kinematic bottom momentum flux (bottom stress) in      !
-!                 the XI-direction (m2/s2) at horizontal U-points.     !
-!  bvstr        Kinematic bottom momentum flux (bottom stress) in      !
+!  bustr        Bottom momentum flux (bottom stress) in the            !
+!                 XI-direction (m2/s2) at horizontal U-points.         !
+!  bvstr        Bottom momentum flux (bottom stress) in the            !
 !                 ETA-direction (m2/s2) at horizontal V-points.        !
 !                                                                      !
 !  Surface wind induced waves.                                         !
@@ -55,8 +55,8 @@
 !                                                                      !
 !  Solar shortwave radiation flux.                                     !
 !                                                                      !
-!  srflx        Kinematic surface shortwave solar radiation flux       !
-!                 (Celsius m/s) at horizontal RHO-points               !
+!  srflx        Surface shortwave solar radiation flux (degC m/s)      !
+!                  at horizontal RHO-points                            !
 !  srflxG       Latest two-time snapshots of input "srflx" grided      !
 !                 data used for interpolation.                         !
 !                                                                      !
@@ -68,10 +68,9 @@
 !                                                                      !
 !  Surface heat fluxes, Atmosphere-Ocean bulk parameterization.        !
 !                                                                      !
-!  lhflx        Kinematic latent heat flux (degC m/s).                 !
-!  lrflx        Kinematic longwave radiation (degC m/s).               !
-!  snhflx       Kinematic surface net heat flux (degC m/s).            !
-!  shflx        Kinematic sensible heat flux (degC m/s).               !
+!  lhflx        Latent heat flux (degC m/s).                           !
+!  lrflx        Longwave radiation (degC m/s).                         !
+!  shflx        Sensible heat flux (degC m/s).                         !
 !                                                                      !
 !  Surface air humidity.                                               !
 !                                                                      !
@@ -111,23 +110,44 @@
 !                                                                      !
 !  Surface tracer fluxes.                                              !
 !                                                                      !
-!  stflx        Kinematic surface flux of tracer type variables        !
-!                 (temperature: degC m/s; salinity: PSU m/s) at        !
-!                 horizontal RHO-points.                               !
-!  stflxG       Latest two-time snapshots of input "stflx" grided      !
+!  stflux       Forcing surface flux of tracer type variables from     !
+!                 data, coupling, bulk flux parameterization, or       !
+!                 analytical formulas.                                 !
+!                                                                      !
+!                 stflux(:,:,itemp)  surface net heat flux             !
+!                 stflux(:,:,isalt)  surface net freshwater flux (E-P) !
+!                                                                      !
+!  stfluxG      Latest two-time snapshots of input "stflux" grided     !
 !                 data used for interpolation.                         !
+!                                                                      !
+!  stflx        ROMS state surface flux of tracer type variables       !
+!                 (TracerUnits m/s) at horizontal RHO-points, as used  !
+!                 in the governing equations.                          !
+
+#if defined ADJUST_STFLUX && defined FOUR_DVAR
+!                                                                      !
+!  tflux        Surface tracer flux adjustments (:,:,Nfrec,2,itrc)     !
+#endif
 !                                                                      !
 !  Bottom tracer fluxes.                                               !
 !                                                                      !
-!  btflx        Kinematic bottom flux of tracer type variables         !
-!                 (temperature: degC m/s; salinity: PSU m/s) at        !
-!                horizontal RHO-points.                                !
-!  btflxG       Latest two-time snapshots of input "btflx" grided      !
+!  btflux       Forcing bottom flux of tracer type variables from      !
+!                 data or analytical formulas. Usually, the bottom     !
+!                 flux of tracer is zero.                              !
+!                                                                      !
+!                 btflux(:,:,itemp)  bottom heat flux                  !
+!                 btflux(:,:,isalt)  bottom freshwater flux            !
+!                                                                      !
+!  btfluxG      Latest two-time snapshots of input "vtflux" grided     !
 !                 data used for interpolation.                         !
+!                                                                      !
+!  btflx        ROMS state bottom flux of tracer type variables        !
+!                 (TracerUnits m/s) at horizontal RHO-points, as used  !
+!                 in the governing equations.                          !
 !                                                                      !
 !  Surface heat flux correction.                                       !
 !                                                                      !
-!  dqdt         Kinematic surface net heat flux sensitivity to SST,    !
+!  dqdt         Surface net heat flux sensitivity to SST,              !
 !                 d(Q)/d(SST), (m/s).                                  !
 !  dqdtG        Latest two-time snapshots of input "dqdt" grided       !
 !                 data used for interpolation.                         !
@@ -151,9 +171,17 @@
 !=======================================================================
 !
         USE mod_kinds
-
+!
         implicit none
-
+!
+        PUBLIC :: allocate_forces
+        PUBLIC :: deallocate_forces
+        PUBLIC :: initialize_forces
+!
+!-----------------------------------------------------------------------
+!  Define T_FORCES structure.
+!-----------------------------------------------------------------------
+!
         TYPE T_FORCES
 !
 !  Nonlinear model state.
@@ -161,7 +189,7 @@
           real(r8), pointer :: sustr(:,:)
           real(r8), pointer :: svstr(:,:)
 #if !defined ANA_SMFLUX     && !defined BULK_FLUXES || \
-     defined NL_BULK_FLUXES
+     defined FORWARD_FLUXES
           real(r8), pointer :: sustrG(:,:,:)
           real(r8), pointer :: svstrG(:,:,:)
 #endif
@@ -294,26 +322,23 @@
           real(r8), pointer :: evap(:,:)
 #  endif
 # endif
-# if (defined BULK_FLUXES && defined EMINUSP) || defined ATM_COUPLING
-          real(r8), pointer :: EminusP(:,:)
-# endif
-# if defined BULK_FLUXES || defined ATM_COUPLING
-          real(r8), pointer :: snhflx(:,:)
-# endif
 
-          real(r8), pointer :: stflx(:,:,:)
+          real(r8), pointer :: stflux(:,:,:)
 # if !defined ANA_STFLUX || !defined ANA_SSFLUX || \
      !defined ANA_SPFLUX
-          real(r8), pointer :: stflxG(:,:,:,:)
+          real(r8), pointer :: stfluxG(:,:,:,:)
 # endif
+          real(r8), pointer :: stflx(:,:,:)
 # ifdef ADJUST_STFLUX
           real(r8), pointer :: tflux(:,:,:,:,:)
 # endif
-          real(r8), pointer :: btflx(:,:,:)
+
+          real(r8), pointer :: btflux(:,:,:)
 # if !defined ANA_BTFLUX || !defined ANA_BSFLUX || \
      !defined ANA_BPFLUX
-          real(r8), pointer :: btflxG(:,:,:,:)
+          real(r8), pointer :: btfluxG(:,:,:,:)
 # endif
+          real(r8), pointer :: btflx(:,:,:)
 
 # ifdef QCORRECTION
           real(r8), pointer :: dqdt(:,:)
@@ -350,8 +375,10 @@
           real(r8), pointer :: tl_bustr(:,:)
           real(r8), pointer :: tl_bvstr(:,:)
 # ifdef SOLVE3D
-          real(r8), pointer :: tl_stflx(:,:,:)
-          real(r8), pointer :: tl_btflx(:,:,:)
+          real(r8), pointer :: tl_stflux(:,:,:)
+          real(r8), pointer :: tl_stflx (:,:,:)
+          real(r8), pointer :: tl_btflux(:,:,:)
+          real(r8), pointer :: tl_btflx (:,:,:)
 #  ifdef ADJUST_STFLUX
           real(r8), pointer :: tl_tflux(:,:,:,:,:)
 #  endif
@@ -433,11 +460,11 @@
 #endif
 
         END TYPE T_FORCES
-
+!
         TYPE (T_FORCES), allocatable :: FORCES(:)
-
+!
       CONTAINS
-
+!
       SUBROUTINE allocate_forces (ng, LBi, UBi, LBj, UBj)
 !
 !=======================================================================
@@ -482,7 +509,7 @@
       Dmem(ng)=Dmem(ng)+size2d
 
 #if !defined ANA_SMFLUX     && !defined BULK_FLUXES || \
-     defined NL_BULK_FLUXES
+     defined FORWARD_FLUXES
       allocate ( FORCES(ng) % sustrG(LBi:UBi,LBj:UBj,2) )
       Dmem(ng)=Dmem(ng)+2.0_r8*size2d
 
@@ -678,38 +705,38 @@
       Dmem(ng)=Dmem(ng)+size2d
 #  endif
 # endif
-# if (defined BULK_FLUXES && defined EMINUSP) || defined ATM_COUPLING
-      allocate ( FORCES(ng) % EminusP(LBi:UBi,LBj:UBj) )
-      Dmem(ng)=Dmem(ng)+size2d
-# endif
 
-# if defined BULK_FLUXES || defined ATM_COUPLING
-      allocate ( FORCES(ng) % snhflx(LBi:UBi,LBj:UBj) )
-      Dmem(ng)=Dmem(ng)+size2d
-# endif
-      allocate ( FORCES(ng) % stflx(LBi:UBi,LBj:UBj,NT(ng)) )
+      allocate ( FORCES(ng) % stflux(LBi:UBi,LBj:UBj,NT(ng)) )
       Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
 
 # if !defined ANA_STFLUX || !defined ANA_SSFLUX || \
      !defined ANA_SPFLUX
-      allocate ( FORCES(ng) % stflxG(LBi:UBi,LBj:UBj,2,NT(ng)) )
+      allocate ( FORCES(ng) % stfluxG(LBi:UBi,LBj:UBj,2,NT(ng)) )
       Dmem(ng)=Dmem(ng)+2.0_r8*REAL(NT(ng),r8)*size2d
 
 # endif
+
+      allocate ( FORCES(ng) % stflx(LBi:UBi,LBj:UBj,NT(ng)) )
+      Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
+
 # ifdef ADJUST_STFLUX
       allocate ( FORCES(ng) % tflux(LBi:UBi,LBj:UBj,nfrec(ng),          &
      &                              2,NT(ng)) )
       Dmem(ng)=Dmem(ng)+2.0_r8*REAL(nfrec(ng)*NT(ng),r8)*size2d
 
 # endif
-      allocate ( FORCES(ng) % btflx(LBi:UBi,LBj:UBj,NT(ng)) )
+
+      allocate ( FORCES(ng) % btflux(LBi:UBi,LBj:UBj,NT(ng)) )
       Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
 
 # if !defined ANA_BTFLUX || !defined ANA_BSFLUX || \
      !defined ANA_BPFLUX
-      allocate ( FORCES(ng) % btflxG(LBi:UBi,LBj:UBj,2,NT(ng)) )
+      allocate ( FORCES(ng) % btfluxG(LBi:UBi,LBj:UBj,2,NT(ng)) )
       Dmem(ng)=Dmem(ng)+2.0_r8*REAL(NT(ng),r8)*size2d
 # endif
+
+      allocate ( FORCES(ng) % btflx(LBi:UBi,LBj:UBj,NT(ng)) )
+      Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
 
 # ifdef QCORRECTION
       allocate ( FORCES(ng) % dqdt(LBi:UBi,LBj:UBj) )
@@ -775,7 +802,13 @@
       allocate ( FORCES(ng) % tl_bvstr(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 # ifdef SOLVE3D
+      allocate ( FORCES(ng) % tl_stflux(LBi:UBi,LBj:UBj,NT(ng)) )
+      Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
+
       allocate ( FORCES(ng) % tl_stflx(LBi:UBi,LBj:UBj,NT(ng)) )
+      Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
+
+      allocate ( FORCES(ng) % tl_btflux(LBi:UBi,LBj:UBj,NT(ng)) )
       Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
 
       allocate ( FORCES(ng) % tl_btflx(LBi:UBi,LBj:UBj,NT(ng)) )
@@ -909,10 +942,499 @@
 #  endif
 # endif
 #endif
-
+!
       RETURN
       END SUBROUTINE allocate_forces
+!
+      SUBROUTINE deallocate_forces (ng)
+!
+!=======================================================================
+!                                                                      !
+!  This routine deallocates all variables in the module for all nested !
+!  grids.                                                              !
+!                                                                      !
+!=======================================================================
+!
+      USE mod_param,   ONLY : Ngrids
+#ifdef SUBOBJECT_DEALLOCATION
+      USE destroy_mod, ONLY : destroy
+#endif
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng
+!
+!  Local variable declarations.
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", deallocate_forces"
 
+#ifdef SUBOBJECT_DEALLOCATION
+!
+!-----------------------------------------------------------------------
+!  Deallocate each variable in the derived-type T_FORCES structure
+!  separately.
+!-----------------------------------------------------------------------
+!
+!  Nonlinear model state
+!
+      IF (.not.destroy(ng, FORCES(ng)%sustr, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%sustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%svstr, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%svstr')) RETURN
+
+# if !defined ANA_SMFLUX     && !defined BULK_FLUXES || \
+      defined FORWARD_FLUXES
+      IF (.not.destroy(ng, FORCES(ng)%sustrG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%sustrG')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%svstrG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%svstrG')) RETURN
+# endif
+
+# ifdef ADJUST_WSTRESS
+      IF (.not.destroy(ng, FORCES(ng)%ustr, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%ustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%vstr, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%vstr')) RETURN
+# endif
+
+      IF (.not.destroy(ng, FORCES(ng)%bustr, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%bustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%bvstr, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%bvstr')) RETURN
+
+# if defined BULK_FLUXES || defined ECOSIM || defined ATM_PRESS
+      IF (.not.destroy(ng, FORCES(ng)%Pair, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%Pair')) RETURN
+#  ifndef ANA_PAIR
+      IF (.not.destroy(ng, FORCES(ng)%PairG, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%PairG')) RETURN
+#  endif
+# endif
+
+# ifdef WAVES_DIR
+      IF (.not.destroy(ng, FORCES(ng)%Dwave, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%Dwave')) RETURN
+#  ifndef ANA_WWAVE
+      IF (.not.destroy(ng, FORCES(ng)%DwaveG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%DwaveG')) RETURN
+#  endif
+# endif
+
+# ifdef WAVES_HEIGHT
+      IF (.not.destroy(ng, FORCES(ng)%Hwave, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%Hwave')) RETURN
+#  ifndef ANA_WWAVE
+      IF (.not.destroy(ng, FORCES(ng)%HwaveG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%HwaveG')) RETURN
+#  endif
+# endif
+
+# ifdef WAVES_LENGTH
+      IF (.not.destroy(ng, FORCES(ng)%Lwave, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%Lwave')) RETURN
+#  ifndef ANA_WWAVE
+      IF (.not.destroy(ng, FORCES(ng)%LwaveG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%LwaveG')) RETURN
+#  endif
+# endif
+
+# ifdef WAVES_TOP_PERIOD
+      IF (.not.destroy(ng, FORCES(ng)%Pwave_top, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%Pwave_top')) RETURN
+#  ifndef ANA_WWAVE
+      IF (.not.destroy(ng, FORCES(ng)%Pwave_topG, MyFile,               &
+     &                 __LINE__, 'FORCES(ng)%Pwave_topG')) RETURN
+#  endif
+# endif
+
+# ifdef WAVES_BOT_PERIOD
+      IF (.not.destroy(ng, FORCES(ng)%Pwave_bot, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%Pwave_bot')) RETURN
+#  ifndef ANA_WWAVE
+      IF (.not.destroy(ng, FORCES(ng)%Pwave_botG, MyFile,               &
+     &                 __LINE__, 'FORCES(ng)%Pwave_botG')) RETURN
+#  endif
+# endif
+
+# if defined BBL_MODEL || defined WAV_COUPLING
+      IF (.not.destroy(ng, FORCES(ng)%Ub_swan, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%Ub_swan')) RETURN
+#  ifndef ANA_WWAVE
+      IF (.not.destroy(ng, FORCES(ng)%Ub_swanG, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%Ub_swanG')) RETURN
+#  endif
+# endif
+
+# if defined TKE_WAVEDISS || defined WAV_COUPLING
+      IF (.not.destroy(ng, FORCES(ng)%wave_dissip, MyFile,              &
+     &                 __LINE__, 'FORCES(ng)%wave_dissip')) RETURN
+#  ifndef ANA_WWAVE
+      IF (.not.destroy(ng, FORCES(ng)%Wave_dissipG, MyFile,             &
+     &                 __LINE__, 'FORCES(ng)%Wave_dissipG')) RETURN
+#  endif
+# endif
+
+# if defined SVENDSEN_ROLLER
+      IF (.not.destroy(ng, FORCES(ng)%wave_break, MyFile,               &
+     &                 __LINE__, 'FORCES(ng)%wave_break')) RETURN
+#  ifndef ANA_WWAVE
+      IF (.not.destroy(ng, FORCES(ng)%Wave_breakG, MyFile,              &
+     &                 __LINE__, 'FORCES(ng)%Wave_breakG')) RETURN
+#  endif
+# endif
+
+# ifdef SOLVE3D
+
+#  ifdef SHORTWAVE
+      IF (.not.destroy(ng, FORCES(ng)%srflx, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%srflx')) RETURN
+#   ifndef ANA_SRFLUX
+      IF (.not.destroy(ng, FORCES(ng)%srflxG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%srflxG')) RETURN
+#   endif
+#  endif
+
+#  if defined RED_TIDE && defined DAILY_SHORTWAVE
+      IF (.not.destroy(ng, FORCES(ng)%srflx_avg, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%srflx_avg')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%srflxG_avg, MyFile,               &
+     &                 __LINE__, 'FORCES(ng)%srflxG_avg')) RETURN
+#  endif
+
+#  ifdef CLOUDS
+      IF (.not.destroy(ng, FORCES(ng)%cloud, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%cloud')) RETURN
+#   ifndef ANA_CLOUD
+      IF (.not.destroy(ng, FORCES(ng)%cloudG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%cloudG')) RETURN
+#   endif
+#  endif
+
+#  ifdef BULK_FLUXES
+      IF (.not.destroy(ng, FORCES(ng)%lhflx, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%lhflx')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%lrflx, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%lrflx')) RETURN
+
+#   ifndef LONGWAVE
+      IF (.not.destroy(ng, FORCES(ng)%lrflxG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%lrflxG')) RETURN
+#   endif
+
+      IF (.not.destroy(ng, FORCES(ng)%shflx, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%shflx')) RETURN
+#  endif
+
+#  if defined BULK_FLUXES || defined ECOSIM || \
+     (defined SHORTWAVE && defined ANA_SRFLUX)
+      IF (.not.destroy(ng, FORCES(ng)%Hair, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%Hair')) RETURN
+
+#   ifndef ANA_HUMIDITY
+      IF (.not.destroy(ng, FORCES(ng)%HairG, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%HairG')) RETURN
+#   endif
+
+      IF (.not.destroy(ng, FORCES(ng)%Tair, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%Tair')) RETURN
+
+#   ifndef ANA_TAIR
+      IF (.not.destroy(ng, FORCES(ng)%TairG, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%TairG')) RETURN
+#   endif
+#  endif
+
+#  if defined BULK_FLUXES || defined ECOSIM
+      IF (.not.destroy(ng, FORCES(ng)%Uwind, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%Uwind')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%Vwind, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%Vwind')) RETURN
+
+#   ifndef ANA_WINDS
+      IF (.not.destroy(ng, FORCES(ng)%UwindG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%UwindG')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%VwindG, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%VwindG')) RETURN
+#   endif
+#  endif
+
+#  ifdef BULK_FLUXES
+      IF (.not.destroy(ng, FORCES(ng)%rain, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%rain')) RETURN
+
+#   ifndef ANA_RAIN
+      IF (.not.destroy(ng, FORCES(ng)%rainG, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%rainG')) RETURN
+#   endif
+
+#   ifdef EMINUSP
+      IF (.not.destroy(ng, FORCES(ng)%evap, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%evap')) RETURN
+#   endif
+#  endif
+
+      IF (.not.destroy(ng, FORCES(ng)%stflux, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%stflux')) RETURN
+
+#  if !defined ANA_STFLUX || !defined ANA_SSFLUX || \
+      !defined ANA_SPFLUX
+      IF (.not.destroy(ng, FORCES(ng)%stfluxG, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%stfluxG')) RETURN
+#  endif
+
+      IF (.not.destroy(ng, FORCES(ng)%stflx, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%stflx')) RETURN
+
+#  ifdef ADJUST_STFLUX
+      IF (.not.destroy(ng, FORCES(ng)%tflux, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%tflux')) RETURN
+#  endif
+
+      IF (.not.destroy(ng, FORCES(ng)%btflux, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%btflux')) RETURN
+
+#  if !defined ANA_BTFLUX || !defined ANA_BSFLUX || \
+      !defined ANA_BPFLUX
+      IF (.not.destroy(ng, FORCES(ng)%btfluxG, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%btfluxG')) RETURN
+#  endif
+
+      IF (.not.destroy(ng, FORCES(ng)%btflx, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%btflx')) RETURN
+
+#  ifdef QCORRECTION
+      IF (.not.destroy(ng, FORCES(ng)%dqdt, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%dqdt')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%sst, MyFile,                      &
+     &                 __LINE__, 'FORCES(ng)%sst')) RETURN
+
+#   ifndef ANA_SST
+      IF (.not.destroy(ng, FORCES(ng)%dqdtG, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%dqdtG')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%sstG, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%sstG')) RETURN
+#   endif
+#  endif
+
+#  if defined SALINITY && (defined SCORRECTION || defined SRELAXATION)
+      IF (.not.destroy(ng, FORCES(ng)%sss, MyFile,                      &
+     &                 __LINE__, 'FORCES(ng)%sss')) RETURN
+
+#   ifndef ANA_SSS
+      IF (.not.destroy(ng, FORCES(ng)%sssG, MyFile,                     &
+     &                 __LINE__, 'FORCES(ng)%sssG')) RETURN
+#   endif
+#  endif
+
+#  ifdef ECOSIM
+      IF (.not.destroy(ng, FORCES(ng)%SpecIr, MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%SpecIr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%avcos, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%avcos')) RETURN
+#  endif
+
+# endif
+
+# if defined TANGENT || defined TL_IOMS
+!
+!  Tangent linear model state
+!
+      IF (.not.destroy(ng, FORCES(ng)%tl_sustr, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_sustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_svstr, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_svstr')) RETURN
+
+#  ifdef ADJUST_WSTRESS
+      IF (.not.destroy(ng, FORCES(ng)%tl_ustr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%tl_ustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_vstr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%tl_vstr')) RETURN
+#  endif
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_bustr, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_bustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_bvstr, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_bvstr')) RETURN
+
+#  ifdef SOLVE3D
+      IF (.not.destroy(ng, FORCES(ng)%tl_stflux, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%tl_stflux')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_stflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_stflx')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_btflux, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%tl_btflux')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_btflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_btflx')) RETURN
+
+#   ifdef ADJUST_STFLUX
+      IF (.not.destroy(ng, FORCES(ng)%tl_tflux, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_tflux')) RETURN
+#   endif
+
+#   ifdef SHORTWAVE
+      IF (.not.destroy(ng, FORCES(ng)%tl_srflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_srflx')) RETURN
+#   endif
+
+#   ifdef BULK_FLUXES
+      IF (.not.destroy(ng, FORCES(ng)%tl_lhflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_lhflx')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_lrflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_lrflx')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%tl_shflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%tl_shflx')) RETURN
+
+#    ifdef EMINUSP
+      IF (.not.destroy(ng, FORCES(ng)%tl_evap, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%tl_evap')) RETURN
+#    endif
+#   endif
+#  endif
+# endif
+
+# ifdef ADJOINT
+!
+!  Adjoint model state
+!
+      IF (.not.destroy(ng, FORCES(ng)%ad_sustr, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_sustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_svstr, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_svstr')) RETURN
+
+#  ifdef ADJUST_WSTRESS
+      IF (.not.destroy(ng, FORCES(ng)%ad_ustr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%ad_ustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_vstr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%ad_vstr')) RETURN
+#  endif
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_bustr, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_bustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_bvstr, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_bvstr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_bustr_sol, MyFile,             &
+     &                 __LINE__, 'FORCES(ng)%ad_bustr_sol')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_bvstr_sol, MyFile,             &
+     &                 __LINE__, 'FORCES(ng)%ad_bvstr_sol')) RETURN
+
+#  ifdef SOLVE3D
+      IF (.not.destroy(ng, FORCES(ng)%ad_stflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_stflx')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_btflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_btflx')) RETURN
+
+#   ifdef ADJUST_STFLUX
+      IF (.not.destroy(ng, FORCES(ng)%ad_tflux, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_tflux')) RETURN
+#   endif
+
+#   ifdef SHORTWAVE
+      IF (.not.destroy(ng, FORCES(ng)%ad_srflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_srflx')) RETURN
+#   endif
+
+#   ifdef BULK_FLUXES
+      IF (.not.destroy(ng, FORCES(ng)%ad_lhflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_lhflx')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_lrflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_lrflx')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ad_shflx, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ad_shflx')) RETURN
+
+#    ifdef EMINUSP
+      IF (.not.destroy(ng, FORCES(ng)%ad_evap, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%ad_evap')) RETURN
+#    endif
+#   endif
+#  endif
+# endif
+
+# if defined ADJUST_WSTRESS || defined ADJUST_STFLUX
+!
+!  Working arrays to store adjoint impulse forcing, background error
+!  covariance, background-error standard deviations, or descent
+!  conjugate vectors (directions).
+!
+#  if defined FOUR_DVAR || defined IMPULSE
+#   ifdef ADJUST_WSTRESS
+      IF (.not.destroy(ng, FORCES(ng)%b_sustr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%b_sustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%b_svstr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%b_svstr')) RETURN
+#   endif
+
+#   if defined ADJUST_STFLUX && defined SOLVE3D
+      IF (.not.destroy(ng, FORCES(ng)%b_stflx, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%b_stflx')) RETURN
+#   endif
+#  endif
+
+#  ifdef FOUR_DVAR
+#   ifdef ADJUST_WSTRESS
+      IF (.not.destroy(ng, FORCES(ng)%d_sustr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%d_sustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%d_svstr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%d_svstr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%e_sustr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%e_sustr')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%e_svstr, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%e_svstr')) RETURN
+#   endif
+
+#   if defined ADJUST_STFLUX && defined SOLVE3D
+      IF (.not.destroy(ng, FORCES(ng)%d_stflx, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%d_stflx')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%e_stflx, MyFile,                  &
+     &                 __LINE__, 'FORCES(ng)%e_stflx')) RETURN
+#   endif
+#  endif
+# endif
+#endif
+!
+!-----------------------------------------------------------------------
+!  Deallocate derived-type FORCES structure.
+!-----------------------------------------------------------------------
+!
+      IF (ng.eq.Ngrids) THEN
+        IF (allocated(FORCES)) deallocate ( FORCES )
+      END IF
+!
+      RETURN
+      END SUBROUTINE deallocate_forces
+!
       SUBROUTINE initialize_forces (ng, tile, model)
 !
 !=======================================================================
@@ -999,7 +1521,7 @@
             FORCES(ng) % sustr(i,j) = IniVal
             FORCES(ng) % svstr(i,j) = IniVal
 #if !defined ANA_SMFLUX     && !defined BULK_FLUXES || \
-     defined NL_BULK_FLUXES
+     defined FORWARD_FLUXES
             FORCES(ng) % sustrG(i,j,1) = IniVal
             FORCES(ng) % sustrG(i,j,2) = IniVal
             FORCES(ng) % svstrG(i,j,1) = IniVal
@@ -1111,12 +1633,6 @@
             FORCES(ng) % evap(i,j) = IniVal
 #  endif
 # endif
-# if (defined BULK_FLUXES && defined EMINUSP) || defined ATM_COUPLING
-            FORCES(ng) % EminusP(i,j) = IniVal
-# endif
-# if defined BULK_FLUXES || defined ATM_COUPLING
-            FORCES(ng) % snhflx(i,j) = IniVal
-# endif
 # if !defined LONGWAVE && defined BULK_FLUXES
             FORCES(ng) % lrflxG(i,j,1) = IniVal
             FORCES(ng) % lrflxG(i,j,2) = IniVal
@@ -1161,24 +1677,27 @@
 #  endif
 # endif
             DO itrc=1,NT(ng)
+              FORCES(ng) % stflux(i,j,itrc) = IniVal
+# if !defined ANA_STFLUX || !defined ANA_SSFLUX || \
+     !defined ANA_SPFLUX
+              FORCES(ng) % stfluxG(i,j,1,itrc) = IniVal
+              FORCES(ng) % stfluxG(i,j,2,itrc) = IniVal
+# endif
+              FORCES(ng) % stflx(i,j,itrc) = IniVal
 # ifdef ADJUST_STFLUX
               DO k=1,Nfrec(ng)
                 FORCES(ng) % tflux(i,j,k,1,itrc) = IniVal
                 FORCES(ng) % tflux(i,j,k,2,itrc) = IniVal
               END DO
 # endif
-              FORCES(ng) % stflx(i,j,itrc) = IniVal
-              FORCES(ng) % btflx(i,j,itrc) = IniVal
-# if !defined ANA_STFLUX || !defined ANA_SSFLUX || \
-     !defined ANA_SPFLUX
-              FORCES(ng) % stflxG(i,j,1,itrc) = IniVal
-              FORCES(ng) % stflxG(i,j,2,itrc) = IniVal
-# endif
+
+              FORCES(ng) % btflux(i,j,itrc) = IniVal
 # if !defined ANA_BTFLUX || !defined ANA_BSFLUX || \
      !defined ANA_BPFLUX
-              FORCES(ng) % btflxG(i,j,1,itrc) = IniVal
-              FORCES(ng) % btflxG(i,j,2,itrc) = IniVal
+              FORCES(ng) % btfluxG(i,j,1,itrc) = IniVal
+              FORCES(ng) % btfluxG(i,j,2,itrc) = IniVal
 # endif
+              FORCES(ng) % btflx(i,j,itrc) = IniVal
             END DO
 # if defined ECOSIM
             DO itrc=1,NBands
@@ -1240,8 +1759,10 @@
                 FORCES(ng) % tl_tflux(i,j,k,2,itrc) = IniVal
               END DO
 #  endif
-              FORCES(ng) % tl_stflx(i,j,itrc) = IniVal
-              FORCES(ng) % tl_btflx(i,j,itrc) = IniVal
+              FORCES(ng) % tl_stflux(i,j,itrc) = IniVal
+              FORCES(ng) % tl_stflx (i,j,itrc) = IniVal
+              FORCES(ng) % tl_btflux(i,j,itrc) = IniVal
+              FORCES(ng) % tl_btflx (i,j,itrc) = IniVal
             END DO
           END DO
 # endif
@@ -1346,7 +1867,7 @@
       END IF
 # endif
 #endif
-
+!
       RETURN
       END SUBROUTINE initialize_forces
 

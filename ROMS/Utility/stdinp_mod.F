@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE stdinp_mod
 !
-!svn $Id: stdinp_mod.F 1037 2020-08-15 01:56:27Z arango $
+!svn $Id: stdinp_mod.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -82,9 +82,13 @@
 !
 !  Local variable declararions
 !
-      integer :: InpUnit
+      integer :: InpUnit, io_err
 !
-      SourceFile=__FILE__// ", stdout_unit"
+      character (len=256)          :: io_errmsg
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", stdout_unit"
+!
+      SourceFile=MyFile
 !
 !-----------------------------------------------------------------------
 !  Determine ROMS standard input unit.
@@ -107,14 +111,22 @@
       CALL mp_bcasts (1, 1, Iname)
 # endif
       OPEN (InpUnit, FILE=TRIM(Iname), FORM='formatted', STATUS='old',  &
-     &      ERR=10)
-      GotFile=.TRUE.
-      GO TO 30
- 10   IF (localPET.eq.0) WRITE (stdout,20)
-      exit_flag=2
-      RETURN
- 20   FORMAT (/,' STDINP_UNIT - Unable to open ROMS/TOMS input script', &
-     &                        ' file.',                                 &
+     &      IOSTAT=io_err, IOMSG=io_errmsg)
+      IF (io_err.ne.0) THEN
+        IF (localPET.eq.0) WRITE (stdout,10) TRIM(io_errmsg)
+        exit_flag=2
+        RETURN
+      ELSE
+        GotFile=.TRUE.
+      END IF
+#else
+      InpUnit=stdinp
+      GotFile=.FALSE.
+#endif
+!
+ 10   FORMAT (/,' STDINP_UNIT - Unable to open ROMS/TOMS input script', &
+     &                        ' file.',/,                               &
+     &        /,11x,'ERROR: ',a,/,                                      &
      &        /,11x,'In distributed-memory applications, the input',    &
      &        /,11x,'script file is processed in parallel. The Unix',   &
      &        /,11x,'routine GETARG is used to get script file name.',  &
@@ -122,11 +134,7 @@
      &        /,11x,'command line is something like:',/,                &
      &        /,11x,'mpirun -np 4 romsM roms.in',/,/,11x,'and not',/,   &
      &        /,11x,'mpirun -np 4 romsM < roms.in',/)
- 30   CONTINUE
-#else
-      InpUnit=stdinp
-      GotFile=.FALSE.
-#endif
+!
       END FUNCTION stdinp_unit
 !
       SUBROUTINE getpar_0d_i (localPET, Value, KeyWord, InpName)
@@ -164,13 +172,13 @@
 !
       logical :: foundit, GotFile
 !
-      integer :: InpUnit, Npts, Nval, status
+      integer :: InpUnit, Npts, Nval, io_err, status
       integer :: Ivalue(1)
 !
       real(dp), dimension(nRval) :: Rval
 !
       character (len= 40) :: string
-      character (len=256) :: line
+      character (len=256) :: io_errmsg, line
       character (len=256), dimension(nCval) :: Cval
 !
 !-----------------------------------------------------------------------
@@ -182,22 +190,26 @@
       IF (PRESENT(InpName)) THEN
         InpUnit=1
         OPEN (InpUnit, FILE=TRIM(InpName), FORM='formatted',            &
-     &        STATUS='old', ERR=10)
-        GotFile=.TRUE.
-        GO TO 30
-  10    IF (localPET.eq.0) WRITE (stdout,20) TRIM(InpName)
-        exit_flag=2
-        RETURN
-  20    FORMAT (/,' GETPAR_0D_i - Unable to input script: ',a)
+     &        STATUS='old', IOSTAT=io_err, IOMSG=io_errmsg)
+        IF (io_err.ne.0) THEN
+          IF (localPET.eq.0) WRITE (stdout,10) TRIM(InpName),           &
+     &                                         TRIM(io_errmsg)
+  10      FORMAT (/,' GETPAR_0D_I - Unable to open input script: ',a,   &
+     &            /,15x,'ERROR: ',a)
+          exit_flag=2
+          RETURN
+        ELSE
+          GotFile=.TRUE.
+        END IF
       ELSE
         InpUnit=stdinp_unit(localPET, GotFile)
       END IF
 !
 !  Process requested parameter.
 !
-  30  foundit=.FALSE.
+      foundit=.FALSE.
       DO WHILE (.TRUE.)
-        READ (InpUnit,'(a)',ERR=40,END=60) line
+        READ (InpUnit,'(a)',ERR=20,END=40) line
         status=decode_line(line, string, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           IF (TRIM(string).eq.TRIM(KeyWord)) THEN
@@ -207,16 +219,16 @@
           END IF
         END IF
       END DO
-  40  IF (localPET.eq.0) THEN
-        WRITE (stdout,50) line
-  50    FORMAT (/,' GETPAR_0D_I - Error while processing line: ',/,a)
+  20  IF (localPET.eq.0) THEN
+        WRITE (stdout,30) line
+  30    FORMAT (/,' GETPAR_0D_I - Error while processing line: ',/,a)
       END IF
       exit_flag=4
-  60  CONTINUE
+  40  CONTINUE
       IF (.not.foundit) THEN
         IF (localPET.eq.0) THEN
-          WRITE (stdout,70) TRIM(KeyWord)
-  70    FORMAT (/,' GETPAR_0D_I - unable to find KeyWord: ',a,          &
+          WRITE (stdout,50) TRIM(KeyWord)
+  50    FORMAT (/,' GETPAR_0D_I - unable to find KeyWord: ',a,          &
      &          /,15x,'in ROMS standard input file.')
         END IF
         exit_flag=5
@@ -265,12 +277,12 @@
 !
       logical :: foundit, GotFile
 !
-      integer :: InpUnit, Npts, Nval, status
+      integer :: InpUnit, Npts, Nval, io_err, status
 !
       real(dp), dimension(nRval) :: Rval
 !
       character (len= 40) :: string
-      character (len=256) :: line
+      character (len=256) :: io_errmsg, line
       character (len=256), dimension(nCval) :: Cval
 !
 !-----------------------------------------------------------------------
@@ -282,22 +294,26 @@
       IF (PRESENT(InpName)) THEN
         InpUnit=1
         OPEN (InpUnit, FILE=TRIM(InpName), FORM='formatted',            &
-     &        STATUS='old', ERR=10)
-        GotFile=.TRUE.
-        GO TO 30
-  10    IF (localPET.eq.0) WRITE (stdout,20) TRIM(InpName)
-        exit_flag=2
-        RETURN
-  20    FORMAT (/,' GETPAR_1D_i - Unable to input script: ',a)
+     &        STATUS='old', IOSTAT=io_err, IOMSG=io_errmsg)
+        IF (io_err.ne.0) THEN
+          IF (localPET.eq.0) WRITE (stdout,10) TRIM(InpName),           &
+     &                                         TRIM(io_errmsg)
+  10      FORMAT (/,' GETPAR_1D_I - Unable to open input script: ',a,   &
+     &            /,15x,'ERROR: ',a)
+          exit_flag=5
+          RETURN
+        ELSE
+          GotFile=.TRUE.
+        END IF
       ELSE
         InpUnit=stdinp_unit(localPET, GotFile)
       END IF
 !
 !  Process requested parameter.
 !
-  30  foundit=.FALSE.
+      foundit=.FALSE.
       DO WHILE (.TRUE.)
-        READ (InpUnit,'(a)',ERR=40,END=60) line
+        READ (InpUnit,'(a)',ERR=20,END=40) line
         status=decode_line(line, string, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           IF (TRIM(string).eq.TRIM(KeyWord)) THEN
@@ -306,16 +322,16 @@
           END IF
         END IF
       END DO
-  40  IF (localPET.eq.0) THEN
-        WRITE (stdout,50) line
-  50    FORMAT (/,' GETPAR_1D_I - Error while processing line: ',/,a)
+  20  IF (localPET.eq.0) THEN
+        WRITE (stdout,30) line
+  30    FORMAT (/,' GETPAR_1D_I - Error while processing line: ',/,a)
       END IF
       exit_flag=4
-  60  CONTINUE
+  40  CONTINUE
       IF (.not.foundit) THEN
         IF (localPET.eq.0) THEN
-          WRITE (stdout,70) TRIM(KeyWord)
-  70    FORMAT (/,' GETPAR_1D_I - unable to find KeyWord: ',a,          &
+          WRITE (stdout,50) TRIM(KeyWord)
+  50    FORMAT (/,' GETPAR_1D_I - unable to find KeyWord: ',a,          &
      &          /,15x,'in ROMS standard input file.')
         END IF
         exit_flag=5
@@ -363,12 +379,12 @@
       logical :: foundit, GotFile
       logical :: Lvalue(1)
 !
-      integer :: InpUnit, Npts, Nval, status
+      integer :: InpUnit, Npts, Nval, io_err, status
 !
       real(dp), dimension(nRval) :: Rval
 !
       character (len= 40) :: string
-      character (len=256) :: line
+      character (len=256) :: io_errmsg, line
       character (len=256), dimension(nCval) :: Cval
 !
 !-----------------------------------------------------------------------
@@ -380,22 +396,26 @@
       IF (PRESENT(InpName)) THEN
         InpUnit=1
         OPEN (InpUnit, FILE=TRIM(InpName), FORM='formatted',            &
-     &        STATUS='old', ERR=10)
-        GotFile=.TRUE.
-        GO TO 30
-  10    IF (localPET.eq.0) WRITE (stdout,20) TRIM(InpName)
-        exit_flag=2
-        RETURN
-  20    FORMAT (/,' GETPAR_0D_L - Unable to input script: ',a)
+     &        STATUS='old', IOSTAT=io_err, IOMSG=io_errmsg)
+        IF (io_err.ne.0) THEN
+          IF (localPET.eq.0) WRITE (stdout,10) TRIM(InpName),           &
+     &                                         TRIM(io_errmsg)
+  10      FORMAT (/,' GETPAR_0D_L - Unable to open input script: ',a,   &
+     &            /,15x,'ERROR: ',a)
+          exit_flag=5
+          RETURN
+        ELSE
+          GotFile=.TRUE.
+        END IF
       ELSE
         InpUnit=stdinp_unit(localPET, GotFile)
       END IF
 !
 !  Process requested parameter.
 !
-  30  foundit=.FALSE.
+      foundit=.FALSE.
       DO WHILE (.TRUE.)
-        READ (InpUnit,'(a)',ERR=40,END=60) line
+        READ (InpUnit,'(a)',ERR=20,END=40) line
         status=decode_line(line, string, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           IF (TRIM(string).eq.TRIM(KeyWord)) THEN
@@ -405,16 +425,16 @@
           END IF
         END IF
       END DO
-  40  IF (localPET.eq.0) THEN
-        WRITE (stdout,50) line
-  50    FORMAT (/,' GETPAR_0D_L - Error while processing line: ',/,a)
+  20  IF (localPET.eq.0) THEN
+        WRITE (stdout,30) line
+  30    FORMAT (/,' GETPAR_0D_L - Error while processing line: ',/,a)
       END IF
       exit_flag=4
-  60  CONTINUE
+  40  CONTINUE
       IF (.not.foundit) THEN
         IF (localPET.eq.0) THEN
-          WRITE (stdout,70) TRIM(KeyWord)
-  70    FORMAT (/,' GETPAR_0D_L - unable to find KeyWord: ',a,          &
+          WRITE (stdout,50) TRIM(KeyWord)
+  50    FORMAT (/,' GETPAR_0D_L - unable to find KeyWord: ',a,          &
      &          /,15x,'in ROMS standard input file.')
         END IF
         exit_flag=5
@@ -463,12 +483,12 @@
 !
       logical :: foundit, GotFile
 !
-      integer :: InpUnit, Npts, Nval, status
+      integer :: InpUnit, Npts, Nval, io_err, status
 !
       real(dp), dimension(nRval) :: Rval
 !
       character (len= 40) :: string
-      character (len=256) :: line
+      character (len=256) :: io_errmsg, line
       character (len=256), dimension(nCval) :: Cval
 !
 !-----------------------------------------------------------------------
@@ -480,22 +500,26 @@
       IF (PRESENT(InpName)) THEN
         InpUnit=1
         OPEN (InpUnit, FILE=TRIM(InpName), FORM='formatted',            &
-     &        STATUS='old', ERR=10)
-        GotFile=.TRUE.
-        GO TO 30
-  10    IF (localPET.eq.0) WRITE (stdout,20) TRIM(InpName)
-        exit_flag=2
-        RETURN
-  20    FORMAT (/,' GETPAR_1D_L - Unable to input script: ',a)
+     &        STATUS='old', IOSTAT=io_err, IOMSG=io_errmsg)
+        IF (io_err.ne.0) THEN
+          IF (localPET.eq.0) WRITE (stdout,10) TRIM(InpName),           &
+     &                                         TRIM(io_errmsg)
+  10      FORMAT (/,' GETPAR_1D_L - Unable to open input script: ',a,   &
+     &            /,15x,'ERROR: ',a)
+          exit_flag=5
+          RETURN
+        ELSE
+          GotFile=.TRUE.
+        END IF
       ELSE
         InpUnit=stdinp_unit(localPET, GotFile)
       END IF
 !
 !  Process requested parameter.
 !
-  30  foundit=.FALSE.
+      foundit=.FALSE.
       DO WHILE (.TRUE.)
-        READ (InpUnit,'(a)',ERR=40,END=60) line
+        READ (InpUnit,'(a)',ERR=20,END=40) line
         status=decode_line(line, string, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           IF (TRIM(string).eq.TRIM(KeyWord)) THEN
@@ -504,16 +528,16 @@
           END IF
         END IF
       END DO
-  40  IF (localPET.eq.0) THEN
-        WRITE (stdout,50) line
-  50    FORMAT (/,' GETPAR_1D_L - Error while processing line: ',/,a)
+  20  IF (localPET.eq.0) THEN
+        WRITE (stdout,30) line
+  30    FORMAT (/,' GETPAR_1D_L - Error while processing line: ',/,a)
       END IF
       exit_flag=4
-  60  CONTINUE
+  40  CONTINUE
       IF (.not.foundit) THEN
         IF (localPET.eq.0) THEN
-          WRITE (stdout,70) TRIM(KeyWord)
-  70    FORMAT (/,' GETPAR_1D_L - unable to find KeyWord: ',a,          &
+          WRITE (stdout,50) TRIM(KeyWord)
+  50    FORMAT (/,' GETPAR_1D_L - unable to find KeyWord: ',a,          &
      &          /,15x,'in ROMS standard input file.')
         END IF
         exit_flag=5
@@ -561,14 +585,14 @@
 !
       logical :: foundit, GotFile
 
-      integer :: InpUnit, Npts, Nval, status
+      integer :: InpUnit, Npts, Nval, io_err, status
 
       real(r8) :: Rvalue(1)
 
       real(dp), dimension(nRval) :: Rval
 !
       character (len= 40) :: string
-      character (len=256) :: line
+      character (len=256) :: io_errmsg, line
       character (len=256), dimension(nCval) :: Cval
 !
 !-----------------------------------------------------------------------
@@ -580,22 +604,26 @@
       IF (PRESENT(InpName)) THEN
         InpUnit=1
         OPEN (InpUnit, FILE=TRIM(InpName), FORM='formatted',            &
-     &        STATUS='old', ERR=10)
-        GotFile=.TRUE.
-        GO TO 30
-  10    IF (localPET.eq.0) WRITE (stdout,20) TRIM(InpName)
-        exit_flag=2
-        RETURN
-  20    FORMAT (/,' GETPAR_0D_R - Unable to input script: ',a)
+     &        STATUS='old', IOSTAT=io_err, IOMSG=io_errmsg)
+        IF (io_err.ne.0) THEN
+          IF (localPET.eq.0) WRITE (stdout,10) TRIM(InpName),           &
+     &                                         TRIM(io_errmsg)
+  10      FORMAT (/,' GETPAR_0D_R - Unable to open input script: ',a,   &
+     &            /,15x,'ERROR: ',a)
+          exit_flag=5
+          RETURN
+        ELSE
+          GotFile=.TRUE.
+        END IF
       ELSE
         InpUnit=stdinp_unit(localPET, GotFile)
       END IF
 !
 !  Process requested parameter.
 !
-  30  foundit=.FALSE.
+      foundit=.FALSE.
       DO WHILE (.TRUE.)
-        READ (InpUnit,'(a)',ERR=40,END=60) line
+        READ (InpUnit,'(a)',ERR=20,END=40) line
         status=decode_line(line, string, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           IF (TRIM(string).eq.TRIM(KeyWord)) THEN
@@ -605,16 +633,16 @@
           END IF
         END IF
       END DO
-  40  IF (localPET.eq.0) THEN
-        WRITE (stdout,50) line
-  50    FORMAT (/,' GETPAR_0D_R - Error while processing line: ',/,a)
+  20  IF (localPET.eq.0) THEN
+        WRITE (stdout,30) line
+  30    FORMAT (/,' GETPAR_0D_R - Error while processing line: ',/,a)
       END IF
       exit_flag=4
-  60  CONTINUE
+  40  CONTINUE
       IF (.not.foundit) THEN
         IF (localPET.eq.0) THEN
-          WRITE (stdout,70) TRIM(KeyWord)
-  70    FORMAT (/,' GETPAR_0D_R - unable to find KeyWord: ',a,          &
+          WRITE (stdout,50) TRIM(KeyWord)
+  50    FORMAT (/,' GETPAR_0D_R - unable to find KeyWord: ',a,          &
      &          /,15x,'in ROMS standard input file.')
         END IF
         exit_flag=5
@@ -663,12 +691,12 @@
 !
       logical :: foundit, GotFile
 !
-      integer :: InpUnit, Npts, Nval, status
+      integer :: InpUnit, Npts, Nval, io_err, status
 !
       real(dp), dimension(nRval) :: Rval
 !
       character (len= 40) :: string
-      character (len=256) :: line
+      character (len=256) :: io_errmsg, line
       character (len=256), dimension(nCval) :: Cval
 !
 !-----------------------------------------------------------------------
@@ -680,22 +708,26 @@
       IF (PRESENT(InpName)) THEN
         InpUnit=1
         OPEN (InpUnit, FILE=TRIM(InpName), FORM='formatted',            &
-     &        STATUS='old', ERR=10)
-        GotFile=.TRUE.
-        GO TO 30
-  10    IF (localPET.eq.0) WRITE (stdout,20) TRIM(InpName)
-        exit_flag=2
-        RETURN
-  20    FORMAT (/,' GETPAR_1D_R - Unable to input script: ',a)
+     &        STATUS='old', IOSTAT=io_err, IOMSG=io_errmsg)
+        IF (io_err.ne.0) THEN
+          IF (localPET.eq.0) WRITE (stdout,10) TRIM(InpName),           &
+     &                                         TRIM(io_errmsg)
+  10      FORMAT (/,' GETPAR_1D_R - Unable to open input script: ',a,   &
+     &            /,15x,'ERROR: ',a)
+          exit_flag=5
+          RETURN
+        ELSE
+          GotFile=.TRUE.
+        END IF
       ELSE
         InpUnit=stdinp_unit(localPET, GotFile)
       END IF
 !
 !  Process requested parameter.
 !
-  30  foundit=.FALSE.
+      foundit=.FALSE.
       DO WHILE (.TRUE.)
-        READ (InpUnit,'(a)',ERR=40,END=60) line
+        READ (InpUnit,'(a)',ERR=20,END=40) line
         status=decode_line(line, string, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           IF (TRIM(string).eq.TRIM(KeyWord)) THEN
@@ -704,16 +736,16 @@
           END IF
         END IF
       END DO
-  40  IF (localPET.eq.0) THEN
-        WRITE (stdout,50) line
-  50    FORMAT (/,' GETPAR_1D_R - Error while processing line: ',/,a)
+  20  IF (localPET.eq.0) THEN
+        WRITE (stdout,30) line
+  30    FORMAT (/,' GETPAR_1D_R - Error while processing line: ',/,a)
       END IF
       exit_flag=4
-  60  CONTINUE
+  40  CONTINUE
       IF (.not.foundit) THEN
         IF (localPET.eq.0) THEN
-          WRITE (stdout,70) TRIM(KeyWord)
-  70    FORMAT (/,' GETPAR_1D_R - unable to find KeyWord: ',a,          &
+          WRITE (stdout,50) TRIM(KeyWord)
+  50    FORMAT (/,' GETPAR_1D_R - unable to find KeyWord: ',a,          &
      &          /,15x,'in ROMS standard input file.')
         END IF
         exit_flag=5
@@ -760,13 +792,13 @@
 !
       logical :: foundit, GotFile
 !
-      integer :: InpUnit, Npts, Nval, i, status
+      integer :: InpUnit, Npts, Nval, i, io_err, status
 !
       real(dp), dimension(nRval) :: Rval
 !
       character (len=1  ), parameter :: blank = ' '
       character (len= 40) :: string
-      character (len=256) :: line
+      character (len=256) :: io_errmsg, line
       character (len=256), dimension(nCval) :: Cval
 !
 !-----------------------------------------------------------------------
@@ -778,22 +810,26 @@
       IF (PRESENT(InpName)) THEN
         InpUnit=1
         OPEN (InpUnit, FILE=TRIM(InpName), FORM='formatted',            &
-     &        STATUS='old', ERR=10)
-        GotFile=.TRUE.
-        GO TO 30
-  10    IF (localPET.eq.0) WRITE (stdout,20) TRIM(InpName)
-        exit_flag=2
-        RETURN
-  20    FORMAT (/,' GETPAR_0D_S - Unable to input script: ',a)
+     &        STATUS='old', IOSTAT=io_err, IOMSG=io_errmsg)
+        IF (io_err.ne.0) THEN
+          IF (localPET.eq.0) WRITE (stdout,10) TRIM(InpName),           &
+     &                                         TRIM(io_errmsg)
+  10      FORMAT (/,' GETPAR_0D_S - Unable to open input script: ',a,   &
+     &            /,15x,'ERROR: ',a)
+          exit_flag=5
+          RETURN
+        ELSE
+          GotFile=.TRUE.
+        END IF
       ELSE
         InpUnit=stdinp_unit(localPET, GotFile)
       END IF
 !
 !  Process requested parameter.
 !
-  30  foundit=.FALSE.
+      foundit=.FALSE.
       DO WHILE (.TRUE.)
-        READ (InpUnit,'(a)',ERR=40,END=60) line
+        READ (InpUnit,'(a)',ERR=20,END=40) line
         status=decode_line(line, string, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           IF (TRIM(string).eq.TRIM(KeyWord)) THEN
@@ -805,16 +841,16 @@
           END IF
         END IF
       END DO
-  40  IF (localPET.eq.0) THEN
-        WRITE (stdout,50) line
-  50    FORMAT (/,' GETPAR_0D_S - Error while processing line: ',/,a)
+  20  IF (localPET.eq.0) THEN
+        WRITE (stdout,30) line
+  30    FORMAT (/,' GETPAR_0D_S - Error while processing line: ',/,a)
       END IF
       exit_flag=4
-  60  CONTINUE
+  40  CONTINUE
       IF (.not.foundit) THEN
         IF (localPET.eq.0) THEN
-          WRITE (stdout,70) TRIM(KeyWord)
-  70    FORMAT (/,' GETPAR_0D_S - unable to find KeyWord: ',a,          &
+          WRITE (stdout,50) TRIM(KeyWord)
+  50    FORMAT (/,' GETPAR_0D_S - unable to find KeyWord: ',a,          &
      &          /,15x,'in ROMS standard input file.')
         END IF
         exit_flag=5

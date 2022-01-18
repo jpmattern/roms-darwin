@@ -2,9 +2,9 @@
       MODULE ini_fields_mod
 #ifdef NONLINEAR
 !
-!svn $Id: ini_fields.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: ini_fields.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -44,10 +44,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 2, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 2, __LINE__, MyFile)
 # endif
       CALL ini_fields_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -93,8 +96,9 @@
      &                      OCEAN(ng) % vbar,                           &
      &                      OCEAN(ng) % zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 2, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 2, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE ini_fields
 !
@@ -768,7 +772,7 @@
 #  endif
       END IF
 # endif
-
+!
       RETURN
       END SUBROUTINE ini_fields_tile
 !
@@ -793,10 +797,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ini_zeta"
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 2, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 2, __LINE__, MyFile)
 # endif
       CALL ini_zeta_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -819,9 +826,9 @@
 # endif
      &                    OCEAN(ng) % zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 2, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 2, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE ini_zeta
 !
@@ -1125,7 +1132,7 @@
 #   endif
 #  endif
 # endif
-
+!
       RETURN
       END SUBROUTINE ini_zeta_tile
 #endif

@@ -1,18 +1,21 @@
 #include "cppdefs.h"
       MODULE mod_scalars
 !
-!svn $Id: mod_scalars.F 1037 2020-08-15 01:56:27Z arango $
+!svn $Id: mod_scalars.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
 !
-        USE mod_param
+        USE mod_kinds
 #ifdef NO_4BYTE_REALS
         USE netcdf
 #endif
-!        implicit none
+!
+        PUBLIC :: allocate_scalars
+        PUBLIC :: deallocate_scalars
+        PUBLIC :: initialize_scalars
 !
 !-----------------------------------------------------------------------
 !  Multiple grid structure.
@@ -108,7 +111,8 @@
         real(dp) :: base               ! reference date (YYYYMMDD.dd)
         real(dp) :: DateNumber(2)      ! date number, [1]: days
                                        !              [2]: seconds
-
+        real(dp) :: tide_DateNumber(2) ! tide reference date number,
+                                       !   [1]: days  [2]: seconds
         character (len=22) :: string   ! YYYY-MM-DD hh:mm:ss.ss
         character (len=25) :: calendar ! date calendar
       END TYPE T_CLOCK
@@ -184,6 +188,9 @@
 !    indx1         2D timestep rolling counter.
 !    iic           Timestep counter for 3D primitive equations.
 !    iif           Timestep counter for 2D primitive equations.
+#ifdef JEDI
+!    jic           Timestep counter for roms-jedi interface.
+#endif
 !    ndtfast       Number of barotropic timesteps between each
 !                    baroclinic timestep.
 !    nfast         Number of barotropic timesteps needed to compute
@@ -198,6 +205,9 @@
 !    io_time       Current I/O time (s) processed in "get_state".
 !    tdays         Model time clock (days).
 !    time          Model time clock (s).
+#ifdef JEDI
+!    time4jedi     Model time clock (s) to pass to roms-jedi interface.
+#endif
 !    time_code     Model time clock (string, YYYY-MM-DD hh:mm:ss.ss)
 !    AVGtime       Model time clock for averages output (s).
 !    DIAtime       Model time clock for diagnostics output (s).
@@ -224,12 +234,20 @@
         integer, allocatable :: iif(:)
 !$OMP THREADPRIVATE (indx1, iic, iif)
 
+#ifdef JEDI
+        integer, allocatable :: jic(:)
+#endif
+
         integer, allocatable :: ndtfast(:)
         integer, allocatable :: nfast(:)
 
         real(dp), allocatable :: tdays(:)                ! days
         real(dp), allocatable :: time(:)                 ! seconds
 !$OMP THREADPRIVATE (tdays, time)
+
+#ifdef JEDI
+        real(dp), allocatable :: time4jedi(:)            ! seconds
+#endif
 
         real(dp), allocatable :: dt(:)                   ! seconds
         real(dp), allocatable :: dtfast(:)               ! seconds
@@ -327,7 +345,7 @@
 !
 ! Set checksum algorithm: "adler32" or "crc32"
 !
-        character (len=*), parameter :: HashMethod = "crc32"
+        character (len=*), parameter :: HashMethod = "bitsum"
 !
 ! Split 4D-Var phase.
 !
@@ -390,6 +408,11 @@
         logical, allocatable :: Lsediment(:)
         logical, allocatable :: Lstations(:)
 !
+!  If equilibrium tides, switch to apply the 18.6-year lunar nodal
+!  cycle correction.
+!
+        logical :: Lnodal = .TRUE.
+!
 !-----------------------------------------------------------------------
 !  Physical constants.
 !-----------------------------------------------------------------------
@@ -428,6 +451,12 @@
 !  Switch for spherical grid (lon,lat) configurations.
 !
         logical :: spherical = .FALSE.
+!
+!  Switch to indicate if ROMS kernel arrays have been allocated.  It
+!  used to skip memory reports during early termination.
+!
+        logical :: LallocatedMemory = .FALSE.
+!$OMP THREADPRIVATE (LallocatedMemory)
 !
 !  Switch to compute the grid stiffness.
 !
@@ -948,8 +977,10 @@
 !  arrays and adjoint ocean time. This is used in 4DVAR for IO
 !  maniputations.
 !
-#if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
+#ifdef AD_OUTPUT_STATE
         logical, allocatable :: LwrtState3d(:)
+#endif
+#if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
         logical, allocatable :: SOinitial(:)
 #endif
         logical, allocatable :: LwrtState2d(:)
@@ -1785,6 +1816,8 @@
 !                                                                      !
 !=======================================================================
 !
+      USE mod_param
+!
 !  Local variable declarations.
 !
       integer :: ng
@@ -1874,6 +1907,13 @@
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 !$OMP END PARALLEL
+
+#ifdef JEDI
+      IF (.not.allocated(jic)) THEN
+        allocate ( jic(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+#endif
 !
 !-----------------------------------------------------------------------
 !  Allocate variables.
@@ -1984,10 +2024,12 @@
       END IF
       IF (.not.allocated(tdays)) THEN
         allocate ( tdays(Ngrids) )
+        tdays=0.0_dp
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
       IF (.not.allocated(time)) THEN
         allocate ( time(Ngrids) )
+        time=0.0_dp
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
       IF (.not.allocated(time_code)) THEN
@@ -1995,6 +2037,14 @@
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 !$OMP END PARALLEL
+
+#ifdef JEDI
+      IF (.not.allocated(time4jedi)) THEN
+        allocate ( time4jedi(Ngrids) )
+        time4jedi=0.0_dp
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+#endif
 
       IF (.not.allocated(NrecFrc)) THEN
         allocate ( NrecFrc(Ngrids) )
@@ -2730,11 +2780,13 @@
         Dmem(1)=Dmem(1)+4.0_r8*REAL(Ngrids,r8)
       END IF
 
-#if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
+#ifdef AD_OUTPUT_STATE
       IF (.not.allocated(LwrtState3d)) THEN
         allocate ( LwrtState3d(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+#endif
+#if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
       IF (.not.allocated(SOinitial)) THEN
         allocate ( SOinitial(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -3202,10 +3254,730 @@
         allocate ( crgban_cw(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
-
+!
       RETURN
       END SUBROUTINE allocate_scalars
+!
+      SUBROUTINE deallocate_scalars (ng)
+!
+!=======================================================================
+!                                                                      !
+!  This routine deallocates structures variables and module variables. !
+!  Notice that "destroy" cannot be use to deallocate pointer variables !
+!  because of cyclic dependencies.                                     !
+!                                                                      !
+!=======================================================================
+!
+!  Imported variable declarations.
+!
+      integer :: ng
 
+#ifdef SUBOBJECT_DEALLOCATION
+!
+!-----------------------------------------------------------------------
+!  Deallocate each variable in the derived-type T_SCALARS structure
+!  separately.
+!-----------------------------------------------------------------------
+!
+# ifdef SOLVE3D
+      IF (associated(SCALARS(ng)%Fstate)) THEN
+        deallocate ( SCALARS(ng)%Fstate )
+      END IF
+
+      IF (associated(SCALARS(ng)%Lstate)) THEN
+        deallocate ( SCALARS(ng)%Lstate )
+      END IF
+# else
+      IF (associated(SCALARS(ng)%Fstate)) THEN
+        deallocate ( SCALARS(ng)%Fstate )
+      END IF
+
+      IF (associated(SCALARS(ng)%Lstate)) THEN
+        deallocate ( SCALARS(ng)%Lstate )
+      END IF
+# endif
+
+# if defined READ_WATER && defined MASKING && defined DISTRIBUTE
+      IF (associated(SCALARS(ng)%IJwater)) THEN
+        deallocate ( SCALARS(ng)%IJwater )
+      END IF
+# endif
+      IF (associated(SCALARS(ng)%Cs_r)) THEN
+        deallocate ( SCALARS(ng)%Cs_r )
+      END IF
+
+      IF (associated(SCALARS(ng)%Cs_w)) THEN
+        deallocate ( SCALARS(ng)%Cs_w )
+      END IF
+
+      IF (associated(SCALARS(ng)%sc_r)) THEN
+        deallocate ( SCALARS(ng)%sc_r )
+      END IF
+
+      IF (associated(SCALARS(ng)%sc_w)) THEN
+        deallocate ( SCALARS(ng)%sc_w )
+      END IF
+#endif
+!
+!-----------------------------------------------------------------------
+!  Deallocate derived-type SCALARS structure.
+!-----------------------------------------------------------------------
+!
+      IF (ng.eq.Ngrids) THEN
+        IF (allocated(SCALARS)) deallocate ( SCALARS )
+      END IF
+!
+!-----------------------------------------------------------------------
+!  Deallocate variables in modules.
+!-----------------------------------------------------------------------
+!
+!  Deallocate variables that require special treatment in shared-memory.
+!  These variables are private for each thread to avoid collisions.
+!
+!$OMP PARALLEL
+      IF (allocated(PREDICTOR_2D_STEP)) deallocate ( PREDICTOR_2D_STEP )
+
+      IF (allocated(indx1))             deallocate ( indx1 )
+
+      IF (allocated(iic))               deallocate ( iic )
+
+      IF (allocated(iif))               deallocate ( iif )
+
+      IF (allocated(FrcRec))            deallocate ( FrcRec )
+
+      IF (allocated(SOrec))             deallocate ( SOrec )
+
+      IF (allocated(synchro_flag))      deallocate ( synchro_flag )
+
+      IF (allocated(step_counter))      deallocate ( step_counter )
+
+      IF (allocated(tdays))             deallocate ( tdays )
+
+      IF (allocated(time))              deallocate ( time )
+
+      IF (allocated(time_code))         deallocate ( time_code )
+!$OMP END PARALLEL
+!
+!  Deallocate regular variables
+!
+#ifdef T_PASSIVE
+      IF (associated(inert))            deallocate ( inert )
+#endif
+      IF (allocated(PerfectRST))        deallocate ( PerfectRST )
+
+      IF (allocated(ndtfast))           deallocate ( ndtfast )
+
+      IF (allocated(nfast))             deallocate ( nfast )
+
+      IF (allocated(dt))                deallocate ( dt )
+
+      IF (allocated(dtfast))            deallocate ( dtfast )
+
+      IF (allocated(TimeEnd))           deallocate ( TimeEnd )
+
+      IF (allocated(AVGtime))           deallocate ( AVGtime )
+
+      IF (allocated(DIAtime))           deallocate ( DIAtime )
+
+      IF (allocated(IMPtime))           deallocate ( IMPtime )
+
+      IF (allocated(INItime))           deallocate ( INItime )
+
+      IF (allocated(INItimeS))          deallocate ( INItimeS )
+
+      IF (allocated(ObsTime))           deallocate ( ObsTime )
+
+      IF (allocated(FrcTime))           deallocate ( FrcTime )
+
+      IF (allocated(ntimes))            deallocate ( ntimes )
+
+      IF (allocated(first_time))        deallocate ( first_time )
+
+      IF (allocated(ntfirst))           deallocate ( ntfirst )
+
+      IF (allocated(ntstart))           deallocate ( ntstart )
+
+      IF (allocated(ntend))             deallocate ( ntend )
+
+      IF (allocated(NrecFrc))           deallocate ( NrecFrc )
+
+      IF (allocated(SetGridConfig))     deallocate ( SetGridConfig )
+
+      IF (allocated(NudgingCoeff))      deallocate ( NudgingCoeff )
+
+      IF (allocated(ObcData))           deallocate ( ObcData )
+
+      IF (allocated(Lbiology))          deallocate ( Lbiology )
+
+      IF (allocated(Lfloats))           deallocate ( Lfloats )
+
+      IF (allocated(Lsediment))         deallocate ( Lsediment )
+
+      IF (allocated(Lstations))         deallocate ( Lstations )
+
+      IF (allocated(CompositeGrid))     deallocate ( CompositeGrid )
+
+      IF (allocated(RefinedGrid))       deallocate ( RefinedGrid )
+
+      IF (allocated(RefineScale))       deallocate ( RefineScale )
+
+      IF (allocated(GetDonorData))      deallocate ( GetDonorData )
+
+      IF (allocated(EWperiodic))        deallocate ( EWperiodic )
+
+      IF (allocated(NSperiodic))        deallocate ( NSperiodic )
+
+      IF (allocated(VolCons))           deallocate ( VolCons )
+
+#if defined ADJOINT || defined TANGENT || defined TL_IOMS
+      IF (allocated(ad_VolCons))        deallocate ( ad_VolCons )
+
+      IF (allocated(tl_VolCons))        deallocate ( tl_VolCons )
+#endif
+
+      IF (allocated(Lsponge))           deallocate ( Lsponge )
+
+      IF (allocated(LuvSponge))         deallocate ( LuvSponge )
+
+      IF (allocated(LtracerSponge))     deallocate ( LtracerSponge )
+
+      IF (allocated(CLM_FILE))          deallocate ( CLM_FILE )
+
+      IF (allocated(Lclimatology))      deallocate ( Lclimatology )
+
+      IF (allocated(LsshCLM))           deallocate ( LsshCLM )
+
+      IF (allocated(Lm2CLM))            deallocate ( Lm2CLM )
+
+      IF (allocated(Lm3CLM))            deallocate ( Lm3CLM )
+
+      IF (allocated(LtracerCLM))        deallocate ( LtracerCLM )
+
+      IF (allocated(Lnudging))          deallocate ( Lnudging )
+
+      IF (allocated(LnudgeM2CLM))       deallocate ( LnudgeM2CLM )
+
+      IF (allocated(LnudgeM3CLM))       deallocate ( LnudgeM3CLM )
+
+      IF (allocated(LnudgeTCLM))        deallocate ( LnudgeTCLM )
+
+      IF (allocated(LuvSrc))            deallocate ( LuvSrc )
+
+      IF (allocated(LwSrc))             deallocate ( LwSrc )
+
+      IF (allocated(LtracerSrc))        deallocate ( LtracerSrc )
+
+      IF (allocated(maxspeed))          deallocate ( maxspeed )
+
+      IF (allocated(maxrho))            deallocate ( maxrho )
+
+      IF (allocated(levsfrc))           deallocate ( levsfrc )
+
+      IF (allocated(levbfrc))           deallocate ( levbfrc )
+
+      IF (allocated(Vtransform))        deallocate ( Vtransform )
+
+      IF (allocated(Vstretching))       deallocate ( Vstretching )
+
+      IF (allocated(Tcline))            deallocate ( Tcline )
+
+      IF (allocated(hc))                deallocate ( hc )
+
+      IF (allocated(theta_s))           deallocate ( theta_s )
+
+      IF (allocated(theta_b))           deallocate ( theta_b )
+
+      IF (allocated(hmin))              deallocate ( hmin )
+
+      IF (allocated(hmax))              deallocate ( hmax )
+
+      IF (allocated(xl))                deallocate ( xl )
+
+      IF (allocated(el))                deallocate ( el )
+
+      IF (allocated(LonMin))            deallocate ( LonMin )
+
+      IF (allocated(LonMax))            deallocate ( LonMax )
+
+      IF (allocated(LatMin))            deallocate ( LatMin )
+
+      IF (allocated(LatMax))            deallocate ( LatMax )
+
+      IF (allocated(Idigits))           deallocate ( Idigits )
+
+      IF (allocated(Jdigits))           deallocate ( Jdigits )
+
+#ifdef SOLVE3D
+      IF (allocated(Kdigits))           deallocate ( Kdigits )
+#endif
+
+      IF (allocated(TotVolume))         deallocate ( TotVolume )
+
+      IF (allocated(MinVolume))         deallocate ( MinVolume )
+
+      IF (allocated(MaxVolume))         deallocate ( MaxVolume )
+
+      IF (allocated(DXmin))             deallocate ( DXmin )
+
+      IF (allocated(DXmax))             deallocate ( DXmax )
+
+      IF (allocated(DYmin))             deallocate ( DYmin )
+
+      IF (allocated(DYmax))             deallocate ( DYmax )
+
+#ifdef MASKING
+      IF (allocated(DXminW))            deallocate ( DXminW )
+
+      IF (allocated(DXmaxW))            deallocate ( DXmaxW )
+
+      IF (allocated(DYminW))            deallocate ( DYminW )
+
+      IF (allocated(DYmaxW))            deallocate ( DYmaxW )
+
+#endif
+
+#ifdef SOLVE3D
+      IF (allocated(DZmin))             deallocate ( DZmin )
+
+      IF (allocated(DZmax))             deallocate ( DZmax )
+
+# ifdef MASKING
+      IF (allocated(DZminW))            deallocate ( DZminW )
+
+      IF (allocated(DZmaxW))            deallocate ( DZmaxW )
+# endif
+#endif
+
+      IF (allocated(grdmax))            deallocate ( grdmax )
+
+#ifdef DIFF_3DCOEF
+      IF (allocated(DiffMin))           deallocate ( DiffMin )
+
+      IF (allocated(DiffMax))           deallocate ( DiffMax )
+#endif
+
+      IF (allocated(Cg_min))            deallocate ( Cg_min )
+
+      IF (allocated(Cg_max))            deallocate ( Cg_max )
+
+      IF (allocated(Cg_Cor))            deallocate ( Cg_Cor )
+
+#ifdef VISC_3DCOEF
+      IF (allocated(ViscMin))           deallocate ( ViscMin )
+
+      IF (allocated(ViscMax))           deallocate ( ViscMax )
+#endif
+
+      IF (allocated(R0))                deallocate ( R0 )
+
+      IF (allocated(Tcoef))             deallocate ( Tcoef )
+
+      IF (allocated(Scoef))             deallocate ( Scoef )
+
+      IF (allocated(T0))                deallocate ( T0 )
+
+      IF (allocated(S0))                deallocate ( S0 )
+
+      IF (allocated(gamma2))            deallocate ( gamma2 )
+
+      IF (allocated(lmd_Jwt))           deallocate ( lmd_Jwt )
+
+      IF (allocated(rx0))               deallocate ( rx0 )
+
+      IF (allocated(rx1))               deallocate ( rx1 )
+
+      IF (allocated(rdrg))              deallocate ( rdrg )
+
+      IF (allocated(rdrg2))             deallocate ( rdrg2 )
+
+      IF (allocated(Zos))               deallocate ( Zos )
+
+      IF (allocated(Zob))               deallocate ( Zob )
+
+      IF (allocated(Dcrit))             deallocate ( Dcrit )
+
+#ifdef PROPAGATOR
+      IF (allocated(Nconv))             deallocate ( Nconv )
+#endif
+
+      IF (allocated(weight))            deallocate ( weight )
+
+      IF (allocated(Akk_bak))           deallocate ( Akk_bak )
+
+      IF (allocated(Akp_bak))           deallocate ( Akp_bak )
+
+      IF (allocated(Akv_bak))           deallocate ( Akv_bak )
+
+      IF (allocated(Akv_limit))         deallocate ( Akv_limit )
+
+      IF (allocated(ad_visc2))          deallocate ( ad_visc2 )
+
+      IF (allocated(nl_visc2))          deallocate ( nl_visc2 )
+
+      IF (allocated(tl_visc2))          deallocate ( tl_visc2 )
+
+      IF (allocated(visc2))             deallocate ( visc2 )
+
+      IF (allocated(ad_visc4))          deallocate ( ad_visc4 )
+
+      IF (allocated(nl_visc4))          deallocate ( nl_visc4 )
+
+      IF (allocated(tl_visc4))          deallocate ( tl_visc4 )
+
+      IF (allocated(visc4))             deallocate ( visc4 )
+
+      IF (allocated(tkenu2))            deallocate ( tkenu2 )
+
+      IF (allocated(tkenu4))            deallocate ( tkenu4 )
+
+      IF (allocated(Akt_bak))           deallocate ( Akt_bak )
+
+      IF (allocated(Akt_limit))         deallocate ( Akt_limit )
+
+      IF (allocated(Kdiff))             deallocate ( Kdiff )
+
+      IF (allocated(ad_tnu2))           deallocate ( ad_tnu2 )
+
+      IF (allocated(nl_tnu2))           deallocate ( nl_tnu2 )
+
+      IF (allocated(tl_tnu2))           deallocate ( tl_tnu2 )
+
+      IF (allocated(tnu2))              deallocate ( tnu2 )
+
+      IF (allocated(ad_tnu4))           deallocate ( ad_tnu4 )
+
+      IF (allocated(nl_tnu4))           deallocate ( nl_tnu4 )
+
+      IF (allocated(tl_tnu4))           deallocate ( tl_tnu4 )
+
+      IF (allocated(tnu4))              deallocate ( tnu4 )
+
+      IF (allocated(tl_M2diff))         deallocate ( tl_M2diff )
+
+      IF (allocated(tl_M3diff))         deallocate ( tl_M3diff )
+
+      IF (allocated(tl_Tdiff))          deallocate ( tl_Tdiff )
+
+      IF (allocated(ad_Akv_fac))        deallocate ( ad_Akv_fac )
+
+      IF (allocated(tl_Akv_fac))        deallocate ( tl_Akv_fac )
+
+      IF (allocated(ad_Akt_fac))        deallocate ( ad_Akt_fac )
+
+      IF (allocated(tl_Akt_fac))        deallocate ( tl_Akt_fac )
+
+      IF (allocated(LdefADJ))           deallocate ( LdefADJ )
+
+      IF (allocated(LdefAVG))           deallocate ( LdefAVG )
+
+      IF (allocated(LdefDAI))           deallocate ( LdefDAI )
+
+      IF (allocated(LdefDIA))           deallocate ( LdefDIA )
+
+      IF (allocated(LdefERR))           deallocate ( LdefERR )
+
+      IF (allocated(LdefFLT))           deallocate ( LdefFLT )
+
+      IF (allocated(LdefHIS))           deallocate ( LdefHIS )
+
+      IF (allocated(LdefHSS))           deallocate ( LdefHSS )
+
+      IF (allocated(LdefINI))           deallocate ( LdefINI )
+
+      IF (allocated(LdefIRP))           deallocate ( LdefIRP )
+
+      IF (allocated(LdefITL))           deallocate ( LdefITL )
+
+      IF (allocated(LdefLCZ))           deallocate ( LdefLCZ )
+
+      IF (allocated(LdefLZE))           deallocate ( LdefLZE )
+
+      IF (allocated(LdefMOD))           deallocate ( LdefMOD )
+
+      IF (allocated(LdefQCK))           deallocate ( LdefQCK )
+
+      IF (allocated(LdefRST))           deallocate ( LdefRST )
+
+#ifdef SP4DVAR
+      IF (allocated(LdefSCA))           deallocate ( LdefSCA )
+
+      IF (allocated(LdefSCT))           deallocate ( LdefSCT )
+
+      IF (allocated(LdefSPA))           deallocate ( LdefSPA )
+
+      IF (allocated(LdefSPT))           deallocate ( LdefSPT )
+#endif
+
+      IF (allocated(LdefSTA))           deallocate ( LdefSTA )
+
+      IF (allocated(LdefTIDE))          deallocate ( LdefTIDE )
+
+      IF (allocated(LdefTLM))           deallocate ( LdefTLM )
+
+      IF (allocated(LdefTLF))           deallocate ( LdefTLF )
+
+      IF (allocated(LreadADM))          deallocate ( LreadADM )
+
+      IF (allocated(LreadBLK))          deallocate ( LreadBLK )
+
+      IF (allocated(LreadFRC))          deallocate ( LreadFRC )
+
+      IF (allocated(LreadFWD))          deallocate ( LreadFWD )
+
+      IF (allocated(LreadQCK))          deallocate ( LreadQCK )
+
+      IF (allocated(LreadTLM))          deallocate ( LreadTLM )
+
+      IF (allocated(LwrtADJ))           deallocate ( LwrtADJ )
+
+      IF (allocated(LwrtAVG))           deallocate ( LwrtAVG )
+
+      IF (allocated(LwrtDIA))           deallocate ( LwrtDIA )
+
+      IF (allocated(LwrtHIS))           deallocate ( LwrtHIS )
+
+      IF (allocated(LwrtPER))           deallocate ( LwrtPER )
+
+      IF (allocated(LwrtQCK))           deallocate ( LwrtQCK )
+
+      IF (allocated(LwrtRST))           deallocate ( LwrtRST )
+
+      IF (allocated(LwrtTLM))           deallocate ( LwrtTLM )
+
+      IF (allocated(LwrtTLF))           deallocate ( LwrtTLF )
+
+      IF (allocated(LdefNRM))           deallocate ( LdefNRM )
+
+      IF (allocated(LwrtNRM))           deallocate ( LwrtNRM )
+
+#ifdef AD_OUTPUT_STATE
+      IF (allocated(LwrtState3d))       deallocate ( LwrtState3d )
+#endif
+
+#if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
+      IF (allocated(SOinitial))         deallocate ( SOinitial )
+#endif
+
+      IF (allocated(LwrtState2d))       deallocate ( LwrtState2d )
+
+      IF (allocated(LwrtTime))          deallocate ( LwrtTime )
+
+      IF (allocated(LwrtCost))          deallocate ( LwrtCost )
+
+      IF (allocated(Ladjusted))         deallocate ( Ladjusted )
+
+      IF (allocated(LprocessOBC))       deallocate ( LprocessOBC )
+
+      IF (allocated(LprocessTides))     deallocate ( LprocessTides )
+
+      IF (allocated(LwrtInfo))          deallocate ( LwrtInfo )
+
+      IF (allocated(ldefout))           deallocate ( ldefout )
+
+      IF (allocated(ndefADJ))           deallocate ( ndefADJ )
+
+      IF (allocated(ndefAVG))           deallocate ( ndefAVG )
+
+      IF (allocated(ndefDIA))           deallocate ( ndefDIA )
+
+      IF (allocated(ndefHIS))           deallocate ( ndefHIS )
+
+      IF (allocated(ndefQCK))           deallocate ( ndefQCK )
+
+      IF (allocated(ndefTLM))           deallocate ( ndefTLM )
+
+      IF (allocated(ntsAVG))            deallocate ( ntsAVG )
+
+      IF (allocated(ntsDIA))            deallocate ( ntsDIA )
+
+      IF (allocated(nADJ))              deallocate ( nADJ )
+
+      IF (allocated(nAVG))              deallocate ( nAVG )
+
+      IF (allocated(nDIA))              deallocate ( nDIA )
+
+      IF (allocated(nFLT))              deallocate ( nFLT )
+
+      IF (allocated(nHIS))              deallocate ( nHIS )
+
+      IF (allocated(nQCK))              deallocate ( nQCK )
+
+      IF (allocated(nRST))              deallocate ( nRST )
+
+      IF (allocated(nSTA))              deallocate ( nSTA )
+
+      IF (allocated(nTLM))              deallocate ( nTLM )
+
+#ifdef SP4DVAR
+      IF (allocated(nSCA))              deallocate ( nSCA )
+
+      IF (allocated(nSCT))              deallocate ( nSCT )
+
+      IF (allocated(nSPA))              deallocate ( nSPA )
+
+      IF (allocated(nSPT))              deallocate ( nSPT )
+
+      IF (allocated(Crec))              deallocate ( Crec )
+#endif
+
+      IF (allocated(ninfo))             deallocate ( ninfo )
+
+      IF (allocated(nOBC))              deallocate ( nOBC )
+
+      IF (allocated(Nbrec))             deallocate ( Nbrec )
+
+      IF (allocated(OBCcount))          deallocate ( OBCcount )
+
+#ifdef ADJUST_BOUNDARY
+      IF (allocated(Lobc))              deallocate ( Lobc )
+#endif
+
+      IF (allocated(nSFF))              deallocate ( nSFF )
+
+      IF (allocated(Nfrec))             deallocate ( Nfrec )
+
+      IF (allocated(SFcount))           deallocate ( SFcount )
+
+#ifdef ADJUST_STFLUX
+      IF (allocated(Lstflux))           deallocate ( Lstflux )
+#endif
+
+      IF (allocated(nrrec))             deallocate ( nrrec )
+
+      IF (allocated(LastRec))           deallocate ( LastRec )
+
+      IF (allocated(LcycleADJ))         deallocate ( LcycleADJ )
+
+      IF (allocated(LcycleRST))         deallocate ( LcycleRST )
+
+      IF (allocated(LcycleTLM))         deallocate ( LcycleTLM )
+
+#if defined AVERAGES  && defined AVERAGES_DETIDE && \
+   (defined SSH_TIDES || defined UV_TIDES)
+      IF (allocated(Hcount))            deallocate ( Hcount )
+#endif
+
+      IF (allocated(KstrS))             deallocate ( KstrS )
+
+      IF (allocated(KendS))             deallocate ( KendS )
+
+      IF (allocated(DstrS))             deallocate ( DstrS )
+
+      IF (allocated(DendS))             deallocate ( DendS )
+
+      IF (allocated(TRnorm))            deallocate ( TRnorm )
+
+      IF (allocated(SO_decay))          deallocate ( SO_decay )
+
+      IF (allocated(SO_sdev))           deallocate ( SO_sdev )
+
+#if defined FOUR_DVAR || defined VERIFICATION
+      IF (allocated(Cnorm))             deallocate ( Cnorm )
+
+      IF (allocated(CnormB))            deallocate ( CnormB )
+
+      IF (allocated(SporadicImpulse))   deallocate ( SporadicImpulse )
+
+      IF (allocated(FrequentImpulse))   deallocate ( FrequentImpulse )
+
+      IF (allocated(dTdz_min))          deallocate ( dTdz_min )
+
+      IF (allocated(ml_depth))          deallocate ( ml_depth )
+
+      IF (allocated(LNM_depth))         deallocate ( LNM_depth )
+
+      IF (allocated(balance))           deallocate ( balance )
+
+      IF (allocated(Hdecay))            deallocate ( Hdecay )
+
+      IF (allocated(Vdecay))            deallocate ( Vdecay )
+
+      IF (allocated(Tdecay))            deallocate ( Tdecay )
+
+      IF (allocated(HdecayB))           deallocate ( HdecayB )
+
+      IF (allocated(VdecayB))           deallocate ( VdecayB )
+
+      IF (allocated(bgqc_type))         deallocate ( bgqc_type )
+
+      IF (allocated(Nprovenance))       deallocate ( Nprovenance )
+
+      IF (allocated(S_bgqc))            deallocate ( S_bgqc )
+#endif
+
+      IF (allocated(obcfac))            deallocate ( obcfac )
+
+      IF (allocated(FSobc_in))          deallocate ( FSobc_in )
+
+      IF (allocated(FSobc_out))         deallocate ( FSobc_out )
+
+      IF (allocated(M2obc_in))          deallocate ( M2obc_in )
+
+      IF (allocated(M2obc_out))         deallocate ( M2obc_out )
+
+#ifdef SOLVE3D
+      IF (allocated(M3obc_in))          deallocate ( M3obc_in )
+
+      IF (allocated(M3obc_out))         deallocate ( M3obc_out )
+
+      IF (allocated(Tobc_in))           deallocate ( Tobc_in )
+
+      IF (allocated(Tobc_out))          deallocate ( Tobc_out )
+#endif
+
+      IF (allocated(Znudg))             deallocate ( Znudg )
+
+      IF (allocated(M2nudg))            deallocate ( M2nudg )
+
+      IF (allocated(M3nudg))            deallocate ( M3nudg )
+
+      IF (allocated(Tnudg))             deallocate ( Tnudg )
+
+#ifdef BULK_FLUXES
+      IF (allocated(blk_ZQ))            deallocate ( blk_ZQ )
+
+      IF (allocated(blk_ZT))            deallocate ( blk_ZT )
+
+      IF (allocated(blk_ZW))            deallocate ( blk_ZW )
+#endif
+
+      IF (allocated(gls_m))             deallocate ( gls_m )
+
+      IF (allocated(gls_n))             deallocate ( gls_n )
+
+      IF (allocated(gls_p))             deallocate ( gls_p )
+
+      IF (allocated(gls_sigk))          deallocate ( gls_sigk )
+
+      IF (allocated(gls_sigp))          deallocate ( gls_sigp )
+
+      IF (allocated(gls_cmu0))          deallocate ( gls_cmu0 )
+
+      IF (allocated(gls_cmupr))         deallocate ( gls_cmupr )
+
+      IF (allocated(gls_c1))            deallocate ( gls_c1 )
+
+      IF (allocated(gls_c2))            deallocate ( gls_c2 )
+
+      IF (allocated(gls_c3m))           deallocate ( gls_c3m )
+
+      IF (allocated(gls_c3p))           deallocate ( gls_c3p )
+
+      IF (allocated(gls_Kmin))          deallocate ( gls_Kmin )
+
+      IF (allocated(gls_Pmin))          deallocate ( gls_Pmin )
+
+      IF (allocated(charnok_alpha))     deallocate ( charnok_alpha )
+
+      IF (allocated(zos_hsig_alpha))    deallocate ( zos_hsig_alpha )
+
+      IF (allocated(sz_alpha))          deallocate ( sz_alpha )
+
+      IF (allocated(crgban_cw))         deallocate ( crgban_cw )
+!
+      RETURN
+      END SUBROUTINE deallocate_scalars
+!
       SUBROUTINE initialize_scalars
 !
 !=======================================================================
@@ -3214,6 +3986,8 @@
 !  grids.                                                              !
 !                                                                      !
 !=======================================================================
+!
+      USE mod_param
 !
 !  Local variable declarations.
 !
@@ -3400,6 +4174,7 @@
 #endif
       Co=1.0_r8/(2.0_r8+SQRT(2.0_r8))
       gorho0=g/rho0
+      user=0.0_r8
       DO ng=1,Ngrids
         EWperiodic(ng)=.FALSE.
         NSperiodic(ng)=.FALSE.
@@ -3634,8 +4409,10 @@
         LwrtTLM(ng)=.FALSE.
         LwrtInfo(ng)=.TRUE.
         LwrtState2d(ng)=.FALSE.
-#if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
+#ifdef AD_OUTPUT_STATE
         LwrtState3d(ng)=.FALSE.
+#endif
+#if defined STOCHASTIC_OPT && !defined STOCH_OPT_WHITE
         SOinitial(ng)=.FALSE.
 #endif
         LwrtTime(ng)=.TRUE.
@@ -3716,5 +4493,5 @@
 
       RETURN
       END SUBROUTINE initialize_scalars
-
+!
       END MODULE mod_scalars

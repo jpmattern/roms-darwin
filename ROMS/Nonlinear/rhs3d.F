@@ -93,6 +93,7 @@
       CALL t3dmix4 (ng, tile)
 #  endif
 # endif
+# if !defined OFFLINE_BIO
 !
 !-----------------------------------------------------------------------
 !  Compute right-hand-side terms for the 3D momentum equations.
@@ -163,6 +164,7 @@
 !
       CALL uv3dmix4 (ng, tile)
 # endif
+# endif /* OFFLINE_BIO */
 
       RETURN
       END SUBROUTINE rhs3d

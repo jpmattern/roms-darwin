@@ -48,6 +48,10 @@
       USE mod_ncparam
       USE mod_netcdf
       USE mod_scalars
+#ifdef OFFLINE_BIO
+!     inquiry.F becomes a module with offline biology.  Must now use it
+      USE inquiry_mod
+#endif
 !
       USE dateclock_mod, ONLY : time_string
 #ifdef CHECKSUM_NG

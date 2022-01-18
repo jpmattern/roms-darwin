@@ -736,6 +736,27 @@
 #endif
 
 /*
+** OFFLINE_BIO: running biology offline
+*/
+
+#if !defined BIOLOGY && defined OFFLINE_BIO
+# undef OFFLINE_BIO
+#endif
+
+/*
+** cae: If biology is run offline, then do not add tides. 
+*/
+#ifdef OFFLINE_BIO
+# define FORWARD_READ
+# define FORWARD_MIXING
+# undef SSH_TIDES
+# undef UV_TIDES
+# undef RAMP_TIDES
+# undef ADD_FSOBC
+# undef ADD_M2OBC
+#endif
+
+/*
 ** Darwin standard options.
 */
 

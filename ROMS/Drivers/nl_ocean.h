@@ -291,7 +291,11 @@
 !
 !$OMP PARALLEL
 #ifdef SOLVE3D
+# ifdef OFFLINE_BIO
+      CALL main3d_offline (MyRunInterval)
+# else
       CALL main3d (MyRunInterval)
+# endif
 #else
       CALL main2d (MyRunInterval)
 #endif

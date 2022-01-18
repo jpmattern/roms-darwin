@@ -27,9 +27,13 @@
       USE mod_forces
       USE mod_grid
       USE mod_iounits
+#ifdef OFFLINE_BIO
+      USE mod_mixing
+#endif
       USE mod_ncparam
 #if defined HYPOXIA_SRM              || \
     defined NLM_OUTER                || \
+    defined OFFLINE_BIO              || \
     defined RBL4DVAR                 || \
     defined RBL4DVAR_ANA_SENSITIVITY || \
     defined RBL4DVAR_FCT_SENSITIVITY || \
@@ -59,6 +63,9 @@
       integer :: ILB, IUB, JLB, JUB
       integer :: LBi, UBi, LBj, UBj
       integer :: i, ic, my_tile
+# if defined OFFLINE_BIO && defined FORWARD_MIXING
+      real(r8) :: scale
+# endif
 !
 !  Lower and upper bounds for nontiled (global values) boundary arrays.
 !
@@ -1099,6 +1106,111 @@
         END IF
       END DO
 # endif
+#endif
+
+#ifdef OFFLINE_BIO
+!
+!-----------------------------------------------------------------------
+!  Read in forward state solution.
+!-----------------------------------------------------------------------
+!
+!  Read in free-surface.
+!
+      CALL get_2dfld (ng, iNLM, idFsur, FWD(ng)%ncid,                   &
+     &                1, FWD(ng), update(1),                            &
+     &                LBi, UBi, LBj, UBj, 2, 1,                         &
+#  ifdef MASKING
+     &                GRID(ng) % rmask,                                 &
+#  endif
+     &                OCEAN(ng) % zetaG)
+      IF (exit_flag.ne.NoError) RETURN
+!
+!  Read 2D momentum.
+!
+      CALL get_2dfld (ng, iNLM, idUbar, FWD(ng)%ncid,                   &
+     &                1, FWD(ng), update(1),                            &
+     &                LBi, UBi, LBj, UBj, 2, 1,                         &
+#  ifdef MASKING
+     &                GRID(ng) % umask,                                 &
+#  endif
+     &                OCEAN(ng) % ubarG)
+      IF (exit_flag.ne.NoError) RETURN
+
+      CALL get_2dfld (ng, iNLM, idVbar, FWD(ng)%ncid,                   &
+     &                1, FWD(ng), update(1),                            &
+     &                LBi, UBi, LBj, UBj, 2, 1,                         &
+#  ifdef MASKING
+     &                GRID(ng) % vmask,                                 &
+#  endif
+     &                OCEAN(ng) % vbarG)
+      IF (exit_flag.ne.NoError) RETURN
+
+#  ifdef SOLVE3D
+!
+!  Read in 3D momentum.
+!
+      CALL get_3dfld (ng, iNLM, idUvel, FWD(ng)%ncid,                   &
+     &                1, FWD(ng), update(1),                            &
+     &                LBi, UBi, LBj, UBj, 1, N(ng), 2, 1,               &
+#   ifdef MASKING
+     &                GRID(ng) % umask,                                 &
+#   endif
+     &                OCEAN(ng) % uG)
+      IF (exit_flag.ne.NoError) RETURN
+      CALL get_3dfld (ng, iNLM, idVvel, FWD(ng)%ncid,                   &
+     &                1, FWD(ng), update(1),                            &
+     &                LBi, UBi, LBj, UBj, 1, N(ng), 2, 1,               &
+#   ifdef MASKING
+     &                GRID(ng) % vmask,                                 &
+#   endif
+     &                OCEAN(ng) % vG)
+      IF (exit_flag.ne.NoError) RETURN
+!
+!  Read in 3D tracers.
+!
+!      DO i=1,NT(ng)
+      DO i=1,NAT
+        CALL get_3dfld (ng, iNLM, idTvar(i), FWD(ng)%ncid,              &
+     &                  1, FWD(ng), update(1),                          &
+     &                  LBi, UBi, LBj, UBj, 1, N(ng), 2, 1,             &
+#   ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#   endif
+     &                  OCEAN(ng) % tG(:,:,:,:,i))
+        IF (exit_flag.ne.NoError) RETURN
+      END DO
+
+#   ifdef FORWARD_MIXING
+!
+!  Read in vertical mixing variables.
+!
+      DO i=1,NAT
+        scale=Fscale(idDiff(i),ng)                    ! save and rescale
+!        Fscale(idDiff(i),ng)=tl_Akt_fac(i,ng)
+        CALL get_3dfld (ng, iNLM, idDiff(i), FWD(ng)%ncid,              &
+     &                  1, FWD(ng), update(1),                          &
+     &                  LBi, UBi, LBj, UBj, 0, N(ng), 2, 1,             &
+#    ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#    endif
+     &                  MIXING(ng) % AktG(:,:,:,:,i))
+        Fscale(idDiff(i),ng)=scale
+        IF (exit_flag.ne.NoError) RETURN
+      END DO
+
+      scale=Fscale(idVvis,ng)                         ! save and rescale
+!      Fscale(idVvis,ng)=tl_Akv_fac(ng)
+      CALL get_3dfld (ng, iNLM, idVvis, FWD(ng)%ncid,                   &
+     &                1, FWD(ng), update(1),                            &
+     &                LBi, UBi, LBj, UBj, 0, N(ng), 2, 1,               &
+#    ifdef MASKING
+     &                GRID(ng) % rmask,                                 &
+#    endif
+     &                MIXING(ng) % AkvG)
+      Fscale(idVvis,ng)=scale
+      IF (exit_flag.ne.NoError) RETURN
+#   endif
+#  endif
 #endif
 
 #ifdef TLM_CHECK

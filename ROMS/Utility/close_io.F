@@ -152,7 +152,11 @@
           FWD(ng)%ncid=-1
         END IF
         IF (FWD(ng)%ncid.ne.-1) THEN
+# ifdef OFFLINE_BIO
+          CALL netcdf_close (ng, iNLM, FWD(ng)%ncid, FWD(ng)%name, .False.)
+# else
           CALL netcdf_close (ng, iNLM, FWD(ng)%ncid, FWD(ng)%name)
+# endif /* OFFLINE_BIO */
         END IF
 #endif
         IF (HIS(ng)%ncid.ne.-1) THEN

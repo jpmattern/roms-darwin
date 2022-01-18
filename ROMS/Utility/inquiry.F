@@ -1,6 +1,13 @@
 #include "cppdefs.h"
+#ifdef OFFLINE_BIO
+      MODULE inquiry_mod
+      CONTAINS
+      SUBROUTINE inquiry (ng, model, job, Iout, Irec, Mrec, ifield,     &
+     &                    ncid, Lmulti, nfiles, S, Lupdate)
+#else
       SUBROUTINE inquiry (ng, model, job, Iout, Irec, Mrec, ifield,     &
      &                    ncid, Lmulti, nfiles, S)
+#endif
 !
 !svn $Id: inquiry.F 1018 2020-04-30 01:07:09Z arango $
 !================================================== Hernan G. Arango ===
@@ -61,6 +68,11 @@
       integer, intent(inout) :: ncid
 
       TYPE(T_IO), intent(inout) :: S(nfiles)
+
+#ifdef OFFLINE_BIO
+      logical, intent(in), optional :: Lupdate
+#endif
+
 !
 !  Local variable declarations.
 !
@@ -125,7 +137,15 @@
             END IF
             S(ifile)%Fcount=Fcount
             S(ifile)%name=TRIM(S(ifile)%files(Fcount))
+#ifdef OFFLINE_BIO
+            IF (PRESENT(Lupdate)) THEN
+              CALL netcdf_close (ng, model, ncid,Lupdate=Lupdate)
+            ELSE
+              CALL netcdf_close (ng, model, ncid)
+            ENDIF
+#else
             CALL netcdf_close (ng, model, ncid)
+#endif
             IF (FoundError(exit_flag, NoError, __LINE__,                &
      &                     __FILE__)) RETURN
             IF (label(1:3).eq.'FRC') THEN
@@ -638,3 +658,6 @@
 
       RETURN
       END SUBROUTINE inquiry
+#ifdef OFFLINE_BIO
+      END MODULE inquiry_mod
+#endif

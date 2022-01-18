@@ -347,7 +347,8 @@
 #endif
 
 #if defined FORWARD_READ && \
-   (defined TANGENT || defined TL_IOMS || defined ADJOINT)
+   (defined TANGENT || defined TL_IOMS || defined ADJOINT || \
+    defined OFFLINE_BIO)
 # ifdef FORWARD_MIXING
 !
 !  Latest two records of the nonlinear trajectory used to interpolate
@@ -760,7 +761,8 @@
 #endif
 
 #if defined FORWARD_READ && \
-   (defined TANGENT || defined TL_IOMS || defined ADJOINT)
+   (defined TANGENT || defined TL_IOMS || defined ADJOINT || \
+    defined OFFLINE_BIO)
 # ifdef FORWARD_MIXING
 !
 !  Latest two records of the nonlinear trajectory used to interpolate
@@ -1276,7 +1278,8 @@
 #endif
 
 #if defined FORWARD_READ && defined FORWARD_MIXING && defined SOLVE3D && \
-   (defined TANGENT || defined TL_IOMS || defined ADJOINT)
+   (defined TANGENT || defined TL_IOMS || defined ADJOINT || \
+    defined OFFLINE_BIO)
 !
 !  Latest two records of the nonlinear trajectory used to interpolate
 !  the background state in the tangent linear and adjoint models.

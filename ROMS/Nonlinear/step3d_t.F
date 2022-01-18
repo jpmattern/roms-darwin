@@ -126,6 +126,9 @@
      &                          t)
 !***********************************************************************
 !
+# ifdef OFFLINE_BIO
+      USE mod_biology
+# endif
       USE mod_param
       USE mod_clima
       USE mod_ncparam
@@ -247,6 +250,9 @@
 # ifdef DIAGNOSTICS_TS
       integer :: idiag
 # endif
+# ifdef OFFLINE_BIO
+      integer :: ibt
+# endif
       real(r8) :: eps = 1.0E-16_r8
       real(r8) :: eps1 = 1.0E-12_r8
 
@@ -356,7 +362,12 @@
 !  Horizontal tracer advection.  It is possible to have a different
 !  advection schme for each tracer.
 !
+#  ifdef OFFLINE_BIO
+      T_LOOP1 : DO ibt=1,NBT
+        itrc=idbio(ibt)
+#  else
       T_LOOP1 : DO itrc=1,NT(ng)
+#  endif
 !
 !  The MPDATA and HSIMT algorithms requires a three-point footprint, so
 !  exchange boundary data on t(:,:,:,nnew,:) so other processes computed
@@ -873,7 +884,12 @@
 !  Time-step vertical advection term.
 !-----------------------------------------------------------------------
 !
+# ifdef OFFLINE_BIO
+      T_LOOP2 : DO ibt=1,NBT
+        itrc=idbio(ibt)
+# else
       T_LOOP2 : DO itrc=1,NT(ng)
+# endif
         IF (Vadvection(itrc,ng)%MPDATA) THEN
           JminT=JstrVm2
           JmaxT=Jendp2i
@@ -1203,7 +1219,12 @@
 !  using MPDATA recursive method.  Notice that pipelined J-loop ended.
 !-----------------------------------------------------------------------
 !
+# ifdef OFFLINE_BIO
+      T_LOOP3 : DO ibt=1,NBT
+        itrc=idbio(ibt)
+# else
       T_LOOP3 : DO itrc=1,NT(ng)
+# endif
         MPDATA : IF ((Hadvection(itrc,ng)%MPDATA).and.                  &
      &               (Vadvection(itrc,ng)%MPDATA)) THEN
           CALL mpdata_adiff_tile (ng, tile,                             &
@@ -1349,7 +1370,12 @@
 !-----------------------------------------------------------------------
 !
       J_LOOP2 : DO j=Jstr,Jend                  ! start pipelined J-loop
+# ifdef OFFLINE_BIO
+        DO ibt=1,NBT
+          itrc=idbio(ibt)
+# else
         DO itrc=1,NT(ng)
+# endif
           ltrc=MIN(NAT,itrc)
 
 # ifdef SPLINES_VDIFF
@@ -1535,7 +1561,12 @@
 !
       ic=0
 !
+# ifdef OFFLINE_BIO
+      DO ibt=1,NBT
+        itrc=idbio(ibt)
+# else
       DO itrc=1,NT(ng)
+# endif
 !
 !  Set compact reduced memory tracer index for nudging coefficients and
 !  climatology arrays.

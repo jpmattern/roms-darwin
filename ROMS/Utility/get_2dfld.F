@@ -52,6 +52,10 @@
       USE nf_fread2d_mod, ONLY : nf_fread2d
       USE nf_fread3d_mod, ONLY : nf_fread3d
       USE strings_mod,    ONLY : FoundError
+#ifdef OFFLINE_BIO
+!     inquiry.F becomes a module with offline biology.  Must now use it
+      USE inquiry_mod
+#endif /* OFFLINE_BIO */
 !
       implicit none
 !

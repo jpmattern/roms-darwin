@@ -96,6 +96,9 @@
      &                         t)
 !***********************************************************************
 !
+#ifdef OFFLINE_BIO
+      USE mod_biology
+#endif
       USE mod_param
       USE mod_scalars
 !
@@ -165,6 +168,9 @@
 !
       integer :: i, itrc, j, k
 
+#ifdef OFFLINE_BIO
+      integer :: ibt
+#endif
       real(r8) :: cff, cff1, cff2, cff3
 
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: FE
@@ -180,7 +186,12 @@
 #endif
 !-----------------------------------------------------------------------
 !
+#ifdef OFFLINE_BIO
+      DO ibt=1,NBT
+        itrc=idbio(ibt)
+#else
       DO itrc=1,NT(ng)
+#endif
         DO k=1,N(ng)
 !
 !  Compute XI- and ETA-components of diffusive tracer flux (T m3/s).

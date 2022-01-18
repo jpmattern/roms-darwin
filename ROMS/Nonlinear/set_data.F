@@ -1349,6 +1349,98 @@
 #  endif
 # endif
 
+# ifdef OFFLINE_BIO
+!
+!-----------------------------------------------------------------------
+!  Set forward solution needed by Tangent/Adjoint models.
+!-----------------------------------------------------------------------
+!
+!  Set forward free-surface.
+!
+      DO k=1,3
+        CALL set_2dfld_tile (ng, tile, iNLM, idFsur,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       OCEAN(ng)%zetaG,                           &
+     &                       OCEAN(ng)%zeta(:,:,k),                     &
+     &                       update)
+        IF (exit_flag.ne.NoError) RETURN
+      END DO
+!
+!  Set forward 2D momentum.
+!
+      DO k=1,3
+        CALL set_2dfld_tile (ng, tile, iNLM, idUbar,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       OCEAN(ng)%ubarG,                           &
+     &                       OCEAN(ng)%ubar(:,:,k),                     &
+     &                       update)
+        IF (exit_flag.ne.NoError) RETURN
+
+        CALL set_2dfld_tile (ng, tile, iNLM, idVbar,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       OCEAN(ng)%vbarG,                           &
+     &                       OCEAN(ng)%vbar(:,:,k),                     &
+     &                       update)
+        IF (exit_flag.ne.NoError) RETURN
+      END DO
+
+#  ifdef SOLVE3D
+!
+!  Set 3D momentum.
+!
+      DO k=1,2
+        CALL set_3dfld_tile (ng, tile, iNLM, idUvel,                    &
+     &                       LBi, UBi, LBj, UBj, 1, N(ng),              &
+     &                       OCEAN(ng)%uG,                              &
+     &                       OCEAN(ng)%u(:,:,:,k),                      &
+     &                       update)
+        IF (exit_flag.ne.NoError) RETURN
+
+        CALL set_3dfld_tile (ng, tile, iNLM, idVvel,                    &
+     &                       LBi, UBi, LBj, UBj, 1, N(ng),              &
+     &                       OCEAN(ng)%vG,                              &
+     &                       OCEAN(ng)%v(:,:,:,k),                      &
+     &                       update)
+        IF (exit_flag.ne.NoError) RETURN
+      END DO
+!
+!  Set 3D tracers.
+!
+
+      DO itrc=1,NAT
+        DO k=1,3
+          CALL set_3dfld_tile (ng, tile, iNLM, idTvar(itrc),            &
+     &                         LBi, UBi, LBj, UBj, 1, N(ng),            &
+     &                         OCEAN(ng)%tG(:,:,:,:,itrc),              &
+     &                         OCEAN(ng)%t(:,:,:,k,itrc),               &
+     &                         update)
+          IF (exit_flag.ne.NoError) RETURN
+        END DO
+      END DO
+
+#   ifdef FORWARD_MIXING
+!
+!  Set forward vertical mixing variables.
+!
+      DO itrc=1,NAT
+        CALL set_3dfld_tile (ng, tile, iNLM, idDiff(itrc),              &
+     &                       LBi, UBi, LBj, UBj, 0, N(ng),              &
+     &                       MIXING(ng)%AktG(:,:,:,:,itrc),             &
+     &                       MIXING(ng)%Akt(:,:,:,itrc),                &
+     &                       update)
+        IF (exit_flag.ne.NoError) RETURN
+      END DO
+
+      CALL set_3dfld_tile (ng, tile, iNLM, idVvis,                      &
+     &                     LBi, UBi, LBj, UBj, 0, N(ng),                &
+     &                     MIXING(ng)%AkvG,                             &
+     &                     MIXING(ng)%Akv,                              &
+     &                     update)
+      IF (exit_flag.ne.NoError) RETURN
+#   endif
+#  endif
+# endif /* OFFLINE_BIO */
+
 # if defined NLM_OUTER                || \
      defined RBL4DVAR                 || \
      defined RBL4DVAR_ANA_SENSITIVITY || \

@@ -1771,6 +1771,12 @@
       Coptions(is:is+18)=' !OCMIP_OXYGEN_SC,'
 # endif
 #endif
+#if defined OFFLINE_BIO
+      IF (Master) WRITE (stdout,20) 'OFFLINE_BIO',                      &
+     &   'Offline biology (no physics time-stepping).'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+13)=' OFFLINE_BIO,'
+#endif
 #if defined PARALLEL_IO && defined DISTRIBUTE
 !
       IF (Master) WRITE (stdout,20) 'PARALLEL_IO',                      &

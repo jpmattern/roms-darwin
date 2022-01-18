@@ -1,5 +1,5 @@
 #include "cppdefs.h"
-#if defined NONLINEAR && defined SOLVE3D
+#if defined NONLINEAR && defined SOLVE3D && !defined OFFLINE_BIO
       SUBROUTINE main3d (RunInterval)
 !
 !svn $Id: main3d.F 1031 2020-07-14 01:39:55Z arango $

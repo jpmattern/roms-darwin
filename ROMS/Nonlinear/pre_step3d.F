@@ -151,6 +151,9 @@
      &                            t, u, v)
 !***********************************************************************
 !
+# ifdef OFFLINE_BIO
+      USE mod_biology
+# endif
       USE mod_param
       USE mod_scalars
       USE mod_sources
@@ -281,6 +284,9 @@
 # if defined DIAGNOSTICS_TS || defined DIAGNOSTICS_UV
       integer :: idiag
 # endif
+# ifdef OFFLINE_BIO
+      integer :: ibt
+# endif
       real(r8), parameter :: eps = 1.0E-16_r8
 
       real(r8) :: cff, cff1, cff2, cff3, cff4
@@ -336,7 +342,12 @@
 !  Compute time rate of change of intermediate tracer due to
 !  horizontal advection.
 !
-      T_LOOP1 :DO itrc=1,NT(ng)
+#ifdef OFFLINE_BIO
+      T_LOOP1 : DO ibt=1,NBT
+        itrc=idbio(ibt)
+#else
+      T_LOOP1 : DO itrc=1,NT(ng)
+#endif
         K_LOOP: DO k=1,N(ng)
 !
           HADV_FLUX : IF (Hadvection(itrc,ng)%CENTERED2) THEN
@@ -611,7 +622,12 @@
 !-----------------------------------------------------------------------
 !
       J_LOOP1 : DO j=Jstr,Jend
+#ifdef OFFLINE_BIO
+        T_LOOP2 : DO ibt=1,NBT
+          itrc=idbio(ibt)
+#else
         T_LOOP2 : DO itrc=1,NT(ng)
+#endif
 !
           VADV_FLUX : IF (Vadvection(itrc,ng)%SPLINES) THEN
 !
@@ -830,7 +846,12 @@
 !
       DO j=Jstr,Jend
         cff3=dt(ng)*(1.0_r8-lambda)
+#ifdef OFFLINE_BIO
+        DO ibt=1,NBT
+          itrc=idbio(ibt)
+#else
         DO itrc=1,NT(ng)
+#endif
           ltrc=MIN(NAT,itrc)
           DO k=1,N(ng)-1
             DO i=Istr,Iend
@@ -899,6 +920,7 @@
         END DO
       END DO
 # endif /* !TS_FIXED */
+# if !defined OFFLINE_BIO
 !
 !=======================================================================
 !  3D momentum equation in the XI-direction.
@@ -1110,6 +1132,7 @@
           END IF
         END IF
       END DO J_LOOP2
+# endif  /* OFFLINE_BIO */
 
 # ifndef TS_FIXED
 !
@@ -1118,7 +1141,12 @@
 !=======================================================================
 !
       ic=0
+#  ifdef OFFLINE_BIO
+      DO ibt=1,NBT
+        itrc=idbio(ibt)
+#  else
       DO itrc=1,NT(ng)
+#  endif
         IF (LtracerCLM(itrc,ng).and.LnudgeTCLM(itrc,ng)) THEN
           ic=ic+1
         END IF

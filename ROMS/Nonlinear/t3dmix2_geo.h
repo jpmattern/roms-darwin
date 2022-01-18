@@ -98,6 +98,9 @@
      &                         t)
 !***********************************************************************
 !
+#ifdef OFFLINE_BIO
+      USE mod_biology
+#endif
       USE mod_param
       USE mod_scalars
 !
@@ -169,6 +172,9 @@
 !
       integer :: i, itrc, j, k, k1, k2
 
+#ifdef OFFLINE_BIO
+      integer :: ibt
+#endif
       real(r8) :: cff, cff1, cff2, cff3, cff4
 
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: FE
@@ -201,7 +207,12 @@
 !
 #endif
 
+#ifdef OFFLINE_BIO
+      T_LOOP : DO ibt=1,NBT
+        itrc=idbio(ibt)
+#else
       T_LOOP : DO itrc=1,NT(ng)
+#endif
         k2=1
         K_LOOP : DO k=0,N(ng)
           k1=k2

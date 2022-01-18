@@ -110,6 +110,9 @@
      &                         t)
 !***********************************************************************
 !
+#ifdef OFFLINE_BIO
+      USE mod_biology
+#endif
       USE mod_param
       USE mod_ncparam
       USE mod_scalars
@@ -200,6 +203,9 @@
       real(r8), parameter :: slope_max = 0.0001_r8
       real(r8), parameter :: strat_min = 0.1_r8
 
+#ifdef OFFLINE_BIO
+      integer :: ibt
+#endif
       real(r8) :: cff, cff1, cff2, cff3, cff4, dife, difx
 
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS,N(ng)) :: LapT
@@ -253,7 +259,12 @@
 !
 #endif
 
+#ifdef OFFLINE_BIO
+      T_LOOP : DO ibt=1,NBT
+        itrc=idbio(ibt)
+#else
       T_LOOP : DO itrc=1,NT(ng)
+#endif
         k2=1
         K_LOOP1 : DO k=0,N(ng)
           k1=k2

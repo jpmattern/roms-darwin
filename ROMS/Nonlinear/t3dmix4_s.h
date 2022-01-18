@@ -106,6 +106,9 @@
      &                         t)
 !***********************************************************************
 !
+#ifdef OFFLINE_BIO
+      USE mod_biology
+#endif
       USE mod_param
       USE mod_ncparam
       USE mod_scalars
@@ -187,6 +190,9 @@
       integer :: Imin, Imax, Jmin, Jmax
       integer :: i, itrc, j, k
 
+#ifdef OFFLINE_BIO
+      integer :: ibt
+#endif
       real(r8) :: cff, cff1, cff2, cff3
 
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: FE
@@ -224,7 +230,12 @@
 !
 !  Compute horizontal tracer flux in the XI- and ETA-directions.
 !
+#ifdef OFFLINE_BIO
+      DO ibt=1,NBT
+        itrc=idbio(ibt)
+#else
       DO itrc=1,NT(ng)
+#endif
         DO k=1,N(ng)
           DO j=Jmin,Jmax
             DO i=Imin,Imax+1

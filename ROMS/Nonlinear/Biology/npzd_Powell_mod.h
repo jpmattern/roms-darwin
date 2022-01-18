@@ -1,7 +1,8 @@
+      MODULE mod_biology
 !
-!svn $Id: npzd_Powell_mod.h 995 2020-01-10 04:01:28Z arango $
+!svn $Id: npzd_Powell_mod.h 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -94,9 +95,9 @@
       real(r8), allocatable :: ZooGR(:)        ! 1/day
       real(r8), allocatable :: ZooMRD(:)       ! 1/day
       real(r8), allocatable :: ZooMRN(:)       ! 1/day
-
+!
       CONTAINS
-
+!
       SUBROUTINE initialize_biology
 !
 !=======================================================================
@@ -271,6 +272,8 @@
       iPhyt=ic+2
       iZoop=ic+3
       iSDet=ic+4
-
+!
       RETURN
       END SUBROUTINE initialize_biology
+
+      END MODULE mod_biology

@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
 #
-# svn $Id: cpp_clean 1018 2020-04-30 01:07:09Z arango $
+# svn $Id: cpp_clean 1099 2022-01-06 21:01:01Z arango $
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Copyright (c) 2002-2020 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2022 The ROMS/TOMS Group                           :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.txt                                                :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -37,6 +37,9 @@ while (<FILE>) {
    next if /^!!/;
    next if /^!\$\!/;
    next if /^\s*$/;
+   if(/".*\/ROMS\/.*(\.F|\.h)"/){
+      $_=~s/".*\/ROMS\/(.*)(\.F|\.h)"/"ROMS\/$1$2"/;
+   }
    $ind=rindex($_,"&");
    if(/\&(\ )*$/ && $ind!=72){
       $l=length();

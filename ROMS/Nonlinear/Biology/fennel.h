@@ -1,11 +1,11 @@
-      SUBROUTINE biology (ng,tile)
+      MODULE biology_mod
 !
-!svn $Id: fennel.h 1038 2020-09-29 01:54:25Z arango $
-!***********************************************************************
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!svn $Id: fennel.h 1099 2022-01-06 21:01:01Z arango $
+!=======================================================================
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license           Hernan G. Arango   !
 !    See License_ROMS.txt                               Katja Fennel   !
-!****************************************** Alexander F. Shchepetkin ***
+!========================================== Alexander F. Shchepetkin ===
 !                                                                      !
 !  This routine computes the  biological sources and sinks for the     !
 !  Fennel et al. (2006) ecosystem model. Then, it adds those terms     !
@@ -118,6 +118,17 @@
 !      Exchange over the Ocean Revisited. Limnol. Oceanogr. Methods    !
 !      12 (6), 351-362, doi:10.4319/lom.2014.12.351.                   !
 !                                                                      !
+!=======================================================================
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: biology
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE biology (ng,tile)
 !***********************************************************************
 !
       USE mod_param
@@ -138,6 +149,9 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
 !  Set header file name.
@@ -148,83 +162,83 @@
       IF (Lbiofile(iNLM).and.(tile.eq.0)) THEN
 #endif
         Lbiofile(iNLM)=.FALSE.
-        BIONAME(iNLM)=__FILE__
+        BIONAME(iNLM)=MyFile
       END IF
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 15, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 15, __LINE__, MyFile)
 #endif
-      CALL biology_tile (ng, tile,                                      &
-     &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &
-     &                   IminS, ImaxS, JminS, JmaxS,                    &
-     &                   nstp(ng), nnew(ng),                            &
+      CALL fennel_tile (ng, tile,                                       &
+     &                  LBi, UBi, LBj, UBj, N(ng), NT(ng),              &
+     &                  IminS, ImaxS, JminS, JmaxS,                     &
+     &                  nstp(ng), nnew(ng),                             &
 #ifdef MASKING
-     &                   GRID(ng) % rmask,                              &
+     &                  GRID(ng) % rmask,                               &
 # ifdef WET_DRY
-     &                   GRID(ng) % rmask_wet,                          &
+     &                  GRID(ng) % rmask_wet,                           &
 #  ifdef DIAGNOSTICS_BIO
-     &                   GRID(ng) % rmask_full,                         &
+     &                  GRID(ng) % rmask_full,                          &
 #  endif
 # endif
 #endif
-     &                   GRID(ng) % Hz,                                 &
-     &                   GRID(ng) % z_r,                                &
-     &                   GRID(ng) % z_w,                                &
-     &                   FORCES(ng) % srflx,                            &
+     &                  GRID(ng) % Hz,                                  &
+     &                  GRID(ng) % z_r,                                 &
+     &                  GRID(ng) % z_w,                                 &
+     &                  FORCES(ng) % srflx,                             &
 #if defined CARBON || defined OXYGEN
 # ifdef BULK_FLUXES
-     &                   FORCES(ng) % Uwind,                            &
-     &                   FORCES(ng) % Vwind,                            &
+     &                  FORCES(ng) % Uwind,                             &
+     &                  FORCES(ng) % Vwind,                             &
 # else
-     &                   FORCES(ng) % sustr,                            &
-     &                   FORCES(ng) % svstr,                            &
+     &                  FORCES(ng) % sustr,                             &
+     &                  FORCES(ng) % svstr,                             &
 # endif
 #endif
 #ifdef CARBON
-     &                   OCEAN(ng) % pH,                                &
+     &                  OCEAN(ng) % pH,                                 &
 #endif
 #ifdef DIAGNOSTICS_BIO
-     &                   DIAGS(ng) % DiaBio2d,                          &
-     &                   DIAGS(ng) % DiaBio3d,                          &
+     &                  DIAGS(ng) % DiaBio2d,                           &
+     &                  DIAGS(ng) % DiaBio3d,                           &
 #endif
-     &                   OCEAN(ng) % t)
+     &                  OCEAN(ng) % t)
 
 #ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 15, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 15, __LINE__, MyFile)
 #endif
-
+!
       RETURN
       END SUBROUTINE biology
 !
 !-----------------------------------------------------------------------
-      SUBROUTINE biology_tile (ng, tile,                                &
-     &                         LBi, UBi, LBj, UBj, UBk, UBt,            &
-     &                         IminS, ImaxS, JminS, JmaxS,              &
-     &                         nstp, nnew,                              &
+      SUBROUTINE fennel_tile (ng, tile,                                 &
+     &                        LBi, UBi, LBj, UBj, UBk, UBt,             &
+     &                        IminS, ImaxS, JminS, JmaxS,               &
+     &                        nstp, nnew,                               &
 #ifdef MASKING
-     &                         rmask,                                   &
+     &                        rmask,                                    &
 # if defined WET_DRY
-     &                         rmask_wet,                               &
+     &                        rmask_wet,                                &
 #  ifdef DIAGNOSTICS_BIO
-     &                         rmask_full,                              &
+     &                        rmask_full,                               &
 #  endif
 # endif
 #endif
-     &                         Hz, z_r, z_w, srflx,                     &
+     &                        Hz, z_r, z_w, srflx,                      &
 #if defined CARBON || defined OXYGEN
 # ifdef BULK_FLUXES
-     &                         Uwind, Vwind,                            &
+     &                        Uwind, Vwind,                             &
 # else
-     &                         sustr, svstr,                            &
+     &                        sustr, svstr,                             &
 # endif
 #endif
 #ifdef CARBON
-     &                         pH,                                      &
+     &                        pH,                                       &
 #endif
 #ifdef DIAGNOSTICS_BIO
-     &                         DiaBio2d, DiaBio3d,                      &
+     &                        DiaBio2d, DiaBio3d,                       &
 #endif
-     &                         t)
+     &                        t)
 !-----------------------------------------------------------------------
 !
       USE mod_param
@@ -338,7 +352,7 @@
 # elif defined RW14_OXYGEN_SC
 !
 ! Alternative formulation for Schmidt number coefficients using the
-! formulation of Wanninkhof (2014, L&O Methods, 12,351-362).
+! formulation of Wanninkhof (2014, L and O Methods, 12,351-362).
 !
       real(r8), parameter :: A_O2 = 1920.4_r8
       real(r8), parameter :: B_O2 = 135.6_r8
@@ -871,7 +885,7 @@
 !  Phytoplankton grazing by zooplankton (rate: ZooGR), phytoplankton
 !  assimilated to zooplankton (fraction: ZooAE_N) and egested to small
 !  detritus, and phytoplankton mortality (rate: PhyMR) to small
-!  detritus. [Landry 1993 L&O 38:468-472]
+!  detritus. [Landry 1993 L and O 38:468-472]
 !-----------------------------------------------------------------------
 !
           fac1=dtdays*ZooGR(ng)
@@ -1108,7 +1122,7 @@
             cff3=cff2*u10squ*SQRT(660.0_r8/SchmidtN_Ox)
 !
 !  Calculate O2 saturation concentration using Garcia and Gordon
-!  L&O (1992) formula, (EXP(AA) is in ml/l).
+!  L and O (1992) formula, (EXP(AA) is in ml/l).
 !
             TS=LOG((298.15_r8-Bio(i,k,itemp))/                          &
      &             (273.15_r8+Bio(i,k,itemp)))
@@ -1558,9 +1572,9 @@
           END DO
         END DO
       END DO J_LOOP
-
+!
       RETURN
-      END SUBROUTINE biology_tile
+      END SUBROUTINE fennel_tile
 
 #ifdef CARBON
 # ifdef pCO2_RZ
@@ -1892,7 +1906,7 @@
 #  endif
 
       END DO I_LOOP
-
+!
       RETURN
       END SUBROUTINE pCO2_water_RZ
 # else
@@ -2353,8 +2367,9 @@
 #  endif
 
       END DO I_LOOP
-
+!
       RETURN
       END SUBROUTINE pCO2_water
 # endif
 #endif
+      END MODULE biology_mod

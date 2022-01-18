@@ -2,9 +2,9 @@
 #if defined TL_IOMS && defined SOLVE3D
       SUBROUTINE rp_main3d (RunInterval)
 !
-!svn $Id: rp_main3d.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: rp_main3d.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -30,6 +30,9 @@
       USE analytical_mod,          ONLY : ana_vmix
 # endif
       USE dateclock_mod,           ONLY : time_string
+# ifdef TIDE_GENERATING_FORCES
+      USE equilibrium_tide_mod,    ONLY : equilibrium_tide
+# endif
 # if defined ATM_COUPLING_NOT_YET && defined MCT_LIB
       USE ocean_coupler_mod,       ONLY : atmos_coupling
 # endif
@@ -48,7 +51,7 @@
 # ifdef BBL_MODEL_NOT_YET
 !!    USE rp_bbl_mod,              ONLY : rp_bblm
 # endif
-# if defined BULK_FLUXES && !defined NL_BULK_FLUXES
+# if defined BULK_FLUXES_NOT_YET && !defined PRIOR_BULK_FLUXES
       USE rp_bulk_flux_mod,        ONLY : rp_bulk_flux
 # endif
 # ifdef BVF_MIXING_NOT_YET
@@ -122,7 +125,11 @@
 # ifdef FLOATS_NOT_YET
       integer :: Lend, Lstr, chunk_size
 # endif
+!
       real(r8) :: MaxDT, my_StepTime
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !  Time-step representers tangent linear 3D primitive equations.
@@ -159,8 +166,7 @@
           CALL rp_get_data (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
 !
 !-----------------------------------------------------------------------
@@ -177,8 +183,7 @@
           END DO
 !$OMP BARRIER
         END DO
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef FORWARD_READ
 !
@@ -251,6 +256,9 @@
 # ifndef TS_FIXED
             CALL rp_rho_eos (ng, tile, iRPM)
 # endif
+# ifdef TIDE_GENERATING_FORCES
+            CALL equilibrium_tide (ng, tile, iTLM)
+# endif
             CALL rp_diag (ng, tile)
 # ifdef FORWARD_READ
             CALL omega (ng, tile, iRPM)
@@ -258,8 +266,7 @@
           END DO
 !$OMP BARRIER
         END DO
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # if defined ATM_COUPLING_NOT_YET && defined MCT_LIB
 !
@@ -318,7 +325,7 @@
 !
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
-# if defined BULK_FLUXES && !defined NL_BULK_FLUXES
+# if defined BULK_FLUXES_NOT_YET && !defined PRIOR_BULK_FLUXES
             CALL rp_bulk_flux (ng, tile)
 # endif
 # ifdef BBL_MODEL_NOT_YET
@@ -419,8 +426,7 @@
           CALL rp_output (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-          IF ((FoundError(exit_flag, NoError, __LINE__,                 &
-     &                    __FILE__)).or.                                &
+          IF ((FoundError(exit_flag, NoError, __LINE__, MyFile)).or.    &
      &        ((iic(ng).eq.(ntend(ng)+1)).and.(ng.eq.Ngrids))) RETURN
         END DO
 !

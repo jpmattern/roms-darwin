@@ -3,9 +3,9 @@
 
 #if defined FOUR_DVAR
 !
-!svn $Id: normalization.F 1028 2020-06-01 00:24:59Z arango $
+!svn $Id: normalization.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -48,21 +48,8 @@
 !======================================================================!
 !
       USE mod_kinds
-
-      implicit none
-
-      PRIVATE
-      PUBLIC :: normalization
-      PUBLIC :: wrt_norm2d
-      PUBLIC :: wrt_norm3d
-
-      CONTAINS
-!
-!***********************************************************************
-      SUBROUTINE normalization (ng, tile, ifac)
-!***********************************************************************
-!
       USE mod_param
+      USE mod_parallel
 # ifdef ADJUST_BOUNDARY
       USE mod_boundary
 # endif
@@ -71,12 +58,85 @@
       USE mod_forces
 # endif
       USE mod_fourdvar
+      USE mod_iounits
+      USE mod_ncparam
+      USE mod_netcdf
       USE mod_mixing
       USE mod_ocean
+# if defined PIO_LIB && defined DISTRIBUTE
+      USE mod_pio_netcdf
+# endif
+      USE mod_scalars
 # if defined SEDIMENT && defined SED_MORPH && defined SOLVE3D
       USE mod_sedbed
 # endif
       USE mod_stepping
+!
+      USE ad_conv_2d_mod
+# ifdef SOLVE3D
+      USE ad_conv_3d_mod
+# endif
+# ifdef ADJUST_BOUNDARY
+      USE ad_conv_bry2d_mod
+#  ifdef SOLVE3D
+      USE ad_conv_bry3d_mod
+#  endif
+# endif
+      USE bc_2d_mod
+# ifdef SOLVE3D
+      USE bc_3d_mod
+# endif
+# ifdef ADJUST_BOUNDARY
+      USE bc_bry2d_mod
+#  ifdef SOLVE3D
+      USE bc_bry3d_mod
+#  endif
+# endif
+# ifdef DISTRIBUTE
+      USE mp_exchange_mod
+# endif
+      USE set_depth_mod
+      USE tl_conv_2d_mod
+# ifdef SOLVE3D
+      USE tl_conv_3d_mod
+# endif
+# ifdef ADJUST_BOUNDARY
+      USE tl_conv_bry2d_mod
+#  ifdef SOLVE3D
+      USE tl_conv_bry3d_mod
+#  endif
+# endif
+      USE white_noise_mod
+!
+# ifdef DISTRIBUTE
+#  ifdef ADJUST_BOUNDARY
+      USE distribute_mod,  ONLY : mp_collect
+#  endif
+      USE distribute_mod,  ONLY : mp_reduce
+# endif
+      USE nf_fwrite2d_mod, ONLY : nf_fwrite2d
+      USE nf_fwrite3d_mod, ONLY : nf_fwrite3d
+      USE strings_mod,     ONLY : FoundError
+!
+      implicit none
+!
+      PUBLIC  :: normalization
+      PRIVATE :: normalization_tile
+      PRIVATE :: randomization_tile
+      PRIVATE :: wrt_norm2d_nf90
+# if defined PIO_LIB && defined DISTRIBUTE
+      PRIVATE :: wrt_norm2d_pio
+# endif
+      PRIVATE :: wrt_norm3d_nf90
+# if defined PIO_LIB && defined DISTRIBUTE
+      PRIVATE :: wrt_norm3d_pio
+# endif
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE normalization (ng, tile, ifac)
+!***********************************************************************
 !
 !  Imported variable declarations.
 !
@@ -230,7 +290,7 @@
      &                           OCEAN(ng) % b_ubar,                    &
      &                           OCEAN(ng) % b_vbar)
       END IF
-
+!
       RETURN
       END SUBROUTINE normalization
 !
@@ -278,44 +338,6 @@
 # endif
      &                               HnormR, HnormU, HnormV)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_netcdf
-      USE mod_scalars
-!
-      USE bc_2d_mod
-      USE ad_conv_2d_mod
-      USE tl_conv_2d_mod
-# ifdef SOLVE3D
-      USE bc_3d_mod
-      USE ad_conv_3d_mod
-      USE tl_conv_3d_mod
-# endif
-# ifdef ADJUST_BOUNDARY
-      USE bc_bry2d_mod
-      USE ad_conv_bry2d_mod
-      USE tl_conv_bry2d_mod
-#  ifdef SOLVE3D
-      USE bc_bry3d_mod
-      USE ad_conv_bry3d_mod
-      USE tl_conv_bry3d_mod
-#  endif
-# endif
-# ifdef DISTRIBUTE
-      USE mp_exchange_mod
-# endif
-      USE set_depth_mod
-# ifdef DISTRIBUTE
-#  ifdef ADJUST_BOUNDARY
-      USE distribute_mod, ONLY : mp_collect
-#  endif
-      USE distribute_mod, ONLY : mp_reduce
-# endif
-      USE strings_mod,    ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -497,16 +519,24 @@
 #   endif
 #  endif
 # endif
-
+!
 # ifdef DISTRIBUTE
       character (len=3  ) :: op_handle
 # endif
       character (len=40 ) :: Text
       character (len=256) :: ncname
 
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", normalization_tile"
+
+# if defined PIO_LIB && defined DISTRIBUTE
+!
+      TYPE (IO_Desc_t),  pointer :: ioDesc
+# endif
+
 # include "set_bounds.h"
 !
-      SourceFile=__FILE__ // ", normalization_tile"
+      SourceFile=MyFile
 
       my_time=tdays(ng)*day2sec
 
@@ -565,14 +595,26 @@
 !
 !  Write out model time (s).
 !
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,idtime),      &
-     &                          my_time,                                &
-     &                          start = (/NRM(ifile,ng)%Rindex/),       &
-     &                          total = (/1/),                          &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(idtime))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,idtime), my_time,           &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(idtime))
+
+# if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,idtime), my_time,       &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(idtime)%vd)
+# endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  2D norm at RHO-points.
 !
@@ -687,17 +729,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          HnormR(:,:,ifile))
 # endif
-            CALL wrt_norm2d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, idFsur,                &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idFsur),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, idFsur,       &
+     &                                NRM(ifile,ng)%ncid,               &
+     &                                NRM(ifile,ng)%Vid(idFsur),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 # ifdef MASKING
-     &                       rmask,                                     &
+     &                                rmask,                            &
 # endif
-     &                       HnormR(:,:,ifile))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+     &                                HnormR(:,:,ifile))
+
+# if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idFsur)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_r2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_r2dvar(ng)
+                END IF
+                CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, idFsur,        &
+     &                               NRM(ifile,ng)%pioFile,             &
+     &                               NRM(ifile,ng)%pioVar(idFsur),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#  ifdef MASKING
+     &                               rmask,                             &
+#  endif
+     &                               HnormR(:,:,ifile))
+# endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 !
 !  2D norm at U-points.
@@ -821,17 +886,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          HnormU(:,:,ifile))
 # endif
-            CALL wrt_norm2d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, idUbar,                &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idUbar),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, idUbar,       &
+     &                                NRM(ifile,ng)%ncid,               &
+     &                                NRM(ifile,ng)%Vid(idUbar),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 # ifdef MASKING
-     &                       umask,                                     &
+     &                                umask,                            &
 # endif
-     &                       HnormU(:,:,ifile))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+     &                                HnormU(:,:,ifile))
+
+# if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idUbar)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_u2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_u2dvar(ng)
+                END IF
+                CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, idUbar,        &
+     &                               NRM(ifile,ng)%pioFile,             &
+     &                               NRM(ifile,ng)%pioVar(idUbar),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#  ifdef MASKING
+     &                               umask,                             &
+#  endif
+     &                               HnormU(:,:,ifile))
+# endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 !
 !  2D norm at V-points.
@@ -954,17 +1042,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          HnormV(:,:,ifile))
 # endif
-            CALL wrt_norm2d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, idVbar,                &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idVbar),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, idVbar,       &
+     &                                NRM(ifile,ng)%ncid,               &
+     &                                NRM(ifile,ng)%Vid(idVbar),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 # ifdef MASKING
-     &                       vmask,                                     &
+     &                                vmask,                            &
 # endif
-     &                       HnormV(:,:,ifile))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+     &                                HnormV(:,:,ifile))
+
+# if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idVbar)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_v2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_v2dvar(ng)
+                END IF
+                CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, idVbar,        &
+     &                               NRM(ifile,ng)%pioFile,             &
+     &                               NRM(ifile,ng)%pioVar(idVbar),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#  ifdef MASKING
+     &                               vmask,                             &
+#  endif
+     &                               HnormV(:,:,ifile))
+# endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 
 # ifdef SOLVE3D
@@ -1113,17 +1224,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          VnormU(:,:,:,ifile))
 #  endif
-            CALL wrt_norm3d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, 1, N(ng), idUvel,      &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idUvel),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm3d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
+     &                                idUvel, NRM(ifile,ng)%ncid,       &
+     &                                NRM(ifile,ng)%Vid(idUvel),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 #  ifdef MASKING
-     &                       umask,                                     &
+     &                                umask,                            &
 #  endif
-     &                       VnormU(:,:,:,ifile))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+     &                                VnormU(:,:,:,ifile))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idUvel)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_u3dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_u3dvar(ng)
+                END IF
+                CALL wrt_norm3d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, 1, N(ng),      &
+     &                               idUvel, NRM(ifile,ng)%pioFile,     &
+     &                               NRM(ifile,ng)%pioVar(idUvel),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#   ifdef MASKING
+     &                               umask,                             &
+#   endif
+     &                               VnormU(:,:,:,ifile))
+#  endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 !
 !  3D norm at V-points.
@@ -1270,17 +1404,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          VnormV(:,:,:,ifile))
 #  endif
-            CALL wrt_norm3d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, 1, N(ng), idVvel,      &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idVvel),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm3d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
+     &                                idVvel, NRM(ifile,ng)%ncid,       &
+     &                                NRM(ifile,ng)%Vid(idVvel),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 #  ifdef MASKING
-     &                       vmask,                                     &
+     &                                vmask,                            &
 #  endif
-     &                       VnormV(:,:,:,ifile))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+     &                                VnormV(:,:,:,ifile))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idVvel)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_v3dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_v3dvar(ng)
+                END IF
+                CALL wrt_norm3d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, 1, N(ng),      &
+     &                               idVvel, NRM(ifile,ng)%pioFile,     &
+     &                               NRM(ifile,ng)%pioVar(idVvel),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#   ifdef MASKING
+     &                               vmask,                             &
+#   endif
+     &                               VnormV(:,:,:,ifile))
+#  endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 !
 !  3D norm at RHO-points.
@@ -1459,17 +1616,43 @@
      &                            EWperiodic(ng), NSperiodic(ng),       &
      &                            VnormR(:,:,:,ifile,itrc))
 #  endif
-              CALL wrt_norm3d (ng, tile, iTLM, ncname,                  &
-     &                         LBi, UBi, LBj, UBj, 1, N(ng),            &
-     &                         idTvar(itrc), NRM(ifile,ng)%ncid,        &
-     &                         NRM(ifile,ng)%Vid(idTvar(itrc)),         &
-     &                         NRM(ifile,ng)%Rindex,                    &
+!
+              SELECT CASE (NRM(ifile,ng)%IOtype)
+                CASE (io_nf90)
+                  CALL wrt_norm3d_nf90 (ng, tile, iTLM, ncname,         &
+     &                                  LBi, UBi, LBj, UBj, 1, N(ng),   &
+     &                                  idTvar(itrc),                   &
+     &                              NRM(ifile,ng)%ncid,                 &
+     &                              NRM(ifile,ng)%Vid(idTvar(itrc)),    &
+     &                              NRM(ifile,ng)%Rindex,               &
 #  ifdef MASKING
-     &                         rmask,                                   &
+     &                                  rmask,                          &
 #  endif
-     &                         VnormR(:,:,:,ifile,itrc))
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+     &                                  VnormR(:,:,:,ifile,itrc))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+                CASE (io_pio)
+                  IF (NRM(ifile,ng)%pioTrc(itrc)%dkind.eq.              &
+     &                PIO_double) THEN
+                    ioDesc => ioDesc_dp_r3dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_r3dvar(ng)
+                  END IF
+                  CALL wrt_norm3d_pio (ng, tile, iTLM, ncname,          &
+     &                                 LBi, UBi, LBj, UBj, 1, N(ng),    &
+     &                                 idTvar(itrc),                    &
+     &                              NRM(ifile,ng)%pioFile,              &
+     &                              NRM(ifile,ng)%pioTrc(itrc),         &
+     &                              NRM(ifile,ng)%Rindex,               &
+     &                                  ioDesc,                         &
+#   ifdef MASKING
+     &                                  rmask,                          &
+#   endif
+     &                                  VnormR(:,:,:,ifile,itrc))
+#  endif
+              END SELECT
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
           END DO
 # endif
@@ -1505,14 +1688,26 @@
 !
         my_time=tdays(ng)*day2sec
 
-        CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,idtime),        &
-     &                        my_time,                                  &
-     &                        start = (/NRM(ifile,ng)%Rindex/),         &
-     &                        total = (/1/),                            &
-     &                        ncid = NRM(ifile,ng)%ncid,                &
-     &                        varid = NRM(ifile,ng)%Vid(idtime))
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        SELECT CASE (NRM(ifile,ng)%IOtype)
+          CASE (io_nf90)
+            CALL netcdf_put_fvar (ng, iTLM, ncname,                     &
+     &                            Vname(1,idtime), my_time,             &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(idtime))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+          CASE (io_pio)
+            CALL pio_netcdf_put_fvar (ng, iTLM, ncname,                 &
+     &                                Vname(1,idtime), my_time,         &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(idtime)%vd)
+#  endif
+        END SELECT
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  2D boundary norm at RHO-points.
 !
@@ -1644,14 +1839,30 @@
         END DO
         IF (ANY(CnormB(isFsur,:))) THEN
           ifield=idSbry(isFsur)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          HnormRobc(LBij:,:),                     &
-     &                          start = (/1,1,NRM(ifile,ng)%Rindex/),   &
-     &                          total = (/IJlen,4,1/),                  &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              HnormRobc(LBij:,:),                 &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  HnormRobc(LBij:,:),             &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+
+#  endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  2D boundary norm at U-points.
@@ -1789,14 +2000,29 @@
         END DO
         IF (ANY(CnormB(isUbar,:))) THEN
           ifield=idSbry(isUbar)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          HnormUobc(LBij:,:),                     &
-     &                          start = (/1,1,NRM(ifile,ng)%Rindex/),   &
-     &                          total = (/IJlen,4,1/),                  &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              HnormUobc(LBij:,:),                 &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  HnormUobc(LBij:,:),             &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#  endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  2D boundary norm at V-points.
@@ -1934,14 +2160,29 @@
         END DO
         IF (ANY(CnormB(isVbar,:))) THEN
           ifield=idSbry(isVbar)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          HnormVobc(LBij:,:),                     &
-     &                          start = (/1,1,NRM(ifile,ng)%Rindex/),   &
-     &                          total = (/IJlen,4,1/),                  &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              HnormVobc(LBij:,:),                 &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  HnormVobc(LBij:,:),             &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#  endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 
 #  ifdef SOLVE3D
@@ -2114,14 +2355,29 @@
         END DO
         IF (ANY(CnormB(isUvel,:))) THEN
           ifield=idSbry(isUvel)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          VnormUobc(LBij:,:,:),                   &
-     &                          start = (/1,1,1,NRM(ifile,ng)%Rindex/), &
-     &                          total = (/IJlen,N(ng),4,1/),            &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              VnormUobc(LBij:,:,:),               &
+     &                         start = (/1,1,1,NRM(ifile,ng)%Rindex/),  &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  VnormUobc(LBij:,:,:),           &
+     &                         start = (/1,1,1,NRM(ifile,ng)%Rindex/),  &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#   endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  3D boundary norm at V-points.
@@ -2292,14 +2548,29 @@
         END DO
         IF (ANY(CnormB(isVvel,:))) THEN
           ifield=idSbry(isVvel)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          VnormVobc(LBij:,:,:),                   &
-     &                          start = (/1,1,1,NRM(ifile,ng)%Rindex/), &
-     &                          total = (/IJlen,N(ng),4,1/),            &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              VnormVobc(LBij:,:,:),               &
+     &                         start = (/1,1,1,NRM(ifile,ng)%Rindex/),  &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  VnormVobc(LBij:,:,:),           &
+     &                         start = (/1,1,1,NRM(ifile,ng)%Rindex/),  &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#   endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  3D boundary norm at RHO-points.
@@ -2476,14 +2747,29 @@
           END DO
           IF (ANY(CnormB(is,:))) THEN
             ifield=idSbry(isTvar(itrc))
-            CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),    &
-     &                            VnormRobc(LBij:,:,:,itrc),            &
-     &                            start =(/1,1,1,NRM(ifile,ng)%Rindex/),&
-     &                            total = (/IJlen,N(ng),4,1/),          &
-     &                            ncid = NRM(ifile,ng)%ncid,            &
-     &                            varid = NRM(ifile,ng)%Vid(ifield))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL netcdf_put_fvar (ng, iTLM, ncname,                 &
+     &                                Vname(1,ifield),                  &
+     &                                VnormRobc(LBij:,:,:,itrc),        &
+     &                         start =(/1,1,1,NRM(ifile,ng)%Rindex/),   &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                CALL pio_netcdf_put_fvar (ng, iTLM, ncname,             &
+     &                                    Vname(1,ifield),              &
+     &                                    VnormRobc(LBij:,:,:,itrc),    &
+     &                         start =(/1,1,1,NRM(ifile,ng)%Rindex/),   &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#   endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END DO
 #  endif
@@ -2492,9 +2778,17 @@
 !  allow other processes to access data immediately after it is
 !  written.
 !
-        CALL netcdf_sync (ng, iTLM, ncname, NRM(ifile,ng)%ncid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        SELECT CASE (NRM(ifile,ng)%IOtype)
+          CASE (io_nf90)
+            CALL netcdf_sync (ng, iTLM, ncname,                         &
+     &                        NRM(ifile,ng)%ncid)
+#  if defined PIO_LIB && defined DISTRIBUTE
+          CASE (io_pio)
+            CALL pio_netcdf_sync (ng, iTLM, ncname,                     &
+     &                            NRM(ifile,ng)%pioFile)
+#  endif
+        END SELECT
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 # endif
 
@@ -2520,14 +2814,26 @@
 !
         my_time=tdays(ng)*day2sec
 
-        CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,idtime),        &
-     &                        my_time,                                  &
-     &                        start = (/NRM(ifile,ng)%Rindex/),         &
-     &                        total = (/1/),                            &
-     &                        ncid = NRM(ifile,ng)%ncid,                &
-     &                        varid = NRM(ifile,ng)%Vid(idtime))
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        SELECT CASE (NRM(ifile,ng)%IOtype)
+          CASE (io_nf90)
+            CALL netcdf_put_fvar (ng, iTLM, ncname,                     &
+     &                            Vname(1,idtime), my_time,             &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(idtime))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+          CASE (io_pio)
+            CALL pio_netcdf_put_fvar (ng, iTLM, ncname,                 &
+     &                                Vname(1,idtime), my_time,         &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(idtime)%vd)
+#  endif
+        END SELECT
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #  ifdef ADJUST_WSTRESS
 !
@@ -2651,17 +2957,40 @@
      &                        EWperiodic(ng), NSperiodic(ng),           &
      &                        HnormSUS)
 #   endif
-          CALL wrt_norm2d (ng, tile, iTLM, ncname,                      &
-     &                     LBi, UBi, LBj, UBj, idUsms,                  &
-     &                     NRM(ifile,ng)%ncid,                          &
-     &                     NRM(ifile,ng)%Vid(idUsms),                   &
-     &                     NRM(ifile,ng)%Rindex,                        &
+!
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,             &
+     &                              LBi, UBi, LBj, UBj, idUsms,         &
+     &                              NRM(ifile,ng)%ncid,                 &
+     &                              NRM(ifile,ng)%Vid(idUsms),          &
+     &                              NRM(ifile,ng)%Rindex,               &
 #   ifdef MASKING
-     &                     umask,                                       &
+     &                              umask,                              &
 #   endif
-     &                     HnormSUS)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+     &                              HnormSUS)
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              IF (NRM(ifile,ng)%pioVar(idUsms)%dkind.eq.                &
+     &            PIO_double) THEN
+                ioDesc => ioDesc_dp_u2dvar(ng)
+              ELSE
+                ioDesc => ioDesc_sp_u2dvar(ng)
+              END IF
+              CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,              &
+     &                             LBi, UBi, LBj, UBj, idUsms,          &
+     &                             NRM(ifile,ng)%pioFile,               &
+     &                             NRM(ifile,ng)%pioVar(idUsms),        &
+     &                             NRM(ifile,ng)%Rindex,                &
+     &                             ioDesc,                              &
+#    ifdef MASKING
+     &                             umask,                               &
+#    endif
+     &                             HnormSUS)
+#   endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  2D norm at V-stress points.
@@ -2784,17 +3113,40 @@
      &                        EWperiodic(ng), NSperiodic(ng),           &
      &                        HnormSVS)
 #   endif
-          CALL wrt_norm2d (ng, tile, iTLM, ncname,                      &
-     &                     LBi, UBi, LBj, UBj, idVsms,                  &
-     &                     NRM(ifile,ng)%ncid,                          &
-     &                     NRM(ifile,ng)%Vid(idVsms),                   &
-     &                     NRM(ifile,ng)%Rindex,                        &
+!
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,             &
+     &                              LBi, UBi, LBj, UBj, idVsms,         &
+     &                              NRM(ifile,ng)%ncid,                 &
+     &                              NRM(ifile,ng)%Vid(idVsms),          &
+     &                              NRM(ifile,ng)%Rindex,               &
 #   ifdef MASKING
-     &                     vmask,                                       &
+     &                              vmask,                              &
 #   endif
-     &                     HnormSVS)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+     &                              HnormSVS)
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              IF (NRM(ifile,ng)%pioVar(idVsms)%dkind.eq.                &
+     &            PIO_double) THEN
+                ioDesc => ioDesc_dp_v2dvar(ng)
+              ELSE
+                ioDesc => ioDesc_sp_v2dvar(ng)
+              END IF
+              CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,              &
+     &                             LBi, UBi, LBj, UBj, idVsms,          &
+     &                             NRM(ifile,ng)%pioFile,               &
+     &                             NRM(ifile,ng)%pioVar(idVsms),        &
+     &                             NRM(ifile,ng)%Rindex,                &
+     &                             ioDesc,                              &
+#    ifdef MASKING
+     &                             vmask,                               &
+#    endif
+     &                             HnormSVS)
+#   endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 #  endif
 #  if defined ADJUST_STFLUX && defined SOLVE3D
@@ -2959,17 +3311,43 @@
      &                            EWperiodic(ng), NSperiodic(ng),       &
      &                            HnormSTF(:,:,itrc))
 #   endif
-              CALL wrt_norm2d (ng, tile, iTLM, ncname,                  &
-     &                         LBi, UBi, LBj, UBj, idTsur(itrc),        &
-     &                         NRM(ifile,ng)%ncid,                      &
-     &                         NRM(ifile,ng)%Vid(idTsur(itrc)),         &
-     &                         NRM(ifile,ng)%Rindex,                    &
+!
+              SELECT CASE (NRM(ifile,ng)%IOtype)
+                CASE (io_nf90)
+                  CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,         &
+     &                                  LBi, UBi, LBj, UBj,             &
+     &                                  idTsur(itrc),                   &
+     &                              NRM(ifile,ng)%ncid,                 &
+     &                              NRM(ifile,ng)%Vid(idTsur(itrc)),    &
+     &                              NRM(ifile,ng)%Rindex,               &
 #   ifdef MASKING
-     &                         rmask,                                   &
+     &                                  rmask,                          &
 #   endif
-     &                         HnormSTF(:,:,itrc))
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+     &                                  HnormSTF(:,:,itrc))
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+                CASE (io_pio)
+                  IF (NRM(ifile,ng)%pioVar(idTsur(itrc))%dkind.eq.      &
+     &                PIO_double) THEN
+                    ioDesc => ioDesc_dp_r2dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_r2dvar(ng)
+                  END IF
+                  CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,          &
+     &                                 LBi, UBi, LBj, UBj,              &
+     &                                 idTsur(itrc),                    &
+     &                              NRM(ifile,ng)%pioFile,              &
+     &                              NRM(ifile,ng)%pioVar(idTsur(itrc)), &
+     &                              NRM(ifile,ng)%Rindex,               &
+     &                                 ioDesc,                          &
+#   ifdef MASKING
+     &                                 rmask,                           &
+#   endif
+     &                                 HnormSTF(:,:,itrc))
+#   endif
+              END SELECT
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
           END IF
         END DO
@@ -2985,7 +3363,7 @@
      &        'Exact Method',/)
  20   FORMAT (4x,'Computing',1x,a,1x,a)
  30   FORMAT (/)
-
+!
       RETURN
       END SUBROUTINE normalization_tile
 
@@ -3034,40 +3412,6 @@
 # endif
      &                               HnormR, HnormU, HnormV)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_netcdf
-      USE mod_scalars
-!
-      USE bc_2d_mod
-      USE tl_conv_2d_mod
-# ifdef SOLVE3D
-      USE bc_3d_mod
-      USE tl_conv_3d_mod
-# endif
-# ifdef ADJUST_BOUNDARY
-      USE bc_bry2d_mod
-      USE tl_conv_bry2d_mod
-#  ifdef SOLVE3D
-      USE bc_bry3d_mod
-      USE tl_conv_bry3d_mod
-#  endif
-# endif
-# ifdef DISTRIBUTE
-      USE mp_exchange_mod
-# endif
-      USE set_depth_mod
-      USE white_noise_mod
-# ifdef DISTRIBUTE
-#  ifdef ADJUST_BOUNDARY
-      USE distribute_mod, ONLY : mp_collect
-#  endif
-# endif
-      USE strings_mod,    ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -3259,13 +3603,21 @@
 #   endif
 #  endif
 # endif
-
+!
       character (len=40 ) :: Text
       character (len=256) :: ncname
 
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", randomization_tile"
+
+# if defined PIO_LIB && defined DISTRIBUTE
+!
+      TYPE (IO_Desc_t),  pointer :: ioDesc
+# endif
+
 # include "set_bounds.h"
 !
-      SourceFile=__FILE__ // ", randomization_tile"
+      SourceFile=MyFile
 
       my_time=tdays(ng)*day2sec
 
@@ -3335,14 +3687,25 @@
 !
 !  Write out model time (s).
 !
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,idtime),      &
-     &                          my_time,                                &
-     &                          start = (/NRM(ifile,ng)%Rindex/),       &
-     &                          total = (/1/),                          &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(idtime))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,idtime), my_time,           &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(idtime))
+# if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,idtime), my_time,       &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(idtime)%vd)
+# endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  2D norm at RHO-points.
 !
@@ -3413,15 +3776,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          HnormR(:,:,ifile))
 # endif
-            CALL wrt_norm2d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, idFsur,                &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idFsur),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, idFsur,       &
+     &                                NRM(ifile,ng)%ncid,               &
+     &                                NRM(ifile,ng)%Vid(idFsur),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 # ifdef MASKING
-     &                       rmask,                                     &
+     &                                rmask,                            &
 # endif
-     &                       HnormR(:,:,ifile))
+     &                                HnormR(:,:,ifile))
+
+# if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idFsur)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_r2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_r2dvar(ng)
+                END IF
+                CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, idFsur,        &
+     &                               NRM(ifile,ng)%pioFile,             &
+     &                               NRM(ifile,ng)%pioVar(idFsur),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#  ifdef MASKING
+     &                               rmask,                             &
+#  endif
+     &                               HnormR(:,:,ifile))
+# endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 !
 !  2D norm at U-points.
@@ -3493,15 +3881,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          HnormU(:,:,ifile))
 # endif
-            CALL wrt_norm2d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, idUbar,                &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idUbar),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, idUbar,       &
+     &                                NRM(ifile,ng)%ncid,               &
+     &                                NRM(ifile,ng)%Vid(idUbar),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 # ifdef MASKING
-     &                       umask,                                     &
+     &                                umask,                            &
 # endif
-     &                       HnormU(:,:,ifile))
+     &                                HnormU(:,:,ifile))
+
+# if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idUbar)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_u2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_u2dvar(ng)
+                END IF
+                CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, idUbar,        &
+     &                               NRM(ifile,ng)%pioFile,             &
+     &                               NRM(ifile,ng)%pioVar(idUbar),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#  ifdef MASKING
+     &                               umask,                             &
+#  endif
+     &                               HnormU(:,:,ifile))
+# endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 !
 !  2D norm at V-points.
@@ -3573,15 +3986,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          HnormV(:,:,ifile))
 # endif
-            CALL wrt_norm2d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, idVbar,                &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idVbar),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, idVbar,       &
+     &                                NRM(ifile,ng)%ncid,               &
+     &                                NRM(ifile,ng)%Vid(idVbar),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 # ifdef MASKING
-     &                       vmask,                                     &
+     &                                vmask,                            &
 # endif
-     &                       HnormV(:,:,ifile))
+     &                                HnormV(:,:,ifile))
+
+# if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idVbar)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_v2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_v2dvar(ng)
+                END IF
+                CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, idVbar,        &
+     &                               NRM(ifile,ng)%pioFile,             &
+     &                               NRM(ifile,ng)%pioVar(idVbar),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#  ifdef MASKING
+     &                               vmask,                             &
+#  endif
+     &                               HnormV(:,:,ifile))
+# endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 
 # ifdef SOLVE3D
@@ -3676,15 +4114,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          VnormU(:,:,:,ifile))
 #  endif
-            CALL wrt_norm3d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, 1, N(ng), idUvel,      &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idUvel),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm3d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
+     &                                idUvel, NRM(ifile,ng)%ncid,       &
+     &                                NRM(ifile,ng)%Vid(idUvel),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 #  ifdef MASKING
-     &                       umask,                                     &
+     &                                umask,                            &
 #  endif
-     &                       VnormU(:,:,:,ifile))
+     &                                VnormU(:,:,:,ifile))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idUvel)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_u3dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_u3dvar(ng)
+                END IF
+                CALL wrt_norm3d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, 1, N(ng),      &
+     &                               idUvel, NRM(ifile,ng)%pioFile,     &
+     &                               NRM(ifile,ng)%pioVar(idUvel),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#   ifdef MASKING
+     &                               umask,                             &
+#   endif
+     &                               VnormU(:,:,:,ifile))
+#  endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 !
 !  3D norm at V-points.
@@ -3777,15 +4240,40 @@
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          VnormV(:,:,:,ifile))
 #  endif
-            CALL wrt_norm3d (ng, tile, iTLM, ncname,                    &
-     &                       LBi, UBi, LBj, UBj, 1, N(ng), idVvel,      &
-     &                       NRM(ifile,ng)%ncid,                        &
-     &                       NRM(ifile,ng)%Vid(idVvel),                 &
-     &                       NRM(ifile,ng)%Rindex,                      &
+!
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL wrt_norm3d_nf90 (ng, tile, iTLM, ncname,           &
+     &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
+     &                                idVvel, NRM(ifile,ng)%ncid,       &
+     &                                NRM(ifile,ng)%Vid(idVvel),        &
+     &                                NRM(ifile,ng)%Rindex,             &
 #  ifdef MASKING
-     &                       vmask,                                     &
+     &                                vmask,                            &
 #  endif
-     &                       VnormV(:,:,:,ifile))
+     &                                VnormV(:,:,:,ifile))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                IF (NRM(ifile,ng)%pioVar(idVvel)%dkind.eq.              &
+     &              PIO_double) THEN
+                  ioDesc => ioDesc_dp_v3dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_v3dvar(ng)
+                END IF
+                CALL wrt_norm3d_pio (ng, tile, iTLM, ncname,            &
+     &                               LBi, UBi, LBj, UBj, 1, N(ng),      &
+     &                               idVvel, NRM(ifile,ng)%pioFile,     &
+     &                               NRM(ifile,ng)%pioVar(idVvel),      &
+     &                               NRM(ifile,ng)%Rindex,              &
+     &                               ioDesc,                            &
+#   ifdef MASKING
+     &                               vmask,                             &
+#   endif
+     &                               VnormV(:,:,:,ifile))
+#  endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 !
 !  3D norm at RHO-points.
@@ -3928,15 +4416,43 @@
      &                            EWperiodic(ng), NSperiodic(ng),       &
      &                            VnormR(:,:,:,ifile,itrc))
 #  endif
-              CALL wrt_norm3d (ng, tile, iTLM, ncname,                  &
-     &                         LBi, UBi, LBj, UBj, 1, N(ng),            &
-     &                         idTvar(itrc), NRM(ifile,ng)%ncid,        &
-     &                         NRM(ifile,ng)%Vid(idTvar(itrc)),         &
-     &                         NRM(ifile,ng)%Rindex,                    &
+!
+              SELECT CASE (NRM(ifile,ng)%IOtype)
+                CASE (io_nf90)
+                  CALL wrt_norm3d_nf90 (ng, tile, iTLM, ncname,         &
+     &                                  LBi, UBi, LBj, UBj, 1, N(ng),   &
+     &                                  idTvar(itrc),                   &
+     &                              NRM(ifile,ng)%ncid,                 &
+     &                              NRM(ifile,ng)%Vid(idTvar(itrc)),    &
+     &                              NRM(ifile,ng)%Rindex,               &
 #  ifdef MASKING
-     &                         rmask,                                   &
+     &                                  rmask,                          &
 #  endif
-     &                         VnormR(:,:,:,ifile,itrc))
+     &                                  VnormR(:,:,:,ifile,itrc))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+                CASE (io_pio)
+                  IF (NRM(ifile,ng)%pioTrc(itrc)%dkind.eq.              &
+     &                PIO_double) THEN
+                    ioDesc => ioDesc_dp_r3dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_r3dvar(ng)
+                  END IF
+                  CALL wrt_norm3d_pio (ng, tile, iTLM, ncname,          &
+     &                                 LBi, UBi, LBj, UBj, 1, N(ng),    &
+     &                                 idTvar(itrc),                    &
+     &                              NRM(ifile,ng)%pioFile,              &
+     &                              NRM(ifile,ng)%pioTrc(itrc),         &
+     &                              NRM(ifile,ng)%Rindex,               &
+     &                                 ioDesc,                          &
+#   ifdef MASKING
+     &                                 rmask,                           &
+#   endif
+     &                                 VnormR(:,:,:,ifile,itrc))
+#  endif
+              END SELECT
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
           END DO
 # endif
@@ -3975,14 +4491,26 @@
 !
 !  Write out model time (s).
 !
-        CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,idtime),        &
-     &                        my_time,                                  &
-     &                        start = (/NRM(ifile,ng)%Rindex/),         &
-     &                        total = (/1/),                            &
-     &                        ncid = NRM(ifile,ng)%ncid,                &
-     &                        varid = NRM(ifile,ng)%Vid(idtime))
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        SELECT CASE (NRM(ifile,ng)%IOtype)
+          CASE (io_nf90)
+            CALL netcdf_put_fvar (ng, iTLM, ncname,                     &
+     &                            Vname(1,idtime), my_time,             &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(idtime))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+          CASE (io_pio)
+            CALL pio_netcdf_put_fvar (ng, iTLM, ncname,                 &
+     &                                Vname(1,idtime), my_time,         &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(idtime)%vd)
+#  endif
+        END SELECT
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  2D boundary norm at RHO-points.
 !
@@ -4105,14 +4633,30 @@
         END DO
         IF (ANY(CnormB(isFsur,:))) THEN
           ifield=idSbry(isFsur)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          HnormRobc(LBij:,:),                     &
-     &                          start = (/1,1,NRM(ifile,ng)%Rindex/),   &
-     &                          total = (/IJlen,4,1/),                  &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              HnormRobc(LBij:,:),                 &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  HnormRobc(LBij:,:),             &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+
+#  endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  2D boundary norm at U-points.
@@ -4236,14 +4780,29 @@
         END DO
         IF (ANY(CnormB(isUbar,:))) THEN
           ifield=idSbry(isUbar)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          HnormUobc(LBij:,:),                     &
-     &                          start = (/1,1,NRM(ifile,ng)%Rindex/),   &
-     &                          total = (/IJlen,4,1/),                  &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              HnormUobc(LBij:,:),                 &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  HnormUobc(LBij:,:),             &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#  endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  2D boundary norm at V-points.
@@ -4367,14 +4926,29 @@
         END DO
         IF (ANY(CnormB(isVbar,:))) THEN
           ifield=idSbry(isVbar)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          HnormVobc(LBij:,:),                     &
-     &                          start = (/1,1,NRM(ifile,ng)%Rindex/),   &
-     &                          total = (/IJlen,4,1/),                  &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              HnormVobc(LBij:,:),                 &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  HnormVobc(LBij:,:),             &
+     &                         start = (/1,1,NRM(ifile,ng)%Rindex/),    &
+     &                         total = (/IJlen,4,1/),                   &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#  endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 
 #  ifdef SOLVE3D
@@ -4455,9 +5029,9 @@
      &                                   Kh, Kv,                        &
      &                                   pm, pn,                        &
      &                                   pmon_r, pnom_p,                &
-#  ifdef MASKING
+#   ifdef MASKING
      &                                   umask, pmask,                  &
-#  endif
+#   endif
      &                                   Hz, z_r,                       &
      &                                   B3d)
               IF (Lconvolve(ibry)) THEN
@@ -4484,15 +5058,15 @@
                   DO j=Jstr,Jend
                     Bavg=FacAvg*B3davg(j,k)
                     Bsqr=FacAvg*B3dsqr(j,k)
-#  ifdef MASKING
+#   ifdef MASKING
                     IF (umask(i,j).gt.0.0_r8) THEN
                       VnormUobc(j,k,ibry)=1.0_r8/SQRT(Bsqr)
                     ELSE
                       VnormUobc(j,k,ibry)=0.0_r8
                     END IF
-#  else
+#   else
                     VnormUobc(j,k,ibry)=1.0_r8/SQRT(Bsqr)
-#  endif
+#   endif
                   END DO
                 END DO
               ELSE IF ((ibry.eq.isouth).or.(ibry.eq.inorth)) THEN
@@ -4500,15 +5074,15 @@
                   DO i=IstrU,Iend
                     Bavg=FacAvg*B3davg(i,k)
                     Bsqr=FacAvg*B3dsqr(i,k)
-#  ifdef MASKING
+#   ifdef MASKING
                     IF (umask(i,j).gt.0.0_r8) THEN
                       VnormUobc(i,k,ibry)=1.0_r8/SQRT(Bsqr)
                     ELSE
                       VnormUobc(i,k,ibry)=0.0_r8
                     END IF
-#  else
+#   else
                     VnormUobc(i,k,ibry)=1.0_r8/SQRT(Bsqr)
-#  endif
+#   endif
                   END DO
                 END DO
               END IF
@@ -4516,7 +5090,7 @@
             CALL bc_u3d_bry_tile (ng, tile, ibry,                       &
      &                            LBij, UBij, 1, N(ng),                 &
      &                            VnormUobc(:,:,ibry))
-#  ifdef DISTRIBUTE
+#   ifdef DISTRIBUTE
             Bwrk=RESHAPE(VnormUobc(:,:,ibry), (/IJKlen/))
             CALL mp_collect (ng, iTLM, IJKlen, Aspv, Bwrk)
             ic=0
@@ -4526,19 +5100,34 @@
                 VnormUobc(ib,k,ibry)=Bwrk(ic)
               END DO
             END DO
-#  endif
+#   endif
           END IF
         END DO
         IF (ANY(CnormB(isUvel,:))) THEN
           ifield=idSbry(isUvel)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          VnormUobc(LBij:,:,:),                   &
-     &                          start = (/1,1,1,NRM(ifile,ng)%Rindex/), &
-     &                          total = (/IJlen,N(ng),4,1/),            &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              VnormUobc(LBij:,:,:),               &
+     &                         start = (/1,1,1,NRM(ifile,ng)%Rindex/),  &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  VnormUobc(LBij:,:,:),           &
+     &                         start = (/1,1,1,NRM(ifile,ng)%Rindex/),  &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#   endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  3D boundary norm at V-points.
@@ -4617,9 +5206,9 @@
      &                                   Kh, Kv,                        &
      &                                   pm, pn,                        &
      &                                   pmon_p, pnom_r,                &
-#  ifdef MASKING
+#   ifdef MASKING
      &                                   vmask, pmask,                  &
-#  endif
+#   endif
      &                                   Hz, z_r,                       &
      &                                   B3d)
               IF (Lconvolve(ibry)) THEN
@@ -4646,15 +5235,15 @@
                   DO j=JstrV,Jend
                     Bavg=FacAvg*B3davg(j,k)
                     Bsqr=FacAvg*B3dsqr(j,k)
-#  ifdef MASKING
+#   ifdef MASKING
                     IF (vmask(i,j).gt.0.0_r8) THEN
                       VnormVobc(j,k,ibry)=1.0_r8/SQRT(Bsqr)
                     ELSE
                       VnormVobc(j,k,ibry)=0.0_r8
                     END IF
-#  else
+#   else
                     VnormVobc(j,k,ibry)=1.0_r8/SQRT(Bsqr)
-#  endif
+#   endif
                   END DO
                 END DO
               ELSE IF ((ibry.eq.isouth).or.(ibry.eq.inorth)) THEN
@@ -4662,15 +5251,15 @@
                   DO i=Istr,Iend
                     Bavg=FacAvg*B3davg(i,k)
                     Bsqr=FacAvg*B3dsqr(i,k)
-#  ifdef MASKING
+#   ifdef MASKING
                     IF (vmask(i,j).gt.0.0_r8) THEN
                       VnormVobc(i,k,ibry)=1.0_r8/SQRT(Bsqr)
                     ELSE
                       VnormVobc(i,k,ibry)=0.0_r8
                     END IF
-#  else
+#   else
                     VnormVobc(i,k,ibry)=1.0_r8/SQRT(Bsqr)
-#  endif
+#   endif
                   END DO
                 END DO
               END IF
@@ -4678,7 +5267,7 @@
             CALL bc_v3d_bry_tile (ng, tile, ibry,                       &
      &                            LBij, UBij, 1, N(ng),                 &
      &                            VnormVobc(:,:,ibry))
-#  ifdef DISTRIBUTE
+#   ifdef DISTRIBUTE
             Bwrk=RESHAPE(VnormVobc(:,:,ibry), (/IJKlen/))
             CALL mp_collect (ng, iTLM, IJKlen, Aspv, Bwrk)
             ic=0
@@ -4688,19 +5277,34 @@
                 VnormVobc(ib,k,ibry)=Bwrk(ic)
               END DO
             END DO
-#  endif
+#   endif
           END IF
         END DO
         IF (ANY(CnormB(isVvel,:))) THEN
           ifield=idSbry(isVvel)
-          CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),      &
-     &                          VnormVobc(LBij:,:,:),                   &
-     &                          start = (/1,1,1,NRM(ifile,ng)%Rindex/), &
-     &                          total = (/IJlen,N(ng),4,1/),            &
-     &                          ncid = NRM(ifile,ng)%ncid,              &
-     &                          varid = NRM(ifile,ng)%Vid(ifield))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL netcdf_put_fvar (ng, iTLM, ncname,                   &
+     &                              Vname(1,ifield),                    &
+     &                              VnormVobc(LBij:,:,:),               &
+     &                         start = (/1,1,1,NRM(ifile,ng)%Rindex/),  &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              CALL pio_netcdf_put_fvar (ng, iTLM, ncname,               &
+     &                                  Vname(1,ifield),                &
+     &                                  VnormVobc(LBij:,:,:),           &
+     &                         start = (/1,1,1,NRM(ifile,ng)%Rindex/),  &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#   endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  3D boundary norm at RHO-points.
@@ -4788,9 +5392,9 @@
      &                                     Kh, Kv,                      &
      &                                     pm, pn,                      &
      &                                     pmon_u, pnom_v,              &
-#  ifdef MASKING
+#   ifdef MASKING
      &                                     rmask, umask, vmask,         &
-#  endif
+#   endif
      &                                     Hz, z_r,                     &
      &                                     B3d)
                 IF (Lconvolve(ibry)) THEN
@@ -4817,15 +5421,15 @@
                     DO j=Jstr,Jend
                       Bavg=FacAvg*B3davg(j,k)
                       Bsqr=FacAvg*B3dsqr(j,k)
-#  ifdef MASKING
+#   ifdef MASKING
                       IF (rmask(i,j).gt.0.0_r8) THEN
                         VnormRobc(j,k,ibry,itrc)=1.0_r8/SQRT(Bsqr)
                       ELSE
                         VnormRobc(j,k,ibry,itrc)=0.0_r8
                       END IF
-#  else
+#   else
                       VnormRobc(j,k,ibry,itrc)=1.0_r8/SQRT(Bsqr)
-#  endif
+#   endif
                     END DO
                   END DO
                 ELSE IF ((ibry.eq.isouth).or.(ibry.eq.inorth)) THEN
@@ -4833,15 +5437,15 @@
                     DO i=Istr,Iend
                       Bavg=FacAvg*B3davg(i,k)
                       Bsqr=FacAvg*B3dsqr(i,k)
-#  ifdef MASKING
+#   ifdef MASKING
                       IF (rmask(i,j).gt.0.0_r8) THEN
                         VnormRobc(i,k,ibry,itrc)=1.0_r8/SQRT(Bsqr)
                       ELSE
                         VnormRobc(i,k,ibry,itrc)=0.0_r8
                       END IF
-#  else
+#   else
                       VnormRobc(i,k,ibry,itrc)=1.0_r8/SQRT(Bsqr)
-#  endif
+#   endif
                     END DO
                   END DO
                 END IF
@@ -4849,7 +5453,7 @@
               CALL bc_r3d_bry_tile (ng, tile, ibry,                     &
      &                              LBij, UBij, 1, N(ng),               &
      &                              VnormRobc(:,:,ibry,itrc))
-#  ifdef DISTRIBUTE
+#   ifdef DISTRIBUTE
               Bwrk=RESHAPE(VnormRobc(:,:,ibry,itrc), (/IJKlen/))
               CALL mp_collect (ng, iTLM, IJKlen, Aspv, Bwrk)
               ic=0
@@ -4859,19 +5463,34 @@
                   VnormRobc(ib,k,ibry,itrc)=Bwrk(ic)
                 END DO
               END DO
-#  endif
+#   endif
             END IF
           END DO
           IF (ANY(CnormB(is,:))) THEN
             ifield=idSbry(isTvar(itrc))
-            CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,ifield),    &
-     &                            VnormRobc(LBij:,:,:,itrc),            &
-     &                            start =(/1,1,1,NRM(ifile,ng)%Rindex/),&
-     &                            total = (/IJlen,N(ng),4,1/),          &
-     &                            ncid = NRM(ifile,ng)%ncid,            &
-     &                            varid = NRM(ifile,ng)%Vid(ifield))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+
+            SELECT CASE (NRM(ifile,ng)%IOtype)
+              CASE (io_nf90)
+                CALL netcdf_put_fvar (ng, iTLM, ncname,                 &
+     &                                Vname(1,ifield),                  &
+     &                                VnormRobc(LBij:,:,:,itrc),        &
+     &                         start =(/1,1,1,NRM(ifile,ng)%Rindex/),   &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(ifield))
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+              CASE (io_pio)
+                CALL pio_netcdf_put_fvar (ng, iTLM, ncname,             &
+     &                                    Vname(1,ifield),              &
+     &                                    VnormRobc(LBij:,:,:,itrc),    &
+     &                         start =(/1,1,1,NRM(ifile,ng)%Rindex/),   &
+     &                         total = (/IJlen,N(ng),4,1/),             &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(ifield)%vd)
+#   endif
+            END SELECT
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END DO
 #  endif
@@ -4880,9 +5499,17 @@
 !  allow other processes to access data immediately after it is
 !  written.
 !
-        CALL netcdf_sync (ng, iTLM, ncname, NRM(ifile,ng)%ncid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        SELECT CASE (NRM(ifile,ng)%IOtype)
+          CASE (io_nf90)
+            CALL netcdf_sync (ng, iTLM, ncname,                         &
+     &                        NRM(ifile,ng)%ncid)
+#  if defined PIO_LIB && defined DISTRIBUTE
+          CASE (io_pio)
+            CALL pio_netcdf_sync (ng, iTLM, ncname,                     &
+     &                            NRM(ifile,ng)%pioFile)
+#  endif
+        END SELECT
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 # endif
 
@@ -4911,14 +5538,26 @@
 !
 !  Write out model time (s).
 !
-        CALL netcdf_put_fvar (ng, iTLM, ncname, Vname(1,idtime),        &
-     &                        my_time,                                  &
-     &                        start = (/NRM(ifile,ng)%Rindex/),         &
-     &                        total = (/1/),                            &
-     &                        ncid = NRM(ifile,ng)%ncid,                &
-     &                        varid = NRM(ifile,ng)%Vid(idtime))
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        SELECT CASE (NRM(ifile,ng)%IOtype)
+          CASE (io_nf90)
+            CALL netcdf_put_fvar (ng, iTLM, ncname,                     &
+     &                            Vname(1,idtime), my_time,             &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         ncid = NRM(ifile,ng)%ncid,               &
+     &                         varid = NRM(ifile,ng)%Vid(idtime))
+
+#  if defined PIO_LIB && defined DISTRIBUTE
+          CASE (io_pio)
+            CALL pio_netcdf_put_fvar (ng, iTLM, ncname,                 &
+     &                                Vname(1,idtime), my_time,         &
+     &                         start = (/NRM(ifile,ng)%Rindex/),        &
+     &                         total = (/1/),                           &
+     &                         pioFile = NRM(ifile,ng)%pioFile,         &
+     &                         pioVar = NRM(ifile,ng)%pioVar(idtime)%vd)
+#  endif
+        END SELECT
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #  ifdef ADJUST_WSTRESS
 !
@@ -4991,15 +5630,40 @@
      &                        EWperiodic(ng), NSperiodic(ng),           &
      &                        HnormSUS)
 #   endif
-          CALL wrt_norm2d (ng, tile, iTLM, ncname,                      &
-     &                     LBi, UBi, LBj, UBj, idUsms,                  &
-     &                     NRM(ifile,ng)%ncid,                          &
-     &                     NRM(ifile,ng)%Vid(idUsms),                   &
-     &                     NRM(ifile,ng)%Rindex,                        &
+!
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,             &
+     &                              LBi, UBi, LBj, UBj, idUsms,         &
+     &                              NRM(ifile,ng)%ncid,                 &
+     &                              NRM(ifile,ng)%Vid(idUsms),          &
+     &                              NRM(ifile,ng)%Rindex,               &
 #   ifdef MASKING
-     &                     umask,                                       &
+     &                              umask,                              &
 #   endif
-     &                     HnormSUS)
+     &                              HnormSUS)
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              IF (NRM(ifile,ng)%pioVar(idUsms)%dkind.eq.                &
+     &            PIO_double) THEN
+                ioDesc => ioDesc_dp_u2dvar(ng)
+              ELSE
+                ioDesc => ioDesc_sp_u2dvar(ng)
+              END IF
+              CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,              &
+     &                             LBi, UBi, LBj, UBj, idUsms,          &
+     &                             NRM(ifile,ng)%pioFile,               &
+     &                             NRM(ifile,ng)%pioVar(idUsms),        &
+     &                             NRM(ifile,ng)%Rindex,                &
+     &                             ioDesc,                              &
+#    ifdef MASKING
+     &                             umask,                               &
+#    endif
+     &                             HnormSUS)
+#   endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  2D norm at V-stress points.
@@ -5071,15 +5735,40 @@
      &                        EWperiodic(ng), NSperiodic(ng),           &
      &                        HnormSVS)
 #   endif
-          CALL wrt_norm2d (ng, tile, iTLM, ncname,                      &
-     &                     LBi, UBi, LBj, UBj, idVsms,                  &
-     &                     NRM(ifile,ng)%ncid,                          &
-     &                     NRM(ifile,ng)%Vid(idVsms),                   &
-     &                     NRM(ifile,ng)%Rindex,                        &
+!
+          SELECT CASE (NRM(ifile,ng)%IOtype)
+            CASE (io_nf90)
+              CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,             &
+     &                              LBi, UBi, LBj, UBj, idVsms,         &
+     &                              NRM(ifile,ng)%ncid,                 &
+     &                              NRM(ifile,ng)%Vid(idVsms),          &
+     &                              NRM(ifile,ng)%Rindex,               &
 #   ifdef MASKING
-     &                     vmask,                                       &
+     &                              vmask,                              &
 #   endif
-     &                     HnormSVS)
+     &                              HnormSVS)
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+            CASE (io_pio)
+              IF (NRM(ifile,ng)%pioVar(idVsms)%dkind.eq.                &
+     &            PIO_double) THEN
+                ioDesc => ioDesc_dp_v2dvar(ng)
+              ELSE
+                ioDesc => ioDesc_sp_v2dvar(ng)
+              END IF
+              CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,              &
+     &                             LBi, UBi, LBj, UBj, idVsms,          &
+     &                             NRM(ifile,ng)%pioFile,               &
+     &                             NRM(ifile,ng)%pioVar(idVsms),        &
+     &                             NRM(ifile,ng)%Rindex,                &
+     &                             ioDesc,                              &
+#    ifdef MASKING
+     &                             vmask,                               &
+#    endif
+     &                             HnormSVS)
+#   endif
+          END SELECT
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 #  endif
 #  if defined ADJUST_STFLUX && defined SOLVE3D
@@ -5208,15 +5897,43 @@
      &                            EWperiodic(ng), NSperiodic(ng),       &
      &                            HnormSTF(:,:,itrc))
 #   endif
-              CALL wrt_norm2d (ng, tile, iTLM, ncname,                  &
-     &                         LBi, UBi, LBj, UBj, idTsur(itrc),        &
-     &                         NRM(ifile,ng)%ncid,                      &
-     &                         NRM(ifile,ng)%Vid(idTsur(itrc)),         &
-     &                         NRM(ifile,ng)%Rindex,                    &
+!
+              SELECT CASE (NRM(ifile,ng)%IOtype)
+                CASE (io_nf90)
+                  CALL wrt_norm2d_nf90 (ng, tile, iTLM, ncname,         &
+     &                                  LBi, UBi, LBj, UBj,             &
+     &                                  idTsur(itrc),                   &
+     &                              NRM(ifile,ng)%ncid,                 &
+     &                              NRM(ifile,ng)%Vid(idTsur(itrc)),    &
+     &                              NRM(ifile,ng)%Rindex,               &
 #   ifdef MASKING
-     &                         rmask,                                   &
+     &                                  rmask,                          &
 #   endif
-     &                         HnormSTF(:,:,itrc))
+     &                                  HnormSTF(:,:,itrc))
+
+#   if defined PIO_LIB && defined DISTRIBUTE
+                CASE (io_pio)
+                  IF (NRM(ifile,ng)%pioVar(idTsur(itrc))%dkind.eq.      &
+     &                PIO_double) THEN
+                    ioDesc => ioDesc_dp_r2dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_r2dvar(ng)
+                  END IF
+                  CALL wrt_norm2d_pio (ng, tile, iTLM, ncname,          &
+     &                                 LBi, UBi, LBj, UBj,              &
+     &                                 idTsur(itrc),                    &
+     &                              NRM(ifile,ng)%pioFile,              &
+     &                              NRM(ifile,ng)%pioVar(idTsur(itrc)), &
+     &                              NRM(ifile,ng)%Rindex,               &
+     &                                 ioDesc,                          &
+#   ifdef MASKING
+     &                                 rmask,                           &
+#   endif
+     &                                 HnormSTF(:,:,itrc))
+#   endif
+              END SELECT
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
           END IF
         END DO
@@ -5231,30 +5948,20 @@
  10   FORMAT (/,' Error Covariance Factors: Randomization Method',/)
  20   FORMAT (4x,'Computing',1x,a,1x,a)
  30   FORMAT (/)
-
+!
       RETURN
       END SUBROUTINE randomization_tile
 
 !
 !***********************************************************************
-      SUBROUTINE wrt_norm2d (ng, tile, model, ncname,                   &
-     &                       LBi, UBi, LBj, UBj,                        &
-     &                       ifield, ncid, ncvarid, tindex,             &
+      SUBROUTINE wrt_norm2d_nf90 (ng, tile, model, ncname,              &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            ifield, ncid, ncvarid, tindex,        &
 # ifdef MASKING
-     &                       Amask,                                     &
+     &                            Amask,                                &
 # endif
-     &                       A)
+     &                            A)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_netcdf
-      USE mod_scalars
-!
-      USE nf_fwrite2d_mod, ONLY : nf_fwrite2d
-      USE strings_mod,     ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -5281,6 +5988,9 @@
       integer :: gfactor, gtype, status
 !
       real(dp) :: scale
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", wrt_norm2d_nf90"
 
 # include "set_bounds.h"
 !
@@ -5290,8 +6000,7 @@
 !  computation, synchronize file to disk.
 !-----------------------------------------------------------------------
 !
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Set grid type factor to write full (gfactor=1) fields or water
 !  points (gfactor=-1) fields only.
@@ -5312,8 +6021,7 @@
      &                   Amask,                                         &
 # endif
      &                   A)
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
           WRITE (stdout,10) TRIM(Vname(1,ifield)), tindex
         END IF
@@ -5326,39 +6034,123 @@
 !  processes to access data immediately after it is written.
 !
       CALL netcdf_sync (ng, model, ncname, ncid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       IF (Master) WRITE (stdout,20) TRIM(Vname(1,ifield)), tindex
       CALL my_flush (stdout)
 !
-  10  FORMAT (/,' WRT_NORM2D - error while writing variable: ',a,/,11x, &
-     &        'into normalization NetCDF file for time record: ',i4)
+  10  FORMAT (/,' WRT_NORM2D_NF90 - error while writing variable: ',a,  &
+     &        /,19x 'into normalization NetCDF file for time record: ', &
+     &        i0)
   20  FORMAT (7x,'wrote  ',a, t21,'normalization factors into record ', &
      &        i0)
+!
+      RETURN
+      END SUBROUTINE wrt_norm2d_nf90
 
-      END SUBROUTINE wrt_norm2d
-
+# if defined PIO_LIB && defined DISTRIBUTE
 !
 !***********************************************************************
-      SUBROUTINE wrt_norm3d (ng, tile, model, ncname,                   &
-     &                       LBi, UBi, LBj, UBj, LBk, UBk,              &
-     &                       ifield, ncid, ncvarid, tindex,             &
-# ifdef MASKING
-     &                       Amask,                                     &
+      SUBROUTINE wrt_norm2d_pio (ng, tile, model, ncname,               &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           ifield, pioFile, pioVar, tindex,       &
+     &                           pioDesc,                               &
+#  ifdef MASKING
+     &                           Amask,                                 &
+#  endif
+     &                           A)
+!***********************************************************************
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: ifield, tindex
+
+      character (len=*), intent(in) :: ncname
+!
+#  ifdef ASSUMED_SHAPE
+#   ifdef MASKING
+      real(r8), intent(in) :: Amask(LBi:,LBj:)
+#   endif
+      real(r8), intent(in) :: A(LBi:,LBj:)
+#  else
+#   ifdef MASKING
+      real(r8), intent(in) :: Amask(LBi:UBi,LBj:UBj)
+#   endif
+      real(r8), intent(in) :: A(LBi:UBi,LBj:UBj)
+#  endif
+!
+      TYPE (File_desc_t), intent(inout) :: pioFile
+      TYPE (IO_Desc_t),   intent(inout) :: pioDesc
+      TYPE (My_VarDesc),  intent(inout) :: pioVar
+!
+!  Local variable declarations.
+!
+      integer :: status
+!
+      real(dp) :: scale
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", wrt_norm2d_pio"
+
+#  include "set_bounds.h"
+!
+!-----------------------------------------------------------------------
+!  Write out requested 2D field into normalization NetCDF file. Since
+!  the computation of normalization coefficients is a very expensive
+!  computation, synchronize file to disk.
+!-----------------------------------------------------------------------
+!
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Write out 2D normalization field.
+!
+      scale=1.0_dp
+      status=nf_fwrite2d(ng, model, pioFile, pioVar, tindex, pioDesc,   &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+#  ifdef MASKING
+     &                   Amask,                                         &
+#  endif
+     &                   A)
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,10) TRIM(Vname(1,ifield)), tindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Synchronize normalization NetCDF file to disk to allow other
+!  processes to access data immediately after it is written.
+!
+      CALL pio_netcdf_sync (ng, model, ncname, pioFile)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+      IF (Master) WRITE (stdout,20) TRIM(Vname(1,ifield)), tindex
+      CALL my_flush (stdout)
+!
+  10  FORMAT (/,' WRT_NORM2D_PIO - error while writing variable: ',a,   &
+     &        /,18x 'into normalization NetCDF file for time record: ', &
+     &        i0)
+  20  FORMAT (7x,'wrote  ',a, t21,'normalization factors into record ', &
+     &        i0)
+!
+      RETURN
+      END SUBROUTINE wrt_norm2d_pio
 # endif
-     &                       A)
+
+!
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_netcdf
-      USE mod_scalars
-!
-      USE nf_fwrite3d_mod, ONLY : nf_fwrite3d
-      USE strings_mod,     ONLY : FoundError
+      SUBROUTINE wrt_norm3d_nf90 (ng, tile, model, ncname,              &
+     &                            LBi, UBi, LBj, UBj, LBk, UBk,         &
+     &                            ifield, ncid, ncvarid, tindex,        &
+# ifdef MASKING
+     &                            Amask,                                &
+# endif
+     &                            A)
+!***********************************************************************
 !
 !  Imported variable declarations.
 !
@@ -5385,6 +6177,9 @@
       integer :: gfactor, gtype, status
 !
       real(dp) :: scale
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", wrt_norm3d_nf90"
 
 # include "set_bounds.h"
 !
@@ -5394,8 +6189,7 @@
 !  computation, synchronize file to disk.
 !-----------------------------------------------------------------------
 !
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Set grid type factor to write full (gfactor=1) fields or water
 !  points (gfactor=-1) fields only.
@@ -5416,8 +6210,7 @@
      &                   Amask,                                         &
 # endif
      &                   A)
-      IF (FoundError(status, nf90_noerr, __LINE__,                      &
-     &               __FILE__)) THEN
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
           WRITE (stdout,10) TRIM(Vname(1,ifield)), tindex
         END IF
@@ -5430,18 +6223,111 @@
 !  processes to access data immediately after it is written.
 !
       CALL netcdf_sync (ng, model, ncname, ncid)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       IF (Master) WRITE (stdout,20) TRIM(Vname(1,ifield)), tindex
       CALL my_flush (stdout)
 !
-  10  FORMAT (/,' WRT_NORM3D - error while writing variable: ',a,/,11x, &
-     &        'into normalization NetCDF file for time record: ',i4)
+  10  FORMAT (/,' WRT_NORM3D_NF90 - error while writing variable: ',a,  &
+     &        /,19x,'into normalization NetCDF file for time record: ', &
+     &        i0)
   20  FORMAT (7x,'wrote  ',a, t21,'normalization factors into record ', &
      &        i0)
+!
       RETURN
+      END SUBROUTINE wrt_norm3d_nf90
 
-      END SUBROUTINE wrt_norm3d
+# if defined PIO_LIB && defined DISTRIBUTE
+!
+!***********************************************************************
+      SUBROUTINE wrt_norm3d_pio (ng, tile, model, ncname,               &
+     &                           LBi, UBi, LBj, UBj, LBk, UBk,          &
+     &                           ifield, pioFile, pioVar, tindex,       &
+     &                           pioDesc,                               &
+#  ifdef MASKING
+     &                           Amask,                                 &
+#  endif
+     &                           A)
+!***********************************************************************
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk
+      integer, intent(in) :: ifield, tindex
+
+      character (len=*), intent(in) :: ncname
+!
+#  ifdef ASSUMED_SHAPE
+#   ifdef MASKING
+      real(r8), intent(in) :: Amask(LBi:,LBj:)
+#   endif
+      real(r8), intent(in) :: A(LBi:,LBj:,LBk:)
+#  else
+#   ifdef MASKING
+      real(r8), intent(in) :: Amask(LBi:UBi,LBj:UBj)
+#   endif
+      real(r8), intent(in) :: A(LBi:UBi,LBj:UBj,LBk:UBk)
+#  endif
+!
+      TYPE (File_desc_t), intent(inout) :: pioFile
+      TYPE (IO_Desc_t),   intent(inout) :: pioDesc
+      TYPE (My_VarDesc),  intent(inout) :: pioVar
+!
+!  Local variable declarations.
+!
+      integer :: status
+!
+      real(dp) :: scale
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", wrt_norm3d_pio"
+
+#  include "set_bounds.h"
+!
+!-----------------------------------------------------------------------
+!  Write out requested 3D field into normalization NetCDF file. Since
+!  the computation of normalization coefficients is a very expensive
+!  computation, synchronize file to disk.
+!-----------------------------------------------------------------------
+!
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Write out 3D normalization field.
+!
+      scale=1.0_dp
+      status=nf_fwrite3d(ng, model, pioFile, pioVar, tindex, pioDesc,   &
+     &                   LBi, UBi, LBj, UBj, LBk, UBk, scale,           &
+#  ifdef MASKING
+     &                   Amask,                                         &
+#  endif
+     &                   A)
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,10) TRIM(Vname(1,ifield)), tindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Synchronize normalization NetCDF file to disk to allow other
+!  processes to access data immediately after it is written.
+!
+      CALL pio_netcdf_sync (ng, model, ncname, pioFile)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+      IF (Master) WRITE (stdout,20) TRIM(Vname(1,ifield)), tindex
+      CALL my_flush (stdout)
+!
+  10  FORMAT (/,' WRT_NORM3D_PIO - error while writing variable: ',a,   &
+     &        /,18x,'into normalization NetCDF file for time record: ', &
+     &        i0)
+  20  FORMAT (7x,'wrote  ',a, t21,'normalization factors into record ', &
+     &        i0)
+!
+      RETURN
+      END SUBROUTINE wrt_norm3d_pio
+# endif
 #endif
       END MODULE normalization_mod

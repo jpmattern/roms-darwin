@@ -3,9 +3,9 @@
 #if defined NONLINEAR && defined SOLVE3D
 # define NEUMANN
 !
-!svn $Id: pre_step3d.F 1029 2020-07-11 02:11:09Z arango $
+!svn $Id: pre_step3d.F 1103 2022-01-13 03:38:35Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -55,10 +55,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 22, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 22, __LINE__, MyFile)
 # endif
       CALL pre_step3d_tile (ng, tile,                                   &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -110,9 +113,9 @@
      &                      OCEAN(ng) % u,                              &
      &                      OCEAN(ng) % v)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 22, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 22, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE pre_step3d
 !
@@ -521,6 +524,9 @@
 !  Apply tracers point sources to the horizontal advection terms,
 !  if any.
 !
+!    Dsrc(is) = 0,  flow across grid cell u-face (positive or negative)
+!    Dsrc(is) = 1,  flow across grid cell v-face (positive or negative)
+!
           IF (LuvSrc(ng)) THEN
             DO is=1,Nsrc(ng)
               Isrc=SOURCES(ng)%Isrc(is)
@@ -534,7 +540,7 @@
                   ELSE
                     FX(Isrc,Jsrc)=0.0_r8
                   END IF
-                ELSE
+                ELSE IF (INT(SOURCES(ng)%Dsrc(is)).eq.1) THEN
                   IF (LtracerSrc(itrc,ng)) THEN
                     FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                    &
      &                            SOURCES(ng)%Tsrc(is,k,itrc)
@@ -1143,7 +1149,7 @@
      &                    t(:,:,:,3,:))
 #  endif
 # endif
-
+!
       RETURN
       END SUBROUTINE pre_step3d_tile
 #endif

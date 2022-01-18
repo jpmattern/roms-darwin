@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       MODULE inp_par_mod
 !
-!svn $Id: inp_par.F 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: inp_par.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -30,12 +30,19 @@
       USE mod_strings
 #endif
 !
-      USE dateclock_mod,  ONLY : get_date
+      USE dateclock_mod,   ONLY : get_date
 #ifdef DISTRIBUTE
-      USE distribute_mod, ONLY : mp_bcasti, mp_bcasts
+      USE distribute_mod,  ONLY : mp_bcasti, mp_bcasts
 #endif
-      USE ran_state,      ONLY : ran_seed
-      USE strings_mod,    ONLY : FoundError
+      USE lbc_mod,         ONLY : lbc_report
+      USE ran_state,       ONLY : ran_seed
+#ifdef NESTING
+      USE set_contact_mod, ONLY : set_contact
+#endif
+      USE strings_mod,     ONLY : FoundError
+#ifdef SOLVE3D
+      USE tadv_mod,        ONLY : tadv_report
+#endif
 !
       implicit none
 !
@@ -54,15 +61,19 @@
       integer :: MaxHaloLenI, MaxHaloLenJ
 #endif
       integer :: ibry, inp, out, i, ic, ifield, itrc, j, ng, npts
-      integer :: sequence, varid
+      integer :: io_err, sequence, varid
 !
       real(r8) :: cff
       real(r8), parameter :: epsilon = 1.0E-8_r8
       real(r8), parameter :: spv = 0.0_r8
 !
-      character (len=10) :: stdout_file
+      character (len=10 ) :: stdout_file
+      character (len=256) :: io_errmsg
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
-      SourceFile=__FILE__
+      SourceFile=MyFile
 !
 !-----------------------------------------------------------------------
 !  Read in and report input model parameters.
@@ -88,11 +99,23 @@
        IF (Master) THEN
          IF (Lappend) THEN
            OPEN (stdout, FILE=TRIM(stdout_file), FORM='formatted',      &
-     &           STATUS='old', POSITION='append', ACTION='write')
+     &           STATUS='old', POSITION='append', ACTION='write',       &
+     &           IOSTAT=io_err, IOMSG=io_errmsg)
          ELSE
            OPEN (stdout, FILE=TRIM(stdout_file), FORM='formatted',      &
-     &           STATUS='replace')
+     &           STATUS='replace', IOSTAT=io_err, IOMSG=io_errmsg)
          END IF
+       END IF
+# ifdef DISTRIBUTE
+       CALL mp_bcasti (1, model, io_err)
+# endif
+       IF (io_err.ne.0) THEN
+         IF (Master) WRITE (stdout,10) TRIM(stdout_file),               &
+     &                                 TRIM(io_errmsg)
+         exit_flag=5
+ 10      FORMAT (/,' INP_PAR - Cannot open standard output file: ',a,   &
+     &           /,11x,'ERROR: ',a)
+         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
        END IF
 #endif
 !
@@ -130,27 +153,26 @@
 !  Read in physical model input parameters.
 !-----------------------------------------------------------------------
 !
-      IF (Master.and.Lwrite) WRITE (out,10) version, TRIM(date_str)
- 10   FORMAT (80('-'),/,                                                &
+      IF (Master.and.Lwrite) WRITE (out,20) version, TRIM(date_str)
+ 20   FORMAT (80('-'),/,                                                &
               ' Model Input Parameters:  ROMS/TOMS version ',a,/,       &
      &        26x,a,/,80('-'))
 
-#ifdef MODEL_COUPLING
+#if defined MODEL_COUPLING || defined JEDI
 !
 !  In multiple model coupling, the ocean input physical parameter
 !  script needs to be opened and processed as a regular file.
 !  Its file name is specified in the coupling standard input script.
 !
       OPEN (inp, FILE=TRIM(Iname), FORM='formatted', STATUS='old',      &
-     &      ERR=20)
-      GO TO 40
- 20   IF (Master) WRITE (stdout,30)
-      exit_flag=2
-      RETURN
- 30   FORMAT (/,' INP_PAR - Unable to open ROMS/TOMS input script ',    &
-     &              'file.')
- 40   CONTINUE
-
+     &      IOSTAT=io_err, IOMSG=io_errmsg)
+      IF (io_err.ne.0) THEN
+        IF (Master) WRITE (stdout,30) TRIM(io_errmsg)
+        exit_flag=5
+        RETURN
+ 30     FORMAT (/,' INP_PAR - Unable to open ROMS/TOMS input script ',  &
+     &              'file.',/,11x,'ERROR: ',a)
+      END IF
 #else
 # ifdef DISTRIBUTE
 !
@@ -163,21 +185,21 @@
       IF (Master) CALL my_getarg (1, Iname)
       CALL mp_bcasts (1, model, Iname)
       OPEN (inp, FILE=TRIM(Iname), FORM='formatted', STATUS='old',      &
-     &      ERR=20)
-      GO TO 40
- 20   IF (Master) WRITE (stdout,30)
-      exit_flag=2
-      RETURN
- 30   FORMAT (/,' INP_PAR - Unable to open ROMS/TOMS input script ',    &
-     &              'file.',                                            &
-     &        /,11x,'In distributed-memory applications, the input',    &
-     &        /,11x,'script file is processed in parallel. The Unix',   &
-     &        /,11x,'routine GETARG is used to get script file name.',  &
-     &        /,11x,'For example, in MPI applications make sure that',  &
-     &        /,11x,'command line is something like:',/,                &
-     &        /,11x,'mpirun -np 4 romsM roms.in',/,/,11x,'and not',/,   &
-     &        /,11x,'mpirun -np 4 romsM < roms.in',/)
- 40   CONTINUE
+     &      IOSTAT=io_err, IOMSG=io_errmsg)
+      IF (io_err.ne.0) THEN
+        IF (Master) WRITE (stdout,30) TRIM(io_errmsg)
+        exit_flag=5
+        RETURN
+ 30     FORMAT (/,' INP_PAR - Unable to open ROMS/TOMS input script ',  &
+     &              'file.',/,11x,'ERROR: ',a,/,                        &
+     &          /,11x,'In distributed-memory applications, the input',  &
+     &          /,11x,'script file is processed in parallel. The Unix', &
+     &          /,11x,'routine GETARG is used to get script file name.',&
+     &          /,11x,'For example, in MPI applications make sure that',&
+     &          /,11x,'command line is something like:',/,              &
+     &          /,11x,'mpirun -np 4 romsM roms.in',/,/,11x,'and not',/, &
+     &          /,11x,'mpirun -np 4 romsM < roms.in',/)
+      END IF
 # endif
 #endif
 !
@@ -185,8 +207,7 @@
 #ifdef DISTRIBUTE
       CALL mp_bcasti (1, model, exit_flag)
 #endif
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #if defined SPLIT_4DVAR && SUPPRESS_REPORT
 !
@@ -209,8 +230,7 @@
       OPEN (15, FILE=TRIM(bparnam), FORM='formatted', STATUS='old')
 
       CALL read_BioPar (model, 15, out, Lwrite)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef SEDIMENT
 !
@@ -221,8 +241,7 @@
       OPEN (25, FILE=TRIM(sparnam), FORM='formatted', STATUS='old')
 
       CALL read_SedPar (model, 25, out, Lwrite)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef NESTING
 !
@@ -232,8 +251,7 @@
 !-----------------------------------------------------------------------
 !
       CALL set_contact (1, model)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 !
 !-----------------------------------------------------------------------
@@ -748,8 +766,7 @@
 #ifdef DISTRIBUTE
       CALL mp_bcasti (1, model, exit_flag)
 #endif
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Report tile minimum and maximum fractional grid coordinates.
 !
@@ -843,8 +860,7 @@
       OPEN (35, FILE=TRIM(aparnam), FORM='formatted', STATUS='old')
 
       CALL read_AssPar (model, 35, out, Lwrite)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef FLOATS
 !
@@ -855,8 +871,7 @@
       OPEN (45, FILE=TRIM(fposnam), FORM='formatted', STATUS='old')
 
       CALL read_FltPar (model, 45, out, Lwrite)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #if defined FLOATS && defined FLOAT_BIOLOGY
 !
@@ -867,8 +882,7 @@
       OPEN (50, FILE=TRIM(fbionam), FORM='formatted', STATUS='old')
 
       CALL read_FltBioPar (model, 50, out, Lwrite)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef STATIONS
 !
@@ -879,8 +893,7 @@
       OPEN (55, FILE=TRIM(sposnam), FORM='formatted', STATUS='old')
 
       CALL read_StaPar (model, 55, out, Lwrite)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef SOLVE3D
 !
@@ -896,8 +909,7 @@
      &          t31,2('------------',7x))
       END IF
       CALL tadv_report (out, iNLM, Hadvection, Vadvection, Lwrite)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # if defined ADJOINT || defined TANGENT || defined TL_IOMS
 !
@@ -905,8 +917,7 @@
         WRITE (out,120) 'TLM, RPM, and ADM'
       END IF
       CALL tadv_report (out, iADM, ad_Hadvection, ad_Vadvection, Lwrite)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 #endif
 #if defined TANGENT || defined TL_IOMS
@@ -959,8 +970,7 @@
         END DO
 #endif
       END IF
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Compute various constants.
@@ -1252,8 +1262,7 @@
       CALL mp_bcasti (1, model, exit_flag)
       CALL mp_bcasts (1, model, Coptions)
 #endif
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Initialize random number sequence so we can get identical results

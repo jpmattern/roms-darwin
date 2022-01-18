@@ -2,9 +2,9 @@
 #if defined NONLINEAR && defined SOLVE3D
       SUBROUTINE main3d (RunInterval)
 !
-!svn $Id: main3d.F 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: main3d.F 1099 2022-01-06 21:01:01Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -47,6 +47,9 @@
       USE diag_mod,             ONLY : diag
 # ifdef TLM_CHECK
       USE dotproduct_mod,       ONLY : nl_dotproduct
+# endif
+# ifdef TIDE_GENERATING_FORCES
+      USE equilibrium_tide_mod, ONLY : equilibrium_tide
 # endif
 # if defined NLM_OUTER                || \
      defined RBL4DVAR                 || \
@@ -129,13 +132,16 @@
 !  Local variable declarations.
 !
       logical :: DoNestLayer, Time_Step
-
+!
       integer :: Nsteps, Rsteps
       integer :: ig, il, istep, ng, nl, tile
       integer :: my_iif, next_indx1
 # ifdef FLOATS
       integer :: Lend, Lstr, chunk_size
 # endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !  Time-step nonlinear 3D primitive equations by the specified time.
@@ -169,8 +175,7 @@
 !  or just a single step (RunInterval=0).
 !
           CALL ntimesteps (iNLM, RunInterval, nl, Nsteps, Rsteps)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           IF ((nl.le.0).or.(nl.gt.NestLayers)) EXIT
 !
 !  Time-step governing equations for Nsteps.
@@ -181,13 +186,14 @@
 !
             DO ig=1,GridsInLayer(nl)
               ng=GridNumber(ig,nl)
-              iic(ng)=iic(ng)+1
               nstp(ng)=1+MOD(iic(ng)-ntstart(ng),2)
               nnew(ng)=3-nstp(ng)
               nrhs(ng)=nstp(ng)
-              time(ng)=time(ng)+dt(ng)
+#ifdef JEDI
+              jic(ng)=jic(ng)+1
+              time4jedi(ng)=time4jedi(ng)+dt(ng)
+#endif
               tdays(ng)=time(ng)*sec2day
-              CALL time_string (time(ng), time_code(ng))
               IF (step_counter(ng).eq.Rsteps) Time_Step=.FALSE.
             END DO
 !
@@ -201,8 +207,8 @@
               CALL get_data (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END DO
 !
 !-----------------------------------------------------------------------
@@ -217,8 +223,7 @@
               END DO
 !$OMP BARRIER
             END DO
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # if defined NLM_OUTER                || \
      defined RBL4DVAR                 || \
@@ -303,6 +308,9 @@
 # ifndef TS_FIXED
                 CALL rho_eos (ng, tile, iNLM)
 # endif
+# ifdef TIDE_GENERATING_FORCES
+                CALL equilibrium_tide (ng, tile, iNLM)
+# endif
                 CALL diag (ng, tile)
 # ifdef TLM_CHECK
                 CALL nl_dotproduct (ng, tile, Lnew(ng))
@@ -310,8 +318,7 @@
               END DO
 !$OMP BARRIER
             END DO
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # if defined ATM_COUPLING && defined MCT_LIB
 !
@@ -375,7 +382,7 @@
               ng=GridNumber(ig,nl)
               DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef BULK_FLUXES
-#  if defined FOUR_DVAR && defined NL_BULK_FLUXES
+#  if defined FOUR_DVAR && defined PRIOR_BULK_FLUXES
                 IF (Nrun.eq.1) CALL bulk_flux (ng, tile)
 #  else
                 CALL bulk_flux (ng, tile)
@@ -515,8 +522,7 @@
               CALL output (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-              IF ((FoundError(exit_flag, NoError, __LINE__,             &
-     &                        __FILE__)).or.                            &
+              IF ((FoundError(exit_flag, NoError, __LINE__, MyFile)).or.&
      &            ((iic(ng).eq.(ntend(ng)+1)).and.(ng.eq.Ngrids))) THEN
                 RETURN
               END IF
@@ -635,9 +641,11 @@
                 IF (ANY(CompositeGrid(:,ng))) THEN
                   CALL nesting (ng, iNLM, n2dPS)
                 END IF
+#  ifdef NESTING_DEBUG
                 IF (RefinedGrid(ng).and.(RefineScale(ng).gt.0)) THEN
                   CALL nesting (ng, iNLM, nmflx)
                 END IF
+#  endif
               END DO
 # endif
 !
@@ -682,9 +690,11 @@
                 IF (ANY(CompositeGrid(:,ng))) THEN
                   CALL nesting (ng, iNLM, n2dCS)
                 END IF
+#  ifdef NESTING_DEBUG
                 IF (RefinedGrid(ng).and.(RefineScale(ng).gt.0)) THEN
                   CALL nesting (ng, iNLM, nmflx)
                 END IF
+#  endif
               END DO
 # endif
             END DO LOOP_2D
@@ -735,7 +745,7 @@
 !
             DO ig=1,GridsInLayer(nl)
               ng=GridNumber(ig,nl)
-              CALL nesting (ng, iNLM, nzwgt)
+!             CALL nesting (ng, iNLM, nzwgt)
             END DO
 # endif
 !
@@ -894,6 +904,18 @@
               END IF
             END DO
 # endif
+!
+!-----------------------------------------------------------------------
+!  Advance time index and time clock.
+!-----------------------------------------------------------------------
+!
+            DO ig=1,GridsInLayer(nl)
+              ng=GridNumber(ig,nl)
+              iic(ng)=iic(ng)+1
+              time(ng)=time(ng)+dt(ng)
+              step_counter(ng)=step_counter(ng)-1
+              CALL time_string (time(ng), time_code(ng))
+            END DO
 
           END DO STEP_LOOP
 

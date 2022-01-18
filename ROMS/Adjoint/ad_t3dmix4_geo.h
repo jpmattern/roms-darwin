@@ -1,17 +1,28 @@
-      SUBROUTINE ad_t3dmix4 (ng, tile)
+      MODULE ad_t3dmix4_mod
 !
-!svn $Id: ad_t3dmix4_geo.h 1009 2020-03-03 20:38:52Z arango $
-!************************************************** Hernan G. Arango ***
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!svn $Id: ad_t3dmix4_geo.h 1099 2022-01-06 21:01:01Z arango $
+!================================================== Hernan G. Arango ===
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
-!***********************************************************************
+!=======================================================================
 !                                                                      !
 !  This subroutine computes adjoint horizontal biharmonic mixing of    !
 !  tracers along geopotential surfaces.                                !
 !                                                                      !
 !  BASIC STATE variables needed: diff4, Hz, t, z_r                     !
 !                                                                      !
+!=======================================================================
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC ad_t3dmix4
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE ad_t3dmix4 (ng, tile)
 !***********************************************************************
 !
       USE mod_param
@@ -32,85 +43,89 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iADM, 28, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 28, __LINE__, MyFile)
 #endif
-      CALL ad_t3dmix4_tile (ng, tile,                                   &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      IminS, ImaxS, JminS, JmaxS,                 &
-     &                      nrhs(ng), nstp(ng), nnew(ng),               &
+      CALL ad_t3dmix4_geo_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          IminS, ImaxS, JminS, JmaxS,             &
+     &                          nrhs(ng), nstp(ng), nnew(ng),           &
 #ifdef MASKING
-     &                      GRID(ng) % umask,                           &
-     &                      GRID(ng) % vmask,                           &
+     &                          GRID(ng) % umask,                       &
+     &                          GRID(ng) % vmask,                       &
 #endif
 #ifdef WET_DRY_NOT_YET
-     &                      GRID(ng) % umask_wet,                       &
-     &                      GRID(ng) % vmask_wet,                       &
+     &                          GRID(ng) % umask_wet,                   &
+     &                          GRID(ng) % vmask_wet,                   &
 #endif
-     &                      GRID(ng) % om_v,                            &
-     &                      GRID(ng) % on_u,                            &
-     &                      GRID(ng) % pm,                              &
-     &                      GRID(ng) % pn,                              &
-     &                      GRID(ng) % Hz,                              &
-     &                      GRID(ng) % ad_Hz,                           &
-     &                      GRID(ng) % z_r,                             &
-     &                      GRID(ng) % ad_z_r,                          &
+     &                          GRID(ng) % om_v,                        &
+     &                          GRID(ng) % on_u,                        &
+     &                          GRID(ng) % pm,                          &
+     &                          GRID(ng) % pn,                          &
+     &                          GRID(ng) % Hz,                          &
+     &                          GRID(ng) % ad_Hz,                       &
+     &                          GRID(ng) % z_r,                         &
+     &                          GRID(ng) % ad_z_r,                      &
 #ifdef DIFF_3DCOEF
 # ifdef TS_U3ADV_SPLIT
-     &                      MIXING(ng) % diff3d_u,                      &
-     &                      MIXING(ng) % diff3d_v,                      &
+     &                          MIXING(ng) % diff3d_u,                  &
+     &                          MIXING(ng) % diff3d_v,                  &
 # else
-     &                      MIXING(ng) % diff3d_r,                      &
+     &                          MIXING(ng) % diff3d_r,                  &
 # endif
 #else
-     &                      MIXING(ng) % diff4,                         &
+     &                          MIXING(ng) % diff4,                     &
 #endif
 #ifdef TS_MIX_CLIMA
-     &                      CLIMA(ng) % tclm,                           &
+     &                          CLIMA(ng) % tclm,                       &
 #endif
 #ifdef DIAGNOSTICS_TS
-!!   &                      DIAGS(ng) % DiaTwrk,                        &
+!!   &                          DIAGS(ng) % DiaTwrk,                    &
 #endif
-     &                      OCEAN(ng) % t,                              &
-     &                      OCEAN(ng) % ad_t)
+     &                          OCEAN(ng) % t,                          &
+     &                          OCEAN(ng) % ad_t)
 #ifdef PROFILE
-      CALL wclock_off (ng, iADM, 28, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 28, __LINE__, MyFile)
 #endif
+!
       RETURN
       END SUBROUTINE ad_t3dmix4
 !
 !***********************************************************************
-      SUBROUTINE ad_t3dmix4_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj,                   &
-     &                            IminS, ImaxS, JminS, JmaxS,           &
-     &                            nrhs, nstp, nnew,                     &
+      SUBROUTINE ad_t3dmix4_geo_tile (ng, tile,                         &
+     &                                LBi, UBi, LBj, UBj,               &
+     &                                IminS, ImaxS, JminS, JmaxS,       &
+     &                                nrhs, nstp, nnew,                 &
 #ifdef MASKING
-     &                            umask, vmask,                         &
+     &                                umask, vmask,                     &
 #endif
 #ifdef WET_DRY_NOT_YET
-     &                            umask_wet, vmask_wet,                 &
+     &                                umask_wet, vmask_wet,             &
 #endif
-     &                            om_v, on_u, pm, pn,                   &
-     &                            Hz, ad_Hz,                            &
-     &                            z_r, ad_z_r,                          &
+     &                                om_v, on_u, pm, pn,               &
+     &                                Hz, ad_Hz,                        &
+     &                                z_r, ad_z_r,                      &
 #ifdef DIFF_3DCOEF
 # ifdef TS_U3ADV_SPLIT
-     &                            diff3d_u, diff3d_v,                   &
+     &                                diff3d_u, diff3d_v,               &
 # else
-     &                            diff3d_r,                             &
+     &                                diff3d_r,                         &
 # endif
 #else
-     &                            diff4,                                &
+     &                                diff4,                            &
 #endif
 #ifdef TS_MIX_CLIMA
-     &                            tclm,                                 &
+     &                                tclm,                             &
 #endif
 #ifdef DIAGNOSTICS_TS
-!!   &                            DiaTwrk,                              &
+!!   &                                DiaTwrk,                          &
 #endif
-     &                            t, ad_t)
+     &                                t, ad_t)
 !***********************************************************************
 !
       USE mod_param
@@ -739,14 +754,14 @@
 #ifdef DIAGNOSTICS_TS
 !!              DiaTwrk(i,j,k,itrc,iThdif)=-cff
 #endif
-!>              tl_t(i,j,k,nnew,itrc)=tl_t(i,j,k,nnew,itrc)-tl_cff
-!>
+!^              tl_t(i,j,k,nnew,itrc)=tl_t(i,j,k,nnew,itrc)-tl_cff
+!^
                 ad_cff=ad_cff-ad_t(i,j,k,nnew,itrc)
-!>              tl_cff=dt(ng)*pm(i,j)*pn(i,j)*                          &
-!>   &                        (tl_FX(i+1,j)-tl_FX(i,j)+                 &
-!>   &                         tl_FE(i,j+1)-tl_FE(i,j))+                &
-!>   &                 dt(ng)*(tl_FS(i,j,k2)-tl_FS(i,j,k1))
-!>
+!^              tl_cff=dt(ng)*pm(i,j)*pn(i,j)*                          &
+!^   &                        (tl_FX(i+1,j)-tl_FX(i,j)+                 &
+!^   &                         tl_FE(i,j+1)-tl_FE(i,j))+                &
+!^   &                 dt(ng)*(tl_FS(i,j,k2)-tl_FS(i,j,k1))
+!^
                 adfac=dt(ng)*ad_cff
                 adfac1=adfac*pm(i,j)*pn(i,j)
                 ad_FS(i,j,k1)=ad_FS(i,j,k1)-adfac
@@ -779,29 +794,29 @@
                   cff2=MIN(dZde(i,j+1,k2),0.0_r8)
                   cff3=MAX(dZde(i,j  ,k2),0.0_r8)
                   cff4=MAX(dZde(i,j+1,k1),0.0_r8)
-!>                tl_FS(i,j,k2)=tl_FS(i,j,k2)+                          &
-!>   &                          dife*                                   &
-!>   &                          (tl_cff1*(cff1*dTdz(i,j,k2)-            &
-!>   &                                    dTde(i,j  ,k1))+              &
-!>   &                           tl_cff2*(cff2*dTdz(i,j,k2)-            &
-!>   &                                    dTde(i,j+1,k2))+              &
-!>   &                           tl_cff3*(cff3*dTdz(i,j,k2)-            &
-!>   &                                    dTde(i,j  ,k2))+              &
-!>   &                           tl_cff4*(cff4*dTdz(i,j,k2)-            &
-!>   &                                    dTde(i,j+1,k1))+              &
-!>   &                           cff1*(tl_cff1*dTdz(i,j,k2)+            &
-!>   &                                 cff1*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTde(i,j  ,k1))+              &
-!>   &                           cff2*(tl_cff2*dTdz(i,j,k2)+            &
-!>   &                                 cff2*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTde(i,j+1,k2))+              &
-!>   &                           cff3*(tl_cff3*dTdz(i,j,k2)+            &
-!>   &                                 cff3*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTde(i,j  ,k2))+              &
-!>   &                           cff4*(tl_cff4*dTdz(i,j,k2)+            &
-!>   &                                 cff4*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTde(i,j+1,k1)))
-!>
+!^                tl_FS(i,j,k2)=tl_FS(i,j,k2)+                          &
+!^   &                          dife*                                   &
+!^   &                          (tl_cff1*(cff1*dTdz(i,j,k2)-            &
+!^   &                                    dTde(i,j  ,k1))+              &
+!^   &                           tl_cff2*(cff2*dTdz(i,j,k2)-            &
+!^   &                                    dTde(i,j+1,k2))+              &
+!^   &                           tl_cff3*(cff3*dTdz(i,j,k2)-            &
+!^   &                                    dTde(i,j  ,k2))+              &
+!^   &                           tl_cff4*(cff4*dTdz(i,j,k2)-            &
+!^   &                                    dTde(i,j+1,k1))+              &
+!^   &                           cff1*(tl_cff1*dTdz(i,j,k2)+            &
+!^   &                                 cff1*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTde(i,j  ,k1))+              &
+!^   &                           cff2*(tl_cff2*dTdz(i,j,k2)+            &
+!^   &                                 cff2*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTde(i,j+1,k2))+              &
+!^   &                           cff3*(tl_cff3*dTdz(i,j,k2)+            &
+!^   &                                 cff3*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTde(i,j  ,k2))+              &
+!^   &                           cff4*(tl_cff4*dTdz(i,j,k2)+            &
+!^   &                                 cff4*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTde(i,j+1,k1)))
+!^
                   adfac=dife*ad_FS(i,j,k2)
                   ad_cff1=ad_cff1+                                      &
      &                    (2.0_r8*cff1*dTdz(i,j,k2)-dTde(i,j  ,k1))*    &
@@ -824,33 +839,33 @@
                   ad_dTde(i,j+1,k2)=ad_dTde(i,j+1,k2)-cff2*adfac
                   ad_dTde(i,j  ,k2)=ad_dTde(i,j  ,k2)-cff3*adfac
                   ad_dTde(i,j+1,k1)=ad_dTde(i,j+1,k1)-cff4*adfac
-!>                tl_cff4=(0.5_r8+SIGN(0.5_r8, dZde(i,j+1,k1)))*        &
-!>   &                    tl_dZde(i,j+1,k1)
-!>
+!^                tl_cff4=(0.5_r8+SIGN(0.5_r8, dZde(i,j+1,k1)))*        &
+!^   &                    tl_dZde(i,j+1,k1)
+!^
                   ad_dZde(i,j+1,k1)=ad_dZde(i,j+1,k1)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                            dZde(i,j+1,k1)))*     &
      &                              ad_cff4
                   ad_cff4=0.0_r8
-!>                tl_cff3=(0.5_r8+SIGN(0.5_r8, dZde(i,j  ,k2)))*        &
-!>   &                    tl_dZde(i,j  ,k2)
-!>
+!^                tl_cff3=(0.5_r8+SIGN(0.5_r8, dZde(i,j  ,k2)))*        &
+!^   &                    tl_dZde(i,j  ,k2)
+!^
                   ad_dZde(i,j  ,k2)=ad_dZde(i,j  ,k2)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                            dZde(i,j  ,k2)))*     &
      &                              ad_cff3
                   ad_cff3=0.0_r8
-!>                tl_cff2=(0.5_r8+SIGN(0.5_r8,-dZde(i,j+1,k2)))*        &
-!>   &                    tl_dZde(i,j+1,k2)
-!>
+!^                tl_cff2=(0.5_r8+SIGN(0.5_r8,-dZde(i,j+1,k2)))*        &
+!^   &                    tl_dZde(i,j+1,k2)
+!^
                   ad_dZde(i,j+1,k2)=ad_dZde(i,j+1,k2)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                           -dZde(i,j+1,k2)))*     &
      &                              ad_cff2
                   ad_cff2=0.0_r8
-!>                tl_cff1=(0.5_r8+SIGN(0.5_r8,-dZde(i,j  ,k1)))*        &
-!>   &                    tl_dZde(i,j  ,k1)
-!>
+!^                tl_cff1=(0.5_r8+SIGN(0.5_r8,-dZde(i,j  ,k1)))*        &
+!^   &                    tl_dZde(i,j  ,k1)
+!^
                   ad_dZde(i,j  ,k1)=ad_dZde(i,j  ,k1)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                           -dZde(i,j  ,k1)))*     &
@@ -861,28 +876,28 @@
                   cff2=MIN(dZdx(i+1,j,k2),0.0_r8)
                   cff3=MAX(dZdx(i  ,j,k2),0.0_r8)
                   cff4=MAX(dZdx(i+1,j,k1),0.0_r8)
-!>                tl_FS(i,j,k2)=difx*                                   &
-!>   &                          (tl_cff1*(cff1*dTdz(i,j,k2)-            &
-!>   &                                    dTdx(i  ,j,k1))+              &
-!>   &                           tl_cff2*(cff2*dTdz(i,j,k2)-            &
-!>   &                                    dTdx(i+1,j,k2))+              &
-!>   &                           tl_cff3*(cff3*dTdz(i,j,k2)-            &
-!>   &                                    dTdx(i  ,j,k2))+              &
-!>   &                           tl_cff4*(cff4*dTdz(i,j,k2)-            &
-!>   &                                    dTdx(i+1,j,k1))+              &
-!>   &                           cff1*(tl_cff1*dTdz(i,j,k2)+            &
-!>   &                                 cff1*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTdx(i  ,j,k1))+              &
-!>   &                           cff2*(tl_cff2*dTdz(i,j,k2)+            &
-!>   &                                 cff2*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTdx(i+1,j,k2))+              &
-!>   &                           cff3*(tl_cff3*dTdz(i,j,k2)+            &
-!>   &                                 cff3*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTdx(i  ,j,k2))+              &
-!>   &                           cff4*(tl_cff4*dTdz(i,j,k2)+            &
-!>   &                                 cff4*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTdx(i+1,j,k1)))
-!>
+!^                tl_FS(i,j,k2)=difx*                                   &
+!^   &                          (tl_cff1*(cff1*dTdz(i,j,k2)-            &
+!^   &                                    dTdx(i  ,j,k1))+              &
+!^   &                           tl_cff2*(cff2*dTdz(i,j,k2)-            &
+!^   &                                    dTdx(i+1,j,k2))+              &
+!^   &                           tl_cff3*(cff3*dTdz(i,j,k2)-            &
+!^   &                                    dTdx(i  ,j,k2))+              &
+!^   &                           tl_cff4*(cff4*dTdz(i,j,k2)-            &
+!^   &                                    dTdx(i+1,j,k1))+              &
+!^   &                           cff1*(tl_cff1*dTdz(i,j,k2)+            &
+!^   &                                 cff1*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTdx(i  ,j,k1))+              &
+!^   &                           cff2*(tl_cff2*dTdz(i,j,k2)+            &
+!^   &                                 cff2*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTdx(i+1,j,k2))+              &
+!^   &                           cff3*(tl_cff3*dTdz(i,j,k2)+            &
+!^   &                                 cff3*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTdx(i  ,j,k2))+              &
+!^   &                           cff4*(tl_cff4*dTdz(i,j,k2)+            &
+!^   &                                 cff4*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTdx(i+1,j,k1)))
+!^
                   adfac=difx*ad_FS(i,j,k2)
                   ad_cff1=ad_cff1+                                      &
      &                    (2.0_r8*cff1*dTdz(i,j,k2)-dTdx(i  ,j,k1))*    &
@@ -906,33 +921,33 @@
                   ad_dTdx(i  ,j,k2)=ad_dTdx(i  ,j,k2)-cff3*adfac
                   ad_dTdx(i+1,j,k1)=ad_dTdx(i+1,j,k1)-cff4*adfac
                   ad_FS(i,j,k2)=0.0_r8
-!>                tl_cff4=(0.5_r8+SIGN(0.5_r8, dZdx(i+1,j,k1)))*        &
-!>   &                    tl_dZdx(i+1,j,k1)
-!>
+!^                tl_cff4=(0.5_r8+SIGN(0.5_r8, dZdx(i+1,j,k1)))*        &
+!^   &                    tl_dZdx(i+1,j,k1)
+!^
                   ad_dZdx(i+1,j,k1)=ad_dZdx(i+1,j,k1)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                            dZdx(i+1,j,k1)))*     &
      &                              ad_cff4
                   ad_cff4=0.0_r8
-!>                tl_cff3=(0.5_r8+SIGN(0.5_r8, dZdx(i  ,j,k2)))*        &
-!>   &                    tl_dZdx(i  ,j,k2)
-!>
+!^                tl_cff3=(0.5_r8+SIGN(0.5_r8, dZdx(i  ,j,k2)))*        &
+!^   &                    tl_dZdx(i  ,j,k2)
+!^
                   ad_dZdx(i  ,j,k2)=ad_dZdx(i  ,j,k2)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                            dZdx(i  ,j,k2)))*     &
      &                              ad_cff3
                   ad_cff3=0.0_r8
-!>                tl_cff2=(0.5_r8+SIGN(0.5_r8,-dZdx(i+1,j,k2)))*        &
-!>   &                    tl_dZdx(i+1,j,k2)
-!>
+!^                tl_cff2=(0.5_r8+SIGN(0.5_r8,-dZdx(i+1,j,k2)))*        &
+!^   &                    tl_dZdx(i+1,j,k2)
+!^
                   ad_dZdx(i+1,j,k2)=ad_dZdx(i+1,j,k2)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                           -dZdx(i+1,j,k2)))*     &
      &                              ad_cff2
                   ad_cff2=0.0_r8
-!>                tl_cff1=(0.5_r8+SIGN(0.5_r8,-dZdx(i  ,j,k1)))*        &
-!>   &                    tl_dZdx(i  ,j,k1)
-!>
+!^                tl_cff1=(0.5_r8+SIGN(0.5_r8,-dZdx(i  ,j,k1)))*        &
+!^   &                    tl_dZdx(i  ,j,k1)
+!^
                   ad_dZdx(i  ,j,k1)=ad_dZdx(i  ,j,k1)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                           -dZdx(i  ,j,k1)))*     &
@@ -954,32 +969,32 @@
                 cff=0.25_r8*(diff4(i,j,itrc)+diff4(i,j-1,itrc))*        &
      &              om_v(i,j)
 #endif
-!>              tl_FE(i,j)=cff*                                         &
-!>   &                     ((tl_Hz(i,j,k)+tl_Hz(i,j-1,k))*              &
-!>   &                      (dTde(i,j,k1)-                              &
-!>   &                       0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*          &
-!>   &                                  (dTdz(i,j-1,k1)+                &
-!>   &                                   dTdz(i,j  ,k2))+               &
-!>   &                               MAX(dZde(i,j,k1),0.0_r8)*          &
-!>   &                                  (dTdz(i,j-1,k2)+                &
-!>   &                                   dTdz(i,j  ,k1))))+             &
-!>   &                      (Hz(i,j,k)+Hz(i,j-1,k))*                    &
-!>   &                      (tl_dTde(i,j,k1)-                           &
-!>   &                       0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*          &
-!>   &                                  (tl_dTdz(i,j-1,k1)+             &
-!>   &                                   tl_dTdz(i,j  ,k2))+            &
-!>   &                               MAX(dZde(i,j,k1),0.0_r8)*          &
-!>   &                                  (tl_dTdz(i,j-1,k2)+             &
-!>   &                                   tl_dTdz(i,j  ,k1)))-           &
-!>   &                       0.5_r8*((0.5_r8+                           &
-!>   &                                SIGN(0.5_r8,-dZde(i,j,k1)))*      &
-!>   &                               tl_dZde(i,j,k1)*                   &
-!>   &                               (dTdz(i,j-1,k1)+dTdz(i,j,k2))+     &
-!>   &                               (0.5_r8+                           &
-!>   &                                SIGN(0.5_r8, dZde(i,j,k1)))*      &
-!>   &                               tl_dZde(i,j,k1)*                   &
-!>   &                               (dTdz(i,j-1,k2)+dTdz(i,j,k1)))))
-!>
+!^              tl_FE(i,j)=cff*                                         &
+!^   &                     ((tl_Hz(i,j,k)+tl_Hz(i,j-1,k))*              &
+!^   &                      (dTde(i,j,k1)-                              &
+!^   &                       0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*          &
+!^   &                                  (dTdz(i,j-1,k1)+                &
+!^   &                                   dTdz(i,j  ,k2))+               &
+!^   &                               MAX(dZde(i,j,k1),0.0_r8)*          &
+!^   &                                  (dTdz(i,j-1,k2)+                &
+!^   &                                   dTdz(i,j  ,k1))))+             &
+!^   &                      (Hz(i,j,k)+Hz(i,j-1,k))*                    &
+!^   &                      (tl_dTde(i,j,k1)-                           &
+!^   &                       0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*          &
+!^   &                                  (tl_dTdz(i,j-1,k1)+             &
+!^   &                                   tl_dTdz(i,j  ,k2))+            &
+!^   &                               MAX(dZde(i,j,k1),0.0_r8)*          &
+!^   &                                  (tl_dTdz(i,j-1,k2)+             &
+!^   &                                   tl_dTdz(i,j  ,k1)))-           &
+!^   &                       0.5_r8*((0.5_r8+                           &
+!^   &                                SIGN(0.5_r8,-dZde(i,j,k1)))*      &
+!^   &                               tl_dZde(i,j,k1)*                   &
+!^   &                               (dTdz(i,j-1,k1)+dTdz(i,j,k2))+     &
+!^   &                               (0.5_r8+                           &
+!^   &                                SIGN(0.5_r8, dZde(i,j,k1)))*      &
+!^   &                               tl_dZde(i,j,k1)*                   &
+!^   &                               (dTdz(i,j-1,k2)+dTdz(i,j,k1)))))
+!^
                 adfac=cff*ad_FE(i,j)
                 adfac1=adfac*(dTde(i,j,k1)-                             &
      &                        0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*         &
@@ -1020,32 +1035,32 @@
                 cff=0.25_r8*(diff4(i,j,itrc)+diff4(i-1,j,itrc))*        &
      &              on_u(i,j)
 #endif
-!>              tl_FX(i,j)=cff*                                         &
-!>   &                     ((tl_Hz(i,j,k)+tl_Hz(i-1,j,k))*              &
-!>   &                      (dTdx(i,j,k1)-                              &
-!>   &                       0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*          &
-!>   &                                  (dTdz(i-1,j,k1)+                &
-!>   &                                   dTdz(i  ,j,k2))+               &
-!>   &                               MAX(dZdx(i,j,k1),0.0_r8)*          &
-!>   &                                  (dTdz(i-1,j,k2)+                &
-!>   &                                   dTdz(i  ,j,k1))))+             &
-!>   &                      (Hz(i,j,k)+Hz(i-1,j,k))*                    &
-!>   &                      (tl_dTdx(i,j,k1)-                           &
-!>   &                       0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*          &
-!>   &                                  (tl_dTdz(i-1,j,k1)+             &
-!>   &                                   tl_dTdz(i  ,j,k2))+            &
-!>   &                               MAX(dZdx(i,j,k1),0.0_r8)*          &
-!>   &                                  (tl_dTdz(i-1,j,k2)+             &
-!>   &                                   tl_dTdz(i  ,j,k1)))-           &
-!>   &                       0.5_r8*((0.5_r8+                           &
-!>   &                                SIGN(0.5_r8,-dZdx(i,j,k1)))*      &
-!>   &                               tl_dZdx(i,j,k1)*                   &
-!>   &                               (dTdz(i-1,j,k1)+dTdz(i,j,k2))+     &
-!>   &                               (0.5_r8+                           &
-!>   &                                SIGN(0.5_r8, dZdx(i,j,k1)))*      &
-!>   &                               tl_dZdx(i,j,k1)*                   &
-!>   &                               (dTdz(i-1,j,k2)+dTdz(i,j,k1)))))
-!>
+!^              tl_FX(i,j)=cff*                                         &
+!^   &                     ((tl_Hz(i,j,k)+tl_Hz(i-1,j,k))*              &
+!^   &                      (dTdx(i,j,k1)-                              &
+!^   &                       0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*          &
+!^   &                                  (dTdz(i-1,j,k1)+                &
+!^   &                                   dTdz(i  ,j,k2))+               &
+!^   &                               MAX(dZdx(i,j,k1),0.0_r8)*          &
+!^   &                                  (dTdz(i-1,j,k2)+                &
+!^   &                                   dTdz(i  ,j,k1))))+             &
+!^   &                      (Hz(i,j,k)+Hz(i-1,j,k))*                    &
+!^   &                      (tl_dTdx(i,j,k1)-                           &
+!^   &                       0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*          &
+!^   &                                  (tl_dTdz(i-1,j,k1)+             &
+!^   &                                   tl_dTdz(i  ,j,k2))+            &
+!^   &                               MAX(dZdx(i,j,k1),0.0_r8)*          &
+!^   &                                  (tl_dTdz(i-1,j,k2)+             &
+!^   &                                   tl_dTdz(i  ,j,k1)))-           &
+!^   &                       0.5_r8*((0.5_r8+                           &
+!^   &                                SIGN(0.5_r8,-dZdx(i,j,k1)))*      &
+!^   &                               tl_dZdx(i,j,k1)*                   &
+!^   &                               (dTdz(i-1,j,k1)+dTdz(i,j,k2))+     &
+!^   &                               (0.5_r8+                           &
+!^   &                                SIGN(0.5_r8, dZdx(i,j,k1)))*      &
+!^   &                               tl_dZdx(i,j,k1)*                   &
+!^   &                               (dTdz(i-1,j,k2)+dTdz(i,j,k1)))))
+!^
                 adfac=cff*ad_FX(i,j)
                 adfac1=adfac*(dTdx(i,j,k1)-                             &
      &                        0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*         &
@@ -1077,12 +1092,12 @@
           IF ((k.eq.0).or.(k.eq.N(ng))) THEN
             DO j=Jstr-1,Jend+1
               DO i=Istr-1,Iend+1
-!>              tl_FS(i,j,k2)=0.0_r8
-!>
+!^              tl_FS(i,j,k2)=0.0_r8
+!^
                 ad_FS(i,j,k2)=0.0_r8
 
-!>              tl_dTdz(i,j,k2)=0.0_r8
-!>
+!^              tl_dTdz(i,j,k2)=0.0_r8
+!^
                 ad_dTdz(i,j,k2)=0.0_r8
               END DO
             END DO
@@ -1090,19 +1105,19 @@
             DO j=Jstr-1,Jend+1
               DO i=Istr-1,Iend+1
                 cff=1.0_r8/(z_r(i,j,k+1)-z_r(i,j,k))
-!>              tl_dTdz(i,j,k2)=tl_cff*(LapT(i,j,k+1)-                  &
-!>   &                                  LapT(i,j,k  ))+                 &
-!>   &                          cff*(tl_LapT(i,j,k+1)-                  &
-!>   &                               tl_LapT(i,j,k  ))
-!>
+!^              tl_dTdz(i,j,k2)=tl_cff*(LapT(i,j,k+1)-                  &
+!^   &                                  LapT(i,j,k  ))+                 &
+!^   &                          cff*(tl_LapT(i,j,k+1)-                  &
+!^   &                               tl_LapT(i,j,k  ))
+!^
                 adfac=cff*ad_dTdz(i,j,k2)
                 ad_LapT(i,j,k  )=ad_LapT(i,j,k  )-adfac
                 ad_LapT(i,j,k+1)=ad_LapT(i,j,k+1)+adfac
                 ad_cff=ad_cff+(LapT(i,j,k+1)-                           &
      &                         LapT(i,j,k  ))*ad_dTdz(i,j,k2)
                 ad_dTdz(i,j,k2)=0.0_r8
-!>              tl_cff=-cff*cff*(tl_z_r(i,j,k+1)-tl_z_r(i,j,k))
-!>
+!^              tl_cff=-cff*cff*(tl_z_r(i,j,k+1)-tl_z_r(i,j,k))
+!^
                 adfac=-cff*cff*ad_cff
                 ad_z_r(i,j,k  )=ad_z_r(i,j,k  )-adfac
                 ad_z_r(i,j,k+1)=ad_z_r(i,j,k+1)+adfac
@@ -1120,16 +1135,16 @@
 #ifdef WET_DRY_NOT_YET
                 cff=cff*vmask_wet(i,j)
 #endif
-!>              tl_dTde(i,j,k2)=cff*(tl_LapT(i,j  ,k+1)-                &
-!>   &                               tl_LapT(i,j-1,k+1))
-!>
+!^              tl_dTde(i,j,k2)=cff*(tl_LapT(i,j  ,k+1)-                &
+!^   &                               tl_LapT(i,j-1,k+1))
+!^
                 adfac=cff*ad_dTde(i,j,k2)
                 ad_LapT(i,j-1,k+1)=ad_LapT(i,j-1,k+1)-adfac
                 ad_LapT(i,j  ,k+1)=ad_LapT(i,j  ,k+1)+adfac
                 ad_dTde(i,j,k2)=0.0_r8
-!>              tl_dZde(i,j,k2)=cff*(tl_z_r(i,j  ,k+1)-                 &
-!>   &                               tl_z_r(i,j-1,k+1))
-!>
+!^              tl_dZde(i,j,k2)=cff*(tl_z_r(i,j  ,k+1)-                 &
+!^   &                               tl_z_r(i,j-1,k+1))
+!^
                 adfac=cff*ad_dZde(i,j,k2)
                 ad_z_r(i,j-1,k+1)=ad_z_r(i,j-1,k+1)-adfac
                 ad_z_r(i,j  ,k+1)=ad_z_r(i,j  ,k+1)+adfac
@@ -1145,16 +1160,16 @@
 #ifdef WET_DRY_NOT_YET
                 cff=cff*umask_wet(i,j)
 #endif
-!>              tl_dTdx(i,j,k2)=cff*(tl_LapT(i  ,j,k+1)-                &
-!>   &                               tl_LapT(i-1,j,k+1))
-!>
+!^              tl_dTdx(i,j,k2)=cff*(tl_LapT(i  ,j,k+1)-                &
+!^   &                               tl_LapT(i-1,j,k+1))
+!^
                 adfac=cff*ad_dTdx(i,j,k2)
                 ad_LapT(i-1,j,k+1)=ad_LapT(i-1,j,k+1)-adfac
                 ad_LapT(i  ,j,k+1)=ad_LapT(i  ,j,k+1)+adfac
                 ad_dTdx(i,j,k2)=0.0_r8
-!>              tl_dZdx(i,j,k2)=cff*(tl_z_r(i  ,j,k+1)-                 &
-!>   &                               tl_z_r(i-1,j,k+1))
-!>
+!^              tl_dZdx(i,j,k2)=cff*(tl_z_r(i  ,j,k+1)-                 &
+!^   &                               tl_z_r(i-1,j,k+1))
+!^
                 adfac=cff*ad_dZdx(i,j,k2)
                 ad_z_r(i-1,j,k+1)=ad_z_r(i-1,j,k+1)-adfac
                 ad_z_r(i  ,j,k+1)=ad_z_r(i  ,j,k+1)+adfac
@@ -1177,10 +1192,10 @@
      &            CompositeGrid(ieast ,ng).or.EWperiodic(ng))) THEN
           IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
             DO k=1,N(ng)
-!>            tl_LapT(Iend+1,Jend+1,k)=0.5_r8*                          &
-!>   &                                 (tl_LapT(Iend  ,Jend+1,k)+       &
-!>   &                                  tl_LapT(Iend+1,Jend  ,k))
-!>
+!^            tl_LapT(Iend+1,Jend+1,k)=0.5_r8*                          &
+!^   &                                 (tl_LapT(Iend  ,Jend+1,k)+       &
+!^   &                                  tl_LapT(Iend+1,Jend  ,k))
+!^
               adfac=0.5_r8*ad_LapT(Iend+1,Jend+1,k)
               ad_LapT(Iend+1,Jend  ,k)=ad_LapT(Iend+1,Jend  ,k)+adfac
               ad_LapT(Iend  ,Jend+1,k)=ad_LapT(Iend  ,Jend+1,k)+adfac
@@ -1193,10 +1208,10 @@
      &            CompositeGrid(iwest ,ng).or.EWperiodic(ng))) THEN
           IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
             DO k=1,N(ng)
-!>            tl_LapT(Istr-1,Jend+1,k)=0.5_r8*                          &
-!>   &                                 (tl_LapT(Istr  ,Jend+1,k)+       &
-!>   &                                  tl_LapT(Istr-1,Jend  ,k))
-!>
+!^            tl_LapT(Istr-1,Jend+1,k)=0.5_r8*                          &
+!^   &                                 (tl_LapT(Istr  ,Jend+1,k)+       &
+!^   &                                  tl_LapT(Istr-1,Jend  ,k))
+!^
               adfac=0.5_r8*ad_LapT(Istr-1,Jend+1,k)
               ad_LapT(Istr-1,Jend  ,k)=ad_LapT(Istr-1,Jend  ,k)+adfac
               ad_LapT(Istr  ,Jend+1,k)=ad_LapT(Istr  ,Jend+1,k)+adfac
@@ -1209,10 +1224,10 @@
      &            CompositeGrid(ieast ,ng).or.EWperiodic(ng))) THEN
           IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
             DO k=1,N(ng)
-!>            tl_LapT(Iend+1,Jstr-1,k)=0.5_r8*                          &
-!>   &                                 (tl_LapT(Iend  ,Jstr-1,k)+       &
-!>   &                                  tl_LapT(Iend+1,Jstr  ,k))
-!>
+!^            tl_LapT(Iend+1,Jstr-1,k)=0.5_r8*                          &
+!^   &                                 (tl_LapT(Iend  ,Jstr-1,k)+       &
+!^   &                                  tl_LapT(Iend+1,Jstr  ,k))
+!^
               adfac=0.5_r8*ad_LapT(Iend+1,Jstr-1,k)
               ad_LapT(Iend  ,Jstr-1,k)=ad_LapT(Iend  ,Jstr-1,k)+adfac
               ad_LapT(Iend+1,Jstr  ,k)=ad_LapT(Iend+1,Jstr  ,k)+adfac
@@ -1225,10 +1240,10 @@
      &            CompositeGrid(iwest ,ng).or.EWperiodic(ng))) THEN
           IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
             DO k=1,N(ng)
-!>            tl_LapT(Istr-1,Jstr-1,k)=0.5_r8*                          &
-!>   &                                 (tl_LapT(Istr  ,Jstr-1,k)+       &
-!>   &                                     tl_LapT(Istr-1,Jstr  ,k))
-!>
+!^            tl_LapT(Istr-1,Jstr-1,k)=0.5_r8*                          &
+!^   &                                 (tl_LapT(Istr  ,Jstr-1,k)+       &
+!^   &                                     tl_LapT(Istr-1,Jstr  ,k))
+!^
               adfac=0.5_r8*ad_LapT(Istr-1,Jstr-1,k)
               ad_LapT(Istr  ,Jstr-1,k)=ad_LapT(Istr  ,Jstr-1,k)+adfac
               ad_LapT(Istr-1,Jstr  ,k)=ad_LapT(Istr-1,Jstr  ,k)+adfac
@@ -1242,16 +1257,16 @@
             IF (ad_LBC(inorth,isTvar(itrc),ng)%closed) THEN
               DO k=1,N(ng)
                 DO i=Imin,Imax
-!>                tl_LapT(i,Jend+1,k)=0.0_r8
-!>
+!^                tl_LapT(i,Jend+1,k)=0.0_r8
+!^
                   ad_LapT(i,Jend+1,k)=0.0_r8
                 END DO
               END DO
             ELSE
               DO k=1,N(ng)
                 DO i=Imin,Imax
-!>                tl_LapT(i,Jend+1,k)=tl_LapT(i,Jend,k)
-!>
+!^                tl_LapT(i,Jend+1,k)=tl_LapT(i,Jend,k)
+!^
                   ad_LapT(i,Jend,k)=ad_LapT(i,Jend,k)+                  &
      &                              ad_LapT(i,Jend+1,k)
                   ad_LapT(i,Jend+1,k)=0.0_r8
@@ -1266,16 +1281,16 @@
             IF (ad_LBC(isouth,isTvar(itrc),ng)%closed) THEN
               DO k=1,N(ng)
                 DO i=Imin,Imax
-!>                tl_LapT(i,Jstr-1,k)=0.0_r8
-!>
+!^                tl_LapT(i,Jstr-1,k)=0.0_r8
+!^
                   ad_LapT(i,Jstr-1,k)=0.0_r8
                 END DO
               END DO
             ELSE
               DO k=1,N(ng)
                 DO i=Imin,Imax
-!>                tl_LapT(i,Jstr-1,k)=tl_LapT(i,Jstr,k)
-!>
+!^                tl_LapT(i,Jstr-1,k)=tl_LapT(i,Jstr,k)
+!^
                   ad_LapT(i,Jstr,k)=ad_LapT(i,Jstr,k)+                  &
      &                              ad_LapT(i,Jstr-1,k)
                   ad_LapT(i,Jstr-1,k)=0.0_r8
@@ -1290,16 +1305,16 @@
             IF (ad_LBC(ieast,isTvar(itrc),ng)%closed) THEN
               DO k=1,N(ng)
                 DO j=Jmin,Jmax
-!>                tl_LapT(Iend+1,j,k)=0.0_r8
-!>
+!^                tl_LapT(Iend+1,j,k)=0.0_r8
+!^
                   ad_LapT(Iend+1,j,k)=0.0_r8
                 END DO
               END DO
             ELSE
               DO k=1,N(ng)
                 DO j=Jmin,Jmax
-!>                tl_LapT(Iend+1,j,k)=tl_LapT(Iend,j,k)
-!>
+!^                tl_LapT(Iend+1,j,k)=tl_LapT(Iend,j,k)
+!^
                   ad_LapT(Iend,j,k)=ad_LapT(Iend,j,k)+                  &
      &                              ad_LapT(Iend+1,j,k)
                   ad_LapT(Iend+1,j,k)=0.0_r8
@@ -1314,16 +1329,16 @@
             IF (ad_LBC(iwest,isTvar(itrc),ng)%closed) THEN
               DO k=1,N(ng)
                 DO j=Jmin,Jmax
-!>                tl_LapT(Istr-1,j,k)=0.0_r8
-!>
+!^                tl_LapT(Istr-1,j,k)=0.0_r8
+!^
                   ad_LapT(Istr-1,j,k)=0.0_r8
                 END DO
               END DO
             ELSE
               DO k=1,N(ng)
                 DO j=Jmin,Jmax
-!>                tl_LapT(Istr-1,j,k)=tl_LapT(Istr,j,k)
-!>
+!^                tl_LapT(Istr-1,j,k)=tl_LapT(Istr,j,k)
+!^
                   ad_LapT(Istr,j,k)=ad_LapT(Istr,j,k)+                  &
      &                              ad_LapT(Istr-1,j,k)
                   ad_LapT(Istr-1,j,k)=0.0_r8
@@ -1598,15 +1613,15 @@
               DO i=Imin,Imax
                 cff=pm(i,j)*pn(i,j)
                 cff1=1.0_r8/Hz(i,j,k)
-!>              tl_LapT(i,j,k)=tl_cff1*(cff*                            &
-!>   &                                  (FX(i+1,j)-FX(i,j)+             &
-!>   &                                   FE(i,j+1)-FE(i,j))+            &
-!>   &                                  (FS(i,j,k2)-FS(i,j,k1)))+       &
-!>   &                         cff1*(cff*                               &
-!>   &                               (tl_FX(i+1,j)-tl_FX(i,j)+          &
-!>   &                                tl_FE(i,j+1)-tl_FE(i,j))+         &
-!>   &                               (tl_FS(i,j,k2)-tl_FS(i,j,k1)))
-!>
+!^              tl_LapT(i,j,k)=tl_cff1*(cff*                            &
+!^   &                                  (FX(i+1,j)-FX(i,j)+             &
+!^   &                                   FE(i,j+1)-FE(i,j))+            &
+!^   &                                  (FS(i,j,k2)-FS(i,j,k1)))+       &
+!^   &                         cff1*(cff*                               &
+!^   &                               (tl_FX(i+1,j)-tl_FX(i,j)+          &
+!^   &                                tl_FE(i,j+1)-tl_FE(i,j))+         &
+!^   &                               (tl_FS(i,j,k2)-tl_FS(i,j,k1)))
+!^
                 adfac=cff1*ad_LapT(i,j,k)
                 adfac1=adfac*cff
                 ad_FS(i,j,k1)=ad_FS(i,j,k1)-adfac
@@ -1621,8 +1636,8 @@
      &                           (FS(i,j,k2)-FS(i,j,k1)))*              &
      &                           ad_LapT(i,j,k)
                 ad_LapT(i,j,k)=0.0_r8
-!>              tl_cff1=-cff1*cff1*tl_Hz(i,j,k)
-!>
+!^              tl_cff1=-cff1*cff1*tl_Hz(i,j,k)
+!^
                 ad_Hz(i,j,k)=ad_Hz(i,j,k)-cff1*cff1*ad_cff1
                 ad_cff1=0.0_r8
               END DO
@@ -1648,29 +1663,29 @@
                   cff2=MIN(dZde(i,j+1,k2),0.0_r8)
                   cff3=MAX(dZde(i,j  ,k2),0.0_r8)
                   cff4=MAX(dZde(i,j+1,k1),0.0_r8)
-!>                tl_FS(i,j,k2)=tl_FS(i,j,k2)+                          &
-!>   &                          dife*                                   &
-!>   &                          (tl_cff1*(cff1*dTdz(i,j,k2)-            &
-!>   &                                    dTde(i,j  ,k1))+              &
-!>   &                           tl_cff2*(cff2*dTdz(i,j,k2)-            &
-!>   &                                    dTde(i,j+1,k2))+              &
-!>   &                           tl_cff3*(cff3*dTdz(i,j,k2)-            &
-!>   &                                    dTde(i,j  ,k2))+              &
-!>   &                           tl_cff4*(cff4*dTdz(i,j,k2)-            &
-!>   &                                    dTde(i,j+1,k1))+              &
-!>   &                           cff1*(tl_cff1*dTdz(i,j,k2)+            &
-!>   &                                 cff1*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTde(i,j  ,k1))+              &
-!>   &                           cff2*(tl_cff2*dTdz(i,j,k2)+            &
-!>   &                                 cff2*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTde(i,j+1,k2))+              &
-!>   &                           cff3*(tl_cff3*dTdz(i,j,k2)+            &
-!>   &                                 cff3*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTde(i,j  ,k2))+              &
-!>   &                           cff4*(tl_cff4*dTdz(i,j,k2)+            &
-!>   &                                 cff4*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTde(i,j+1,k1)))
-!>
+!^                tl_FS(i,j,k2)=tl_FS(i,j,k2)+                          &
+!^   &                          dife*                                   &
+!^   &                          (tl_cff1*(cff1*dTdz(i,j,k2)-            &
+!^   &                                    dTde(i,j  ,k1))+              &
+!^   &                           tl_cff2*(cff2*dTdz(i,j,k2)-            &
+!^   &                                    dTde(i,j+1,k2))+              &
+!^   &                           tl_cff3*(cff3*dTdz(i,j,k2)-            &
+!^   &                                    dTde(i,j  ,k2))+              &
+!^   &                           tl_cff4*(cff4*dTdz(i,j,k2)-            &
+!^   &                                    dTde(i,j+1,k1))+              &
+!^   &                           cff1*(tl_cff1*dTdz(i,j,k2)+            &
+!^   &                                 cff1*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTde(i,j  ,k1))+              &
+!^   &                           cff2*(tl_cff2*dTdz(i,j,k2)+            &
+!^   &                                 cff2*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTde(i,j+1,k2))+              &
+!^   &                           cff3*(tl_cff3*dTdz(i,j,k2)+            &
+!^   &                                 cff3*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTde(i,j  ,k2))+              &
+!^   &                           cff4*(tl_cff4*dTdz(i,j,k2)+            &
+!^   &                                 cff4*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTde(i,j+1,k1)))
+!^
                   adfac=dife*ad_FS(i,j,k2)
                   ad_cff1=ad_cff1+                                      &
      &                    (2.0_r8*cff1*dTdz(i,j,k2)-dTde(i,j  ,k1))*    &
@@ -1693,33 +1708,33 @@
                   ad_dTde(i,j+1,k2)=ad_dTde(i,j+1,k2)-cff2*adfac
                   ad_dTde(i,j  ,k2)=ad_dTde(i,j  ,k2)-cff3*adfac
                   ad_dTde(i,j+1,k1)=ad_dTde(i,j+1,k1)-cff4*adfac
-!>                tl_cff4=(0.5_r8+SIGN(0.5_r8, dZde(i,j+1,k1)))*        &
-!>   &                    tl_dZde(i,j+1,k1)
-!>
+!^                tl_cff4=(0.5_r8+SIGN(0.5_r8, dZde(i,j+1,k1)))*        &
+!^   &                    tl_dZde(i,j+1,k1)
+!^
                   ad_dZde(i,j+1,k1)=ad_dZde(i,j+1,k1)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                            dZde(i,j+1,k1)))*     &
      &                              ad_cff4
                   ad_cff4=0.0_r8
-!>                tl_cff3=(0.5_r8+SIGN(0.5_r8, dZde(i,j  ,k2)))*        &
-!>   &                    tl_dZde(i,j  ,k2)
-!>
+!^                tl_cff3=(0.5_r8+SIGN(0.5_r8, dZde(i,j  ,k2)))*        &
+!^   &                    tl_dZde(i,j  ,k2)
+!^
                   ad_dZde(i,j  ,k2)=ad_dZde(i,j  ,k2)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                            dZde(i,j  ,k2)))*     &
      &                              ad_cff3
                   ad_cff3=0.0_r8
-!>                tl_cff2=(0.5_r8+SIGN(0.5_r8,-dZde(i,j+1,k2)))*        &
-!>   &                    tl_dZde(i,j+1,k2)
-!>
+!^                tl_cff2=(0.5_r8+SIGN(0.5_r8,-dZde(i,j+1,k2)))*        &
+!^   &                    tl_dZde(i,j+1,k2)
+!^
                   ad_dZde(i,j+1,k2)=ad_dZde(i,j+1,k2)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                           -dZde(i,j+1,k2)))*     &
      &                              ad_cff2
                   ad_cff2=0.0_r8
-!>                tl_cff1=(0.5_r8+SIGN(0.5_r8,-dZde(i,j  ,k1)))*        &
-!>   &                    tl_dZde(i,j  ,k1)
-!>
+!^                tl_cff1=(0.5_r8+SIGN(0.5_r8,-dZde(i,j  ,k1)))*        &
+!^   &                    tl_dZde(i,j  ,k1)
+!^
                   ad_dZde(i,j  ,k1)=ad_dZde(i,j  ,k1)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                           -dZde(i,j  ,k1)))*     &
@@ -1730,28 +1745,28 @@
                   cff2=MIN(dZdx(i+1,j,k2),0.0_r8)
                   cff3=MAX(dZdx(i  ,j,k2),0.0_r8)
                   cff4=MAX(dZdx(i+1,j,k1),0.0_r8)
-!>                tl_FS(i,j,k2)=difx*                                   &
-!>   &                          (tl_cff1*(cff1*dTdz(i,j,k2)-            &
-!>   &                                    dTdx(i  ,j,k1))+              &
-!>   &                           tl_cff2*(cff2*dTdz(i,j,k2)-            &
-!>   &                                    dTdx(i+1,j,k2))+              &
-!>   &                           tl_cff3*(cff3*dTdz(i,j,k2)-            &
-!>   &                                    dTdx(i  ,j,k2))+              &
-!>   &                           tl_cff4*(cff4*dTdz(i,j,k2)-            &
-!>   &                                    dTdx(i+1,j,k1))+              &
-!>   &                           cff1*(tl_cff1*dTdz(i,j,k2)+            &
-!>   &                                 cff1*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTdx(i  ,j,k1))+              &
-!>   &                           cff2*(tl_cff2*dTdz(i,j,k2)+            &
-!>   &                                 cff2*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTdx(i+1,j,k2))+              &
-!>   &                           cff3*(tl_cff3*dTdz(i,j,k2)+            &
-!>   &                                 cff3*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTdx(i  ,j,k2))+              &
-!>   &                           cff4*(tl_cff4*dTdz(i,j,k2)+            &
-!>   &                                 cff4*tl_dTdz(i,j,k2)-            &
-!>   &                                 tl_dTdx(i+1,j,k1)))
-!>
+!^                tl_FS(i,j,k2)=difx*                                   &
+!^   &                          (tl_cff1*(cff1*dTdz(i,j,k2)-            &
+!^   &                                    dTdx(i  ,j,k1))+              &
+!^   &                           tl_cff2*(cff2*dTdz(i,j,k2)-            &
+!^   &                                    dTdx(i+1,j,k2))+              &
+!^   &                           tl_cff3*(cff3*dTdz(i,j,k2)-            &
+!^   &                                    dTdx(i  ,j,k2))+              &
+!^   &                           tl_cff4*(cff4*dTdz(i,j,k2)-            &
+!^   &                                    dTdx(i+1,j,k1))+              &
+!^   &                           cff1*(tl_cff1*dTdz(i,j,k2)+            &
+!^   &                                 cff1*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTdx(i  ,j,k1))+              &
+!^   &                           cff2*(tl_cff2*dTdz(i,j,k2)+            &
+!^   &                                 cff2*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTdx(i+1,j,k2))+              &
+!^   &                           cff3*(tl_cff3*dTdz(i,j,k2)+            &
+!^   &                                 cff3*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTdx(i  ,j,k2))+              &
+!^   &                           cff4*(tl_cff4*dTdz(i,j,k2)+            &
+!^   &                                 cff4*tl_dTdz(i,j,k2)-            &
+!^   &                                 tl_dTdx(i+1,j,k1)))
+!^
                   adfac=difx*ad_FS(i,j,k2)
                   ad_cff1=ad_cff1+                                      &
      &                    (2.0_r8*cff1*dTdz(i,j,k2)-dTdx(i  ,j,k1))*    &
@@ -1775,33 +1790,33 @@
                   ad_dTdx(i  ,j,k2)=ad_dTdx(i  ,j,k2)-cff3*adfac
                   ad_dTdx(i+1,j,k1)=ad_dTdx(i+1,j,k1)-cff4*adfac
                   ad_FS(i,j,k2)=0.0_r8
-!>                tl_cff4=(0.5_r8+SIGN(0.5_r8, dZdx(i+1,j,k1)))*        &
-!>   &                    tl_dZdx(i+1,j,k1)
-!>
+!^                tl_cff4=(0.5_r8+SIGN(0.5_r8, dZdx(i+1,j,k1)))*        &
+!^   &                    tl_dZdx(i+1,j,k1)
+!^
                   ad_dZdx(i+1,j,k1)=ad_dZdx(i+1,j,k1)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                            dZdx(i+1,j,k1)))*     &
      &                              ad_cff4
                   ad_cff4=0.0_r8
-!>                tl_cff3=(0.5_r8+SIGN(0.5_r8, dZdx(i  ,j,k2)))*        &
-!>   &                    tl_dZdx(i  ,j,k2)
-!>
+!^                tl_cff3=(0.5_r8+SIGN(0.5_r8, dZdx(i  ,j,k2)))*        &
+!^   &                    tl_dZdx(i  ,j,k2)
+!^
                   ad_dZdx(i  ,j,k2)=ad_dZdx(i  ,j,k2)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                            dZdx(i  ,j,k2)))*     &
      &                              ad_cff3
                   ad_cff3=0.0_r8
-!>                tl_cff2=(0.5_r8+SIGN(0.5_r8,-dZdx(i+1,j,k2)))*        &
-!>   &                    tl_dZdx(i+1,j,k2)
-!>
+!^                tl_cff2=(0.5_r8+SIGN(0.5_r8,-dZdx(i+1,j,k2)))*        &
+!^   &                    tl_dZdx(i+1,j,k2)
+!^
                   ad_dZdx(i+1,j,k2)=ad_dZdx(i+1,j,k2)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                           -dZdx(i+1,j,k2)))*     &
      &                              ad_cff2
                   ad_cff2=0.0_r8
-!>                tl_cff1=(0.5_r8+SIGN(0.5_r8,-dZdx(i  ,j,k1)))*        &
-!>   &                    tl_dZdx(i  ,j,k1)
-!>
+!^                tl_cff1=(0.5_r8+SIGN(0.5_r8,-dZdx(i  ,j,k1)))*        &
+!^   &                    tl_dZdx(i  ,j,k1)
+!^
                   ad_dZdx(i  ,j,k1)=ad_dZdx(i  ,j,k1)+                  &
      &                              (0.5_r8+SIGN(0.5_r8,                &
      &                                           -dZdx(i  ,j,k1)))*     &
@@ -1823,32 +1838,32 @@
                 cff=0.25_r8*(diff4(i,j,itrc)+diff4(i,j-1,itrc))*        &
      &              om_v(i,j)
 #endif
-!>              tl_FE(i,j)=cff*                                         &
-!>   &                     ((tl_Hz(i,j,k)+tl_Hz(i,j-1,k))*              &
-!>   &                      (dTde(i,j,k1)-                              &
-!>   &                       0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*          &
-!>   &                                  (dTdz(i,j-1,k1)+                &
-!>   &                                   dTdz(i,j  ,k2))+               &
-!>   &                               MAX(dZde(i,j,k1),0.0_r8)*          &
-!>   &                                  (dTdz(i,j-1,k2)+                &
-!>   &                                   dTdz(i,j  ,k1))))+             &
-!>   &                      (Hz(i,j,k)+Hz(i,j-1,k))*                    &
-!>   &                      (tl_dTde(i,j,k1)-                           &
-!>   &                       0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*          &
-!>   &                                  (tl_dTdz(i,j-1,k1)+             &
-!>   &                                   tl_dTdz(i,j  ,k2))+            &
-!>   &                               MAX(dZde(i,j,k1),0.0_r8)*          &
-!>   &                                  (tl_dTdz(i,j-1,k2)+             &
-!>   &                                   tl_dTdz(i,j  ,k1)))-           &
-!>   &                       0.5_r8*((0.5_r8+                           &
-!>   &                                SIGN(0.5_r8,-dZde(i,j,k1)))*      &
-!>   &                               tl_dZde(i,j,k1)*                   &
-!>   &                               (dTdz(i,j-1,k1)+dTdz(i,j,k2))+     &
-!>   &                               (0.5_r8+                           &
-!>   &                                SIGN(0.5_r8, dZde(i,j,k1)))*      &
-!>   &                               tl_dZde(i,j,k1)*                   &
-!>   &                               (dTdz(i,j-1,k2)+dTdz(i,j,k1)))))
-!>
+!^              tl_FE(i,j)=cff*                                         &
+!^   &                     ((tl_Hz(i,j,k)+tl_Hz(i,j-1,k))*              &
+!^   &                      (dTde(i,j,k1)-                              &
+!^   &                       0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*          &
+!^   &                                  (dTdz(i,j-1,k1)+                &
+!^   &                                   dTdz(i,j  ,k2))+               &
+!^   &                               MAX(dZde(i,j,k1),0.0_r8)*          &
+!^   &                                  (dTdz(i,j-1,k2)+                &
+!^   &                                   dTdz(i,j  ,k1))))+             &
+!^   &                      (Hz(i,j,k)+Hz(i,j-1,k))*                    &
+!^   &                      (tl_dTde(i,j,k1)-                           &
+!^   &                       0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*          &
+!^   &                                  (tl_dTdz(i,j-1,k1)+             &
+!^   &                                   tl_dTdz(i,j  ,k2))+            &
+!^   &                               MAX(dZde(i,j,k1),0.0_r8)*          &
+!^   &                                  (tl_dTdz(i,j-1,k2)+             &
+!^   &                                   tl_dTdz(i,j  ,k1)))-           &
+!^   &                       0.5_r8*((0.5_r8+                           &
+!^   &                                SIGN(0.5_r8,-dZde(i,j,k1)))*      &
+!^   &                               tl_dZde(i,j,k1)*                   &
+!^   &                               (dTdz(i,j-1,k1)+dTdz(i,j,k2))+     &
+!^   &                               (0.5_r8+                           &
+!^   &                                SIGN(0.5_r8, dZde(i,j,k1)))*      &
+!^   &                               tl_dZde(i,j,k1)*                   &
+!^   &                               (dTdz(i,j-1,k2)+dTdz(i,j,k1)))))
+!^
                 adfac=cff*ad_FE(i,j)
                 adfac1=adfac*(dTde(i,j,k1)-                             &
      &                        0.5_r8*(MIN(dZde(i,j,k1),0.0_r8)*         &
@@ -1889,32 +1904,32 @@
                 cff=0.25_r8*(diff4(i,j,itrc)+diff4(i-1,j,itrc))*        &
      &              on_u(i,j)
 #endif
-!>              tl_FX(i,j)=cff*                                         &
-!>   &                     ((tl_Hz(i,j,k)+tl_Hz(i-1,j,k))*              &
-!>   &                      (dTdx(i,j,k1)-                              &
-!>   &                       0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*          &
-!>   &                                  (dTdz(i-1,j,k1)+                &
-!>   &                                   dTdz(i  ,j,k2))+               &
-!>   &                               MAX(dZdx(i,j,k1),0.0_r8)*          &
-!>   &                                  (dTdz(i-1,j,k2)+                &
-!>   &                                   dTdz(i  ,j,k1))))+             &
-!>   &                      (Hz(i,j,k)+Hz(i-1,j,k))*                    &
-!>   &                      (tl_dTdx(i,j,k1)-                           &
-!>   &                       0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*          &
-!>   &                                  (tl_dTdz(i-1,j,k1)+             &
-!>   &                                   tl_dTdz(i  ,j,k2))+            &
-!>   &                               MAX(dZdx(i,j,k1),0.0_r8)*          &
-!>   &                                  (tl_dTdz(i-1,j,k2)+             &
-!>   &                                   tl_dTdz(i  ,j,k1)))-           &
-!>   &                       0.5_r8*((0.5_r8+                           &
-!>   &                                SIGN(0.5_r8,-dZdx(i,j,k1)))*      &
-!>   &                               tl_dZdx(i,j,k1)*                   &
-!>   &                               (dTdz(i-1,j,k1)+dTdz(i,j,k2))+     &
-!>   &                               (0.5_r8+                           &
-!>   &                                SIGN(0.5_r8, dZdx(i,j,k1)))*      &
-!>   &                               tl_dZdx(i,j,k1)*                   &
-!>   &                               (dTdz(i-1,j,k2)+dTdz(i,j,k1)))))
-!>
+!^              tl_FX(i,j)=cff*                                         &
+!^   &                     ((tl_Hz(i,j,k)+tl_Hz(i-1,j,k))*              &
+!^   &                      (dTdx(i,j,k1)-                              &
+!^   &                       0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*          &
+!^   &                                  (dTdz(i-1,j,k1)+                &
+!^   &                                   dTdz(i  ,j,k2))+               &
+!^   &                               MAX(dZdx(i,j,k1),0.0_r8)*          &
+!^   &                                  (dTdz(i-1,j,k2)+                &
+!^   &                                   dTdz(i  ,j,k1))))+             &
+!^   &                      (Hz(i,j,k)+Hz(i-1,j,k))*                    &
+!^   &                      (tl_dTdx(i,j,k1)-                           &
+!^   &                       0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*          &
+!^   &                                  (tl_dTdz(i-1,j,k1)+             &
+!^   &                                   tl_dTdz(i  ,j,k2))+            &
+!^   &                               MAX(dZdx(i,j,k1),0.0_r8)*          &
+!^   &                                  (tl_dTdz(i-1,j,k2)+             &
+!^   &                                   tl_dTdz(i  ,j,k1)))-           &
+!^   &                       0.5_r8*((0.5_r8+                           &
+!^   &                                SIGN(0.5_r8,-dZdx(i,j,k1)))*      &
+!^   &                               tl_dZdx(i,j,k1)*                   &
+!^   &                               (dTdz(i-1,j,k1)+dTdz(i,j,k2))+     &
+!^   &                               (0.5_r8+                           &
+!^   &                                SIGN(0.5_r8, dZdx(i,j,k1)))*      &
+!^   &                               tl_dZdx(i,j,k1)*                   &
+!^   &                               (dTdz(i-1,j,k2)+dTdz(i,j,k1)))))
+!^
                 adfac=cff*ad_FX(i,j)
                 adfac1=adfac*(dTdx(i,j,k1)-                             &
      &                        0.5_r8*(MIN(dZdx(i,j,k1),0.0_r8)*         &
@@ -1946,12 +1961,12 @@
           IF ((k.eq.0).or.(k.eq.N(ng))) THEN
             DO j=-1+Jmin,Jmax+1
               DO i=-1+Imin,Imax+1
-!>              tl_dTdz(i,j,k2)=0.0_r8
-!>
+!^              tl_dTdz(i,j,k2)=0.0_r8
+!^
                 ad_dTdz(i,j,k2)=0.0_r8
 
-!>              tl_FS(i,j,k2)=0.0_r8
-!>
+!^              tl_FS(i,j,k2)=0.0_r8
+!^
                 ad_FS(i,j,k2)=0.0_r8
               END DO
             END DO
@@ -1960,15 +1975,15 @@
               DO i=-1+Imin,Imax+1
                 cff=1.0_r8/(z_r(i,j,k+1)-z_r(i,j,k))
 #if defined TS_MIX_STABILITY
-!>              tl_dTdz(i,j,k2)=tl_cff*(0.75_r8*(t(i,j,k+1,nrhs,itrc)-  &
-!>   &                                           t(i,j,k  ,nrhs,itrc))+ &
-!>   &                                  0.25_r8*(t(i,j,k+1,nstp,itrc)-  &
-!>   &                                           t(i,j,k  ,nstp,itrc)))+&
-!>   &                          cff*(0.75_r8*(tl_t(i,j,k+1,nrhs,itrc)-  &
-!>   &                                        tl_t(i,j,k  ,nrhs,itrc))+ &
-!>   &                               0.25_r8*(tl_t(i,j,k+1,nstp,itrc)-  &
-!>   &                                        tl_t(i,j,k  ,nstp,itrc)))
-!>
+!^              tl_dTdz(i,j,k2)=tl_cff*(0.75_r8*(t(i,j,k+1,nrhs,itrc)-  &
+!^   &                                           t(i,j,k  ,nrhs,itrc))+ &
+!^   &                                  0.25_r8*(t(i,j,k+1,nstp,itrc)-  &
+!^   &                                           t(i,j,k  ,nstp,itrc)))+&
+!^   &                          cff*(0.75_r8*(tl_t(i,j,k+1,nrhs,itrc)-  &
+!^   &                                        tl_t(i,j,k  ,nrhs,itrc))+ &
+!^   &                               0.25_r8*(tl_t(i,j,k+1,nstp,itrc)-  &
+!^   &                                        tl_t(i,j,k  ,nstp,itrc)))
+!^
                 adfac=cff*ad_dTdz(i,j,k2)
                 adfac1=adfac*0.75_r8
                 adfac2=adfac*0.25_r8
@@ -1984,13 +1999,13 @@
                 ad_dTdz(i,j,k2)=0.0_r8
 #elif defined TS_MIX_CLIMA
                 IF (LtracerCLM(itrc,ng)) THEN
-!>                tl_dTdz(i,j,k2)=tl_cff*((t(i,j,k+1,nrhs,itrc)-        &
-!>   &                                     tclm(i,j,k+1,itrc))-         &
-!>   &                                    (t(i,j,k  ,nrhs,itrc)-        &
-!>   &                                     tclm(i,j,k  ,itrc)))+        &
-!>   &                            cff*(tl_t(i,j,k+1,nrhs,itrc)-         &
-!>   &                                 tl_t(i,j,k  ,nrhs,itrc))
-!>
+!^                tl_dTdz(i,j,k2)=tl_cff*((t(i,j,k+1,nrhs,itrc)-        &
+!^   &                                     tclm(i,j,k+1,itrc))-         &
+!^   &                                    (t(i,j,k  ,nrhs,itrc)-        &
+!^   &                                     tclm(i,j,k  ,itrc)))+        &
+!^   &                            cff*(tl_t(i,j,k+1,nrhs,itrc)-         &
+!^   &                                 tl_t(i,j,k  ,nrhs,itrc))
+!^
                   adfac=cff*ad_dTdz(i,j,k2)
                   ad_t(i,j,k  ,nrhs,itrc)=ad_t(i,j,k  ,nrhs,itrc)-adfac
                   ad_t(i,j,k+1,nrhs,itrc)=ad_t(i,j,k+1,nrhs,itrc)+adfac
@@ -2001,11 +2016,11 @@
      &                     tclm(i,j,k  ,itrc)))*ad_dTdz(i,j,k2)
                   ad_dTdz(i,j,k2)=0.0_r8
                 ELSE
-!>                tl_dTdz(i,j,k2)=tl_cff*(t(i,j,k+1,nrhs,itrc)-         &
-!>   &                                    t(i,j,k  ,nrhs,itrc))+        &
-!>   &                            cff*(tl_t(i,j,k+1,nrhs,itrc)-         &
-!>   &                                 tl_t(i,j,k  ,nrhs,itrc))
-!>
+!^                tl_dTdz(i,j,k2)=tl_cff*(t(i,j,k+1,nrhs,itrc)-         &
+!^   &                                    t(i,j,k  ,nrhs,itrc))+        &
+!^   &                            cff*(tl_t(i,j,k+1,nrhs,itrc)-         &
+!^   &                                 tl_t(i,j,k  ,nrhs,itrc))
+!^
                   adfac=cff*ad_dTdz(i,j,k2)
                   ad_t(i,j,k  ,nrhs,itrc)=ad_t(i,j,k  ,nrhs,itrc)-adfac
                   ad_t(i,j,k+1,nrhs,itrc)=ad_t(i,j,k+1,nrhs,itrc)+adfac
@@ -2015,11 +2030,11 @@
                   ad_dTdz(i,j,k2)=0.0_r8
                 END IF
 #else
-!>              tl_dTdz(i,j,k2)=tl_cff*(t(i,j,k+1,nrhs,itrc)-           &
-!>   &                                  t(i,j,k  ,nrhs,itrc))+          &
-!>   &                          cff*(tl_t(i,j,k+1,nrhs,itrc)-           &
-!>   &                               tl_t(i,j,k  ,nrhs,itrc))
-!>
+!^              tl_dTdz(i,j,k2)=tl_cff*(t(i,j,k+1,nrhs,itrc)-           &
+!^   &                                  t(i,j,k  ,nrhs,itrc))+          &
+!^   &                          cff*(tl_t(i,j,k+1,nrhs,itrc)-           &
+!^   &                               tl_t(i,j,k  ,nrhs,itrc))
+!^
                 adfac=cff*ad_dTdz(i,j,k2)
                 ad_t(i,j,k  ,nrhs,itrc)=ad_t(i,j,k  ,nrhs,itrc)-adfac
                 ad_t(i,j,k+1,nrhs,itrc)=ad_t(i,j,k+1,nrhs,itrc)+adfac
@@ -2028,8 +2043,8 @@
      &                  t(i,j,k  ,nrhs,itrc))*ad_dTdz(i,j,k2)
                 ad_dTdz(i,j,k2)=0.0_r8
 #endif
-!>              tl_cff=-cff*cff*(tl_z_r(i,j,k+1)-tl_z_r(i,j,k))
-!>
+!^              tl_cff=-cff*cff*(tl_z_r(i,j,k+1)-tl_z_r(i,j,k))
+!^
                 adfac=-cff*cff*ad_cff
                 ad_z_r(i,j,k  )=ad_z_r(i,j,k  )-adfac
                 ad_z_r(i,j,k+1)=ad_z_r(i,j,k+1)+adfac
@@ -2048,12 +2063,12 @@
                 cff=cff*vmask_wet(i,j)
 #endif
 #if defined TS_MIX_STABILITY
-!>              tl_dTde(i,j,k2)=cff*
-!>   &                          (0.75_r8*(tl_t(i,j  ,k+1,nrhs,itrc)-    &
-!>   &                                    tl_t(i,j-1,k+1,nrhs,itrc))+   &
-!>   &                           0.25_r8*(tl_t(i,j  ,k+1,nstp,itrc)-    &
-!>   &                                    tl_t(i,j-1,k+1,nstp,itrc)))
-!>
+!^              tl_dTde(i,j,k2)=cff*
+!^   &                          (0.75_r8*(tl_t(i,j  ,k+1,nrhs,itrc)-    &
+!^   &                                    tl_t(i,j-1,k+1,nrhs,itrc))+   &
+!^   &                           0.25_r8*(tl_t(i,j  ,k+1,nstp,itrc)-    &
+!^   &                                    tl_t(i,j-1,k+1,nstp,itrc)))
+!^
                 adfac=cff*ad_dTde(i,j,k2)
                 adfac1=adfac*0.75_r8
                 adfac2=adfac*0.25_r8
@@ -2067,9 +2082,9 @@
      &                                    adfac2
                 ad_dTde(i,j,k2)=0.0_r8
 #elif defined TS_MIX_CLIMA
-!>              tl_dTde(i,j,k2)=cff*(tl_t(i,j  ,k+1,nrhs,itrc)-         &
-!>   &                               tl_t(i,j-1,k+1,nrhs,itrc))
-!>
+!^              tl_dTde(i,j,k2)=cff*(tl_t(i,j  ,k+1,nrhs,itrc)-         &
+!^   &                               tl_t(i,j-1,k+1,nrhs,itrc))
+!^
                 adfac=cff*ad_dTde(i,j,k2)
                 ad_t(i,j-1,k+1,nrhs,itrc)=ad_t(i,j-1,k+1,nrhs,itrc)-    &
      &                                    adfac
@@ -2077,9 +2092,9 @@
      &                                    adfac
                 ad_dTde(i,j,k2)=0.0_r8
 #else
-!>              tl_dTde(i,j,k2)=cff*(tl_t(i,j  ,k+1,nrhs,itrc)-         &
-!>   &                               tl_t(i,j-1,k+1,nrhs,itrc))
-!>
+!^              tl_dTde(i,j,k2)=cff*(tl_t(i,j  ,k+1,nrhs,itrc)-         &
+!^   &                               tl_t(i,j-1,k+1,nrhs,itrc))
+!^
                 adfac=cff*ad_dTde(i,j,k2)
                 ad_t(i,j-1,k+1,nrhs,itrc)=ad_t(i,j-1,k+1,nrhs,itrc)-    &
      &                                    adfac
@@ -2087,9 +2102,9 @@
      &                                    adfac
                 ad_dTde(i,j,k2)=0.0_r8
 #endif
-!>              tl_dZde(i,j,k2)=cff*(tl_z_r(i,j  ,k+1)-                 &
-!>   &                               tl_z_r(i,j-1,k+1))
-!>
+!^              tl_dZde(i,j,k2)=cff*(tl_z_r(i,j  ,k+1)-                 &
+!^   &                               tl_z_r(i,j-1,k+1))
+!^
                 adfac=cff*ad_dZde(i,j,k2)
                 ad_z_r(i,j-1,k+1)=ad_z_r(i,j-1,k+1)-adfac
                 ad_z_r(i,j  ,k+1)=ad_z_r(i,j  ,k+1)+adfac
@@ -2106,12 +2121,12 @@
                 cff=cff*umask_wet(i,j)
 #endif
 #if defined TS_MIX_STABILITY
-!>              tl_dTdx(i,j,k2)=cff*
-!>   &                          (0.75_r8*(tl_t(i  ,j,k+1,nrhs,itrc)-    &
-!>   &                                    tl_t(i-1,j,k+1,nrhs,itrc))+   &
-!>   &                           0.25_r8*(tl_t(i  ,j,k+1,nstp,itrc)-    &
-!>   &                                    tl_t(i-1,j,k+1,nstp,itrc)))
-!>
+!^              tl_dTdx(i,j,k2)=cff*
+!^   &                          (0.75_r8*(tl_t(i  ,j,k+1,nrhs,itrc)-    &
+!^   &                                    tl_t(i-1,j,k+1,nrhs,itrc))+   &
+!^   &                           0.25_r8*(tl_t(i  ,j,k+1,nstp,itrc)-    &
+!^   &                                    tl_t(i-1,j,k+1,nstp,itrc)))
+!^
                 adfac=cff*ad_dTdx(i,j,k2)
                 adfac1=adfac*0.75_r8
                 adfac2=adfac*0.25_r8
@@ -2125,9 +2140,9 @@
      &                                    adfac2
                 ad_dTdx(i,j,k2)=0.0_r8
 #elif defined TS_MIX_CLIMA
-!>              tl_dTdx(i,j,k2)=cff*(tl_t(i  ,j,k+1,nrhs,itrc)-         &
-!>   &                               tl_t(i-1,j,k+1,nrhs,itrc))
-!>
+!^              tl_dTdx(i,j,k2)=cff*(tl_t(i  ,j,k+1,nrhs,itrc)-         &
+!^   &                               tl_t(i-1,j,k+1,nrhs,itrc))
+!^
                 adfac=cff*ad_dTdx(i,j,k2)
                 ad_t(i-1,j,k+1,nrhs,itrc)=ad_t(i-1,j,k+1,nrhs,itrc)-    &
      &                                    adfac
@@ -2135,9 +2150,9 @@
      &                                    adfac
                 ad_dTdx(i,j,k2)=0.0_r8
 #else
-!>              tl_dTdx(i,j,k2)=cff*(tl_t(i  ,j,k+1,nrhs,itrc)-         &
-!>   &                               tl_t(i-1,j,k+1,nrhs,itrc))
-!>
+!^              tl_dTdx(i,j,k2)=cff*(tl_t(i  ,j,k+1,nrhs,itrc)-         &
+!^   &                               tl_t(i-1,j,k+1,nrhs,itrc))
+!^
                 adfac=cff*ad_dTdx(i,j,k2)
                 ad_t(i-1,j,k+1,nrhs,itrc)=ad_t(i-1,j,k+1,nrhs,itrc)-    &
      &                                    adfac
@@ -2145,9 +2160,9 @@
      &                                    adfac
                 ad_dTdx(i,j,k2)=0.0_r8
 #endif
-!>              tl_dZdx(i,j,k2)=cff*(tl_z_r(i  ,j,k+1)-                 &
-!>   &                               tl_z_r(i-1,j,k+1))
-!>
+!^              tl_dZdx(i,j,k2)=cff*(tl_z_r(i  ,j,k+1)-                 &
+!^   &                               tl_z_r(i-1,j,k+1))
+!^
                 adfac=cff*ad_dZdx(i,j,k2)
                 ad_z_r(i-1,j,k+1)=ad_z_r(i-1,j,k+1)-adfac
                 ad_z_r(i  ,j,k+1)=ad_z_r(i  ,j,k+1)+adfac
@@ -2163,6 +2178,8 @@
           k1=kt
         END DO K_LOOP3
       END DO T_LOOP
-
+!
       RETURN
-      END SUBROUTINE ad_t3dmix4_tile
+      END SUBROUTINE ad_t3dmix4_geo_tile
+
+      END MODULE ad_t3dmix4_mod

@@ -2,9 +2,9 @@
 #ifdef TANGENT
       SUBROUTINE tl_initial (ng)
 !
-!svn $Id: tl_initial.F 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: tl_initial.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -34,10 +34,22 @@
       USE mod_scalars
       USE mod_stepping
 !
+# ifdef ADJUST_BOUNDARY
+      USE mod_boundary,        ONLY : initialize_boundary
+# endif
+# if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
+      USE mod_forces,          ONLY : initialize_forces
+# endif
+!
       USE analytical_mod
+      USE close_io_mod,        ONLY : close_inp
       USE dateclock_mod,       ONLY : time_string
 # ifdef DISTRIBUTE
       USE distribute_mod,      ONLY : mp_bcasti
+# endif
+      USE get_state_mod,       ONLY : get_state
+# ifdef WET_DRY
+      USE get_wetdry_mod,      ONLY : get_wetdry
 # endif
 # ifdef TLM_CHECK
       USE ini_adjust_mod,      ONLY : tl_ini_perturb
@@ -46,31 +58,36 @@
 # ifdef I4DVAR_ANA_SENSITIVITY
       USE ini_lanczos_mod,     ONLY : ini_lanczos
 # endif
-# ifdef ADJUST_BOUNDARY
-      USE mod_boundary,        ONLY : initialize_boundary
+# ifdef OBSERVATIONS
+      USE obs_initial_mod,     ONLY : obs_initial
 # endif
-# if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
-      USE mod_forces,          ONLY : initialize_forces
+# if defined WAV_COUPLING_NOT_YET && defined MCT_LIB
+      USE ocean_coupler_mod,   ONLY : ocn2wav_coupling
 # endif
+# ifdef SOLVE3D
+      USE set_depth_mod,       ONLY : set_depth
+# endif
+# ifdef MASKING
+      USE set_masks_mod,       ONLY : set_masks
+# endif
+      USE stiffness_mod,       ONLY : stiffness
       USE strings_mod,         ONLY : FoundError
 # if defined RBL4DVAR           || defined R4DVAR      || \
      defined SENSITIVITY_4DVAR  || defined TL_RBL4DVAR || \
      defined TL_R4DVAR
       USE tl_set_depth_mod,    ONLY : tl_bath
 # endif
+# ifdef FOUR_DVAR
+      USE tl_def_ini_mod,      ONLY : tl_def_ini
+# endif
 # ifdef SOLVE3D
-      USE set_depth_mod,       ONLY : set_depth
-      USE tl_set_depth_mod,    ONLY : tl_set_depth
       USE tl_omega_mod,        ONLY : tl_omega
       USE tl_rho_eos_mod,      ONLY : tl_rho_eos
+      USE tl_set_depth_mod,    ONLY : tl_set_depth
       USE tl_set_massflux_mod, ONLY : tl_set_massflux
 # endif
-# ifdef MASKING
-      USE set_masks_mod,       ONLY : set_masks
-# endif
-      USE stiffness_mod,       ONLY : stiffness
-# if defined WAV_COUPLING_NOT_YET && defined MCT_LIB
-      USE ocean_coupler_mod,   ONLY : ocn2wav_coupling
+# ifdef FOUR_DVAR
+      USE tl_wrt_ini_mod,      ONLY : tl_wrt_ini
 # endif
 # ifdef WET_DRY
       USE wetdry_mod,          ONLY : wetdry
@@ -89,12 +106,14 @@
 !  Local variable declarations.
 !
       logical :: update = .FALSE.
-
-      integer :: LBi, UBi, LBj, UBj
+!
       integer :: Fcount, IniRec, Tindex, wrtRec
       integer :: thread, tile
-
+!
       real(dp) :: my_dstart
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !   Initialize model variables.
@@ -169,16 +188,10 @@
       ntstart(ng)=INT((time(ng)-dstart*day2sec)/dt(ng))+1
       ntend(ng)=ntstart(ng)+ntimes(ng)-1
       ntfirst(ng)=ntstart(ng)
-!
-      CALL time_string (time(ng), time_code(ng))
+      step_counter(ng)=0
 !
       IniRec=nrrec(ng)
       Tindex=1
-!
-      LBi=LBOUND(GRID(ng)%h,DIM=1)
-      UBi=UBOUND(GRID(ng)%h,DIM=1)
-      LBj=LBOUND(GRID(ng)%h,DIM=2)
-      UBj=UBOUND(GRID(ng)%h,DIM=2)
 !
 !  Initialize global diagnostics variables.
 !
@@ -194,8 +207,7 @@
 !-----------------------------------------------------------------------
 !
       DO thread=THREAD_RANGE
-        CALL wclock_on (ng, iTLM, 2, __LINE__,                          &
-     &                  __FILE__)
+        CALL wclock_on (ng, iTLM, 2, __LINE__, MyFile)
       END DO
 # endif
 
@@ -229,14 +241,21 @@
       IF ((Nrun.eq.ERstr).and.(inner.eq.0)) THEN
         LdefITL(ng)=.TRUE.
         CALL tl_def_ini (ng)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-        CALL tl_wrt_ini (ng, Tindex, 1)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
-        CALL tl_wrt_ini (ng, Tindex, 2)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+#    ifdef DISTRIBUTE
+        CALL tl_wrt_ini (ng, MyRank, Tindex, 1)
+#    else
+        CALL tl_wrt_ini (ng, -1, Tindex, 1)
+#    endif
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+#    ifdef DISTRIBUTE
+        CALL tl_wrt_ini (ng, MyRank, Tindex, 2)
+#    else
+        CALL tl_wrt_ini (ng, -1, Tindex, 2)
+#    endif
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 #   endif
 #   ifndef WEAK_CONSTRAINT
@@ -368,9 +387,12 @@
 !
         IF (Nrun.gt.1) THEN
           wrtRec=1
-          CALL tl_wrt_ini (ng, Tindex, wrtRec)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+#    ifdef DISTRIBUTE
+          CALL tl_wrt_ini (ng, MyRank, Tindex, wrtRec)
+#    else
+          CALL tl_wrt_ini (ng, -1, Tindex, wrtRec)
+#    endif
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 #   endif
@@ -464,15 +486,13 @@
 !  Read in initial conditions for initial or restart NetCDF file.
 !
 #  ifdef INI_FILE
-      CALL get_state (ng, iTLM, 1, ITL(ng)%name, IniRec, Tindex)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      CALL get_state (ng, iTLM, 1, ITL(ng), IniRec, Tindex)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       time(ng)=io_time                       ! needed for shared-memory
 #  else
       IF (nrrec(ng).ne.0) THEN
-        CALL get_state (ng, iTLM, 1, ITL(ng)%name, IniRec, Tindex)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        CALL get_state (ng, iTLM, 1, ITL(ng), IniRec, Tindex)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         time(ng)=io_time                     ! needed for shared-memory
       END IF
 #  endif
@@ -487,12 +507,13 @@
 !  If restart, read in wet/dry masks.
 !
       IF (nrrec(ng).ne.0) THEN
-        CALL get_wetdry (ng, iTLM, IniRec(ng))
 #  ifdef DISTRIBUTE
+        CALL get_wetdry (ng, MyRank, iTLM, IniRec(ng))
         CALL mp_bcasti (ng, iTLM, exit_flag)
+#  else
+        CALL get_wetdry (ng, -1, iTLM, IniRec(ng))
 #  endif
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       ELSE
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL wetdry (ng, tile, Tindex(ng), .TRUE.)
@@ -511,8 +532,7 @@
 !-----------------------------------------------------------------------
 !
       CALL obs_initial (ng, iTLM, .FALSE.)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 
 # if defined ANA_PERTURB && defined SANITY_CHECK
@@ -601,8 +621,7 @@
 # ifdef DISTRIBUTE
       CALL mp_bcasti (ng, iTLM, exit_flag)
 # endif
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Read in initial forcing, climatology and assimilation data from
@@ -615,8 +634,7 @@
 # ifdef DISTRIBUTE
       CALL mp_bcasti (ng, iTLM, exit_flag)
 # endif
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef MASKING
 !
@@ -655,9 +673,8 @@
 !
       IF (nADJ(ng).lt.ntimes(ng)) THEN
         IniRec=1
-        CALL get_state (ng, 7, 7, TLF(ng)%name, IniRec, 1)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        CALL get_state (ng, 7, 7, TLF(ng), IniRec, 1)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 # endif
 
@@ -707,14 +724,11 @@
 # endif
 !
 !-----------------------------------------------------------------------
-!  Initialize time-stepping counter and clock.
+!  Initialize time-stepping counter.
 !-----------------------------------------------------------------------
 !
-!  Subsract one time unit to avoid special case due to initialization
-!  in the main time-stepping routine.
-!
-      iic(ng)=ntstart(ng)-1
-      time(ng)=time(ng)-dt(ng)
+      iic(ng)=ntstart(ng)
+      CALL time_string (time(ng), time_code(ng))
 
 # ifdef PROFILE
 !
@@ -723,8 +737,7 @@
 !-----------------------------------------------------------------------
 !
       DO thread=THREAD_RANGE
-        CALL wclock_off (ng, iTLM, 2, __LINE__,                         &
-     &                   __FILE__)
+        CALL wclock_off (ng, iTLM, 2, __LINE__, MyFile)
       END DO
 # endif
 !

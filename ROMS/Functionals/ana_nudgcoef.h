@@ -1,8 +1,9 @@
+!!
       SUBROUTINE ana_nudgcoef (ng, tile, model)
 !
-!! svn $Id: ana_nudgcoef.h 995 2020-01-10 04:01:28Z arango $
+!! svn $Id: ana_nudgcoef.h 1099 2022-01-06 21:01:01Z arango $
 !!================================================= Hernan G. Arango ===
-!! Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
 !!   See License_ROMS.txt                                              !
 !=======================================================================
@@ -36,6 +37,9 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
       CALL ana_nudgcoef_tile (ng, tile, model,                          &
@@ -49,9 +53,9 @@
 #else
       IF (Lanafile.and.(tile.eq.0)) THEN
 #endif
-        ANANAME(16)=__FILE__
+        ANANAME(16)=MyFile
       END IF
-
+!
       RETURN
       END SUBROUTINE ana_nudgcoef
 !
@@ -88,11 +92,11 @@
 !  Local variable declarations.
 !
       integer :: Iwrk, i, itrc, j, k
-
+!
       real(r8) :: cff1, cff2, cff3
-
+!
       real(r8), parameter :: IniVal = 0.0_r8
-
+!
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: wrk
 
 #include "set_bounds.h"
@@ -243,6 +247,6 @@
       END IF
 # endif
 #endif
-
+!
       RETURN
       END SUBROUTINE ana_nudgcoef_tile

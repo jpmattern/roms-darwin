@@ -2,9 +2,9 @@
 #ifdef TL_IOMS
       SUBROUTINE rp_initial (ng)
 !
-!svn $Id: rp_initial.F 1035 2020-07-28 00:49:02Z arango $
+!svn $Id: rp_initial.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -18,7 +18,7 @@
 # ifdef BBL_MODEL_NOT_YET
       USE mod_bbl
 # endif
-      Use mod_boundary
+      USE mod_boundary
 # ifdef SOLVE3D
       USE mod_coupling
 # endif
@@ -37,9 +37,14 @@
       USE mod_stepping
 !
       USE analytical_mod
+      USE close_io_mod,        ONLY : close_inp
       USE dateclock_mod,       ONLY : time_string
 # ifdef DISTRIBUTE
       USE distribute_mod,      ONLY : mp_bcasti
+# endif
+      USE get_state_mod,       ONLY : get_state
+# ifdef WET_DRY
+      USE get_wetdry_mod,      ONLY : get_wetdry
 # endif
 # ifdef TLM_CHECK
       USE ini_adjust_mod,      ONLY : tl_ini_perturb
@@ -57,6 +62,12 @@
       USE omega_mod,           ONLY : omega
       USE rho_eos_mod,         ONLY : rho_eos
       USE set_massflux_mod,    ONLY : set_massflux
+# endif
+# ifdef OBSERVATIONS
+      USE obs_initial_mod,     ONLY : obs_initial
+# endif
+# ifdef WEAK_CONSTRAINT
+      USE rp_def_ini_mod,      ONLY : rp_def_ini
 # endif
 # ifdef MASKING
       USE set_masks_mod,       ONLY : set_masks
@@ -83,12 +94,15 @@
 !  Local variable declarations.
 !
       logical :: update = .FALSE.
-
+!
       integer :: LBi, UBi, LBj, UBj
       integer :: Fcount, IniRec, Tindex
       integer :: thread, tile
-
+!
       real(dp) :: my_dstart
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !   Initialize model variables.
@@ -184,7 +198,7 @@
 !-----------------------------------------------------------------------
 !
       DO thread=THREAD_RANGE
-        CALL wclock_on (ng, iRPM, 2, __LINE__, __FILE__)
+        CALL wclock_on (ng, iRPM, 2, __LINE__, MyFile)
       END DO
 # endif
 
@@ -203,8 +217,7 @@
         LdefIRP(ng)=.TRUE.
 #  endif
         CALL rp_def_ini (ng)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
       IniRec=IRP(ng)%Rindex
 
@@ -365,19 +378,18 @@
 !  Read in representer model initial conditions.
 !
 # ifdef INI_FILE
-      CALL get_state (ng, iRPM, 1, IRP(ng)%name, IniRec, Tindex)
+      CALL get_state (ng, iRPM, 1, IRP(ng), IniRec, Tindex)
       time(ng)=io_time                       ! needed for shared-memory
 # else
       IF (nrrec(ng).ne.0) THEN
-        CALL get_state (ng, iRPM, 1, IRP(ng)name, IniRec, Tindex)
+        CALL get_state (ng, iRPM, 1, IRP(ng), IniRec, Tindex)
         time(ng)=io_time                     ! needed for shared-memory
 # ifdef DISTRIBUTE
         CALL mp_bcasti (ng, iNLM, exit_flag)
 # endif
       END IF
 # endif
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef WET_DRY
 !
@@ -388,12 +400,13 @@
 !  If restart, read in wet/dry masks.
 !
       IF (nrrec(ng).ne.0) THEN
-        CALL get_wetdry (ng, iRPM, IniRec(ng))
 #  ifdef DISTRIBUTE
+        CALL get_wetdry (ng, MyRank, iRPM, IniRec(ng))
         CALL mp_bcasti (ng, iRPM, exit_flag)
+#  else
+        CALL get_wetdry (ng, -1, iRPM, IniRec(ng))
 #  endif
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       ELSE
         DO tile=first_tile(ng),last_tile(ng),+1
           CALL wetdry (ng, tile, Tindex(ng), .TRUE.)
@@ -412,8 +425,7 @@
 !-----------------------------------------------------------------------
 !
       CALL obs_initial (ng, iRPM, .FALSE.)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 
 # if defined ANA_PERTURB && defined SANITY_CHECK
@@ -489,8 +501,7 @@
 # ifdef DISTRIBUTE
       CALL mp_bcasti (ng, iRPM, exit_flag)
 # endif
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Read in initial forcing, climatology and assimilation data from
@@ -500,8 +511,7 @@
 !
       CALL rp_get_idata (ng)
       CALL rp_get_data (ng)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef MASKING
 !
@@ -601,7 +611,7 @@
 !-----------------------------------------------------------------------
 !
       DO thread=THREAD_RANGE
-        CALL wclock_off (ng, iRPM, 2, __LINE__, __FILE__)
+        CALL wclock_off (ng, iRPM, 2, __LINE__, MyFile)
       END DO
 # endif
 !

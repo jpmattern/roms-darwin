@@ -1,8 +1,8 @@
       SUBROUTINE read_BioPar (model, inp, out, Lwrite)
 !
-!svn $Id: npzd_iron_inp.h 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: npzd_iron_inp.h 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -72,18 +72,18 @@
               Npts=load_i(Nval, Rval, Ngrids, BioIter)
 #ifdef ANA_BIOLOGY
             CASE ('BioIni(iNO3_)')
-              Npts=load_r(Nval, Rval, Ngrids, BioIni(iNO3_,1))
+              Npts=load_r(Nval, Rval, Ngrids, BioIni(iNO3_,:))
             CASE ('BioIni(iPhyt)')
-              Npts=load_r(Nval, Rval, Ngrids, BioIni(iPhyt,1))
+              Npts=load_r(Nval, Rval, Ngrids, BioIni(iPhyt,:))
             CASE ('BioIni(iZoop)')
-              Npts=load_r(Nval, Rval, Ngrids, BioIni(iZoop,1))
+              Npts=load_r(Nval, Rval, Ngrids, BioIni(iZoop,:))
             CASE ('BioIni(iSDet)')
-              Npts=load_r(Nval, Rval, Ngrids, BioIni(iSDet,1))
+              Npts=load_r(Nval, Rval, Ngrids, BioIni(iSDet,:))
 # ifdef IRON_LIMIT
             CASE ('BioIni(iFphy)')
-              Npts=load_r(Nval, Rval, Ngrids, BioIni(iFphy,1))
+              Npts=load_r(Nval, Rval, Ngrids, BioIni(iFphy,:))
             CASE ('BioIni(iFdis)')
-              Npts=load_r(Nval, Rval, Ngrids, BioIni(iFdis,1))
+              Npts=load_r(Nval, Rval, Ngrids, BioIni(iFdis,:))
 # endif
 #endif
             CASE ('PARfrac')

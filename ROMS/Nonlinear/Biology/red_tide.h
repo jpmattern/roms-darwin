@@ -1,14 +1,14 @@
 #undef  NEWMAN
 #define LIMIT_INTERIOR
 
-      SUBROUTINE biology (ng,tile)
+      MODULE biology_mod
 !
-!svn $Id: red_tide.h 995 2020-01-10 04:01:28Z arango $
-!******************************************************** Ruoying He ***
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!svn $Id: red_tide.h 1099 2022-01-06 21:01:01Z arango $
+!======================================================== Ruoying He ===
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
-!****************************************** Alexander F. Shchepetkin ***
+!========================================== Alexander F. Shchepetkin ===
 !                                                                      !
 !  Red Tide Biological Model: Alexandrium fundyense                    !
 !                                                                      !
@@ -28,6 +28,17 @@
 !      western Gulf of Maine: 2, Coupled biophysical modeling, J.      !
 !      Geophys. Res., 113, C07040, doi:10.1029/2007JC004602.           !
 !                                                                      !
+!=======================================================================
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: biology
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE biology (ng,tile)
 !***********************************************************************
 !
       USE mod_param
@@ -43,6 +54,9 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
 !  Set header file name.
@@ -53,50 +67,51 @@
       IF (Lbiofile(iNLM).and.(tile.eq.0)) THEN
 #endif
         Lbiofile(iNLM)=.FALSE.
-        BIONAME(iNLM)=__FILE__
+        BIONAME(iNLM)=MyFile
       END IF
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 15, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 15, __LINE__, MyFile)
 #endif
-      CALL biology_tile (ng, tile,                                      &
-     &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &
-     &                   IminS, ImaxS, JminS, JmaxS,                    &
-     &                   nstp(ng), nnew(ng),                            &
+      CALL red_tide_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj, N(ng), NT(ng),            &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    nstp(ng), nnew(ng),                           &
 #ifdef MASKING
-     &                   GRID(ng) % rmask,                              &
+     &                    GRID(ng) % rmask,                             &
 #endif
-     &                   GRID(ng) % Hz,                                 &
-     &                   GRID(ng) % z_r,                                &
-     &                   GRID(ng) % z_w,                                &
+     &                    GRID(ng) % Hz,                                &
+     &                    GRID(ng) % z_r,                               &
+     &                    GRID(ng) % z_w,                               &
 #ifdef DAILY_SHORTWAVE
-     &                   FORCES(ng) % srflx_avg,                        &
+     &                    FORCES(ng) % srflx_avg,                       &
 #endif
-     &                   FORCES(ng) % srflx,                            &
-     &                   OCEAN(ng) % CystIni,                           &
-     &                   OCEAN(ng) % DIN_obs,                           &
-     &                   OCEAN(ng) % t)
+     &                    FORCES(ng) % srflx,                           &
+     &                    OCEAN(ng) % CystIni,                          &
+     &                    OCEAN(ng) % DIN_obs,                          &
+     &                    OCEAN(ng) % t)
 
 #ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 15, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 15, __LINE__, MyFile)
 #endif
+!
       RETURN
       END SUBROUTINE biology
 !
 !-----------------------------------------------------------------------
-      SUBROUTINE biology_tile (ng, tile,                                &
-     &                         LBi, UBi, LBj, UBj, UBk, UBt,            &
-     &                         IminS, ImaxS, JminS, JmaxS,              &
-     &                         nstp, nnew,                              &
+      SUBROUTINE red_tide_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj, UBk, UBt,           &
+     &                          IminS, ImaxS, JminS, JmaxS,             &
+     &                          nstp, nnew,                             &
 #ifdef MASKING
-     &                         rmask,                                   &
+     &                          rmask,                                  &
 #endif
-     &                         Hz, z_r, z_w,                            &
+     &                          Hz, z_r, z_w,                           &
 #ifdef DAILY_SHORTWAVE
-     &                         srflx_avg,                               &
+     &                          srflx_avg,                              &
 #endif
-     &                         srflx, CystIni, DIN_obs,                 &
-     &                         t)
+     &                          srflx, CystIni, DIN_obs,                &
+     &                          t)
 !-----------------------------------------------------------------------
 !
       USE mod_param
@@ -328,11 +343,11 @@
 !  of bottom temperature.
 !
             temp=Bio(i,1,itemp)                         ! bottom, k=1
-            GermL=(1.50_r8+                                              &
-     &             (8.72_r8-1.50_r8)*0.5_r8*                             &
+            GermL=(1.50_r8+                                             &
+     &             (8.72_r8-1.50_r8)*0.5_r8*                            &
      &             (TANH(0.790_r8*temp-6.27_r8)+1.0_r8))*oNsedLayers
-            GermD=(1.04_r8+                                              &
-     &             (4.26_r8-1.04_r8)*0.5_r8*                             &
+            GermD=(1.04_r8+                                             &
+     &             (4.26_r8-1.04_r8)*0.5_r8*                            &
      &             (TANH(0.394_r8*temp-3.33_r8)+1.0_r8))*oNsedLayers
 !
 !  Compute non-spectral irradiance flux at each sediment layer.  Then,
@@ -690,6 +705,8 @@
         END DO
 
       END DO J_LOOP
-
+!
       RETURN
-      END SUBROUTINE biology_tile
+      END SUBROUTINE red_tide_tile
+
+      END MODULE biology_mod

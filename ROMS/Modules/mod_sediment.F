@@ -1,10 +1,9 @@
 #include "cppdefs.h"
-      MODULE mod_sediment
 
 /*
-** svn $Id: mod_sediment.F 995 2020-01-10 04:01:28Z arango $
+** svn $Id: mod_sediment.F 1099 2022-01-06 21:01:01Z arango $
 *************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2020 The ROMS/TOMS Group                        **
+** Copyright (c) 2002-2022 The ROMS/TOMS Group                        **
 **   Licensed under a MIT/X style license                             **
 **   See License_ROMS.txt                                             **
 ************************************************************************
@@ -64,6 +63,7 @@
 
 #if defined SEDIMENT || defined BBL_MODEL
 # include <sediment_mod.h>
-#endif
-
+#else
+      MODULE mod_sediment
       END MODULE mod_sediment
+#endif

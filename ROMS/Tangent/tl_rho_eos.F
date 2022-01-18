@@ -2,16 +2,16 @@
       MODULE tl_rho_eos_mod
 #if defined TANGENT && defined SOLVE3D
 !
-!svn $Id: tl_rho_eos.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: tl_rho_eos.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
 !                                                                      !
 !  This routine computes  "in situ" density and other associated       !
 !  quantitites as a function of potential temperature,  salinity,      !
-!  and pressure from a polynomial expression (Jackett & McDougall,     !
+!  and pressure from a polynomial expression (Jackett and McDougall,   !
 !  1992). The polynomial expression was found from fitting to 248      !
 !  values  in the  oceanographic  ranges of  salinity,  potential      !
 !  temperature,  and pressure.  It  assumes no pressure variation      !
@@ -60,10 +60,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 14, __LINE__, __FILE__)
+      CALL wclock_on (ng, model, 14, __LINE__, MyFile)
 # endif
       CALL tl_rho_eos_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -107,9 +110,9 @@
      &                     OCEAN(ng) % rho,                             &
      &                     OCEAN(ng) % tl_rho)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 14, __LINE__, __FILE__)
+      CALL wclock_off (ng, model, 14, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE tl_rho_eos
 
@@ -626,10 +629,10 @@
             tl_den_dn=tl_cff2*(den1(i,k  )*bulk_dn)+                    &
      &                cff2*(tl_den1(i,k  )*bulk_dn+                     &
      &                      den1(i,k  )*tl_bulk_dn)
-!>          bvf(i,j,k)=-g*(den_up-den_dn)/                              &
-!>   &                 (0.5_r8*(den_up+den_dn)*                         &
-!>   &                  (z_r(i,j,k+1)-z_r(i,j,k)))
-!>
+!^          bvf(i,j,k)=-g*(den_up-den_dn)/                              &
+!^   &                 (0.5_r8*(den_up+den_dn)*                         &
+!^   &                  (z_r(i,j,k+1)-z_r(i,j,k)))
+!^
             cff3=1.0_r8/(0.5_r8*(den_up+den_dn)*                        &
      &                  (z_r(i,j,k+1)-z_r(i,j,k)))
             tl_cff3=-cff3*cff3*                                         &
@@ -642,11 +645,11 @@
           END DO
         END DO
         DO i=IstrT,IendT
-!>        bvf(i,j,0)=0.0_r8
-!>
+!^        bvf(i,j,0)=0.0_r8
+!^
           tl_bvf(i,j,0)=0.0_r8
-!>        bvf(i,j,N(ng))=0.0_r8
-!>
+!^        bvf(i,j,N(ng))=0.0_r8
+!^
           tl_bvf(i,j,N(ng))=0.0_r8
         END DO
 #  endif
@@ -692,8 +695,8 @@
      &                     tl_Dden1DS(i,k)*cff2+                        &
      &                     Dden1DS(i,k)*tl_cff2)
 #   ifdef LMD_DDMIX_NOT_YET
-!>          alfaobeta(i,j,k)=Tcof(i,k)/Scof(i,k)
-!>
+!^          alfaobeta(i,j,k)=Tcof(i,k)/Scof(i,k)
+!^
             tl_alfaobeta(i,j,k)=(tl_Tcof(i,k)*Scof(i,k)-                &
      &                           Tcof(i,k)*tl_Scof(i,k))/               &
      &                           (Scof(i,k)*Scof(i,k))
@@ -724,12 +727,12 @@
             rho(i,j,k)=den(i,k)
             tl_rho(i,j,k)=tl_den(i,k)
 #  if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET
-!>          pden(i,j,k)=(den1(i,k)-1000.0_r8)      ! This gives a fatal
-!>                                                 ! result in 4D-Var
+!^          pden(i,j,k)=(den1(i,k)-1000.0_r8)      ! This gives a fatal
+!^                                                 ! result in 4D-Var
             tl_pden(i,j,k)=tl_den1(i,k)            ! posterior error...
 #   ifdef MASKING
-!>          pden(i,j,k)=pden(i,k)*rmask(i,j)
-!>
+!^          pden(i,j,k)=pden(i,k)*rmask(i,j)
+!^
             tl_pden(i,j,k)=tl_pden(i,k)*rmask(i,j)
 #   endif
 #  endif
@@ -750,10 +753,10 @@
      &                          tl_rho)
 
 #  if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET
-!>      CALL exchange_r3d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
-!>   &                          pden)
-!>
+!^      CALL exchange_r3d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+!^   &                          pden)
+!^
         CALL exchange_r3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          tl_pden)
@@ -762,10 +765,10 @@
 #  if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET || \
       defined BULK_FLUXES_NOT_YET
 #   ifdef LMD_DDMIX_NOT_YET
-!>      CALL exchange_w3d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
-!>   &                          alfaobeta)
-!>
+!^      CALL exchange_w3d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+!^   &                          alfaobeta)
+!^
         CALL exchange_w3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          tl_alfaobeta)
@@ -800,10 +803,10 @@
 #  endif
 
 #  ifdef BV_FREQUENCY_NOT_YET
-!>      CALL exchange_w3d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
-!>   &                          bvf)
-!>
+!^      CALL exchange_w3d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+!^   &                          bvf)
+!^
         CALL exchange_w3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          tl_bvf)
@@ -824,12 +827,12 @@
      &                    tl_rho)
 
 #   if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET
-!>    CALL mp_exchange3d (ng, tile, model, 1,                           &
-!>   &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    pden)
-!>
+!^    CALL mp_exchange3d (ng, tile, model, 1,                           &
+!^   &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    pden)
+!^
       CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
      &                    NghostPoints,                                 &
@@ -840,12 +843,12 @@
 #   if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET || \
        defined BULK_FLUXES
 #    ifdef LMD_DDMIX_NOT_YET
-!>    CALL mp_exchange3d (ng, tile, model, 1,                           &
-!>   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    alfaobeta)
-!>
+!^    CALL mp_exchange3d (ng, tile, model, 1,                           &
+!^   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    alfaobeta)
+!^
       CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
      &                    NghostPoints,                                 &
@@ -878,12 +881,12 @@
 #   endif
 
 #   ifdef BV_FREQUENCY_NOT_YET
-!>    CALL mp_exchange3d (ng, tile, model, 1,                           &
-!>   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    bvf)
-!>
+!^    CALL mp_exchange3d (ng, tile, model, 1,                           &
+!^   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    bvf)
+!^
       CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
      &                    NghostPoints,                                 &
@@ -891,7 +894,7 @@
      &                    tl_bvf)
 #   endif
 #  endif
-
+!
       RETURN
       END SUBROUTINE tl_rho_eos_tile
 # endif
@@ -1094,8 +1097,8 @@
             tl_rho(i,j,k)=tl_rho(i,j,k)*rmask(i,j)
 #  endif
 #  if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET
-!>          pden(i,j,k)=rho(i,j,k)
-!>
+!^          pden(i,j,k)=rho(i,j,k)
+!^
             tl_pden(i,j,k)=tl_rho(i,j,k)
 #  endif
           END DO
@@ -1158,9 +1161,9 @@
 !
         DO k=1,N(ng)-1
           DO i=IstrT,IendT
-!>          bvf(i,j,k)=-gorho0*(rho(i,j,k+1)-rho(i,j,k))/               &
-!>   &                         (z_r(i,j,k+1)-z_r(i,j,k))
-!>
+!^          bvf(i,j,k)=-gorho0*(rho(i,j,k+1)-rho(i,j,k))/               &
+!^   &                         (z_r(i,j,k+1)-z_r(i,j,k))
+!^
             cff=1.0_r8/(z_r(i,j,k+1)-z_r(i,j,k))
             tl_cff=-cff*cff*(tl_z_r(i,j,k+1)-tl_z_r(i,j,k))
             tl_bvf(i,j,k)=-gorho0*                                      &
@@ -1201,8 +1204,8 @@
         END IF
         DO k=1,N(ng)
           DO i=IstrT,IendT
-!>          alfaobeta(i,j,k)=cff*Tcoef(ng)
-!>
+!^          alfaobeta(i,j,k)=cff*Tcoef(ng)
+!^
             tl_alfaobeta(i,j,k)=0.0_r8
           END DO
         END DO
@@ -1223,10 +1226,10 @@
      &                          tl_rho)
 
 #  if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET
-!>      CALL exchange_r3d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
-!>   &                          pden)
-!>
+!^      CALL exchange_r3d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+!^   &                          pden)
+!^
         CALL exchange_r3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          tl_pden)
@@ -1235,10 +1238,10 @@
 #  if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET || \
       defined BULK_FLUXES_NOT_YET
 #   ifdef LMD_DDMIX_NOT_YET
-!>      CALL exchange_w3d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
-!>   &                          alfaobeta)
-!>
+!^      CALL exchange_w3d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+!^   &                          alfaobeta)
+!^
         CALL exchange_w3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          tl_alfaobeta)
@@ -1273,10 +1276,10 @@
 #  endif
 
 #  ifdef BV_FREQUENCY_NOT_YET
-!>      CALL exchange_w3d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
-!>   &                          bvf)
-!>
+!^      CALL exchange_w3d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
+!^   &                          bvf)
+!^
         CALL exchange_w3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          tl_bvf)
@@ -1297,12 +1300,12 @@
      &                    tl_rho)
 
 #   if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET
-!>    CALL mp_exchange3d (ng, tile, model, 1,                           &
-!>   &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    pden)
-!>
+!^    CALL mp_exchange3d (ng, tile, model, 1,                           &
+!^   &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    pden)
+!^
       CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
      &                    NghostPoints,                                 &
@@ -1313,12 +1316,12 @@
 #   if defined LMD_SKPP_NOT_YET || defined LMD_BKPP_NOT_YET || \
        defined BULK_FLUXES
 #    ifdef LMD_DDMIX_NOT_YET
-!>    CALL mp_exchange3d (ng, tile, model, 1,                           &
-!>   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    alfaobeta)
-!>
+!^    CALL mp_exchange3d (ng, tile, model, 1,                           &
+!^   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    alfaobeta)
+!^
       CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
      &                    NghostPoints,                                 &
@@ -1351,12 +1354,12 @@
 #   endif
 
 #   ifdef BV_FREQUENCY_NOT_YET
-!>    CALL mp_exchange3d (ng, tile, model, 1,                           &
-!>   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    bvf)
-!>
+!^    CALL mp_exchange3d (ng, tile, model, 1,                           &
+!^   &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    bvf)
+!^
       CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 0, N(ng),                 &
      &                    NghostPoints,                                 &
@@ -1364,7 +1367,7 @@
      &                    tl_bvf)
 #   endif
 #  endif
-
+!
       RETURN
       END SUBROUTINE tl_rho_eos_tile
 # endif

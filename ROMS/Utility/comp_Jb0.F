@@ -3,9 +3,9 @@
 
 #ifdef RPCG
 !
-!svn $Id: comp_Jb0.F 1038 2020-09-29 01:54:25Z arango $
+!svn $Id: comp_Jb0.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -15,18 +15,6 @@
 !                                                                      !
 !=======================================================================
 !
-      implicit none
-
-      PRIVATE
-      PUBLIC comp_Jb0
-      PUBLIC aug_oper
-
-      CONTAINS
-!
-!***********************************************************************
-      SUBROUTINE comp_Jb0 (ng, tile, model, outLoop, LTLM, LADJ)
-!***********************************************************************
-!
       USE mod_param
 # ifdef ADJUST_BOUNDARY
       USE mod_boundary
@@ -34,9 +22,31 @@
 # if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
       USE mod_forces
 # endif
-      USE mod_grid
-      USE mod_ocean
       USE mod_fourdvar
+      USE mod_grid
+      USE mod_iounits
+      USE mod_ncparam
+      USE mod_netcdf
+# if defined PIO_LIB && defined DISTRIBUTE
+      USE mod_pio_netcdf
+# endif
+      USE mod_ocean
+      USE mod_scalars
+!
+      USE state_dotprod_mod, ONLY : state_dotprod
+      USE strings_mod,       ONLY : FoundError
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: comp_Jb0
+      PUBLIC  :: aug_oper
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE comp_Jb0 (ng, tile, model, outLoop, LTLM, LADJ)
+!***********************************************************************
 !
 !  Imported variable declarations.
 !
@@ -107,6 +117,7 @@
      &                    OCEAN(ng) % ad_vbar,                          &
 # endif
      &                    OCEAN(ng) % ad_zeta)
+!
       RETURN
       END SUBROUTINE comp_Jb0
 !
@@ -157,19 +168,6 @@
 # endif
      &                          ad_zeta)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_ncparam
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_netcdf
-      USE mod_scalars
-# ifdef ADJUST_BOUNDARY
-      USE mod_boundary
-# endif
-!
-      USE state_dotprod_mod, ONLY : state_dotprod
-      USE strings_mod,       ONLY : FoundError
 !
 !  Imported variable declarations.
 !
@@ -281,6 +279,9 @@
 !  Local variable declarations.
 !
       real(r8), dimension(0:NstateVar(ng)) :: dot
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", comp_Jb0_tile"
 
 # include "set_bounds.h"
 !
@@ -334,12 +335,21 @@
 !  Write out outer loop background cost function into 4D-Var NetCDF
 !  (DAV struc) file.  Recall that Jb0(0:Nouter)
 !
-      CALL netcdf_put_fvar (ng, model, DAV(ng)%name,                    &
-     &                      'Jb0', Jb0(0:),                             &
-     &                      (/1/), (/Nouter+1/),                        &
-     &                      ncid = DAV(ng)%ncid)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+      SELECT CASE (DAV(ng)%IOtype)
+        CASE (io_nf90)
+          CALL netcdf_put_fvar (ng, model, DAV(ng)%name,                &
+     &                          'Jb0', Jb0(0:),                         &
+     &                          (/1/), (/Nouter+1/),                    &
+     &                          ncid = DAV(ng)%ncid)
+# if defined PIO_LIB && defined DISTRIBUTE
+        CASE (io_pio)
+          CALL pio_netcdf_put_fvar (ng, model, DAV(ng)%name,            &
+     &                              'Jb0', Jb0(0:),                     &
+     &                              (/1/), (/Nouter+1/),                &
+     &                              pioFile = DAV(ng)%pioFile)
+# endif
+      END SELECT
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
       RETURN
       END SUBROUTINE comp_Jb0_tile
@@ -396,7 +406,7 @@
      &                    OCEAN(ng) % tl_vbar,                          &
 # endif
      &                    OCEAN(ng) % tl_zeta)
-
+!
       RETURN
       END SUBROUTINE aug_oper
 !
@@ -425,17 +435,6 @@
 # endif
      &                          tl_zeta)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_ncparam
-# if defined ADJUST_STFLUX || defined ADJUST_WSTRESS || \
-     defined ADJUST_BOUNDARY
-      USE mod_scalars
-# endif
-# ifdef ADJUST_BOUNDARY
-      USE mod_boundary
-# endif
-      USE mod_fourdvar
 !
 !  Imported variable declarations.
 !
@@ -874,7 +873,7 @@
       END DO
 #  endif
 # endif
-
+!
       RETURN
       END SUBROUTINE aug_oper_tile
 #endif

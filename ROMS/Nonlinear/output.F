@@ -2,9 +2,9 @@
 #ifdef NONLINEAR
       SUBROUTINE output (ng)
 !
-!svn $Id: output.F 1036 2020-07-29 05:39:53Z arango $
+!svn $Id: output.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -26,13 +26,51 @@
 # endif
       USE mod_iounits
       USE mod_ncparam
-      USE mod_netcdf
       USE mod_scalars
 !
-# ifdef DISTRIBUTE
-      USE distribute_mod, ONLY : mp_bcasts
+      USE close_io_mod,    ONLY : close_file
+# ifdef AVERAGES
+      USE def_avg_mod,     ONLY : def_avg
 # endif
-      USE strings_mod,    ONLY : FoundError
+# ifdef DIAGNOSTICS
+      USE def_diags_mod,   ONLY : def_diags
+# endif
+# ifdef FLOATS
+      USE def_floats_mod,  ONLY : def_floats
+# endif
+      USE def_his_mod,     ONLY : def_his
+      USE def_quick_mod,   ONLY : def_quick
+      USE def_rst_mod,     ONLY : def_rst
+# ifdef STATIONS
+      USE def_station_mod, ONLY : def_station
+# endif
+# ifdef DISTRIBUTE
+      USE distribute_mod,  ONLY : mp_bcasts
+# endif
+# ifdef OBSERVATIONS
+      USE obs_read_mod,    ONLY : obs_read
+      USE obs_write_mod,   ONLY : obs_write
+# endif
+      USE strings_mod,     ONLY : FoundError
+# ifdef AVERAGES
+      USE wrt_avg_mod,     ONLY : wrt_avg
+# endif
+# ifdef DIAGNOSTICS
+      USE wrt_diags_mod,   ONLY : wrt_diags
+# endif
+# ifdef FLOATS
+      USE wrt_floats_mod,  ONLY : wrt_floats
+# endif
+      USE wrt_his_mod,     ONLY : wrt_his
+      USE wrt_quick_mod,   ONLY : wrt_quick
+      USE wrt_rst_mod,     ONLY : wrt_rst
+# ifdef STATIONS
+      USE wrt_station_mod, ONLY : wrt_station
+# endif
+# if defined AVERAGES  && defined AVERAGES_DETIDE && \
+   (defined SSH_TIDES || defined UV_TIDES)
+      USE wrt_tides_mod,   ONLY : wrt_tides
+# endif
 !
       implicit none
 !
@@ -43,10 +81,13 @@
 !  Local variable declarations.
 !
       logical :: Ldefine, NewFile
-
+!
       integer :: Fcount, ifile, status, tile
 !
-      SourceFile=__FILE__
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
+      SourceFile=MyFile
 
 # ifdef PROFILE
 !
@@ -54,7 +95,7 @@
 !  Turn on output data time wall clock.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, iNLM, 8, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 8, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -119,8 +160,8 @@
      &                             ifile
               END IF
               exit_flag=4
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
             Fcount=HIS(ng)%load
             HIS(ng)%Nrec(Fcount)=0
@@ -131,12 +172,9 @@
             CALL mp_bcasts (ng, iNLM, HIS(ng)%name)
 # endif
             HIS(ng)%files(Fcount)=TRIM(HIS(ng)%name)
-            IF (HIS(ng)%ncid.ne.-1) THEN
-              CALL netcdf_close (ng, iNLM, HIS(ng)%ncid)
-            END IF
+            CALL close_file (ng, iNLM, HIS(ng), HIS(ng)%name)
             CALL def_his (ng, NewFile)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
           IF ((iic(ng).eq.ntstart(ng)).and.(nrrec(ng).ne.0)) THEN
             LwrtHIS(ng)=.FALSE.                 ! avoid writing initial
@@ -146,8 +184,7 @@
         ELSE
           IF (iic(ng).eq.ntstart(ng)) THEN
             CALL def_his (ng, ldefout(ng))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtHIS(ng)=.TRUE.
             LdefHIS(ng)=.FALSE.
           END IF
@@ -164,14 +201,12 @@
             IF (nrrec(ng).eq.0.or.iic(ng).ne.ntstart(ng)) THEN
               CALL wrt_his (ng, tile)
             END IF
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
           IF (MOD(iic(ng)-1,nHIS(ng)).eq.0) THEN
             CALL wrt_his (ng, tile)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END IF
       END IF
@@ -224,8 +259,8 @@
      &                             ifile
               END IF
               exit_flag=4
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
             Fcount=QCK(ng)%load
             QCK(ng)%Nrec(Fcount)=0
@@ -236,12 +271,9 @@
             CALL mp_bcasts (ng, iNLM, QCK(ng)%name)
 # endif
             QCK(ng)%files(Fcount)=TRIM(QCK(ng)%name)
-            IF (QCK(ng)%ncid.ne.-1) THEN
-              CALL netcdf_close (ng, iNLM, QCK(ng)%ncid)
-            END IF
+            CALL close_file (ng, iNLM, QCK(ng), QCK(ng)%name)
             CALL def_quick (ng, NewFile)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
           IF ((iic(ng).eq.ntstart(ng)).and.(nrrec(ng).ne.0)) THEN
             LwrtQCK(ng)=.FALSE.                 ! avoid writing initial
@@ -251,8 +283,7 @@
         ELSE
           IF (iic(ng).eq.ntstart(ng)) THEN
             CALL def_quick (ng, ldefout(ng))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtQCK(ng)=.TRUE.
             LdefQCK(ng)=.FALSE.
           END IF
@@ -269,14 +300,12 @@
             IF (nrrec(ng).eq.0.or.iic(ng).ne.ntstart(ng)) THEN
               CALL wrt_quick (ng, tile)
             END IF
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
           IF (MOD(iic(ng)-1,nQCK(ng)).eq.0) THEN
             CALL wrt_quick (ng, tile)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END IF
       END IF
@@ -337,8 +366,8 @@
      &                             ifile
               END IF
               exit_flag=4
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
             Fcount=AVG(ng)%load
             AVG(ng)%Nrec(Fcount)=0
@@ -349,19 +378,15 @@
             CALL mp_bcasts (ng, iNLM, AVG(ng)%name)
 #  endif
             AVG(ng)%files(Fcount)=TRIM(AVG(ng)%name)
-            IF (AVG(ng)%ncid.ne.-1) THEN
-              CALL netcdf_close (ng, iNLM, AVG(ng)%ncid)
-            END IF
+            CALL close_file (ng, iNLM, AVG(ng), AVG(ng)%name)
             CALL def_avg (ng, Newfile)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtAVG(ng)=.TRUE.
           END IF
         ELSE
           IF (iic(ng).eq.ntstart(ng)) THEN
             CALL def_avg (ng, ldefout(ng))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtAVG(ng)=.TRUE.
             LdefAVG(ng)=.FALSE.
           END IF
@@ -374,13 +399,11 @@
         IF (((iic(ng).gt.ntstart(ng)).and.                              &
      &       (MOD(iic(ng)-1,nAVG(ng)).eq.0)).or.                        &
      &      ((iic(ng).ge.ntsAVG(ng)).and.(nAVG(ng).eq.1))) THEN
-          CALL wrt_avg (ng)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL wrt_avg (ng, tile)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  if defined AVERAGES_DETIDE && (defined SSH_TIDES || defined UV_TIDES)
-          CALL wrt_tides (ng)
-          IF (FoundError(exit_flag, NoError, __LINE__,                   &
-     &                   __FILE__)) RETURN
+          CALL wrt_tides (ng, tile)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
         END IF
       END IF
@@ -442,8 +465,8 @@
      &                             ifile
               END IF
               exit_flag=4
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
             Fcount=DIA(ng)%load
             DIA(ng)%Nrec(Fcount)=0
@@ -454,19 +477,15 @@
             CALL mp_bcasts (ng, iNLM, DIA(ng)%name)
 #  endif
             DIA(ng)%files(Fcount)=TRIM(DIA(ng)%name)
-            IF (DIA(ng)%ncid.ne.-1) THEN
-              CALL netcdf_close (ng, iNLM, DIA(ng)%ncid)
-            END IF
+            CALL close_file (ng, iNLM, DIA(ng), DIA(ng)%name)
             CALL def_diags (ng, Newfile)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtDIA(ng)=.TRUE.
           END IF
         ELSE
           IF (iic(ng).eq.ntstart(ng)) THEN
             CALL def_diags (ng, ldefout(ng))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtDIA(ng)=.TRUE.
             LdefDIA(ng)=.FALSE.
           END IF
@@ -479,9 +498,8 @@
         IF (((iic(ng).gt.ntstart(ng)).and.                              &
      &       (MOD(iic(ng)-1,nDIA(ng)).eq.0)).or.                        &
      &      ((iic(ng).ge.ntsDIA(ng)).and.(nDIA(ng).eq.1))) THEN
-          CALL wrt_diags (ng)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL wrt_diags (ng, tile)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 # endif
@@ -500,17 +518,15 @@
 !
         IF (LdefSTA(ng).and.(iic(ng).eq.ntstart(ng))) THEN
           CALL def_station (ng, ldefout(ng))
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           LdefSTA(ng)=.FALSE.
         END IF
 !
 !  Write out data into stations NetCDF file.
 !
         IF (MOD(iic(ng)-1,nSTA(ng)).eq.0) THEN
-          CALL wrt_station (ng)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL wrt_station (ng, tile)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 # endif
@@ -534,8 +550,7 @@
             NewFile=.FALSE.
           END IF
           CALL def_floats (ng, NewFile)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           LdefFLT(ng)=.FALSE.
         END IF
 !
@@ -544,8 +559,7 @@
         IF ((MOD(iic(ng)-1,nFLT(ng)).eq.0).and.                         &
      &      ((frrec(ng).eq.0).or.(iic(ng).ne.ntstart(ng)))) THEN
           CALL wrt_floats (ng)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 # endif
@@ -559,8 +573,7 @@
 !
       IF (LdefRST(ng)) THEN
         CALL def_rst (ng)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         LwrtRST(ng)=.TRUE.
         LdefRST(ng)=.FALSE.
       END IF
@@ -570,9 +583,8 @@
       IF (LwrtRST(ng)) THEN
         IF ((iic(ng).gt.ntstart(ng)).and.                               &
      &      (MOD(iic(ng)-1,nRST(ng)).eq.0)) THEN
-          CALL wrt_rst (ng)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL wrt_rst (ng, tile)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 
@@ -612,7 +624,7 @@
 !  Turn off output data time wall clock.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, iNLM, 8, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 8, __LINE__, MyFile)
 # endif
 !
  10   FORMAT (/,' OUTPUT - multi-file counter ',a,i0,                   &

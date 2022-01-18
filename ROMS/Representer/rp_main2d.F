@@ -2,9 +2,9 @@
 #if defined TL_IOMS && !defined SOLVE3D
       SUBROUTINE rp_main2d (RunInterval)
 !
-!svn $Id: rp_main2d.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: rp_main2d.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -27,6 +27,9 @@
       USE mod_stepping
 !
       USE dateclock_mod,           ONLY : time_string
+# ifdef TIDE_GENERATING_FORCES
+      USE equilibrium_tide_mod,    ONLY : equilibrium_tide
+# endif
 # if defined ATM_COUPLING_NOT_YET && defined MCT_LIB
       USE ocean_coupler_mod,       ONLY : atmos_coupling
 # endif
@@ -77,7 +80,11 @@
 # ifdef FLOATS_NOT_YET
       integer :: Lend, Lstr, chunk_size
 # endif
+!
       real(r8) :: MaxDT, my_StepTime
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !  Time-step tangent linear vertically integrated equations.
@@ -111,8 +118,7 @@
           CALL rp_get_data (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
 !
 !-----------------------------------------------------------------------
@@ -126,8 +132,7 @@
           END DO
 !$OMP BARRIER
         END DO
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef WEAK_CONSTRAINT
 !
@@ -186,6 +191,9 @@
 # endif
 # ifdef DIAGNOSTICS
 !!          CALL rp_set_diags (ng, tile)
+# endif
+# ifdef TIDE_GENERATING_FORCES
+            CALL equilibrium_tide (ng, tile, iRPM)
 # endif
             CALL rp_diag (ng, tile)
           END DO
@@ -301,8 +309,7 @@
           CALL rp_output (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-          IF ((FoundError(exit_flag, NoError, __LINE__,                 &
-     &                    __FILE__)).or.                                &
+          IF ((FoundError(exit_flag, NoError, __LINE__, MyFile)).or.    &
      &        ((iic(ng).eq.(ntend(ng)+1)).and.(ng.eq.Ngrids))) RETURN
         END DO
 !

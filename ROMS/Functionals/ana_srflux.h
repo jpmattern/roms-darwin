@@ -1,8 +1,9 @@
+!!
       SUBROUTINE ana_srflux (ng, tile, model)
 !
-!! svn $Id: ana_srflux.h 995 2020-01-10 04:01:28Z arango $
+!! svn $Id: ana_srflux.h 1099 2022-01-06 21:01:01Z arango $
 !!======================================================================
-!! Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
 !!   See License_ROMS.txt                                              !
 !=======================================================================
@@ -20,7 +21,12 @@
 ! Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, model
-
+!
+!  Local variable declarations.
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
       CALL ana_srflux_tile (ng, tile, model,                            &
@@ -43,9 +49,9 @@
 #else
       IF (Lanafile.and.(tile.eq.0)) THEN
 #endif
-        ANANAME(27)=__FILE__
+        ANANAME(27)=MyFile
       END IF
-
+!
       RETURN
       END SUBROUTINE ana_srflux
 !
@@ -100,6 +106,7 @@
 !  Local variable declarations.
 !
       integer :: i, j
+!
 #if defined ALBEDO || defined DIURNAL_SRFLUX
       real(dp) :: hour, yday
       real(r8) :: Dangle, Hangle, LatRad
@@ -109,7 +116,7 @@
 # endif
 #endif
       real(r8) :: cff
-
+!
       real(r8), parameter :: alb_w=0.06_r8
 
 #include "set_bounds.h"
@@ -274,6 +281,6 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    srflx)
 #endif
-
+!
       RETURN
       END SUBROUTINE ana_srflux_tile

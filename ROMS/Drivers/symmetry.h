@@ -1,8 +1,8 @@
-      MODULE ocean_control_mod
+      MODULE roms_kernel_mod
 !
-!svn $Id: symmetry.h 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: symmetry.h 1103 2022-01-13 03:38:35Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -24,15 +24,39 @@
 !                                                                      !
 !=======================================================================
 !
+      USE mod_param
+      USE mod_parallel
+      USE mod_arrays
+      USE mod_fourdvar
+      USE mod_iounits
+      USE mod_ncparam
+      USE mod_ocean
+      USE mod_scalars
+      USE mod_stepping
+!
+      USE close_io_mod,      ONLY : close_inp, close_out
+      USE convolve_mod,      ONLY : error_covariance
+      USE def_impulse_mod,   ONLY : def_impulse
+      USE def_norm_mod,      ONLY : def_norm
+#ifdef DISTRIBUTE
+      USE distribute_mod,    ONLY : mp_bcastf
+#endif
+      USE get_state_mod,     ONLY : get_state
+      USE inp_par_mod,       ONLY : inp_par
+      USE normalization_mod, ONLY : normalization
+      USE strings_mod,       ONLY : FoundError
+      USE tl_def_ini_mod,    ONLY : tl_def_ini
+      USE wrt_impulse_mod,   ONLY : wrt_impulse
+      USE wrt_rst_mod,       ONLY : wrt_rst
+!
       implicit none
-
-      PRIVATE
-      PUBLIC  :: ROMS_initialize
-      PUBLIC  :: ROMS_run
-      PUBLIC  :: ROMS_finalize
-
+!
+      PUBLIC :: ROMS_initialize
+      PUBLIC :: ROMS_run
+      PUBLIC :: ROMS_finalize
+!
       CONTAINS
-
+!
       SUBROUTINE ROMS_initialize (first, mpiCOMM)
 !
 !=======================================================================
@@ -42,25 +66,16 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_scalars
-!
-      USE inp_par_mod, ONLY : inp_par
-      USE strings_mod, ONLY : FoundError
-!
 !  Imported variable declarations.
 !
       logical, intent(inout) :: first
-
+!
       integer, intent(in), optional :: mpiCOMM
 !
 !  Local variable declarations.
 !
       logical :: allocate_vars = .TRUE.
-
+!
 #ifdef DISTRIBUTE
       integer :: MyError, MySize
 #endif
@@ -69,6 +84,9 @@
 #ifdef _OPENMP
       integer :: my_threadnum
 #endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ROMS_initialize"
 
 #ifdef DISTRIBUTE
 !
@@ -105,14 +123,12 @@
 !  grids and dimension parameters are known.
 !
         CALL inp_par (iNLM)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Set domain decomposition tile partition range.  This range is
 !  computed only once since the "first_tile" and "last_tile" values
 !  are private for each parallel thread/node.
 !
-!$OMP PARALLEL
 #if defined _OPENMP
       MyThread=my_threadnum()
 #elif defined DISTRIBUTE
@@ -125,7 +141,6 @@
         first_tile(ng)=MyThread*chunk_size
         last_tile (ng)=first_tile(ng)+chunk_size-1
       END DO
-!$OMP END PARALLEL
 !
 !  Initialize internal wall clocks. Notice that the timings does not
 !  includes processing standard input because several parameters are
@@ -137,22 +152,16 @@
         END IF
 !
         DO ng=1,Ngrids
-!$OMP PARALLEL
           DO thread=THREAD_RANGE
-            CALL wclock_on (ng, iNLM, 0, __LINE__, __FILE__)
+            CALL wclock_on (ng, iNLM, 0, __LINE__, MyFile)
           END DO
-!$OMP END PARALLEL
         END DO
 !
 !  Allocate and initialize modules variables.
 !
-!$OMP PARALLEL
-        CALL mod_arrays (allocate_vars)
-!$OMP END PARALLEL
-!
-!  Allocate and initialize observation arrays.
-!
-        CALL initialize_fourdvar
+        CALL ROMS_allocate_arrays (allocate_vars)
+        CALL ROMS_initialize_arrays
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       END IF
 !
@@ -166,9 +175,8 @@
       STDrec=1
       Tindex=1
       DO ng=1,Ngrids
-        CALL get_state (ng, 10, 10, STD(1,ng)%name, STDrec, Tindex)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        CALL get_state (ng, 10, 10, STD(1,ng), STDrec, Tindex)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 !
 !  Model error standard deviation. They are loaded in Tindex=2
@@ -178,9 +186,8 @@
       Tindex=2
       IF (NSA.eq.2) THEN
         DO ng=1,Ngrids
-          CALL get_state (ng, 11, 11, STD(2,ng)%name, STDrec, Tindex)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL get_state (ng, 11, 11, STD(2,ng), STDrec, Tindex)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
       END IF
 
@@ -191,9 +198,8 @@
       STDrec=1
       Tindex=1
       DO ng=1,Ngrids
-        CALL get_state (ng, 12, 12, STD(3,ng)%name, STDrec, Tindex)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        CALL get_state (ng, 12, 12, STD(3,ng), STDrec, Tindex)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 #endif
 #if defined ADJUST_WSTRESS || defined ADJUST_STFLUX
@@ -203,15 +209,14 @@
       STDrec=1
       Tindex=1
       DO ng=1,Ngrids
-        CALL get_state (ng, 13, 13, STD(4,ng)%name, STDrec, Tindex)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        CALL get_state (ng, 13, 13, STD(4,ng), STDrec, Tindex)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 #endif
-
+!
       RETURN
       END SUBROUTINE ROMS_initialize
-
+!
       SUBROUTINE ROMS_run (RunInterval)
 !
 !=======================================================================
@@ -220,32 +225,17 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param
-      USE mod_parallel
-      USE mod_fourdvar
-      USE mod_iounits
-      USE mod_ncparam
-      USE mod_ocean
-      USE mod_scalars
-      USE mod_stepping
-!
-      USE convolve_mod,      ONLY : error_covariance
-#ifdef DISTRIBUTE
-      USE distribute_mod,    ONLY : mp_bcastf
-#endif
-      USE normalization_mod, ONLY : normalization
-      USE strings_mod,       ONLY : FoundError
-!
 !  Imported variable declarations
 !
       real(dp), intent(in) :: RunInterval            ! seconds
 !
 !  Local variable declarations.
 !
-      logical :: BOUNDED_TL
-
+      logical :: BOUNDED_TL, Lposterior
+!
       integer :: i, j, ng, tile
-      integer :: Lbck, Lini, Lstate, NRMrec
+      integer :: Lbck, Lini, Lstate, NRMrec, Rec1, Rec2
+      integer :: Fcount
       integer :: IperAD, JperAD, KperAD, ivarAD
       integer :: IoutTL, JoutTL, KoutTL, ivarTL
 #ifdef DISTRIBUTE
@@ -254,11 +244,14 @@
       integer, dimension(Ngrids) :: Nrec
 
       integer, allocatable :: StateVar(:)
-
+!
       real(r8), allocatable :: R(:,:,:), Rerr(:,:)
-
+!
       character (len=8 ) :: driver
-      character (len=20) :: frmt
+      character (len=24) :: frmt
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ROMS_run"
 !
 !-----------------------------------------------------------------------
 !  Run nonlinear model and compute basic state tracjectory.
@@ -277,12 +270,8 @@
         wrtRPmod(ng)=.FALSE.
         wrtTLmod(ng)=.FALSE.
       END DO
-
-!$OMP PARALLEL
       CALL initial
-!$OMP END PARALLEL
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Run nonlinear model and compute basic state trajectory.
 !
@@ -291,16 +280,13 @@
           WRITE (stdout,10) 'NL', ng, ntstart(ng), ntend(ng)
         END IF
       END DO
-
-!$OMP PARALLEL
+!
 #ifdef SOLVE3D
       CALL main3d (RunInterval)
 #else
       CALL main2d (RunInterval)
 #endif
-!$OMP END PARALLEL
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Set structure for the nonlinear forward trajectory to be processed
 !  by the tangent linear and adjoint models. Also, set switches to
@@ -309,25 +295,30 @@
 !  their size.
 !
       CALL edit_multifile ('HIS2FWD')
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       DO ng=1,Ngrids
         LreadFWD(ng)=.TRUE.
       END DO
 
-#if defined BULK_FLUXES && defined NL_BULK_FLUXES
+#ifdef FORWARD_FLUXES
 !
-!  Set structure for the nonlinear surface fluxes to be processed by
-!  by the tangent linear and adjoint models. Also, set switches to
-!  process the BLK structure in routine "check_multifile".  Notice that
-!  it is possible to split solution into multiple NetCDF files to reduce
-!  their size.
+!  Set the BLK structure to contain the nonlinear model surface fluxes
+!  needed by the tangent linear and adjoint models. Also, set switches
+!  to process that structure in routine "check_multifile". Notice that
+!  it is possible to split the solution into multiple NetCDF files to
+!  reduce their size.
 !
-      CALL edit_multifile ('HIS2BLK')
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+!  The switch LreadFRC is deactivated because all the atmospheric
+!  forcing, including shortwave radiation, is read from the NLM
+!  surface fluxes or is assigned during ESM coupling.  Such fluxes
+!  are available from the QCK structure. There is no need for reading
+!  and processing from the FRC structure input forcing-files.
+!
+      CALL edit_multifile ('QCK2BLK')
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       DO ng=1,Ngrids
         LreadBLK(ng)=.TRUE.
+        LreadFRC(ng)=.FALSE.
       END DO
 #endif
 !
@@ -343,51 +334,42 @@
       DO ng=1,Ngrids
         IF (ANY(LwrtNRM(:,ng))) THEN
           CALL def_norm (ng, iNLM, 1)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
           IF (NSA.eq.2) THEN
             CALL def_norm (ng, iNLM, 2)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 #ifdef ADJUST_BOUNDARY
           CALL def_norm (ng, iNLM, 3)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #if defined ADJUST_WSTRESS || defined ADJUST_STFLUX
           CALL def_norm (ng, iNLM, 4)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
-!$OMP PARALLEL
+
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL normalization (ng, tile, 2)
           END DO
-!$OMP END PARALLEL
           LdefNRM(1:4,ng)=.FALSE.
           LwrtNRM(1:4,ng)=.FALSE.
         ELSE
           NRMrec=1
-          CALL get_state (ng, 14, 14, NRM(1,ng)%name, NRMrec, 1)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL get_state (ng, 14, 14, NRM(1,ng), NRMrec, 1)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
           IF (NSA.eq.2) THEN
-            CALL get_state (ng, 15, 15, NRM(2,ng)%name, NRMrec, 2)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            CALL get_state (ng, 15, 15, NRM(2,ng), NRMrec, 2)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
 #ifdef ADJUST_BOUNDARY
-          CALL get_state (ng, 16, 16, NRM(3,ng)%name, NRMrec, 1)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL get_state (ng, 16, 16, NRM(3,ng), NRMrec, 1)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #if defined ADJUST_WSTRESS || defined ADJUST_STFLUX
-          CALL get_state (ng, 17, 17, NRM(4,ng)%name, NRMrec, 1)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          CALL get_state (ng, 17, 17, NRM(4,ng), NRMrec, 1)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
         END IF
       END DO
@@ -397,8 +379,7 @@
       DO ng=1,Ngrids
         LdefTLF(ng)=.TRUE.
         CALL def_impulse (ng)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 !
 !=======================================================================
@@ -445,6 +426,15 @@
       KoutTL=INT(user(7))
       KperAD=INT(user(8))
 !
+!  Open tangent linear initial conditions NetCDF file (ITL struc) and
+!  inquire about its variables IDs.
+!
+      DO ng=1,Ngrids
+        LdefITL(ng)=.FALSE.
+        CALL tl_def_ini (ng)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+      END DO
+!
 !  Determine number of perturbation iterations.
 !
       ERstr=1
@@ -467,11 +457,8 @@
         TLmodel=.FALSE.
         DO ng=1,Ngrids
           Lold(ng)=1
-!$OMP PARALLEL
           CALL ad_initial (ng)
-!$OMP END PARALLEL
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           Fcount=ADM(ng)%load
           ADM(ng)%Nrec(Fcount)=0
           ADM(ng)%Rindex=0
@@ -484,16 +471,13 @@
             WRITE (stdout,10) 'AD', ng, ntstart(ng), ntend(ng)
           END IF
         END DO
-
-!$OMP PARALLEL
+!
 #ifdef SOLVE3D
         CALL ad_main3d (RunInterval)
 #else
         CALL ad_main2d (RunInterval)
 #endif
-!$OMP END PARALLEL
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Convolve adjoint trajectory with model-error covariance and convert
@@ -504,8 +488,7 @@
         CALL error_covariance (iTLM, driver, -1, -1,                    &
      &                         Lbck, Lini, Lold, Lnew,                  &
      &                         Rec1, Rec2, Lposterior)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Convert convolved adjoint solution to impulse forcing. Write out
 !  impulse forcing into TLF(ng)%name NetCDF file. To facilitate the
@@ -520,8 +503,7 @@
           tile=-1
 #endif
           CALL wrt_impulse (ng, tile, iADM, ADM(ng)%name)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
 !
 !-----------------------------------------------------------------------
@@ -538,11 +520,8 @@
         TLmodel=.FALSE.
         DO ng=1,Ngrids
           wrtTLmod(ng)=.FALSE.
-!$OMP PARALLEL
           CALL tl_initial (ng)
-!$OMP END PARALLEL
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
 !
 !  Run tangent linear model forward and force with convolved adjoint
@@ -554,16 +533,13 @@
             WRITE (stdout,10) 'TL', ng, ntstart(ng), ntend(ng)
           END IF
         END DO
-
-!$OMP PARALLEL
+!
 #ifdef SOLVE3D
         CALL tl_main3d (RunInterval)
 #else
         CALL tl_main2d (RunInterval)
 #endif
-!$OMP END PARALLEL
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Extract solution at requested points.
 !
@@ -607,11 +583,9 @@
      &                      'Sampling   Point: ',                       &
      &                      IoutTL, JoutTL, KoutTL
           WRITE (stdout,30) 'Sampled Representer Matrix: '
-          IF (Lstate.lt.10) THEN
-            WRITE (frmt,'(i1,a)') Lstate, '(1x,1p,e14.7,0p)'
-          ELSE
-            WRITE (frmt,'(i2,a)') Lstate, '(1x,1p,e14.7,0p)'
-          END IF
+          WRITE (frmt,'(a,i0,a)') '(', Lstate, '(1x,1p,e14.7,0p))'
+!!        WRITE (frmt,'(a)') '(*(1x,1p,e14.7,0p))'        ! FORTRAN 2008
+          WRITE (stdout,'(a,a)') 'My Format: ', frmt
           DO i=1,Lstate
             DO j=1,Lstate
               Rerr(i,j)=R(i,j,ng)-R(j,i,ng)
@@ -632,10 +606,10 @@
  20   FORMAT (/,1x,a,/,/,3x,a,' i = ',i4.4,' j = ',i4.4,' k = ',i4.4,   &
      &                 /,3x,a,' i = ',i4.4,' j = ',i4.4,' k = ',i4.4)
  30   FORMAT (/,1x,a,/)
-
+!
       RETURN
       END SUBROUTINE ROMS_run
-
+!
       SUBROUTINE ROMS_finalize
 !
 !=======================================================================
@@ -654,15 +628,8 @@
 !
       integer :: Fcount, ng, thread
 !
-!-----------------------------------------------------------------------
-!  Compute and report model-observation comparison statistics.
-!-----------------------------------------------------------------------
-!
-      IF (exit_flag.eq.NoError) THEN
-        DO ng=1,Ngrids
-          CALL stats_modobs (ng)
-        END DO
-      END IF
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ROMS_finalize"
 !
 !-----------------------------------------------------------------------
 !  If blowing-up, save latest model state into RESTART NetCDF file.
@@ -683,7 +650,11 @@
             END IF
             blowup=exit_flag
             exit_flag=NoError
-            CALL wrt_rst (ng)
+#ifdef DISTRIBUTE
+            CALL wrt_rst (ng, MyRank)
+#else
+            CALL wrt_rst (ng, -1)
+#endif
           END IF
         END DO
       END IF
@@ -701,18 +672,14 @@
       END IF
 !
       DO ng=1,Ngrids
-!$OMP PARALLEL
         DO thread=THREAD_RANGE
-          CALL wclock_off (ng, iNLM, 0, __LINE__, __FILE__)
+          CALL wclock_off (ng, iNLM, 0, __LINE__, MyFile)
         END DO
-!$OMP END PARALLEL
       END DO
 !
 !  Report dynamic memory and automatic memory requirements.
 !
-!$OMP PARALLEL
       CALL memory
-!$OMP END PARALLEL
 !
 !  Close IO files.
 !
@@ -720,8 +687,8 @@
         CALL close_inp (ng, iNLM)
       END DO
       CALL close_out
-
+!
       RETURN
       END SUBROUTINE ROMS_finalize
 
-      END MODULE ocean_control_mod
+      END MODULE roms_kernel_mod

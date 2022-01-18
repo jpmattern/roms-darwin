@@ -3,9 +3,9 @@
 
 #if defined TL_IOMS && defined SOLVE3D
 !
-!svn $Id: rp_set_zeta.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: rp_set_zeta.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -36,10 +36,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iRPM, 12, __LINE__, __FILE__)
+      CALL wclock_on (ng, iRPM, 12, __LINE__, MyFile)
 # endif
       CALL rp_set_zeta_tile (ng, tile,                                  &
      &                       LBi, UBi, LBj, UBj,                        &
@@ -47,9 +50,9 @@
      &                       COUPLING(ng) % tl_Zt_avg1,                 &
      &                       OCEAN(ng) % tl_zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, iRPM, 12, __LINE__, __FILE__)
+      CALL wclock_off (ng, iRPM, 12, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE rp_set_zeta
 !
@@ -98,39 +101,39 @@
 !
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-!>        zeta(i,j,1)=Zt_avg1(i,j)
-!>        zeta(i,j,2)=Zt_avg1(i,j)
-!>
+!^        zeta(i,j,1)=Zt_avg1(i,j)
+!^        zeta(i,j,2)=Zt_avg1(i,j)
+!^
           tl_zeta(i,j,1)=tl_Zt_avg1(i,j)
           tl_zeta(i,j,2)=tl_Zt_avg1(i,j)
         END DO
       END DO
 
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-!>      CALL exchange_r2d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj,                     &
-!>   &                          zeta(:,:,1))
-!>
+!^      CALL exchange_r2d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj,                     &
+!^   &                          zeta(:,:,1))
+!^
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          tl_zeta(:,:,1))
-!>      CALL exchange_r2d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj,                     &
-!>   &                          zeta(:,:,2))
-!>
+!^      CALL exchange_r2d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj,                     &
+!^   &                          zeta(:,:,2))
+!^
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          tl_zeta(:,:,2))
       END IF
 
 # ifdef DISTRIBUTE
-!>    CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
-!>   &                    LBi, UBi, LBj, UBj,                           &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    zeta(:,:,1),                                  &
-!>   &                    zeta(:,:,2))
-!>
+!^    CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
+!^   &                    LBi, UBi, LBj, UBj,                           &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    zeta(:,:,1),                                  &
+!^   &                    zeta(:,:,2))
+!^
       CALL mp_exchange2d (ng, tile, iRPM, 2,                            &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
@@ -138,7 +141,7 @@
      &                    tl_zeta(:,:,1),                               &
      &                    tl_zeta(:,:,2))
 # endif
-
+!
       RETURN
       END SUBROUTINE rp_set_zeta_tile
 #endif

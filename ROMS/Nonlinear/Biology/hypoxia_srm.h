@@ -1,11 +1,11 @@
-      SUBROUTINE biology (ng,tile)
+      MODULE biology_mod
 !
-!svn $Id: hypoxia_srm.h 995 2020-01-10 04:01:28Z arango $
-!************************************************** Hernan G. Arango ***
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!svn $Id: hypoxia_srm.h 1099 2022-01-06 21:01:01Z arango $
+!================================================== Hernan G. Arango ===
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
-!***********************************************************************
+!=======================================================================
 !                                                                      !
 !  This routine computes the biological sources and sinks for the      !
 !  Hypoxia Simple Respiration Model for dissolved oxygen. Then, it     !
@@ -37,6 +37,17 @@
 !      oxygen waters in Chesapeake Bay: a multiple model comparison,   !
 !      Biogeosciences, 13, 2011-2028                                   !
 !                                                                      !
+!=======================================================================
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: biology
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE biology (ng,tile)
 !***********************************************************************
 !
       USE mod_param
@@ -57,6 +68,9 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
 !  Set header file name.
@@ -67,65 +81,65 @@
       IF (Lbiofile(iNLM).and.(tile.eq.0)) THEN
 #endif
         Lbiofile(iNLM)=.FALSE.
-        BIONAME(iNLM)=__FILE__
+        BIONAME(iNLM)=MyFile
       END IF
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 15, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 15, __LINE__, MyFile)
 #endif
-      CALL biology_tile (ng, tile,                                      &
-     &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &
-     &                   IminS, ImaxS, JminS, JmaxS,                    &
-     &                   nstp(ng), nnew(ng),                            &
+      CALL hypoxia_srm_tile (ng, tile,                                  &
+     &                       LBi, UBi, LBj, UBj, N(ng), NT(ng),         &
+     &                       IminS, ImaxS, JminS, JmaxS,                &
+     &                       nstp(ng), nnew(ng),                        &
 #ifdef MASKING
-     &                   GRID(ng) % rmask,                              &
+     &                       GRID(ng) % rmask,                          &
 # if defined WET_DRY && defined DIAGNOSTICS_BIO
-     &                   GRID(ng) % rmask_full,                         &
+     &                       GRID(ng) % rmask_full,                     &
 # endif
 #endif
-     &                   GRID(ng) % Hz,                                 &
+     &                       GRID(ng) % Hz,                             &
 #ifdef BULK_FLUXES
-     &                   FORCES(ng) % Uwind,                            &
-     &                   FORCES(ng) % Vwind,                            &
+     &                       FORCES(ng) % Uwind,                        &
+     &                       FORCES(ng) % Vwind,                        &
 #else
-     &                   FORCES(ng) % sustr,                            &
-     &                   FORCES(ng) % svstr,                            &
+     &                       FORCES(ng) % sustr,                        &
+     &                       FORCES(ng) % svstr,                        &
 #endif
-     &                   OCEAN(ng) % respiration,                       &
+     &                       OCEAN(ng) % respiration,                   &
 #ifdef DIAGNOSTICS_BIO
-     &                   DIAGS(ng) % DiaBio2d,                          &
+     &                       DIAGS(ng) % DiaBio2d,                      &
 #endif
-     &                   OCEAN(ng) % t)
+     &                       OCEAN(ng) % t)
 
 #ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 15, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 15, __LINE__, MyFile)
 #endif
-
+!
       RETURN
       END SUBROUTINE biology
 !
 !-----------------------------------------------------------------------
-      SUBROUTINE biology_tile (ng, tile,                                &
-     &                         LBi, UBi, LBj, UBj, UBk, UBt,            &
-     &                         IminS, ImaxS, JminS, JmaxS,              &
-     &                         nstp, nnew,                              &
+      SUBROUTINE hypoxia_srm_tile (ng, tile,                            &
+     &                             LBi, UBi, LBj, UBj, UBk, UBt,        &
+     &                             IminS, ImaxS, JminS, JmaxS,          &
+     &                             nstp, nnew,                          &
 #ifdef MASKING
-     &                         rmask,                                   &
+     &                             rmask,                               &
 # if defined WET_DRY && defined DIAGNOSTICS_BIO
-     &                         rmask_full,                              &
+     &                             rmask_full,                          &
 # endif
 #endif
-     &                         Hz,                                      &
+     &                             Hz,                                  &
 #ifdef BULK_FLUXES
-     &                         Uwind, Vwind,                            &
+     &                             Uwind, Vwind,                        &
 #else
-     &                         sustr, svstr,                            &
+     &                             sustr, svstr,                        &
 #endif
-     &                         respiration,                             &
+     &                             respiration,                         &
 #ifdef DIAGNOSTICS_BIO
-     &                         DiaBio2d,                                &
+     &                             DiaBio2d,                            &
 #endif
-     &                         t)
+     &                             t)
 !-----------------------------------------------------------------------
 !
       USE mod_param
@@ -332,7 +346,7 @@
 !-----------------------------------------------------------------------
 !
 !  Calculate O2 saturation concentration using Garcia and Gordon
-!  L&O (1992) formula, (EXP(AA) is in ml/l).
+!  L and O (1992) formula, (EXP(AA) is in ml/l).
 !
           k=N(ng)
           DO i=Istr,Iend
@@ -391,7 +405,7 @@
             cff4=cff3*u10squ*SQRT(660.0_r8/SchmidtN_Ox)
 !
 !  Calculate O2 saturation concentration using Garcia and Gordon
-!  L&O (1992) formula, (EXP(AA) is in ml/l).
+!  L and O (1992) formula, (EXP(AA) is in ml/l).
 !
             TS=LOG((298.15_r8-Bio(i,k,itemp))/                          &
      &             (273.15_r8+Bio(i,k,itemp)))
@@ -444,6 +458,8 @@
           END DO
         END DO
       END DO J_LOOP
-
+!
       RETURN
-      END SUBROUTINE biology_tile
+      END SUBROUTINE hypoxia_srm_tile
+
+      END MODULE biology_mod

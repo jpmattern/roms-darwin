@@ -1,7 +1,8 @@
+      MODULE mod_biology
 !
-!svn $Id: npzd_iron_mod.h 995 2020-01-10 04:01:28Z arango $
+!svn $Id: npzd_iron_mod.h 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -352,3 +353,5 @@
 
       RETURN
       END SUBROUTINE initialize_biology
+
+      END MODULE mod_biology

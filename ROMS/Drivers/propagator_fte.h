@@ -1,11 +1,11 @@
-      SUBROUTINE propagator (RunInterval, state, tl_state)
+      MODULE propagator_mod
 !
-!svn $Id: propagator_fte.h 995 2020-01-10 04:01:28Z arango $
-!************************************************** Hernan G. Arango ***
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!svn $Id: propagator_fte.h 1099 2022-01-06 21:01:01Z arango $
+!================================================== Hernan G. Arango ===
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
-!***********************************************************************
+!=======================================================================
 !                                                                      !
 !  Finite Time Eigenvalues Propagator:                                 !
 !                                                                      !
@@ -21,6 +21,19 @@
 !       analysis system based on the tangent linear and adjoint of a   !
 !       regional ocean model, Ocean Modelling, 7, 227-258.             !
 !                                                                      !
+!=======================================================================
+!
+      USE mod_kinds
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: propagator_fte
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE propagator_fte (RunInterval, state, tl_state)
 !***********************************************************************
 !
       USE mod_param
@@ -33,6 +46,7 @@
       USE mod_scalars
       USE mod_stepping
 !
+      USE close_io_mod,   ONLY : close_inp
       USE dotproduct_mod, ONLY : tl_statenorm
       USE packing_mod,    ONLY : tl_unpack, tl_pack
 #ifdef SOLVE3D
@@ -43,7 +57,7 @@
 !  Imported variable declarations.
 !
       real(dp), intent(in) :: RunInterval
-
+!
       TYPE (T_GST), intent(in) :: state(Ngrids)
       TYPE (T_GST), intent(inout) :: tl_state(Ngrids)
 !
@@ -51,10 +65,14 @@
 !
 #ifdef SOLVE3D
       logical :: FirstPass = .TRUE.
+!
 #endif
       integer :: ng, tile
-
+!
       real(r8) :: StateNorm(Ngrids)
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !  Forward integration of the tangent linear model.
@@ -167,16 +185,15 @@
       DO ng=1,Ngrids
 !$OMP MASTER
         CALL close_inp (ng, iTLM)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
         CALL tl_get_idata (ng)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
         CALL tl_get_data (ng)
 !$OMP END MASTER
 !$OMP BARRIER
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 !
 !-----------------------------------------------------------------------
@@ -200,8 +217,7 @@
       CALL tl_main2d (RunInterval)
 #endif
 !$OMP BARRIER
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Clear nonlinear state (basic state) variables and insure that the
@@ -272,4 +288,6 @@
      &        ' (Grid: ',i2.2,' TimeSteps: ',i8.8,' - ',i8.8,')')
 
       RETURN
-      END SUBROUTINE propagator
+      END SUBROUTINE propagator_fte
+
+      END MODULE propagator_mod

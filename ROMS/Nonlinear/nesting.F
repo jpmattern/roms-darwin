@@ -3,9 +3,9 @@
 
 #ifdef NESTING
 !
-!svn $Id: nesting.F 1037 2020-08-15 01:56:27Z arango $
+!svn $Id: nesting.F 1099 2022-01-06 21:01:01Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license           Hernan G. Arango   !
 !    See License_ROMS.txt                             John C. Warner   !
 !=======================================================================
@@ -172,8 +172,12 @@
 !  Local variable declarations.
 !
       logical :: LputFsur
+!
       integer :: subs, tile, thread
       integer :: ngc
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 
 # ifdef PROFILE
 !
@@ -181,7 +185,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 36, __LINE__, __FILE__)
+      CALL wclock_on (ng, model, 36, __LINE__, MyFile)
 # endif
 # ifdef SOLVE3D
 !
@@ -303,8 +307,7 @@
             CALL fine2coarse (ng, model, r2dvar, tile)
           END DO
 !$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #  ifdef SOLVE3D
 !
@@ -323,8 +326,7 @@
             CALL fine2coarse (ng, model, r3dvar, tile)
           END DO
 !$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 # else
 !
@@ -365,9 +367,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 36, __LINE__, __FILE__)
+      CALL wclock_off (ng, model, 36, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE nesting
 !
@@ -457,9 +459,12 @@
 
 # ifdef DISTRIBUTE
       integer :: NptsWE, NptsSN
-
-      real(r8), parameter :: Fspv = 0.0_r8
 # endif
+!
+      real(r8), parameter :: Fspv = 0.0_r8
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", bry_fluxes"
 !
 !-----------------------------------------------------------------------
 !  Initialize local variables.
@@ -478,11 +483,6 @@
 !
       NptsWE=JUB-JLB+1
       NptsSN=IUB-ILB+1
-!
-      F_west =Fspv
-      F_east =Fspv
-      F_south=Fspv
-      F_north=Fspv
 # endif
 !
 !-----------------------------------------------------------------------
@@ -495,36 +495,77 @@
 !
       IF (rg.gt.dg) THEN
 !
+! Reset fluxes to zero for first entry of receiver finer grid.
+!
+        IF (MOD(iic(rg)-1,RefineSteps(rg)).eq.0) THEN
+          F_west =Fspv
+          F_east =Fspv
+          F_south=Fspv
+          F_north=Fspv
+        END IF
+!
 !  Western boundary.
 !
         IF (DOMAIN(dg)%Western_Edge(tile)) THEN
           DO j=Jstr,Jend
-            F_west(j)=FX(Istr,j)*scale
+            F_west(j)=F_west(j)+FX(Istr,j)*scale
           END DO
+          DO j=JLB,Jstr-1
+            F_west(j)=Fspv
+          END DO
+          DO j=Jend+1,JUB
+            F_west(j)=Fspv
+          END DO
+        ELSE
+          F_west=Fspv
         END IF
 !
 !  Eastern boundary.
 !
         IF (DOMAIN(dg)%Eastern_Edge(tile)) THEN
           DO j=Jstr,Jend
-            F_east(j)=FX(Iend+1,j)*scale
+            F_east(j)=F_east(j)+FX(Iend+1,j)*scale
           END DO
+          DO j=JLB,Jstr-1
+            F_east(j)=Fspv
+          END DO
+          DO j=Jend+1,JUB
+            F_east(j)=Fspv
+          END DO
+        ELSE
+          F_east=Fspv
         END IF
 !
 !  Southern boundary.
 !
         IF (DOMAIN(dg)%Southern_Edge(tile)) THEN
           DO i=Istr,Iend
-            F_south(i)=FE(i,Jstr)*scale
+            F_south(i)=F_south(i)+FE(i,Jstr)*scale
           END DO
+          DO i=ILB,Istr-1
+            F_south(i)=Fspv
+          END DO
+          DO i=Iend+1,IUB
+            F_south(i)=Fspv
+          END DO
+        ELSE
+          F_south=Fspv
         END IF
 !
 !  Northern boundary.
 !
         IF (DOMAIN(dg)%Northern_Edge(tile)) THEN
           DO i=Istr,Iend
-            F_north(i)=FE(i,Jend+1)*scale
+            F_north(i)=F_north(i)+FE(i,Jend+1)*scale
           END DO
+          DO i=ILB,Istr-1
+            F_north(i)=Fspv
+          END DO
+          DO i=Iend+1,IUB
+            F_north(i)=Fspv
+          END DO
+        ELSE
+          F_north=Fspv
         END IF
 !
 !-----------------------------------------------------------------------
@@ -539,6 +580,11 @@
       ELSE IF (rg.lt.dg) THEN
 !
 !  Western/Eastern boundaries.
+!
+        F_west =Fspv
+        F_east =Fspv
+        F_south=Fspv
+        F_north=Fspv
 !
         Ib_west=I_left(dg)
         Ib_east=I_right(dg)
@@ -574,22 +620,18 @@
 !-----------------------------------------------------------------------
 !
       CALL mp_assemble (dg, model, NptsWE, Fspv, F_west (JLB:))
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       CALL mp_assemble (dg, model, NptsWE, Fspv, F_east (JLB:))
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       CALL mp_assemble (dg, model, NptsSN, Fspv, F_south(ILB:))
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       CALL mp_assemble (dg, model, NptsSN, Fspv, F_north(ILB:))
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
-
+!
       RETURN
       END SUBROUTINE bry_fluxes
 
@@ -910,13 +952,13 @@
 !
 !  Collect data from all nodes.
 !
-          CALL mp_assemble (dg, model, NptsWE, spv,                      &
+          CALL mp_assemble (dg, model, NptsWE, spv,                     &
      &                      BRY_CONTACT(iwest ,cjcr)%Mflux(JLB:))
-          CALL mp_assemble (dg, model, NptsWE, spv,                      &
+          CALL mp_assemble (dg, model, NptsWE, spv,                     &
      &                      BRY_CONTACT(ieast ,cjcr)%Mflux(JLB:))
-          CALL mp_assemble (dg, model, NptsSN, spv,                      &
+          CALL mp_assemble (dg, model, NptsSN, spv,                     &
      &                      BRY_CONTACT(isouth,cjcr)%Mflux(ILB:))
-          CALL mp_assemble (dg, model, NptsSN, spv,                      &
+          CALL mp_assemble (dg, model, NptsSN, spv,                     &
      &                      BRY_CONTACT(inorth,cjcr)%Mflux(ILB:))
 #  endif
         END IF
@@ -935,7 +977,7 @@
      &        'Fine Grid',11x,'Ratio',/,4x,'Ib',9x,'DV_avg2',9x,        &
      &        'SUM(DV_avg2)',/)
   30  FORMAT (4x,i4.4,3(3x,1p,e15.8))
-
+!
       RETURN
       END SUBROUTINE check_massflux
 # endif
@@ -1149,7 +1191,7 @@
 !!        END IF                                 ! regular grid
         END IF
       END DO
-
+!
       RETURN
       END SUBROUTINE fill_contact
 
@@ -1202,7 +1244,7 @@
 #  ifdef DISTRIBUTE
       integer :: Lpoints, Qpoints
 #  endif
-
+!
       real(r8) :: cff
       real(r8) :: LWsum, LWsum_check, MaskLWsum
 #  ifdef QUADRATIC_WEIGHTS
@@ -1221,6 +1263,9 @@
       real(r8), allocatable :: QW(:,:)
 #   endif
 #  endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mask_hweights"
 !
 !=======================================================================
 !  If appropriate, scale horizontal interpolation weights to account
@@ -1446,13 +1491,11 @@
 !  Exchange data between all parallel nodes.
 !
           CALL mp_assemble (dg, model, Lpoints, spv, LW)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #   ifdef QUADRATIC_WEIGHTS
           CALL mp_assemble (dg, model, Qpoints, spv, QW)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #   endif
 !
 !  Load exchanged weights.
@@ -1677,13 +1720,11 @@
 !  Exchange data between all parallel nodes.
 !
           CALL mp_assemble (dg, model, Lpoints, spv, LW)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #   ifdef QUADRATIC_WEIGHTS
           CALL mp_assemble (dg, model, Qpoints, spv, QW)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #   endif
 !
 !  Load exchanged weights.
@@ -1909,13 +1950,11 @@
 !  Exchange data between all parallel nodes.
 !
           CALL mp_assemble (dg, model, Lpoints, spv, LW)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #   ifdef QUADRATIC_WEIGHTS
           CALL mp_assemble (dg, model, Qpoints, spv, QW)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #   endif
 !
 !  Load exchanged weights.
@@ -1940,7 +1979,7 @@
 
         END IF SCALE_WEIGHTS
       END DO
-
+!
       RETURN
       END SUBROUTINE mask_hweights
 # endif
@@ -2196,7 +2235,7 @@
 
         END IF
       END DO
-
+!
       RETURN
       END SUBROUTINE get_composite
 !
@@ -2242,8 +2281,11 @@
       integer :: cr, dg, i, j, m
       integer :: Istr, Iend, Jstr, Jend
       integer :: NpointsU, NpointsV
-
+!
       real(r8), parameter :: spv = 0.0_r8
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", get_metrics"
 !
 !-----------------------------------------------------------------------
 !  Extract grid spacing metrics.
@@ -2298,16 +2340,14 @@
 !  Exchange data between all nodes.
 !
         CALL mp_assemble (dg, model, NpointsU, spv, REFINED(cr) % on_u)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         CALL mp_assemble (dg, model, NpointsV, spv, REFINED(cr) % om_v)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 
       END DO
-
+!
       RETURN
       END SUBROUTINE get_metrics
 !
@@ -2480,7 +2520,7 @@
 
 # ifdef SOLVE3D
 !
-!  Extract time-veraged fluxes (DU_avg2, DV_avg2).  We will use latter
+!  Extract time-averaged fluxes (DU_avg2, DV_avg2).  We will use latter
 !  only the values at the finer grid physical boundary to impose mass
 !  flux conservation in routine "put_refine2d".
 !
@@ -2527,7 +2567,7 @@
 # endif
         END IF
       END DO
-
+!
       RETURN
       END SUBROUTINE get_refine
 !
@@ -2884,7 +2924,7 @@
 
         END IF
       END DO CR_LOOP
-
+!
       RETURN
       END SUBROUTINE put_composite
 !
@@ -2977,7 +3017,7 @@
           END IF
         END IF
       END DO
-
+!
       RETURN
       END SUBROUTINE put_refine
 
@@ -3039,7 +3079,7 @@
       CALL correct_tracer_tile (ng, ngf, model, tile,                   &
                                 LBi, UBi, LBj, UBj,                     &
      &                          IminS, ImaxS, JminS, JmaxS)
-
+!
       RETURN
       END SUBROUTINE correct_tracer
 !
@@ -3133,8 +3173,8 @@
 !  is done at the bottom of main3d, we need to use the newest time
 !  index, I think.
 !
-      Tindex=nstp(ngc)                ! HGA: Why this index is stable?
-!!    Tindex=nnew(ngc)                ! Gets a lot of noise at boundary
+!!    Tindex=nstp(ngc)  ! HGA: Why this index is stable? newest is nosy
+      Tindex=nnew(ngc)
 !
 !=======================================================================
 !  Compute vertically integrated horizontal advective tracer flux for
@@ -3186,9 +3226,6 @@
             END DO
 !
 !  Zeroth order correction to fine grid time integral (RIL, 2016).
-!
-            TFF=TFF*dt(ngc)/dt(ngf)
-!
 !  Correct coarse grid tracer at the finer grid western boundary.
 !
             cff=GRID(ngc)%pm(Ibc-1,Jbc)*                                &
@@ -3246,9 +3283,6 @@
             END DO
 !
 !  Zeroth order correction to fine grid time integral (RIL, 2016).
-!
-            TFF=TFF*dt(ngc)/dt(ngf)
-!
 !  Correct coarse grid tracer at the finer grid eastern boundary.
 !
             cff=GRID(ngc)%pm(Ibc,Jbc)*                                  &
@@ -3306,9 +3340,6 @@
             END DO
 !
 !  Zeroth order correction to fine grid time integral (RIL, 2016).
-!
-            TFF=TFF*dt(ngc)/dt(ngf)
-!
 !  Correct coarse grid tracer at the finer grid southern boundary.
 !
             cff=GRID(ngc)%pm(Ibc,Jbc-1)*                                &
@@ -3366,9 +3397,6 @@
             END DO
 !
 !  Zeroth order correction to fine grid time integral.
-!
-            TFF=TFF*dt(ngc)/dt(ngf)
-!
 !  Correct coarse grid tracer at the finer grid northern boundary.
 !
             cff=GRID(ngc)%pm(Ibc,Jbc)*                                  &
@@ -3405,7 +3433,7 @@
      &                    EWperiodic(ngc), NSperiodic(ngc),             &
      &                    OCEAN(ngc)%t(:,:,:,Tindex,:))
 #  endif
-
+!
       RETURN
       END SUBROUTINE correct_tracer_tile
 # endif
@@ -3464,6 +3492,7 @@
 !  Local variable declarations.
 !
       logical :: AreaAvg
+!
       integer :: LBiD, UBiD, LBjD, UBjD
       integer :: LBiR, UBiR, LBjR, UBjR
       integer :: Dindex2d, Rindex2d
@@ -3474,6 +3503,9 @@
 # ifdef SOLVE3D
       integer :: itrc
 # endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", fine2coarse"
 !
 !-----------------------------------------------------------------------
 !  Average interior fine grid state variable data to the coarse grid
@@ -3549,7 +3581,7 @@
      &                          GRID(rg)%pm,                            &
      &                          GRID(rg)%pn,                            &
 #  ifdef MASKING
-     &                          GRID(dg)%rmask,                         &
+     &                          GRID(dg)%rmask_full,                    &
      &                          GRID(rg)%rmask,                         &
 #  endif
      &                          COUPLING(dg)%Zt_avg1,                   &
@@ -3572,8 +3604,7 @@
      &                          OCEAN(dg)%zeta(:,:,Dindex2d),           &
      &                          OCEAN(rg)%zeta(:,:,Rindex2d))
 # endif
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Process 2D momentum components (ubar,vbar).
 !
@@ -3599,8 +3630,7 @@
 # else
      &                          OCEAN(rg)%ubar(:,:,Rindex2d))
 # endif
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
             CALL fine2coarse2d (rg, dg, model, tile,                    &
      &                          v2dvar, Vname(1,idVbar),                &
@@ -3623,8 +3653,7 @@
 # else
      &                          OCEAN(rg)%vbar(:,:,Rindex2d))
 # endif
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef SOLVE3D
 !
@@ -3649,13 +3678,13 @@
      &                            GRID(rg)%pm,                          &
      &                            GRID(rg)%pn,                          &
 #  ifdef MASKING
-     &                            GRID(dg)%rmask,                       &
+     &                            GRID(dg)%rmask_full,                  &
      &                            GRID(rg)%rmask,                       &
 #  endif
      &                            OCEAN(dg)%t(:,:,:,Dindex3d,itrc),     &
      &                            OCEAN(rg)%t(:,:,:,Rindex3d,itrc))
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END DO
 !
 !  Process 3D momentum components (u, v).
@@ -3677,8 +3706,7 @@
 #  endif
      &                          OCEAN(dg)%u(:,:,:,Dindex3d),            &
      &                          OCEAN(rg)%u(:,:,:,Rindex3d))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
             CALL fine2coarse3d (rg, dg, model, tile,                    &
      &                          v3dvar, Vname(1,idVvel),                &
@@ -3696,8 +3724,7 @@
 #  endif
      &                          OCEAN(dg)%v(:,:,:,Dindex3d),            &
      &                          OCEAN(rg)%v(:,:,:,Rindex3d))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
           END IF
 !
@@ -3794,7 +3821,7 @@
 # endif
         END IF
       END DO
-
+!
       RETURN
       END SUBROUTINE fine2coarse
 !
@@ -3955,10 +3982,11 @@
 !  Local variable declarations.
 !
       integer :: Iadd, Ic, Jadd, Jc, half, i, j, m
+      integer :: Ib_east, Ib_west, Jb_north, Jb_south
 # ifdef DISTRIBUTE
       integer :: LBi, UBi, LBj, UBj
 # endif
-
+!
       real(r8) :: areaC_inv, my_area, my_areasum, ratio
       real(r8) :: my_avg, my_count, my_sum
 
@@ -3970,6 +3998,9 @@
       real(r8), allocatable :: Fmsk(:,:)
 #  endif
 # endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", fine2coarse2d"
 
 # include "set_bounds.h"
 !
@@ -4010,23 +4041,20 @@
      &                     LBiF, UBiF, LBjF, UBjF,                      &
      &                     LBi,  UBi,  LBj,  UBj,                       &
      &                     A, F)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
       IF (AreaAvg) THEN
         CALL mp_aggregate2d (dg, model, gtype,                          &
      &                       LBiF, UBiF, LBjF, UBjF,                    &
      &                       LBi,  UBi,  LBj,  UBj,                     &
      &                       Adx, dxF)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         CALL mp_aggregate2d (dg, model, gtype,                          &
      &                       LBiF, UBiF, LBjF, UBjF,                    &
      &                       LBi,  UBi,  LBj,  UBj,                     &
      &                       Ady, dyF)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 #  ifdef MASKING
 !
@@ -4034,8 +4062,7 @@
      &                     LBiF, UBiF, LBjF, UBjF,                      &
      &                     LBi,  UBi,  LBj,  UBj,                       &
      &                     Amsk, Fmsk)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 # endif
 !
@@ -4119,7 +4146,13 @@
 # endif
               END DO
             END DO
-            IF (my_count.gt.0.0_r8) my_avg=my_sum/my_count
+            IF (my_count.gt.0.0_r8) THEN
+              my_avg=my_sum/my_count
+            ELSE
+              IF (gtype.eq.r2dvar) THEN
+                my_avg=C1(Ic,Jc)
+              END IF
+            END IF
 # ifdef MASKING
             my_avg=my_avg*Cmsk(Ic,Jc)
 # endif
@@ -4127,6 +4160,119 @@
             IF (PRESENT(C2)) THEN
               C2(Ic,Jc)=my_avg
             END IF
+          END IF
+        END DO
+      END IF
+!
+!-----------------------------------------------------------------------
+!  Average finer grid BOUNDARY data to coarse grid U-type and V-type
+!  variables according to the refinement ratio.
+!-----------------------------------------------------------------------
+!
+!  U-type variables finer grid eastern and western boundaries.
+!
+      IF (gtype.eq.u2dvar) THEN
+!
+!  Get boundary indices of the receiver coarser grid.
+!
+        Ib_west=I_left(dg)
+        Ib_east=I_right(dg)
+        Jb_south=J_bottom(dg)
+        Jb_north=J_top(dg)
+!
+!  Eastern boundary.
+!
+        i=Lm(dg)+1                            ! donor finer grid
+        Ic=Ib_east                            ! receiver coarser grid
+        DO Jc=Jb_south,Jb_north-1
+          j=(Jc-Jb_south)*Rscale+half+1
+          IF (((Istr.le.Ic).and.(Ic.le.Iend)).and.                      &
+     &        ((Jstr.le.Jc).and.(Jc.le.Jend))) THEN
+            my_count=0.0_r8
+            my_avg=0.0_r8
+            my_sum=0.0_r8
+            DO Jadd=-half,half
+              my_sum=my_sum+                                            &
+     &               F(i,j+Jadd)
+              my_count=my_count+1.0_r8
+            END DO
+            my_avg=my_sum/my_count
+            C1(Ic,Jc)=my_avg
+          END IF
+        END DO
+!
+!  Western boundary.
+!
+        i=1                                   ! donor finer grid
+        Ic=Ib_west                            ! receiver coarser grid
+        DO Jc=Jb_south,Jb_north-1
+          j=(Jc-Jb_south)*Rscale+half+1
+          IF (((Istr.le.Ic).and.(Ic.le.Iend)).and.                      &
+     &        ((Jstr.le.Jc).and.(Jc.le.Jend))) THEN
+            my_count=0.0_r8
+            my_avg=0.0_r8
+            my_sum=0.0_r8
+            DO Jadd=-half,half
+              my_sum=my_sum+                                            &
+     &               F(i,j+Jadd)
+              my_count=my_count+1.0_r8
+            END DO
+            my_avg=my_sum/my_count
+            C1(Ic,Jc)=my_avg
+          END IF
+        END DO
+      END IF
+!
+!  V-type variables finer grid northern and southern boundaries.
+!
+      IF (gtype.eq.v2dvar) THEN
+!
+!  Get boundary indices of the receiver coarser grid.
+!
+        Ib_west=I_left(dg)
+        Ib_east=I_right(dg)
+        Jb_south=J_bottom(dg)
+        Jb_north=J_top(dg)
+!
+!  Northern boundary.
+!
+        j=Mm(dg)+1                            ! donor finer grid
+        Jc=Jb_north                           ! receiver coarser grid
+        DO Ic=Ib_west,Ib_east-1
+          i=(Ic-Ib_west)*Rscale+half+1
+          IF (((Istr.le.Ic).and.(Ic.le.Iend)).and.                      &
+     &        ((Jstr.le.Jc).and.(Jc.le.Jend))) THEN
+            my_count=0.0_r8
+            my_avg=0.0_r8
+            my_sum=0.0_r8
+            DO Iadd=-half,half
+              my_sum=my_sum+                                            &
+     &               F(i+Iadd,j)
+              my_count=my_count+1.0_r8
+            END DO
+            my_avg=my_sum/my_count
+            C1(Ic,Jc)=my_avg
+          END IF
+        END DO
+!
+!  Southern boundary.
+!
+        j=1                                   ! donor finer grid
+        Jc=Jb_south                           ! receiver coarser grid
+        DO Ic=Ib_west,Ib_east-1
+          i=(Ic-Ib_west)*Rscale+half+1
+          IF (((Istr.le.Ic).and.(Ic.le.Iend)).and.                      &
+     &        ((Jstr.le.Jc).and.(Jc.le.Jend))) THEN
+            my_count=0.0_r8
+            my_avg=0.0_r8
+            my_sum=0.0_r8
+            DO Iadd=-half,half
+              my_sum=my_sum+                                            &
+     &               F(i+Iadd,j)
+              my_count=my_count+1.0_r8
+            END DO
+            my_avg=my_sum/my_count
+            C1(Ic,Jc)=my_avg
           END IF
         END DO
       END IF
@@ -4152,7 +4298,7 @@
       END IF
 #  endif
 # endif
-
+!
       RETURN
       END SUBROUTINE fine2coarse2d
 !
@@ -4315,10 +4461,11 @@
 !  Local variable declarations.
 !
       integer :: Iadd, Ic, Jadd, Jc, half, i, j, k, m
+      integer :: Ib_east, Ib_west, Jb_north, Jb_south
 #  ifdef DISTRIBUTE
       integer :: LBi, UBi, LBj, UBj
 #  endif
-
+!
       real(r8) :: areaC_inv, my_area, my_areasum, ratio
       real(r8) :: my_avg, my_count, my_sum
 
@@ -4330,6 +4477,9 @@
       real(r8), allocatable :: Fmsk(:,:)
 #   endif
 #  endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", fine2coarse3d"
 
 #  include "set_bounds.h"
 !
@@ -4371,23 +4521,20 @@
      &                     LBi,  UBi,  LBj,  UBj,                       &
      &                     LBkF, UBkF,                                  &
      &                     A, F)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
       IF (AreaAvg) THEN
         CALL mp_aggregate2d (dg, model, gtype,                          &
      &                       LBiF, UBiF, LBjF, UBjF,                    &
      &                       LBi,  UBi,  LBj,  UBj,                     &
      &                       Adx, dxF)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         CALL mp_aggregate2d (dg, model, gtype,                          &
      &                       LBiF, UBiF, LBjF, UBjF,                    &
      &                       LBi,  UBi,  LBj,  UBj,                     &
      &                       Ady, dyF)
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 #   ifdef MASKING
 !
@@ -4395,13 +4542,14 @@
      &                     LBiF, UBiF, LBjF, UBjF,                      &
      &                     LBi,  UBi,  LBj,  UBj,                       &
      &                     Amsk, Fmsk)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #   endif
 #  endif
 !
-!  Average finer grid data to coarse grid according to the refinement
-!  ratio.
+!-----------------------------------------------------------------------
+!  Average finer grid INTERIOR data to coarse grid according to the
+!  refinement ratio.
+!-----------------------------------------------------------------------
 !
       half=(Rscale-1)/2
       IF (AreaAvg) THEN               ! area averaging
@@ -4480,10 +4628,137 @@
 #  endif
                 END DO
               END DO
-              IF (my_count.gt.0.0_r8) my_avg=my_sum/my_count
+              IF (my_count.gt.0.0_r8) THEN
+                my_avg=my_sum/my_count
+              ELSE
+                IF (gtype.eq.r3dvar) THEN
+!!                my_avg=C(Ic,Jc,k)                ! HGA: Why? Previous
+                END IF                             !      is uncommented
+              END IF
 #  ifdef MASKING
               my_avg=my_avg*Cmsk(Ic,Jc)
 #  endif
+              C(Ic,Jc,k)=my_avg
+            END IF
+          END DO
+        END DO
+      END IF
+!
+!-----------------------------------------------------------------------
+!  Average finer grid BOUNDARY data to coarse grid U-type and V-type
+!  variables according to the refinement ratio.
+!-----------------------------------------------------------------------
+!
+!  U-type variables finer grid eastern and western boundaries.
+!
+      IF (gtype.eq.u3dvar) THEN
+!
+!  Get boundary indices of the receiver coarser grid.
+!
+        Ib_west=I_left(dg)
+        Ib_east=I_right(dg)
+        Jb_south=J_bottom(dg)
+        Jb_north=J_top(dg)
+!
+!  Eastern boundary.
+!
+        DO k=LBkC,UBkC
+          i=Lm(dg)+1                            ! donor finer grid
+          Ic=Ib_east                            ! receiver coarser grid
+          DO Jc=Jb_south,Jb_north-1
+            j=(Jc-Jb_south)*Rscale+half+1
+            IF (((Istr.le.Ic).and.(Ic.le.Iend)).and.                    &
+     &          ((Jstr.le.Jc).and.(Jc.le.Jend))) THEN
+              my_count=0.0_r8
+              my_avg=0.0_r8
+              my_sum=0.0_r8
+              DO Jadd=-half,half
+                my_sum=my_sum+                                          &
+     &                 F(i,j+Jadd,k)
+                my_count=my_count+1.0_r8
+              END DO
+              my_avg=my_sum/my_count
+              C(Ic,Jc,k)=my_avg
+            END IF
+          END DO
+        END DO
+!
+!  Western boundary.
+!
+        DO k=LBkC,UBkC
+          i=1                                   ! donor finer grid
+          Ic=Ib_west                            ! receiver coarser grid
+          DO Jc=Jb_south,Jb_north-1
+            j=(Jc-Jb_south)*Rscale+half+1
+            IF (((Istr.le.Ic).and.(Ic.le.Iend)).and.                    &
+     &          ((Jstr.le.Jc).and.(Jc.le.Jend))) THEN
+              my_count=0.0_r8
+              my_avg=0.0_r8
+              my_sum=0.0_r8
+              DO Jadd=-half,half
+                my_sum=my_sum+                                          &
+     &                 F(i,j+Jadd,k)
+                my_count=my_count+1.0_r8
+              END DO
+              my_avg=my_sum/my_count
+              C(Ic,Jc,k)=my_avg
+            END IF
+          END DO
+        END DO
+      END IF
+!
+!  V-type variables finer grid northern and southern boundaries.
+!
+      IF (gtype.eq.v3dvar) THEN
+!
+!  Get boundary indices of the receiver coarser grid.
+!
+        Ib_west=I_left(dg)
+        Ib_east=I_right(dg)
+        Jb_south=J_bottom(dg)
+        Jb_north=J_top(dg)
+!
+!  Northern boundary.
+!
+        DO k=LBkC,UBkC
+          j=Mm(dg)+1                            ! donor finer grid
+          Jc=Jb_north                           ! receiver coarser grid
+          DO Ic=Ib_west,Ib_east-1
+            i=(Ic-Ib_west)*Rscale+half+1
+            IF (((Istr.le.Ic).and.(Ic.le.Iend)).and.                    &
+     &          ((Jstr.le.Jc).and.(Jc.le.Jend))) THEN
+              my_count=0.0_r8
+              my_avg=0.0_r8
+              my_sum=0.0_r8
+              DO Iadd=-half,half
+                my_sum=my_sum+                                          &
+     &                 F(i+Iadd,j,k)
+                my_count=my_count+1.0_r8
+              END DO
+              my_avg=my_sum/my_count
+              C(Ic,Jc,k)=my_avg
+            END IF
+          END DO
+        END DO
+!
+!  Southern boundary.
+!
+        DO k=LBkC,UBkC
+          j=1                                   ! donor finer grid
+          Jc=Jb_south                           ! receiver coarser grid
+          DO Ic=Ib_west,Ib_east-1
+            i=(Ic-Ib_west)*Rscale+half+1
+            IF (((Istr.le.Ic).and.(Ic.le.Iend)).and.                    &
+     &          ((Jstr.le.Jc).and.(Jc.le.Jend))) THEN
+              my_count=0.0_r8
+              my_avg=0.0_r8
+              my_sum=0.0_r8
+              DO Iadd=-half,half
+                my_sum=my_sum+                                          &
+     &                 F(i+Iadd,j,k)
+                my_count=my_count+1.0_r8
+              END DO
+              my_avg=my_sum/my_count
               C(Ic,Jc,k)=my_avg
             END IF
           END DO
@@ -4511,7 +4786,7 @@
       END IF
 #   endif
 #  endif
-
+!
       RETURN
       END SUBROUTINE fine2coarse3d
 # endif
@@ -4669,7 +4944,7 @@
 !
       CALL mp_assemble (dg, model, Npts, Aspv, Ac)
 # endif
-
+!
       RETURN
       END SUBROUTINE get_contact2d
 
@@ -4832,7 +5107,7 @@
 !
       CALL mp_assemble (dg, model, Npts, Aspv, Ac(:,LBk:,:))
 #  endif
-
+!
       RETURN
       END SUBROUTINE get_contact3d
 # endif
@@ -4918,9 +5193,12 @@
 # ifdef DISTRIBUTE
       integer :: Npts
 # endif
-
+!
       real(r8), parameter :: Aspv = 0.0_r8
       real(r8):: Rscale
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", get_persisted2d"
 !
 !-----------------------------------------------------------------------
 !  Initialize.
@@ -5031,10 +5309,9 @@
 !  Gather and broadcast data from all nodes.
 !
       CALL mp_assemble (dg, model, Npts, Aspv, Ac)
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
-
+!
       RETURN
       END SUBROUTINE get_persisted2d
 !
@@ -5152,7 +5429,7 @@
 # endif
         END IF
       END DO
-
+!
       RETURN
       END SUBROUTINE put_contact2d
 
@@ -5301,7 +5578,7 @@
           END IF
         END DO
       END DO
-
+!
       RETURN
       END SUBROUTINE put_contact3d
 # endif
@@ -5363,19 +5640,22 @@
 !  Local variable declarations.
 !
       logical :: Uboundary, Vboundary
-
+!
 # ifdef DISTRIBUTE
       integer :: ILB, IUB, JLB, JUB, NptsSN, NptsWE, my_tile
 # endif
       integer :: NSUB, i, irec, j, m, tnew, told
       integer :: Idg, Jdg
-
+!
 # ifdef DISTRIBUTE
       real(r8), parameter :: spv = 0.0_r8
 # endif
       real(dp) :: Wnew, Wold, SecScale, fac
       real(r8) :: cff, cff1
       real(r8) :: my_value
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", put_refined2d"
 
 # include "set_bounds.h"
 !
@@ -5439,8 +5719,7 @@
      &                        INT(RollingTime(tnew,cr))
           END IF
           exit_flag=8
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 !
@@ -5635,6 +5914,9 @@
 #  else
             my_value=cff1*REFINED(cr)%DU_avg2(1,m,tnew)/cff
 #  endif
+#  ifdef WEC
+            my_value=my_value-OCEAN(ng)%ubar_stokes(Istr,j)
+#  endif
 #  ifdef MASKING
             my_value=my_value*GRID(ng)%umask(Istr,j)
 #  endif
@@ -5666,6 +5948,9 @@
      &                     Wnew*REFINED(cr)%DU_avg2(1,m,tnew))/cff
 #  else
             my_value=cff1*REFINED(cr)%DU_avg2(1,m,tnew)/cff
+#  endif
+#  ifdef WEC
+            my_value=my_value-OCEAN(ng)%ubar_stokes(Iend+1,j)
 #  endif
 #  ifdef MASKING
             my_value=my_value*GRID(ng)%umask(Iend+1,j)
@@ -5699,6 +5984,9 @@
 #  else
             my_value=cff1*REFINED(cr)%DV_avg2(1,m,tnew)/cff
 #  endif
+#  ifdef WEC
+            my_value=my_value-OCEAN(ng)%vbar_stokes(i,Jstr)
+#  endif
 #  ifdef MASKING
             my_value=my_value*GRID(ng)%vmask(i,Jstr)
 #  endif
@@ -5730,6 +6018,9 @@
      &                     Wnew*REFINED(cr)%DV_avg2(1,m,tnew))/cff
 #  else
             my_value=cff1*REFINED(cr)%DV_avg2(1,m,tnew)/cff
+#  endif
+#  ifdef WEC
+            my_value=my_value-OCEAN(ng)%vbar_stokes(i,Jend+1)
 #  endif
 #  ifdef MASKING
             my_value=my_value*GRID(ng)%vmask(i,Jend+1)
@@ -5792,13 +6083,13 @@
 
 #  ifdef NESTING_DEBUG
 !
-        CALL mp_assemble (ng, model, NptsWE, spv,                        &
+        CALL mp_assemble (ng, model, NptsWE, spv,                       &
      &                    BRY_CONTACT(iwest ,cr)%Mflux(JLB:))
-        CALL mp_assemble (ng, model, NptsWE, spv,                        &
+        CALL mp_assemble (ng, model, NptsWE, spv,                       &
      &                    BRY_CONTACT(ieast ,cr)%Mflux(JLB:))
-        CALL mp_assemble (ng, model, NptsSN, spv,                        &
+        CALL mp_assemble (ng, model, NptsSN, spv,                       &
      &                    BRY_CONTACT(isouth,cr)%Mflux(ILB:))
-        CALL mp_assemble (ng, model, NptsSN, spv,                        &
+        CALL mp_assemble (ng, model, NptsSN, spv,                       &
      &                    BRY_CONTACT(inorth,cr)%Mflux(ILB:))
 #  endif
       END IF
@@ -5818,7 +6109,7 @@
      &        /,2x,  'time(ng) = ',i7.7,                                &
      &          3x,'time(told) = ',i7.7,                                &
      &          3x,'time(tnew) = ',i7.7)
-
+!
       RETURN
       END SUBROUTINE put_refine2d
 
@@ -5876,11 +6167,15 @@
 !
 # ifdef NESTING_DEBUG
       logical, save :: first = .TRUE.
+!
 # endif
       integer :: i, itrc, j, k, m, tnew, told
-
+!
       real(dp) :: Wnew, Wold, SecScale, fac
       real(r8) :: my_value
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", put_refined3d"
 
 #  include "set_bounds.h"
 !
@@ -5917,8 +6212,7 @@
      &                        INT(RollingTime(tnew,cr))
           END IF
           exit_flag=8
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 
@@ -6094,7 +6388,7 @@
      &        /,2x,  'time(ng) = ',i7.7,                                &
      &          3x,'time(told) = ',i7.7,                                &
      &          3x,'time(tnew) = ',i7.7)
-
+!
       RETURN
       END SUBROUTINE put_refine3d
 # endif
@@ -6148,11 +6442,15 @@
 
       integer, parameter :: ispv = 0
 #  endif
+!
       real(r8), parameter :: spv = 0.0_r8
 
       real(r8) :: Zbot, Zr, Ztop, dz, r1, r2
 
       real(r8), allocatable :: Zd(:,:,:)
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", z_weights"
 !
 !=======================================================================
 !  Compute vertical indices and weights for each contact region.
@@ -6261,8 +6559,7 @@
 !  Exchange data between all parallel nodes.
 !
             CALL mp_assemble (dg, model, Nzpts, spv, Zd)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 !
 !  Determine donor grid vertical indices (Kdg) and weights (Vweight)
@@ -6322,12 +6619,10 @@
 !  Exchange data between all parallel nodes.
 !
           CALL mp_assemble (rg, model, Nkpts, ispv, Rcontact(cr)%Kdg)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
           CALL mp_assemble (rg, model, Nwpts, spv, Rcontact(cr)%Vweight)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 !
 !  Deallocate local work arrays.
@@ -6433,8 +6728,7 @@
 !  Exchange data between all parallel nodes.
 !
             CALL mp_assemble (dg, model, Nzpts, spv, Zd)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 !
 !  Determine donor grid vertical indices (Kdg) and weights (Vweight)
@@ -6495,12 +6789,10 @@
 !  Exchange data between all parallel nodes.
 !
           CALL mp_assemble (rg, model, Nkpts, ispv, Ucontact(cr)%Kdg)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
           CALL mp_assemble (rg, model, Nwpts, spv, Ucontact(cr)%Vweight)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 !
 !  Deallocate local work arrays.
@@ -6602,8 +6894,7 @@
 !  Exchange data between all parallel nodes.
 !
             CALL mp_assemble (dg, model, Nzpts, spv, Zd)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 !
 !  Determine donor grid vertical indices (Kdg) and weights (Vweight)
@@ -6664,12 +6955,10 @@
 !  Exchange data between all parallel nodes.
 !
           CALL mp_assemble (rg, model, Nkpts, ispv, Vcontact(cr)%Kdg)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
           CALL mp_assemble (rg, model, Nwpts, spv, Vcontact(cr)%Vweight)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 !
 !  Deallocate local work arrays.
@@ -6680,9 +6969,8 @@
 
         END IF
       END DO
-
+!
       RETURN
-
       END SUBROUTINE z_weights
 # endif
 #endif

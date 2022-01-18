@@ -1,9 +1,9 @@
 #include "cppdefs.h"
       SUBROUTINE initial
 !
-!svn $Id: initial.F 1037 2020-08-15 01:56:27Z arango $
+!svn $Id: initial.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -31,10 +31,18 @@
       USE mod_stepping
 !
       USE analytical_mod
+      USE close_io_mod,      ONLY : close_inp
       USE dateclock_mod,     ONLY : time_string
-# ifdef DISTRIBUTE
+#if defined FOUR_DVAR && !defined CORRELATION
+      USE def_ini_mod,       ONLY : def_ini
+#endif
+#ifdef DISTRIBUTE
       USE distribute_mod,    ONLY : mp_bcasti
-# endif
+#endif
+      USE get_state_mod,     ONLY : get_state
+#ifdef WET_DRY
+      USE get_wetdry_mod,    ONLY : get_wetdry
+#endif
 #ifdef TLM_CHECK
       USE ini_adjust_mod,    ONLY : ini_perturb
 #endif
@@ -47,6 +55,9 @@
       USE omega_mod,         ONLY : omega
       USE rho_eos_mod,       ONLY : rho_eos
       USE set_massflux_mod,  ONLY : set_massflux
+#endif
+#if defined OBSERVATIONS && !defined RBL4DVAR_FCT_SENSITIVITY
+      USE obs_initial_mod,   ONLY : obs_initial
 #endif
 #ifdef MASKING
       USE set_masks_mod,     ONLY : set_masks
@@ -69,7 +80,7 @@
 !  Local variable declarations.
 !
       logical :: update = .FALSE.
-
+!
       integer :: Fcount
       integer :: ng, thread, tile
 #ifdef NESTING
@@ -83,9 +94,14 @@
     defined ADJUST_STFLUX   || defined ADJUST_WSTRESS
       integer :: irec
 #endif
+!
 #ifdef SP4DVAR
       real(dp) :: my_dstart
+!
 #endif
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !=======================================================================
 !   Initialize model variables.
@@ -155,7 +171,6 @@
 !$OMP END MASTER
 !$OMP BARRIER
         step_counter(ng)=0
-        CALL time_string (time(ng), time_code(ng))
       END DO
 !
 !  Initialize global diagnostics variables.
@@ -173,7 +188,7 @@
 !
       DO ng=1,Ngrids
         DO thread=THREAD_RANGE
-          CALL wclock_on (ng, iNLM, 2, __LINE__, __FILE__)
+          CALL wclock_on (ng, iNLM, 2, __LINE__, MyFile)
         END DO
       END DO
 !$OMP BARRIER
@@ -199,8 +214,7 @@
 # ifdef DISTRIBUTE
           CALL mp_bcasti (ng, iNLM, exit_flag)
 # endif
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           IniRec(ng)=nrrec(ng)
           INI(ng)%Rindex=IniRec(ng)
         ELSE
@@ -393,15 +407,13 @@
 !
       DO ng=1,Ngrids
 !$OMP MASTER
-        CALL get_state (ng, iNLM, 1, INI(ng)%name,                      &
-     &                  IniRec(ng), Tindex(ng))
+        CALL get_state (ng, iNLM, 1, INI(ng), IniRec(ng), Tindex(ng))
 !$OMP END MASTER
 # ifdef DISTRIBUTE
         CALL mp_bcasti (ng, iNLM, exit_flag)
 # endif
 !$OMP BARRIER
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         time(ng)=io_time                     ! needed for shared-memory
       END DO
 #else
@@ -411,15 +423,13 @@
       DO ng=1,Ngrids
         IF (nrrec(ng).ne.0) THEN
 !$OMP MASTER
-          CALL get_state (ng, 0, 1, INI(ng)%name,                       &
-     &                    IniRec(ng), Tindex(ng))
+          CALL get_state (ng, 0, 1, INI(ng), IniRec(ng), Tindex(ng))
 !$OMP END MASTER
 # ifdef DISTRIBUTE
           CALL mp_bcasti (ng, iNLM, exit_flag)
 # endif
 !$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           time(ng)=io_time                   ! needed for shared-memory
         END IF
       END DO
@@ -437,14 +447,17 @@
 !
         IF (nrrec(ng).ne.0) THEN
 !$OMP MASTER
-          CALL get_wetdry (ng, iNLM, IniRec(ng))
+# ifdef DISTRIBUTE
+          CALL get_wetdry (ng, MyRank, iNLM, IniRec(ng))
+# else
+          CALL get_wetdry (ng, -1, iNLM, IniRec(ng))
+# endif
 !$OMP END MASTER
 # ifdef DISTRIBUTE
           CALL mp_bcasti (ng, iNLM, exit_flag)
 # endif
 !$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         ELSE
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL wetdry (ng, tile, Tindex(ng), .TRUE.)
@@ -468,8 +481,7 @@
 !$OMP MASTER
         CALL obs_initial (ng, iNLM, .FALSE.)
 !$OMP END MASTER
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 !$OMP BARRIER
 #endif
@@ -491,15 +503,13 @@
       IF (Nrun.gt.1) THEN
         DO ng=1,Ngrids
 !$OMP MASTER
-          CALL get_state (ng, 5, 5, INI(ng)%name,                       &
-     &                    IniRec(ng), Tindex(ng))
+          CALL get_state (ng, 5, 5, INI(ng), IniRec(ng), Tindex(ng))
 !$OMP END MASTER
 # ifdef DISTRIBUTE
           CALL mp_bcasti (ng, iNLM, exit_flag)
 # endif
 !$OMP BARRIER
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
       END IF
 #endif
@@ -515,7 +525,7 @@
       IF (outer.ge.1) THEN
         DO ng=1,Ngrids
           DO tile=first_tile(ng),last_tile(ng),+1
-            CALL ini_perturb (ng, tile, Lnew(ng), Tindex)
+            CALL ini_perturb (ng, tile, Lnew(ng), Tindex(ng))
           END DO
 !$OMP BARRIER
         END DO
@@ -643,8 +653,7 @@
         CALL mp_bcasti (ng, iNLM, exit_flag)
 #  endif
 !$OMP BARRIER
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 !
 !  If applicable, read in input data.
@@ -658,8 +667,7 @@
         CALL mp_bcasti (ng, iNLM, exit_flag)
 #  endif
 !$OMP BARRIER
-        IF (FoundError(exit_flag, NoError, __LINE__,                    &
-     &                 __FILE__)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END DO
 # endif
 #endif
@@ -766,14 +774,13 @@
         IF (SporadicImpulse(ng)) THEN
           FrcRec(ng)=1
 !$OMP MASTER
-          CALL get_state (ng, 7, 7, TLF(ng)%name, FrcRec(ng), 1)
+          CALL get_state (ng, 7, 7, TLF(ng), FrcRec(ng), 1)
 !$OMP END MASTER
 !$OMP BARRIER
 # ifdef DISTRIBUTE
           CALL mp_bcasti (ng, iTLM, exit_flag)
 # endif
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END DO
 #endif
@@ -839,16 +846,14 @@
 # endif
 !
 !-----------------------------------------------------------------------
-!  Initialize time-stepping counter and clock.
+!  Initialize time-stepping counter and date/time string. Save NLM
+!  initial conditions time.
 !-----------------------------------------------------------------------
 !
-!  Subsract one time unit to avoid special case due to initialization
-!  in the main time-stepping routine.
-!
       DO ng=1,Ngrids
-        iic(ng)=ntstart(ng)-1
-        INItime(ng)=time(ng)         ! Save NLM initial conditions time
-        time(ng)=time(ng)-dt(ng)
+        INItime(ng)=time(ng)
+        iic(ng)=ntstart(ng)
+        CALL time_string (time(ng), time_code(ng))
       END DO
 
 #ifdef PROFILE
@@ -859,11 +864,11 @@
 !
       DO ng=1,Ngrids
         DO thread=THREAD_RANGE
-          CALL wclock_off (ng, iNLM, 2, __LINE__, __FILE__)
+          CALL wclock_off (ng, iNLM, 2, __LINE__, MyFile)
         END DO
 !$OMP BARRIER
       END DO
 #endif
-
+!
       RETURN
       END SUBROUTINE initial

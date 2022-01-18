@@ -2,9 +2,9 @@
       MODULE bulk_flux_mod
 #ifdef BULK_FLUXES
 !
-!svn $Id: bulk_flux.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: bulk_flux.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -76,10 +76,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 17, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 17, __LINE__, MyFile)
 # endif
       CALL bulk_flux_tile (ng, tile,                                    &
      &                     LBi, UBi, LBj, UBj,                          &
@@ -126,17 +129,16 @@
      &                     FORCES(ng) % lrflx,                          &
      &                     FORCES(ng) % shflx,                          &
      &                     FORCES(ng) % srflx,                          &
-     &                     FORCES(ng) % snhflx,                         &
 # ifdef EMINUSP
-     &                     FORCES(ng) % EminusP,                        &
      &                     FORCES(ng) % evap,                           &
 # endif
+     &                     FORCES(ng) % stflux,                         &
      &                     FORCES(ng) % sustr,                          &
      &                     FORCES(ng) % svstr)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 17, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 17, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE bulk_flux
 !
@@ -169,12 +171,11 @@
      (defined COARE_TAYLOR_YELLAND || defined COARE_OOST)
      &                           Lwave,                                 &
 # endif
-     &                           rain, lhflx, lrflx, shflx,             &
-     &                           srflx, snhflx,                         &
+     &                           rain, lhflx, lrflx, shflx, srflx,      &
 # ifdef EMINUSP
-     &                           EminusP, evap,                         &
+     &                           evap,                                  &
 # endif
-     &                           sustr, svstr)
+     &                           stflux, sustr, svstr)
 !***********************************************************************
 !
       USE mod_param
@@ -235,10 +236,9 @@
       real(r8), intent(inout) :: lrflx(LBi:,LBj:)
       real(r8), intent(inout) :: shflx(LBi:,LBj:)
       real(r8), intent(inout) :: srflx(LBi:,LBj:)
-      real(r8), intent(inout) :: snhflx(LBi:,LBj:)
+      real(r8), intent(inout) :: stflux(LBi:,LBj:,:)
 
 #  ifdef EMINUSP
-      real(r8), intent(out) :: EminusP(LBi:,LBj:)
       real(r8), intent(out) :: evap(LBi:,LBj:)
 #  endif
       real(r8), intent(out) :: sustr(LBi:,LBj:)
@@ -286,10 +286,9 @@
       real(r8), intent(inout) :: lrflx(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: shflx(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: srflx(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: snhflx(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: stflux(LBi:UBi,LBj:UBj,NT(ng))
 
 #  ifdef EMINUSP
-      real(r8), intent(out) :: EminusP(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: evap(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(out) :: sustr(LBi:UBi,LBj:UBj)
@@ -544,7 +543,7 @@
           cff=(1.0007_r8+3.46E-6_r8*PairM)*6.1121_r8*                   &
      &        EXP(17.502_r8*TseaC(i)/(240.97_r8+TseaC(i)))
 !
-!  Vapor Pressure reduced for salinity (Kraus & Businger, 1994, pp 42).
+!  Vapor Pressure reduced for salinity (Kraus and Businger, 1994, pp42).
 !
           cff=cff*0.98_r8
 !
@@ -861,10 +860,10 @@
 !  Note that if evaporating, the salt flux is positive
 !        and if     raining, the salt flux is negative
 !
-!  Note that fresh water flux is positive out of the ocean and the
-!  salt flux (stflx(isalt)) is positive into the ocean. It is converted
-!  to (psu m/s) for stflx(isalt) in "set_vbc.F". The E-P value is
-!  saved in variable EminusP for I/O purposes.
+!  Note that stflux(:,:,isalt) is the E-P flux. The fresh water flux
+!  is positive out of the ocean and the salt flux is positive into the
+!  ocean. It is  multiplied by surface salinity when computing state
+!  variable stflx(:,:,isalt) in "set_vbc.F".
 !
       Hscale=1.0_r8/(rho0*Cp)
       cff=1.0_r8/rhow
@@ -873,13 +872,13 @@
           lrflx(i,j)=LRad(i,j)*Hscale
           lhflx(i,j)=-LHeat(i,j)*Hscale
           shflx(i,j)=-SHeat(i,j)*Hscale
-          snhflx(i,j)=(srflx(i,j)+lrflx(i,j)+                           &
-     &                 lhflx(i,j)+shflx(i,j))
+          stflux(i,j,itemp)=(srflx(i,j)+lrflx(i,j)+                     &
+     &                       lhflx(i,j)+shflx(i,j))
 # ifdef MASKING
-          snhflx(i,j)=snhflx(i,j)*rmask(i,j)
+          stflux(i,j,itemp)=stflux(i,j,itemp)*rmask(i,j)
 # endif
 # ifdef WET_DRY
-          snhflx(i,j)=snhflx(i,j)*rmask_wet(i,j)
+          stflux(i,j,itemp)=stflux(i,j,itemp)*rmask_wet(i,j)
 # endif
 # ifdef EMINUSP
           evap(i,j)=LHeat(i,j)/Hlv(i,j)
@@ -889,12 +888,12 @@
 #  ifdef WET_DRY
           evap(i,j)=evap(i,j)*rmask_wet(i,j)
 #  endif
-          EminusP(i,j)=cff*(evap(i,j)-rain(i,j))
+          stflux(i,j,isalt)=cff*(evap(i,j)-rain(i,j))
 #  ifdef MASKING
-          EminusP(i,j)=EminusP(i,j)*rmask(i,j)
+          stflux(i,j,isalt)=stflux(i,j,isalt)*rmask(i,j)
 #  endif
 #  ifdef WET_DRY
-          EminusP(i,j)=EminusP(i,j)*rmask_wet(i,j)
+          stflux(i,j,isalt)=stflux(i,j,isalt)*rmask_wet(i,j)
 #  endif
 # endif
         END DO
@@ -942,14 +941,14 @@
      &                          shflx)
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          snhflx)
+     &                          stflux(:,:,itemp))
 # ifdef EMINUSP
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          evap)
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          EminusP)
+     &                          stflux(:,:,isalt))
 # endif
         CALL exchange_u2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
@@ -964,13 +963,15 @@
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    lrflx, lhflx, shflx, snhflx)
+     &                    lrflx, lhflx, shflx,                          &
+     &                    stflux(:,:,itemp))
 #  ifdef EMINUSP
       CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    evap, EminusP)
+     &                    evap,                                         &
+     &                    stflux(:,:,isalt))
 #  endif
       CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -978,10 +979,10 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    sustr, svstr)
 # endif
-
+!
       RETURN
       END SUBROUTINE bulk_flux_tile
-
+!
       FUNCTION bulk_psiu (ZoL, pi)
 !
 !=======================================================================
@@ -1043,9 +1044,10 @@
         bulk_psiu=-((1.0_r8+ZoL)+0.6667_r8*(ZoL-14.28_r8)/              &
      &            EXP(cff)+8.525_r8)
       END IF
+!
       RETURN
       END FUNCTION bulk_psiu
-
+!
       FUNCTION bulk_psit (ZoL, pi)
 !
 !=======================================================================
@@ -1106,7 +1108,7 @@
         bulk_psit=-((1.0_r8+2.0_r8*ZoL)**1.5_r8+                        &
      &            0.6667_r8*(ZoL-14.28_r8)/EXP(cff)+8.525_r8)
       END IF
-
+!
       RETURN
       END FUNCTION bulk_psit
 #endif

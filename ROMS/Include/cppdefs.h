@@ -1,9 +1,9 @@
 /*
 ** Include file "cppdefs.h"
 **
-** svn $Id: cppdefs.h 1038 2020-09-29 01:54:25Z arango $
+** svn $Id: cppdefs.h 1099 2022-01-06 21:01:01Z arango $
 ********************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2020 The ROMS/TOMS Group                               **
+** Copyright (c) 2002-2022 The ROMS/TOMS Group                               **
 **   Licensed under a MIT/X style license                                    **
 **   See License_ROMS.txt                                                    **
 *******************************************************************************
@@ -105,7 +105,6 @@
 **   sea surface temperature; (3) provide net longwave radiation (default).  **
 **                                                                           **
 ** BULK_FLUXES             if bulk fluxes computation                        **
-** NL_BULK_FLUXES          if bulk fluxes computed by nonlinear model        **
 ** COOL_SKIN               if cool skin correction                           **
 ** LONGWAVE                if computing net longwave radiation               **
 ** LONGWAVE_OUT            if computing outgoing longwave radiation          **
@@ -330,6 +329,7 @@
 ** SSH_TIDES               if imposing tidal elevation                       **
 ** UV_TIDES                if imposing tidal currents                        **
 ** RAMP_TIDES              if ramping (over one day) tidal forcing           **
+** TIDE_GENERATING_FORCES  adds tide generation forces to pressure gradient  **
 ** FSOBC_REDUCED           if SSH data and reduced physics conditions        **
 ** ADD_FSOBC               to add tidal elevation to processed OBC data      **
 ** ADD_M2OBC               to add tidal currents  to processed OBC data      **
@@ -352,7 +352,9 @@
 ** INNER_PRODUCT              if tangent/adjoint inner product check         **
 ** I4DVAR                     if incremental 4D-Var data assimilation        **
 ** I4DVAR_ANA_SENSITIVITY     if I4D-Var observations sensitivity            **
-** LCZ_FINAL                  it computing 4D-Var Hessian singular vectors   **
+** INITIALIZE_AUTOMATIC       to initialize automatic arrays in step2d       **
+** JEDI                       if using Joint Effort for DA Integration       **
+** LCZ_FINAL                  if computing 4D-Var Hessian singular vectors   **
 ** OPT_OBSERVATIONS           if optimal observations                        **
 ** OPT_PERTURBATION           if optimal perturbations, singular vectors     **
 ** PICARD_TEST                if representer tangent linear model test       **
@@ -379,6 +381,7 @@
 ** OPTIONS associated with tangent linear, representer and adjoint models:   **
 **                                                                           **
 ** AD_IMPULSE              to force adjoint model with intermittent impulses **
+** AD_OUTPUT_STATE         to write full adjoint state by adding time levels **
 ** ADJUST_BOUNDARY         if including boundary conditions in 4DVar state   **
 ** ADJUST_STFLUX           if including surface tracer flux in 4DVar state   **
 ** ADJUST_WSTRESS          if including wind-stress in 4DVar state           **
@@ -391,6 +394,7 @@
 ** CLIPPING_SPLIT          to separate analysis due to IC, forcing, and OBC  **
 ** DATALESS_LOOPS          if testing convergence of Picard iterations       **
 ** ENKF_RESTART            if writting restart fields for EnKF               **
+** FORWARD_FLUXES          if using NLM trajectory surface fluxes            **
 ** FORWARD_MIXING          if processing forward vertical mixing coefficient **
 ** FORWARD_WRITE           if writing out forward solution, basic state      **
 ** FORWARD_READ            if reading in  forward solution, basic state      **
@@ -407,6 +411,7 @@
 ** POSTERIOR_EOFS          if posterior analysis error covariance EOFS       **
 ** POSTERIOR_ERROR_F       if final posterior analysis error covariance      **
 ** POSTERIOR_ERROR_I       if initial posterior analysis error covariance    **
+** PRIOR_BULK_FLUXES       if imposing prior NLM surface fluxes              **
 ** RECOMPUTE_4DVAR         if recomputing 4DVar in analysis algorithms       **
 ** RPCG                    if Restricted B-preconditioned Lanczos solver     **
 ** RPM_RELAXATION          if Picard iterations, Diffusive Relaxation of RPM **
@@ -550,6 +555,8 @@
 **                                                                           **
 ** NetCDF input/output OPTIONS:                                              **
 **                                                                           **
+** CHECKSUM                to report checksum when processing I/O            **
+** CHECK_OPEN_FILES        to report number opened/closed/created files      **
 ** DEFLATE                 to set compression NetCDF-4/HDF5 format files     **
 ** HDF5                    to create NetCDF-4/HDF5 format files              **
 ** NO_LBC_ATT              to not check NLM_LBC global attribute on restart  **
@@ -557,9 +564,12 @@
 ** NO_WRITE_GRID           if not writing grid arrays                        **
 ** PARALLEL_IO             if parallel I/O via HDF5 or pnetcdf libraries     **
 ** PERFECT_RESTART         to include perfect restart variables              **
+** PIO_LIB                 to include Parallel-IO from the PIO library       **
 ** PNETCDF                 if parallel I/O with pnetcdf (classic format)     **
 ** POSITIVE_ZERO           to impose positive zero in ouput data             **
 ** READ_WATER              if only reading water points data                 **
+** REGRID_SHAPIRO          to apply Shapiro Filter to regridded data         **
+** ROMS_STDOUT             to write standard output into the 'log.roms' file **
 ** WRITE_WATER             if only writing water points data                 **
 ** RST_SINGLE              if writing single precision restart fields        **
 ** OUT_DOUBLE              if writing double precision output fields         **

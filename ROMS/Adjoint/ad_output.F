@@ -2,9 +2,9 @@
 #ifdef ADJOINT
       SUBROUTINE ad_output (ng)
 !
-!svn $Id: ad_output.F 1036 2020-07-29 05:39:53Z arango $
+!svn $Id: ad_output.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -20,13 +20,21 @@
       USE mod_parallel
       USE mod_iounits
       USE mod_ncparam
-      USE mod_netcdf
       USE mod_scalars
 !
+      USE ad_def_his_mod, ONLY : ad_def_his
+      USE ad_wrt_his_mod, ONLY : ad_wrt_his
+      USE close_io_mod,   ONLY : close_file
+# ifdef AD_AVERAGES
+      USE def_avg_mod,    ONLY : def_avg
+# endif
 # ifdef DISTRIBUTE
       USE distribute_mod, ONLY : mp_bcasts
 # endif
-      USE strings_mod, ONLY : FoundError
+      USE strings_mod,    ONLY : FoundError
+# ifdef AD_AVERAGES
+      USE wrt_avg_mod,    ONLY : wrt_avg
+# endif
 !
       implicit none
 !
@@ -40,7 +48,10 @@
 
       integer :: Fcount, ifile, status
 !
-      SourceFile=__FILE__
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
+      SourceFile=MyFile
 
 # ifdef PROFILE
 !
@@ -48,7 +59,7 @@
 !  Turn on output data time wall clock.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, iADM, 8, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 8, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -105,8 +116,8 @@
      &                            ifile
               END IF
               exit_flag=4
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
             Fcount=ADM(ng)%load
             ADM(ng)%Nrec(Fcount)=0
@@ -117,12 +128,9 @@
             CALL mp_bcasts (ng, iADM, ADM(ng)%name)
 # endif
             ADM(ng)%files(Fcount)=TRIM(ADM(ng)%name)
-            IF (ADM(ng)%ncid.ne.-1) THEN
-              CALL netcdf_close (ng, iADM, ADM(ng)%ncid)
-            END IF
+            CALL close_file (ng, iADM, ADM(ng), ADM(ng)%name)
             CALL ad_def_his (ng, NewFile)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
           IF ((iic(ng).eq.ntstart(ng)).and.(nrrec(ng).ne.0)) THEN
             LwrtADJ(ng)=.FALSE.                 ! avoid writing initial
@@ -132,8 +140,7 @@
         ELSE
           IF (iic(ng).eq.ntstart(ng)) THEN
             CALL ad_def_his (ng, ldefout(ng))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtADJ(ng)=.TRUE.
             LdefADJ(ng)=.FALSE.
           END IF
@@ -146,9 +153,12 @@
         IF (LwrtPER(ng)) THEN
           IF ((iic(ng).ne.ntstart(ng)).and.                             &
      &        (MOD(iic(ng)-1,nADJ(ng)).eq.0)) THEN
-            CALL ad_wrt_his (ng)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+# ifdef DISTRIBUTE
+            CALL ad_wrt_his (ng, MyRank)
+# else
+            CALL ad_wrt_his (ng, -1)
+# endif
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
 # ifdef HESSIAN_SO
@@ -170,9 +180,12 @@
           END IF
 # endif
           IF (wrtHIS) THEN
-            CALL ad_wrt_his (ng)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+# ifdef DISTRIBUTE
+            CALL ad_wrt_his (ng, MyRank)
+# else
+            CALL ad_wrt_his (ng, -1)
+# endif
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END IF
       END IF
@@ -232,8 +245,8 @@
      &                            ifile
               END IF
               exit_flag=4
-              IF (FoundError(exit_flag, NoError, __LINE__,              &
-     &                       __FILE__)) RETURN
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
             END IF
             Fcount=AVG(ng)%load
             AVG(ng)%Nrec(Fcount)=0
@@ -244,19 +257,15 @@
             CALL mp_bcasts (ng, iADM, AVG(ng)%name)
 #  endif
             AVG(ng)%files(Fcount)=TRIM(AVG(ng)%name)
-            IF (AVG(ng)%ncid.ne.-1) THEN
-              CALL netcdf_close (ng, iADM, AVG(ng)%ncid)
-            END IF
+            CALL close_file (ng, iADM, ADM(ng), ADM(ng)%name)
             CALL def_avg (ng, Newfile)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtAVG(ng)=.TRUE.
           END IF
         ELSE
           IF (iic(ng).eq.ntstart(ng)) THEN
             CALL def_avg (ng, ldefout(ng))
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtAVG(ng)=.TRUE.
             LdefAVG(ng)=.FALSE.
           END IF
@@ -268,9 +277,12 @@
       IF (LwrtAVG(ng)) THEN
         IF ((iic(ng).ne.ntstart(ng)).and.                               &
      &      (MOD(iic(ng),nAVG(ng)).eq.1)) THEN
-          CALL wrt_avg (ng)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+#  ifdef DISTRIBUTE
+          CALL wrt_avg (ng, MyRank)
+#  else
+          CALL wrt_avg (ng, -1)
+#  endif
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 # endif
@@ -281,7 +293,7 @@
 !  Turn off output data time wall clock.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, iADM, 8, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 8, __LINE__, MyFile)
 # endif
 !
  10   FORMAT (/,' AD_OUTPUT - multi-file counter ',a,i0,                &

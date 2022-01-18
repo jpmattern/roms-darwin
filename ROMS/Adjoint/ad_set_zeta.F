@@ -3,9 +3,9 @@
 
 #if defined ADJOINT && defined SOLVE3D
 !
-!svn $Id: ad_set_zeta.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: ad_set_zeta.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -36,10 +36,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iADM, 12, __LINE__, __FILE__)
+      CALL wclock_on (ng, iADM, 12, __LINE__, MyFile)
 # endif
       CALL ad_set_zeta_tile (ng, tile,                                  &
      &                       LBi, UBi, LBj, UBj,                        &
@@ -48,8 +51,9 @@
      &                       OCEAN(ng) % ad_zeta,                       &
      &                       OCEAN(ng) % ad_zeta_sol)
 # ifdef PROFILE
-      CALL wclock_off (ng, iADM, 12, __LINE__, __FILE__)
+      CALL wclock_off (ng, iADM, 12, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE ad_set_zeta
 !
@@ -99,13 +103,13 @@
 !-----------------------------------------------------------------------
 !
 # ifdef DISTRIBUTE
-!>    CALL mp_exchange2d (ng, tile, iTLM, 2,                            &
-!>   &                    LBi, UBi, LBj, UBj,                           &
-!>   &                    NghostPoints,                                 &
-!>   &                    EWperiodic(ng), NSperiodic(ng),               &
-!>   &                    tl_zeta(:,:,1),                               &
-!>   &                    tl_zeta(:,:,2))
-!>
+!^    CALL mp_exchange2d (ng, tile, iTLM, 2,                            &
+!^   &                    LBi, UBi, LBj, UBj,                           &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    tl_zeta(:,:,1),                               &
+!^   &                    tl_zeta(:,:,2))
+!^
       CALL ad_mp_exchange2d (ng, tile, iADM, 2,                         &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       NghostPoints,                              &
@@ -116,17 +120,17 @@
 # endif
 
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-!>      CALL exchange_r2d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj,                     &
-!>   &                          tl_zeta(:,:,2))
-!>
+!^      CALL exchange_r2d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj,                     &
+!^   &                          tl_zeta(:,:,2))
+!^
         CALL ad_exchange_r2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_zeta(:,:,2))
-!>      CALL exchange_r2d_tile (ng, tile,                               &
-!>   &                          LBi, UBi, LBj, UBj,                     &
-!>   &                          tl_zeta(:,:,1))
-!>
+!^      CALL exchange_r2d_tile (ng, tile,                               &
+!^   &                          LBi, UBi, LBj, UBj,                     &
+!^   &                          tl_zeta(:,:,1))
+!^
         CALL ad_exchange_r2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_zeta(:,:,1))
@@ -143,16 +147,16 @@
 !
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-!>        tl_zeta(i,j,2)=tl_Zt_avg1(i,j)
-!>        tl_zeta(i,j,1)=tl_Zt_avg1(i,j)
-!>
+!^        tl_zeta(i,j,2)=tl_Zt_avg1(i,j)
+!^        tl_zeta(i,j,1)=tl_Zt_avg1(i,j)
+!^
           ad_Zt_avg1(i,j)=ad_Zt_avg1(i,j)+                              &
      &                    ad_zeta(i,j,1)+ad_zeta(i,j,2)
           ad_zeta(i,j,2)=0.0_r8
           ad_zeta(i,j,1)=0.0_r8
         END DO
       END DO
-
+!
       RETURN
       END SUBROUTINE ad_set_zeta_tile
 #endif

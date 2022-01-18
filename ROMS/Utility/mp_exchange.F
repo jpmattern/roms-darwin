@@ -2,9 +2,9 @@
       MODULE mp_exchange_mod
 #ifdef DISTRIBUTE
 !
-!svn $Id: mp_exchange.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: mp_exchange.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -303,7 +303,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: Nghost
@@ -325,7 +325,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, icS, icN, ioff, Imin, Imax, Ilen
       integer :: j, jcW, jcE, joff, Jmin, Jmax, Jlen
       integer :: m, mc, Ierror, Lstr, pp
@@ -345,8 +345,11 @@
 
       real(r8), dimension(Nvar*HaloSizeI(ng)) :: sendS, sendN
       real(r8), dimension(Nvar*HaloSizeI(ng)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_exchange2d"
 
 # include "set_bounds.h"
 
@@ -356,8 +359,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 60, __LINE__,                          &
-     &                __FILE__//":mp_exchange2d")
+      CALL wclock_on (ng, model, 60, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -886,16 +888,16 @@
           END DO
         END IF
       END IF
+
 # ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 60, __LINE__,                         &
-     &                 __FILE__//":mp_exchange2d")
+      CALL wclock_off (ng, model, 60, __LINE__,  MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_exchange2d
 !
@@ -916,7 +918,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar, boundary
       integer, intent(in) :: LBij, UBij
       integer, intent(in) :: Nghost
@@ -938,7 +940,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, icS, icN
       integer :: j, jcW, jcE
       integer :: m, Ierror, Lstr, pp
@@ -958,8 +960,11 @@
 
       real(r8), dimension(Nvar*HaloBry(ng)) :: sendS, sendN
       real(r8), dimension(Nvar*HaloBry(ng)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_exchange2d_bry"
 
 # include "set_bounds.h"
 
@@ -969,8 +974,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 63, __LINE__,                          &
-     &                __FILE__//":mp_exchange2d_bry")
+      CALL wclock_on (ng, model, 63, __LINE__,  MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -1399,10 +1403,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 63, __LINE__,                         &
-     &                 __FILE__//":mp_exchange2d_bry")
+      CALL wclock_off (ng, model, 63, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_exchange2d_bry
 !
@@ -1423,7 +1426,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk
       integer, intent(in) :: Nghost
@@ -1445,7 +1448,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen
       integer :: k, kc,  m, mc, Ierror, Klen, Lstr, pp
@@ -1469,8 +1472,11 @@
      &                          (UBk-LBk+1)) :: sendS, sendN
       real(r8), dimension(Nvar*HaloSizeI(ng)*                           &
      &                          (UBk-LBk+1)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_exchange3d"
 
 # include "set_bounds.h"
 
@@ -1480,8 +1486,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 61, __LINE__,                          &
-     &                __FILE__//":mp_exchange3d")
+      CALL wclock_on (ng, model, 61, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -2109,16 +2114,16 @@
           END DO
         END IF
       END IF
+
 # ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 61, __LINE__,                         &
-     &                 __FILE__//":mp_exchange3d")
+      CALL wclock_off (ng, model, 61, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_exchange3d
 
@@ -2140,7 +2145,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar, boundary
       integer, intent(in) :: LBij, UBij, LBk, UBk
       integer, intent(in) :: Nghost
@@ -2162,7 +2167,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, ikS, ikN, ioff
       integer :: j, jkW, jkE, joff
       integer :: k, m, mc, Ierror, Klen, Lstr, pp
@@ -2181,8 +2186,11 @@
       real(r8), dimension(Nvar*HaloBry(ng)*(UBk-LBk+1)) :: recvW, recvE
       real(r8), dimension(Nvar*HaloBry(ng)*(UBk-LBk+1)) :: sendS, sendN
       real(r8), dimension(Nvar*HaloBry(ng)*(UBk-LBk+1)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_exchange3d_bry"
 
 # include "set_bounds.h"
 
@@ -2192,8 +2200,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 63, __LINE__,                          &
-     &                __FILE__//":mp_exchange3d_bry")
+      CALL wclock_on (ng, model, 63, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -2735,10 +2742,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 63, __LINE__,                         &
-     &                 __FILE__//":mp_exchange3d_bry")
+      CALL wclock_off (ng, model, 63, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_exchange3d_bry
 
@@ -2760,7 +2766,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt
       integer, intent(in) :: Nghost
@@ -2783,7 +2789,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen, IKTlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen, JKTlen
       integer :: k, kc, m, mc, Ierror, Klen, Lstr, Tlen, pp
@@ -2808,8 +2814,11 @@
      &                    (UBk-LBk+1)*(UBt-LBt+1)) :: sendS, sendN
       real(r8), dimension(Nvar*HaloSizeI(ng)*                           &
      &                    (UBk-LBk+1)*(UBt-LBt+1)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", mp_exchange4d"
 
 # include "set_bounds.h"
 
@@ -2819,8 +2828,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 62, __LINE__,                          &
-     &                __FILE__//":mp_exchange4d")
+      CALL wclock_on (ng, model, 62, __LINE__, MyFile)
 # endif
 !
 !-----------------------------------------------------------------------
@@ -3407,16 +3415,16 @@
           END DO
         END IF
       END IF
+
 # ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 62, __LINE__,                         &
-     &                 __FILE__//":mp_exchange4d")
+      CALL wclock_off (ng, model, 62, __LINE__, MyFile)
 # endif
-
+!
       RETURN
       END SUBROUTINE mp_exchange4d
 
@@ -3439,11 +3447,11 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: Nghost
-
+!
 #  ifdef ASSUMED_SHAPE
       real(r8), intent(inout) :: ad_A(LBi:,LBj:)
 
@@ -3461,7 +3469,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, icS, icN, ioff, Imin, Imax, Ilen
       integer :: j, jcW, jcE, joff, Jmin, Jmax, Jlen
       integer :: m, mc, Ierror, Lstr, pp
@@ -3481,18 +3489,21 @@
 
       real(r8), dimension(Nvar*HaloSizeI(ng)) :: sendS, sendN
       real(r8), dimension(Nvar*HaloSizeI(ng)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
 
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ad_mp_exchange2d"
+
 #  include "set_bounds.h"
+
 #  ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 60, __LINE__,                          &
-     &                __FILE__//":ad_mp_exchange2d")
+      CALL wclock_on (ng, model, 60, __LINE__, MyFile)
 #  endif
 !
 !-----------------------------------------------------------------------
@@ -3560,8 +3571,8 @@
           DO i=Imin,Imax
             sizeN=sizeN+1
             icN=1+(i-Imin)+mc
-!>          A(i,j)=recvN(icN)
-!>
+!^          A(i,j)=recvN(icN)
+!^
             recvN(icN)=ad_A(i,j)
             ad_A(i,j)=0.0_r8
           END DO
@@ -3574,8 +3585,8 @@
             DO i=Imin,Imax
               sizeN=sizeN+1
               icN=ioff+1+(i-Imin)+mc
-!>            B(i,j)=recvN(icN)
-!>
+!^            B(i,j)=recvN(icN)
+!^
               recvN(icN)=ad_B(i,j)
               ad_B(i,j)=0.0_r8
             END DO
@@ -3589,8 +3600,8 @@
             DO i=Imin,Imax
               sizeN=sizeN+1
               icN=ioff+1+(i-Imin)+mc
-!>            C(i,j)=recvN(icN)
-!>
+!^            C(i,j)=recvN(icN)
+!^
               recvN(icN)=ad_C(i,j)
               ad_C(i,j)=0.0_r8
             END DO
@@ -3604,8 +3615,8 @@
             DO i=Imin,Imax
               sizeN=sizeN+1
               icN=ioff+1+(i-Imin)+mc
-!>            D(i,j)=recvN(icN)
-!>
+!^            D(i,j)=recvN(icN)
+!^
               recvN(icN)=ad_D(i,j)
               ad_D(i,j)=0.0_r8
             END DO
@@ -3625,8 +3636,8 @@
           DO i=Imin,Imax
             sizeS=sizeS+1
             icS=1+(i-Imin)+mc
-!>          A(i,j)=recvS(icS)
-!>
+!^          A(i,j)=recvS(icS)
+!^
             recvS(icS)=ad_A(i,j)
             ad_A(i,j)=0.0_r8
           END DO
@@ -3639,8 +3650,8 @@
             DO i=Imin,Imax
               sizeS=sizeS+1
               icS=ioff+1+(i-Imin)+mc
-!>            B(i,j)=recvS(icS)
-!>
+!^            B(i,j)=recvS(icS)
+!^
               recvS(icS)=ad_B(i,j)
               ad_B(i,j)=0.0_r8
             END DO
@@ -3654,8 +3665,8 @@
             DO i=Imin,Imax
               sizeS=sizeS+1
               icS=ioff+1+(i-Imin)+mc
-!>            C(i,j)=recvS(icS)
-!>
+!^            C(i,j)=recvS(icS)
+!^
               recvS(icS)=ad_C(i,j)
               ad_C(i,j)=0.0_r8
             END DO
@@ -3669,8 +3680,8 @@
             DO i=Imin,Imax
               sizeS=sizeS+1
               icS=ioff+1+(i-Imin)+mc
-!>            D(i,j)=recvS(icS)
-!>
+!^            D(i,j)=recvS(icS)
+!^
               recvS(icS)=ad_D(i,j)
               ad_D(i,j)=0.0_r8
             END DO
@@ -3684,30 +3695,30 @@
 !
 #  if defined MPI
       IF (Sexchange) THEN
-!>      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
-!>   &                  OCN_COMM_WORLD, Srequest, Serror)
-!>
+!^      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
+!^   &                  OCN_COMM_WORLD, Srequest, Serror)
+!^
         CALL mpi_irecv (sendS, NSsize, MP_FLOAT, Stile, Ntag,           &
      &                  OCN_COMM_WORLD, Srequest, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
-!>   &                  OCN_COMM_WORLD, Nrequest, Nerror)
-!>
+!^      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
+!^   &                  OCN_COMM_WORLD, Nrequest, Nerror)
+!^
         CALL mpi_irecv (sendN, NSsize, MP_FLOAT, Ntile, Stag,           &
      &                  OCN_COMM_WORLD, Nrequest, Nerror)
       END IF
       IF (Sexchange) THEN
-!>      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
-!>   &                  OCN_COMM_WORLD, Serror)
-!>
+!^      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
+!^   &                  OCN_COMM_WORLD, Serror)
+!^
         CALL mpi_send  (recvS, sizeS, MP_FLOAT, Stile, Stag,            &
      &                  OCN_COMM_WORLD, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
-!>   &                  OCN_COMM_WORLD, Nerror)
-!>
+!^      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
+!^   &                  OCN_COMM_WORLD, Nerror)
+!^
         CALL mpi_send  (recvN, sizeN, MP_FLOAT, Ntile, Ntag,            &
      &                  OCN_COMM_WORLD, Nerror)
       END IF
@@ -3734,8 +3745,8 @@
           j=Jstr+m-1
           DO i=Imin,Imax
             icS=1+(i-Imin)+mc
-!>          sendS(icS)=A(i,j)
-!>
+!^          sendS(icS)=A(i,j)
+!^
             ad_A(i,j)=ad_A(i,j)+sendS(icS)
             sendS(icS)=0.0_r8
           END DO
@@ -3747,8 +3758,8 @@
             j=Jstr+m-1
             DO i=Imin,Imax
               icS=ioff+1+(i-Imin)+mc
-!>            sendS(icS)=B(i,j)
-!>
+!^            sendS(icS)=B(i,j)
+!^
               ad_B(i,j)=ad_B(i,j)+sendS(icS)
               sendS(icS)=0.0_r8
             END DO
@@ -3761,8 +3772,8 @@
             j=Jstr+m-1
             DO i=Imin,Imax
               icS=ioff+1+(i-Imin)+mc
-!>            sendS(icS)=C(i,j)
-!>
+!^            sendS(icS)=C(i,j)
+!^
               ad_C(i,j)=ad_C(i,j)+sendS(icS)
               sendS(icS)=0.0_r8
             END DO
@@ -3775,8 +3786,8 @@
             j=Jstr+m-1
             DO i=Imin,Imax
               icS=ioff+1+(i-Imin)+mc
-!>            sendS(icS)=D(i,j)
-!>
+!^            sendS(icS)=D(i,j)
+!^
               ad_D(i,j)=ad_D(i,j)+sendS(icS)
               sendS(icS)=0.0_r8
             END DO
@@ -3801,8 +3812,8 @@
           j=Jend-GsendN+m
           DO i=Imin,Imax
             icN=1+(i-Imin)+mc
-!>          sendN(icN)=A(i,j)
-!>
+!^          sendN(icN)=A(i,j)
+!^
             ad_A(i,j)=ad_A(i,j)+sendN(icN)
             sendN(icN)=0.0_r8
           END DO
@@ -3814,8 +3825,8 @@
             j=Jend-GsendN+m
             DO i=Imin,Imax
               icN=ioff+1+(i-Imin)+mc
-!>            sendN(icN)=B(i,j)
-!>
+!^            sendN(icN)=B(i,j)
+!^
               ad_B(i,j)=ad_B(i,j)+sendN(icN)
               sendN(icN)=0.0_r8
             END DO
@@ -3828,8 +3839,8 @@
             j=Jend-GsendN+m
             DO i=Imin,Imax
               icN=ioff+1+(i-Imin)+mc
-!>            sendN(icN)=C(i,Jend-GsendN+m)
-!>
+!^            sendN(icN)=C(i,Jend-GsendN+m)
+!^
               ad_C(i,j)=ad_C(i,j)+sendN(icN)
               sendN(icN)=0.0_r8
             END DO
@@ -3842,8 +3853,8 @@
             j=Jend-GsendN+m
             DO i=Imin,Imax
               icN=ioff+1+(i-Imin)+mc
-!>            sendN(icN)=D(i,j)
-!>
+!^            sendN(icN)=D(i,j)
+!^
               ad_D(i,j)=ad_D(i,j)+sendN(icN)
               sendN(icN)=0.0_r8
             END DO
@@ -3867,8 +3878,8 @@
           DO j=Jmin,Jmax
             sizeE=sizeE+1
             jcE=1+(j-Jmin)+mc
-!>          A(i,j)=recvE(jcE)
-!>
+!^          A(i,j)=recvE(jcE)
+!^
             recvE(jcE)=ad_A(i,j)
             ad_A(i,j)=0.0_r8
           ENDDO
@@ -3881,8 +3892,8 @@
             DO j=Jmin,Jmax
               sizeE=sizeE+1
               jcE=joff+1+(j-Jmin)+mc
-!>            B(i,j)=recvE(jcE)
-!>
+!^            B(i,j)=recvE(jcE)
+!^
               recvE(jcE)=ad_B(i,j)
               ad_B(i,j)=0.0_r8
             END DO
@@ -3896,8 +3907,8 @@
             DO j=Jmin,Jmax
               sizeE=sizeE+1
               jcE=joff+1+(j-Jmin)+mc
-!>            C(i,j)=recvE(jcE)
-!>
+!^            C(i,j)=recvE(jcE)
+!^
               recvE(jcE)=ad_C(i,j)
               ad_C(i,j)=0.0_r8
             END DO
@@ -3911,8 +3922,8 @@
             DO j=Jmin,Jmax
               sizeE=sizeE+1
               jcE=joff+1+(j-Jmin)+mc
-!>            D(i,j)=recvE(jcE)
-!>
+!^            D(i,j)=recvE(jcE)
+!^
               recvE(jcE)=ad_D(i,j)
               ad_D(i,j)=0.0_r8
             END DO
@@ -3932,8 +3943,8 @@
           DO j=Jmin,Jmax
             sizeW=sizeW+1
             jcW=1+(j-Jmin)+mc
-!>          A(i,j)=recvW(jcW)
-!>
+!^          A(i,j)=recvW(jcW)
+!^
             recvW(jcW)=ad_A(i,j)
             ad_A(i,j)=0.0_r8
           END DO
@@ -3946,8 +3957,8 @@
             DO j=Jmin,Jmax
               sizeW=sizeW+1
               jcW=joff+1+(j-Jmin)+mc
-!>            B(i,j)=recvW(jcW)
-!>
+!^            B(i,j)=recvW(jcW)
+!^
               recvW(jcW)=ad_B(i,j)
               ad_B(i,j)=0.0_r8
             END DO
@@ -3961,8 +3972,8 @@
             DO j=Jmin,Jmax
               sizeW=sizeW+1
               jcW=joff+1+(j-Jmin)+mc
-!>            C(i,j)=recvW(jcW)
-!>
+!^            C(i,j)=recvW(jcW)
+!^
               recvW(jcW)=ad_C(i,j)
               ad_C(i,j)=0.0_r8
             END DO
@@ -3976,8 +3987,8 @@
             DO j=Jmin,Jmax
               sizeW=sizeW+1
               jcW=joff+1+(j-Jmin)+mc
-!>            D(i,j)=recvW(jcW)
-!>
+!^            D(i,j)=recvW(jcW)
+!^
               recvW(jcW)=ad_D(i,j)
               ad_D(i,j)=0.0_r8
             END DO
@@ -3991,30 +4002,30 @@
 !
 #  if defined MPI
       IF (Wexchange) THEN
-!>      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
-!>   &                  OCN_COMM_WORLD, Wrequest, Werror)
-!>
+!^      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
+!^   &                  OCN_COMM_WORLD, Wrequest, Werror)
+!^
         CALL mpi_irecv (sendW, EWsize, MP_FLOAT, Wtile, Etag,           &
      &                  OCN_COMM_WORLD, Wrequest, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
-!>   &                  OCN_COMM_WORLD, Erequest, Eerror)
-!>
+!^      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
+!^   &                  OCN_COMM_WORLD, Erequest, Eerror)
+!^
         CALL mpi_irecv (sendE, EWsize, MP_FLOAT, Etile, Wtag,           &
      &                  OCN_COMM_WORLD, Erequest, Eerror)
       END IF
       IF (Wexchange) THEN
-!>      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
-!>   &                  OCN_COMM_WORLD, Werror)
-!>
+!^      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
+!^   &                  OCN_COMM_WORLD, Werror)
+!^
         CALL mpi_send  (recvW, sizeW, MP_FLOAT, Wtile, Wtag,            &
      &                  OCN_COMM_WORLD, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
-!>   &                  OCN_COMM_WORLD, Eerror)
-!>
+!^      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
+!^   &                  OCN_COMM_WORLD, Eerror)
+!^
         CALL mpi_send  (recvE, sizeE, MP_FLOAT, Etile, Etag,            &
      &                  OCN_COMM_WORLD, Eerror)
       END IF
@@ -4039,8 +4050,8 @@
           i=Istr+m-1
           DO j=Jmin,Jmax
             jcW=1+(j-Jmin)+mc
-!>          sendW(jcW)=A(i,j)
-!>
+!^          sendW(jcW)=A(i,j)
+!^
             ad_A(i,j)=ad_A(i,j)+sendW(jcW)
             sendW(jcW)=0.0_r8
           END DO
@@ -4052,8 +4063,8 @@
             i=Istr+m-1
             DO j=Jmin,Jmax
               jcW=joff+1+(j-Jmin)+mc
-!>            sendW(jcW)=B(i,j)
-!>
+!^            sendW(jcW)=B(i,j)
+!^
               ad_B(i,j)=ad_B(i,j)+sendW(jcW)
               sendW(jcW)=0.0_r8
             END DO
@@ -4066,8 +4077,8 @@
             i=Istr+m-1
             DO j=Jmin,Jmax
               jcW=joff+1+(j-Jmin)+mc
-!>            sendW(jcW)=C(i,j)
-!>
+!^            sendW(jcW)=C(i,j)
+!^
               ad_C(i,j)=ad_C(i,j)+sendW(jcW)
               sendW(jcW)=0.0_r8
             END DO
@@ -4080,8 +4091,8 @@
             i=Istr+m-1
             DO j=Jmin,Jmax
               jcW=joff+1+(j-Jmin)+mc
-!>            sendW(jcW)=D(i,j)
-!>
+!^            sendW(jcW)=D(i,j)
+!^
               ad_D(i,j)=ad_D(i,j)+sendW(jcW)
               sendW(jcW)=0.0_r8
             END DO
@@ -4106,8 +4117,8 @@
           i=Iend-GsendE+m
           DO j=Jmin,Jmax
             jcE=1+(j-Jmin)+mc
-!>          sendE(jcE)=A(i,j)
-!>
+!^          sendE(jcE)=A(i,j)
+!^
             ad_A(i,j)=ad_A(i,j)+sendE(jcE)
             sendE(jcE)=0.0_r8
           END DO
@@ -4119,8 +4130,8 @@
             i=Iend-GsendE+m
             DO j=Jmin,Jmax
               jcE=joff+1+(j-Jmin)+mc
-!>            sendE(jcE)=B(i,j)
-!>
+!^            sendE(jcE)=B(i,j)
+!^
               ad_B(i,j)=ad_B(i,j)+sendE(jcE)
               sendE(jcE)=0.0_r8
             END DO
@@ -4133,8 +4144,8 @@
             i=Iend-GsendE+m
             DO j=Jmin,Jmax
               jcE=joff+1+(j-Jmin)+mc
-!>            sendE(jcE)=C(i,j)
-!>
+!^            sendE(jcE)=C(i,j)
+!^
               ad_C(i,j)=ad_C(i,j)+sendE(jcE)
               sendE(jcE)=0.0_r8
             END DO
@@ -4147,24 +4158,24 @@
             i=Iend-GsendE+m
             DO j=Jmin,Jmax
               jcE=joff+1+(j-Jmin)+mc
-!>            sendE(jcE)=D(i,j)
-!>
+!^            sendE(jcE)=D(i,j)
+!^
               ad_D(i,j)=ad_D(i,j)+sendE(jcE)
               sendE(jcE)=0.0_r8
             END DO
           END DO
         END IF
       END IF
+
 #  ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 60, __LINE__,                         &
-     &                 __FILE__//":ad_mp_exchange2d")
+      CALL wclock_off (ng, model, 60, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE ad_mp_exchange2d
 
@@ -4186,7 +4197,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar, boundary
       integer, intent(in) :: LBij, UBij
       integer, intent(in) :: Nghost
@@ -4208,7 +4219,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, icS, icN
       integer :: j, jcW, jcE
       integer :: m, Ierror, Lstr, pp
@@ -4228,18 +4239,21 @@
 
       real(r8), dimension(Nvar*HaloBry(ng)) :: sendS, sendN
       real(r8), dimension(Nvar*HaloBry(ng)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
 
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ad_mp_exchange2d_bry"
+
 #  include "set_bounds.h"
+
 #  ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 63, __LINE__,                          &
-     &                __FILE__//":ad_mp_exchange2d_bry")
+      CALL wclock_on (ng, model, 63, __LINE__, MyFile)
 #  endif
 !
 !-----------------------------------------------------------------------
@@ -4311,8 +4325,8 @@
           j=Jend+m
           sizeN=sizeN+1
           icN=icN+1
-!>        A(j)=recvN(icN)
-!>
+!^        A(j)=recvN(icN)
+!^
           recvN(icN)=ad_A(j)
           ad_A(j)=0.0_r8
         END DO
@@ -4321,8 +4335,8 @@
             j=Jend+m
             sizeN=sizeN+1
             icN=icN+1
-!>          B(j)=recvN(icN)
-!>
+!^          B(j)=recvN(icN)
+!^
             recvN(icN)=ad_B(j)
             ad_B(j)=0.0_r8
           END DO
@@ -4332,8 +4346,8 @@
             j=Jend+m
             sizeN=sizeN+1
             icN=icN+1
-!>          C(j)=recvN(icN)
-!>
+!^          C(j)=recvN(icN)
+!^
             recvN(icN)=ad_C(j)
             ad_C(j)=0.0_r8
           END DO
@@ -4343,8 +4357,8 @@
             j=Jend+m
             sizeN=sizeN+1
             icN=icN+1
-!>          D(j)=recvN(icN)
-!>
+!^          D(j)=recvN(icN)
+!^
             recvN(icN)=ad_D(j)
             ad_D(j)=0.0_r8
           END DO
@@ -4362,8 +4376,8 @@
           j=Jstr-m
           sizeS=sizeS+1
           icS=icS+1
-!>        A(j)=recvS(icS)
-!>
+!^        A(j)=recvS(icS)
+!^
           recvS(icS)=ad_A(j)
           ad_A(j)=0.0_r8
         END DO
@@ -4372,8 +4386,8 @@
             j=Jstr-m
             sizeS=sizeS+1
             icS=icS+1
-!>          B(j)=recvS(icS)
-!>
+!^          B(j)=recvS(icS)
+!^
             recvS(icS)=ad_B(j)
             ad_B(j)=0.0_r8
           END DO
@@ -4383,8 +4397,8 @@
             j=Jstr-m
             sizeS=sizeS+1
             icS=icS+1
-!>          C(j)=recvS(icS)
-!>
+!^          C(j)=recvS(icS)
+!^
             recvS(icS)=ad_C(j)
             ad_C(j)=0.0_r8
           END DO
@@ -4394,8 +4408,8 @@
             j=Jstr-m
             sizeS=sizeS+1
             icS=icS+1
-!>          D(j)=recvS(icS)
-!>
+!^          D(j)=recvS(icS)
+!^
             recvS(icS)=ad_D(j)
             ad_D(j)=0.0_r8
           END DO
@@ -4408,30 +4422,30 @@
 !
 #  if defined MPI
       IF (Sexchange) THEN
-!>      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
-!>   &                  OCN_COMM_WORLD, Srequest, Serror)
-!>
+!^      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
+!^   &                  OCN_COMM_WORLD, Srequest, Serror)
+!^
         CALL mpi_irecv (sendS, NSsize, MP_FLOAT, Stile, Ntag,           &
      &                  OCN_COMM_WORLD, Srequest, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
-!>   &                  OCN_COMM_WORLD, Nrequest, Nerror)
-!>
+!^      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
+!^   &                  OCN_COMM_WORLD, Nrequest, Nerror)
+!^
         CALL mpi_irecv (sendN, NSsize, MP_FLOAT, Ntile, Stag,           &
      &                  OCN_COMM_WORLD, Nrequest, Nerror)
       END IF
       IF (Sexchange) THEN
-!>      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
-!>   &                  OCN_COMM_WORLD, Serror)
-!>
+!^      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
+!^   &                  OCN_COMM_WORLD, Serror)
+!^
         CALL mpi_send  (recvS, sizeS, MP_FLOAT, Stile, Stag,            &
      &                  OCN_COMM_WORLD, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
-!>   &                  OCN_COMM_WORLD, Nerror)
-!>
+!^      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
+!^   &                  OCN_COMM_WORLD, Nerror)
+!^
         CALL mpi_send  (recvN, sizeN, MP_FLOAT, Ntile, Ntag,            &
      &                  OCN_COMM_WORLD, Nerror)
       END IF
@@ -4457,8 +4471,8 @@
         DO m=1,GsendS
           j=Jstr+m-1
           icS=icS+1
-!>        sendS(icS)=A(j)
-!>
+!^        sendS(icS)=A(j)
+!^
           ad_A(j)=ad_A(j)+sendS(icS)
           sendS(icS)=0.0_r8
         END DO
@@ -4466,8 +4480,8 @@
           DO m=1,GsendS
             j=Jstr+m-1
             icS=icS+1
-!>          sendS(icS)=B(j)
-!>
+!^          sendS(icS)=B(j)
+!^
             ad_B(j)=ad_B(j)+sendS(icS)
             sendS(icS)=0.0_r8
           END DO
@@ -4476,8 +4490,8 @@
           DO m=1,GsendS
             j=Jstr+m-1
             icS=ics+1
-!>          sendS(icS)=C(j)
-!>
+!^          sendS(icS)=C(j)
+!^
             ad_C(j)=ad_C(j)+sendS(icS)
             sendS(icS)=0.0_r8
           END DO
@@ -4486,8 +4500,8 @@
           DO m=1,GsendS
             j=Jstr+m-1
             icS=icS+1
-!>          sendS(icS)=D(j)
-!>
+!^          sendS(icS)=D(j)
+!^
             ad_D(j)=ad_D(j)+sendS(icS)
             sendS(icS)=0.0_r8
           END DO
@@ -4510,8 +4524,8 @@
         DO m=1,GsendN
           j=Jend-GsendN+m
           icN=icN+1
-!>        sendN(icN)=A(j)
-!>
+!^        sendN(icN)=A(j)
+!^
           ad_A(j)=ad_A(j)+sendN(icN)
           sendN(icN)=0.0_r8
         END DO
@@ -4519,8 +4533,8 @@
           DO m=1,GsendN
             j=Jend-GsendN+m
             icN=icN+1
-!>          sendN(icN)=B(j)
-!>
+!^          sendN(icN)=B(j)
+!^
             ad_B(j)=ad_B(j)+sendN(icN)
             sendN(icN)=0.0_r8
           END DO
@@ -4529,8 +4543,8 @@
           DO m=1,GsendN
             j=Jend-GsendN+m
             icN=icN+1
-!>          sendN(icN)=C(j)
-!>
+!^          sendN(icN)=C(j)
+!^
             ad_C(j)=ad_C(j)+sendN(icN)
             sendN(icN)=0.0_r8
           END DO
@@ -4539,8 +4553,8 @@
           DO m=1,GsendN
             j=Jend-GsendN+m
             icN=icN+1
-!>          sendN(icN)=D(j)
-!>
+!^          sendN(icN)=D(j)
+!^
             ad_D(j)=ad_D(j)+sendN(icN)
             sendN(icN)=0.0_r8
           END DO
@@ -4562,8 +4576,8 @@
           i=Iend+m
           sizeE=sizeE+1
           jcE=jcE+1
-!>        A(i)=recvE(jcE)
-!>
+!^        A(i)=recvE(jcE)
+!^
           recvE(jcE)=ad_A(i)
           ad_A(i)=0.0_r8
         END DO
@@ -4572,8 +4586,8 @@
             i=Iend+m
             sizeE=sizeE+1
             jcE=jcE+1
-!>          B(i)=recvE(jcE)
-!>
+!^          B(i)=recvE(jcE)
+!^
             recvE(jcE)=ad_B(i)
             ad_B(i)=0.0_r8
           END DO
@@ -4583,8 +4597,8 @@
             i=Iend+m
             sizeE=sizeE+1
             jcE=jcE+1
-!>          C(i)=recvE(jcE)
-!>
+!^          C(i)=recvE(jcE)
+!^
             recvE(jcE)=ad_C(i)
             ad_C(i)=0.0_r8
           END DO
@@ -4594,8 +4608,8 @@
             i=Iend+m
             sizeE=sizeE+1
             jcE=jcE+1
-!>          D(i)=recvE(jcE)
-!>
+!^          D(i)=recvE(jcE)
+!^
             recvE(jcE)=ad_D(i)
             ad_D(i)=0.0_r8
           END DO
@@ -4613,8 +4627,8 @@
           i=Istr-m
           sizeW=sizeW+1
           jcW=jcW+1
-!>        A(i)=recvW(jcW)
-!>
+!^        A(i)=recvW(jcW)
+!^
           recvW(jcW)=ad_A(i)
           ad_A(i)=0.0_r8
         END DO
@@ -4623,8 +4637,8 @@
             i=Istr-m
             sizeW=sizeW+1
             jcW=jcW+1
-!>          B(i)=recvW(jcW)
-!>
+!^          B(i)=recvW(jcW)
+!^
             recvW(jcW)=ad_B(i)
             ad_B(i)=0.0_r8
           END DO
@@ -4634,8 +4648,8 @@
             i=Istr-m
             sizeW=sizeW+1
             jcW=jcW+1
-!>          C(i)=recvW(jcW)
-!>
+!^          C(i)=recvW(jcW)
+!^
             recvW(jcW)=ad_C(i)
             ad_C(i)=0.0_r8
           END DO
@@ -4645,8 +4659,8 @@
             i=Istr-m
             sizeW=sizeW+1
             jcW=jcW+1
-!>          D(i)=recvW(jcW)
-!>
+!^          D(i)=recvW(jcW)
+!^
             recvW(jcW)=ad_D(i)
             ad_D(i)=0.0_r8
           END DO
@@ -4659,30 +4673,30 @@
 !
 #  if defined MPI
       IF (Wexchange) THEN
-!>      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
-!>   &                  OCN_COMM_WORLD, Wrequest, Werror)
-!>
+!^      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
+!^   &                  OCN_COMM_WORLD, Wrequest, Werror)
+!^
         CALL mpi_irecv (sendW, EWsize, MP_FLOAT, Wtile, Etag,           &
      &                  OCN_COMM_WORLD, Wrequest, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
-!>   &                  OCN_COMM_WORLD, Erequest, Eerror)
-!>
+!^      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
+!^   &                  OCN_COMM_WORLD, Erequest, Eerror)
+!^
         CALL mpi_irecv (sendE, EWsize, MP_FLOAT, Etile, Wtag,           &
      &                  OCN_COMM_WORLD, Erequest, Eerror)
       END IF
       IF (Wexchange) THEN
-!>      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
-!>   &                  OCN_COMM_WORLD, Werror)
-!>
+!^      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
+!^   &                  OCN_COMM_WORLD, Werror)
+!^
         CALL mpi_send  (recvW, sizeW, MP_FLOAT, Wtile, Wtag,            &
      &                  OCN_COMM_WORLD, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
-!>   &                  OCN_COMM_WORLD, Eerror)
-!>
+!^      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
+!^   &                  OCN_COMM_WORLD, Eerror)
+!^
         CALL mpi_send  (recvE, sizeE, MP_FLOAT, Etile, Etag,            &
      &                  OCN_COMM_WORLD, Eerror)
       END IF
@@ -4706,8 +4720,8 @@
         DO m=1,GsendW
           i=Istr+m-1
           jcW=jcW+1
-!>        sendW(jcW)=A(i)
-!>
+!^        sendW(jcW)=A(i)
+!^
           ad_A(i)=ad_A(i)+sendW(jcW)
           sendW(jcW)=0.0_r8
         END DO
@@ -4715,8 +4729,8 @@
           DO m=1,GsendW
             i=Istr+m-1
             jcW=jcW+1
-!>          sendW(jcW)=B(i)
-!>
+!^          sendW(jcW)=B(i)
+!^
             ad_B(i)=ad_B(i)+sendW(jcW)
             sendW(jcW)=0.0_r8
           END DO
@@ -4725,8 +4739,8 @@
           DO m=1,GsendW
             i=Istr+m-1
             jcW=jcW+1
-!>          sendW(jcW)=C(i)
-!>
+!^          sendW(jcW)=C(i)
+!^
             ad_C(i)=ad_C(i)+sendW(jcW)
             sendW(jcW)=0.0_r8
           END DO
@@ -4735,8 +4749,8 @@
           DO m=1,GsendW
             i=Istr+m-1
             jcW=jcW+1
-!>          sendW(jcW)=D(i)
-!>
+!^          sendW(jcW)=D(i)
+!^
             ad_D(i)=ad_D(i)+sendW(jcW)
             sendW(jcW)=0.0_r8
           END DO
@@ -4759,8 +4773,8 @@
         DO m=1,GsendE
           i=Iend-GsendE+m
           jcE=jcE+1
-!>        sendE(jcE)=A(i)
-!>
+!^        sendE(jcE)=A(i)
+!^
           ad_A(i)=ad_A(i)+sendE(jcE)
           sendE(jcE)=0.0_r8
         END DO
@@ -4768,8 +4782,8 @@
           DO m=1,GsendE
             i=Iend-GsendE+m
             jcE=jcE+1
-!>          sendE(jcE)=B(i)
-!>
+!^          sendE(jcE)=B(i)
+!^
             ad_B(i)=ad_B(i)+sendE(jcE)
             sendE(jcE)=0.0_r8
           END DO
@@ -4778,8 +4792,8 @@
           DO m=1,GsendE
             i=Iend-GsendE+m
             jcE=jcE+1
-!>          sendE(jcE)=C(i)
-!>
+!^          sendE(jcE)=C(i)
+!^
             ad_C(i)=ad_C(i)+sendE(jcE)
             sendE(jcE)=0.0_r8
           END DO
@@ -4788,8 +4802,8 @@
           DO m=1,GsendE
             i=Iend-GsendE+m
             jcE=jcE+1
-!>          sendE(jcE)=D(i)
-!>
+!^          sendE(jcE)=D(i)
+!^
             ad_D(i)=ad_D(i)+sendE(jcE)
             sendE(jcE)=0.0_r8
           END DO
@@ -4802,10 +4816,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 63, __LINE__,                         &
-     &                 __FILE__//":ad_mp_exchange2d_bry")
+      CALL wclock_off (ng, model, 63, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE ad_mp_exchange2d_bry
 
@@ -4827,7 +4840,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk
       integer, intent(in) :: Nghost
@@ -4849,7 +4862,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen
       integer :: k, kc, m, mc, Ierror, Klen, Lstr, pp
@@ -4873,18 +4886,21 @@
      &                           (UBk-LBk+1)) :: recvW, recvE
       real(r8), dimension(Nvar*HaloSizeI(ng)*                           &
      &                           (UBk-LBk+1)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
 
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ad_mp_exchange3d"
+
 #  include "set_bounds.h"
+
 #  ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 61, __LINE__,                          &
-     &                __FILE__//":ad_mp_exchange3d")
+      CALL wclock_on (ng, model, 61, __LINE__, MyFile)
 #  endif
 !
 !-----------------------------------------------------------------------
@@ -4957,8 +4973,8 @@
             DO i=Imin,Imax
               sizeN=sizeN+1
               ikN=1+(i-Imin)+kc
-!>            A(i,j,k)=recvN(ikN)
-!>
+!^            A(i,j,k)=recvN(ikN)
+!^
               recvN(ikN)=ad_A(i,j,k)
               ad_A(i,j,k)=0.0_r8
             END DO
@@ -4974,8 +4990,8 @@
               DO i=Imin,Imax
                 sizeN=sizeN+1
                 ikN=ioff+1+(i-Imin)+kc
-!>              B(i,j,k)=recvN(ikN)
-!>
+!^              B(i,j,k)=recvN(ikN)
+!^
                 recvN(ikN)=ad_B(i,j,k)
                 ad_B(i,j,k)=0.0_r8
               END DO
@@ -4992,8 +5008,8 @@
               DO i=Imin,Imax
                 sizeN=sizeN+1
                 ikN=ioff+1+(i-Imin)+kc
-!>              C(i,j,k)=recvN(ikN)
-!>
+!^              C(i,j,k)=recvN(ikN)
+!^
                 recvN(ikN)=ad_C(i,j,k)
                 ad_C(i,j,k)=0.0_r8
               END DO
@@ -5010,8 +5026,8 @@
               DO i=Imin,Imax
                 sizeN=sizeN+1
                 ikN=ioff+1+(i-Imin)+kc
-!>              D(i,j,k)=recvN(ikN)
-!>
+!^              D(i,j,k)=recvN(ikN)
+!^
                 recvN(ikN)=ad_D(i,j,k)
                 ad_D(i,j,k)=0.0_r8
               END DO
@@ -5034,8 +5050,8 @@
             DO i=Imin,Imax
               sizeS=sizeS+1
               ikS=1+(i-Imin)+kc
-!>            A(i,j,k)=recvS(ikS)
-!>
+!^            A(i,j,k)=recvS(ikS)
+!^
               recvS(ikS)=ad_A(i,j,k)
               ad_A(i,j,k)=0.0_r8
             END DO
@@ -5051,8 +5067,8 @@
               DO i=Imin,Imax
                 sizeS=sizeS+1
                 ikS=ioff+1+(i-Imin)+kc
-!>              B(i,j,k)=recvS(ikS)
-!>
+!^              B(i,j,k)=recvS(ikS)
+!^
                 recvS(ikS)=ad_B(i,j,k)
                 ad_B(i,j,k)=0.0_r8
               END DO
@@ -5069,8 +5085,8 @@
               DO i=Imin,Imax
                 sizeS=sizeS+1
                 ikS=ioff+1+(i-Imin)+kc
-!>              C(i,j,k)=recvS(ikS)
-!>
+!^              C(i,j,k)=recvS(ikS)
+!^
                 recvS(ikS)=ad_C(i,j,k)
                 ad_C(i,j,k)=0.0_r8
               END DO
@@ -5087,8 +5103,8 @@
               DO i=Imin,Imax
                 sizeS=sizeS+1
                 ikS=ioff+1+(i-Imin)+kc
-!>              D(i,j,k)=recvS(ikS)
-!>
+!^              D(i,j,k)=recvS(ikS)
+!^
                 recvS(ikS)=ad_D(i,j,k)
                 ad_D(i,j,k)=0.0_r8
               END DO
@@ -5103,30 +5119,30 @@
 !
 #  if defined MPI
       IF (Sexchange) THEN
-!>      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
-!>   &                  OCN_COMM_WORLD, Srequest, Serror)
-!>
+!^      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
+!^   &                  OCN_COMM_WORLD, Srequest, Serror)
+!^
         CALL mpi_irecv (sendS, NSsize, MP_FLOAT, Stile, Ntag,           &
      &                  OCN_COMM_WORLD, Srequest, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
-!>   &                  OCN_COMM_WORLD, Nrequest, Nerror)
-!>
+!^      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
+!^   &                  OCN_COMM_WORLD, Nrequest, Nerror)
+!^
         CALL mpi_irecv (sendN, NSsize, MP_FLOAT, Ntile, Stag,           &
      &                  OCN_COMM_WORLD, Nrequest, Nerror)
       END IF
       IF (Sexchange) THEN
-!>      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
-!>   &                  OCN_COMM_WORLD, Serror)
-!>
+!^      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
+!^   &                  OCN_COMM_WORLD, Serror)
+!^
         CALL mpi_send  (recvS, sizeS, MP_FLOAT, Stile, Stag,            &
      &                  OCN_COMM_WORLD, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
-!>   &                  OCN_COMM_WORLD, Nerror)
-!>
+!^      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
+!^   &                  OCN_COMM_WORLD, Nerror)
+!^
         CALL mpi_send  (recvN, sizeN, MP_FLOAT, Ntile, Ntag,            &
      &                  OCN_COMM_WORLD, Nerror)
       END IF
@@ -5155,8 +5171,8 @@
             kc=(k-LBk)*Ilen+mc
             DO i=Imin,Imax
               ikS=1+(i-Imin)+kc
-!>            sendS(ikS)=A(i,j,k)
-!>
+!^            sendS(ikS)=A(i,j,k)
+!^
               ad_A(i,j,k)=ad_A(i,j,k)+sendS(ikS)
               sendS(ikS)=0.0_r8
             END DO
@@ -5171,8 +5187,8 @@
               kc=(k-LBk)*Ilen+mc
               DO i=Imin,Imax
                 ikS=ioff+1+(i-Imin)+kc
-!>              sendS(ikS)=B(i,j,k)
-!>
+!^              sendS(ikS)=B(i,j,k)
+!^
                 ad_B(i,j,k)=ad_B(i,j,k)+sendS(ikS)
                 sendS(ikS)=0.0_r8
               END DO
@@ -5188,8 +5204,8 @@
               kc=(k-LBk)*Ilen+mc
               DO i=Imin,Imax
                 ikS=ioff+1+(i-Imin)+kc
-!>              sendS(ikS)=C(i,j,k)
-!>
+!^              sendS(ikS)=C(i,j,k)
+!^
                 ad_C(i,j,k)=ad_C(i,j,k)+sendS(ikS)
                 sendS(ikS)=0.0_r8
               END DO
@@ -5205,8 +5221,8 @@
               kc=(k-LBk)*Ilen+mc
               DO i=Imin,Imax
                 ikS=ioff+1+(i-Imin)+kc
-!>              sendS(ikS)=D(i,j,k)
-!>
+!^              sendS(ikS)=D(i,j,k)
+!^
                 ad_D(i,j,k)=ad_D(i,j,k)+sendS(ikS)
                 sendS(ikS)=0.0_r8
               END DO
@@ -5234,8 +5250,8 @@
             kc=(k-LBk)*Ilen+mc
             DO i=Imin,Imax
               ikN=1+(i-Imin)+kc
-!>            sendN(ikN)=A(i,j,k)
-!>
+!^            sendN(ikN)=A(i,j,k)
+!^
               ad_A(i,j,k)=ad_A(i,j,k)+sendN(ikN)
               sendN(ikN)=0.0_r8
             END DO
@@ -5250,8 +5266,8 @@
               kc=(k-LBk)*Ilen+mc
               DO i=Imin,Imax
                 ikN=ioff+1+(i-Imin)+kc
-!>              sendN(ikN)=B(i,j,k)
-!>
+!^              sendN(ikN)=B(i,j,k)
+!^
                 ad_B(i,j,k)=ad_B(i,j,k)+sendN(ikN)
                 sendN(ikN)=0.0_r8
               END DO
@@ -5267,8 +5283,8 @@
               kc=(k-LBk)*Ilen+mc
               DO i=Imin,Imax
                 ikN=ioff+1+(i-Imin)+kc
-!>              sendN(ikN)=C(i,j,k)
-!>
+!^              sendN(ikN)=C(i,j,k)
+!^
                 ad_C(i,j,k)=ad_C(i,j,k)+sendN(ikN)
                 sendN(ikN)=0.0_r8
               END DO
@@ -5284,8 +5300,8 @@
               kc=(k-LBk)*Ilen+mc
               DO i=Imin,Imax
                 ikN=ioff+1+(i-Imin)+kc
-!>              sendN(ikN)=D(i,j,k)
-!>
+!^              sendN(ikN)=D(i,j,k)
+!^
                 ad_D(i,j,k)=ad_D(i,j,k)+sendN(ikN)
                 sendN(ikN)=0.0_r8
               END DO
@@ -5312,8 +5328,8 @@
             DO j=Jmin,Jmax
               sizeE=sizeE+1
               jkE=1+(j-Jmin)+kc
-!>            A(i,j,k)=recvE(jkE)
-!>
+!^            A(i,j,k)=recvE(jkE)
+!^
               recvE(jkE)=ad_A(i,j,k)
               ad_A(i,j,k)=0.0_r8
             END DO
@@ -5329,8 +5345,8 @@
               DO j=Jmin,Jmax
                 sizeE=sizeE+1
                 jkE=joff+1+(j-Jmin)+kc
-!>              B(i,j,k)=recvE(jkE)
-!>
+!^              B(i,j,k)=recvE(jkE)
+!^
                 recvE(jkE)=ad_B(i,j,k)
                 ad_B(i,j,k)=0.0_r8
               END DO
@@ -5347,8 +5363,8 @@
               DO j=Jmin,Jmax
                 sizeE=sizeE+1
                 jkE=joff+1+(j-Jmin)+kc
-!>              C(i,j,k)=recvE(jkE)
-!>
+!^              C(i,j,k)=recvE(jkE)
+!^
                 recvE(jkE)=ad_C(i,j,k)
                 ad_C(i,j,k)=0.0_r8
               END DO
@@ -5365,8 +5381,8 @@
               DO j=Jmin,Jmax
                 sizeE=sizeE+1
                 jkE=joff+1+(j-Jmin)+kc
-!>              D(i,j,k)=recvE(jkE)
-!>
+!^              D(i,j,k)=recvE(jkE)
+!^
                 recvE(jkE)=ad_D(i,j,k)
                 ad_D(i,j,k)=0.0_r8
               END DO
@@ -5389,8 +5405,8 @@
             DO j=Jmin,Jmax
               sizeW=sizeW+1
               jkW=1+(j-Jmin)+kc
-!>            A(i,j,k)=recvW(jkW)
-!>
+!^            A(i,j,k)=recvW(jkW)
+!^
               recvW(jkW)=ad_A(i,j,k)
               ad_A(i,j,k)=0.0_r8
             END DO
@@ -5406,8 +5422,8 @@
               DO j=Jmin,Jmax
                 sizeW=sizeW+1
                 jkW=joff+1+(j-Jmin)+kc
-!>              B(i,j,k)=recvW(jkW)
-!>
+!^              B(i,j,k)=recvW(jkW)
+!^
                 recvW(jkW)=ad_B(i,j,k)
                 ad_B(i,j,k)=0.0_r8
               END DO
@@ -5424,8 +5440,8 @@
               DO j=Jmin,Jmax
                 sizeW=sizeW+1
                 jkW=joff+1+(j-Jmin)+kc
-!>              C(i,j,k)=recvW(jkW)
-!>
+!^              C(i,j,k)=recvW(jkW)
+!^
                 recvW(jkW)=ad_C(i,j,k)
                 ad_C(i,j,k)=0.0_r8
               END DO
@@ -5442,8 +5458,8 @@
               DO j=Jmin,Jmax
                 sizeW=sizeW+1
                 jkW=joff+1+(j-Jmin)+kc
-!>              D(i,j,k)=recvW(jkW)
-!>
+!^              D(i,j,k)=recvW(jkW)
+!^
                 recvW(jkW)=ad_D(i,j,k)
                 ad_D(i,j,k)=0.0_r8
               END DO
@@ -5458,30 +5474,30 @@
 !
 #  if defined MPI
       IF (Wexchange) THEN
-!>      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
-!>   &                  OCN_COMM_WORLD, Wrequest, Werror)
-!>
+!^      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
+!^   &                  OCN_COMM_WORLD, Wrequest, Werror)
+!^
         CALL mpi_irecv (sendW, EWsize, MP_FLOAT, Wtile, Etag,           &
      &                  OCN_COMM_WORLD, Wrequest, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
-!>   &                  OCN_COMM_WORLD, Erequest, Eerror)
-!>
+!^      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
+!^   &                  OCN_COMM_WORLD, Erequest, Eerror)
+!^
         CALL mpi_irecv (sendE, EWsize, MP_FLOAT, Etile, Wtag,           &
      &                  OCN_COMM_WORLD, Erequest, Eerror)
       END IF
       IF (Wexchange) THEN
-!>      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
-!>   &                  OCN_COMM_WORLD, Werror)
-!>
+!^      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
+!^   &                  OCN_COMM_WORLD, Werror)
+!^
         CALL mpi_send  (recvW, sizeW, MP_FLOAT, Wtile, Wtag,            &
      &                  OCN_COMM_WORLD, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
-!>   &                  OCN_COMM_WORLD, Eerror)
-!>
+!^      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
+!^   &                  OCN_COMM_WORLD, Eerror)
+!^
         CALL mpi_send  (recvE, sizeE, MP_FLOAT, Etile, Etag,            &
      &                  OCN_COMM_WORLD, Eerror)
       END IF
@@ -5508,8 +5524,8 @@
             kc=(k-LBk)*Jlen+mc
             DO j=Jmin,Jmax
               jkW=1+(j-Jmin)+kc
-!>            sendW(jkW)=A(i,j,k)
-!>
+!^            sendW(jkW)=A(i,j,k)
+!^
               ad_A(i,j,k)=ad_A(i,j,k)+sendW(jkW)
               sendW(jkW)=0.0_r8
             END DO
@@ -5524,8 +5540,8 @@
               kc=(k-LBk)*Jlen+mc
               DO j=Jmin,Jmax
                 jkW=joff+1+(j-Jmin)+kc
-!>              sendW(jkW)=B(i,j,k)
-!>
+!^              sendW(jkW)=B(i,j,k)
+!^
                 ad_B(i,j,k)=ad_B(i,j,k)+sendW(jkW)
                 sendW(jkW)=0.0_r8
               END DO
@@ -5541,8 +5557,8 @@
               kc=(k-LBk)*Jlen+mc
               DO j=Jmin,Jmax
                 jkW=joff+1+(j-Jmin)+kc
-!>              sendW(jkW)=C(i,j,k)
-!>
+!^              sendW(jkW)=C(i,j,k)
+!^
                 ad_C(i,j,k)=ad_C(i,j,k)+sendW(jkW)
                 sendW(jkW)=0.0_r8
               END DO
@@ -5558,8 +5574,8 @@
               kc=(k-LBk)*Jlen+mc
               DO j=Jmin,Jmax
                 jkW=joff+1+(j-Jmin)+kc
-!>              sendW(jkW)=D(i,j,k)
-!>
+!^              sendW(jkW)=D(i,j,k)
+!^
                 ad_D(i,j,k)=ad_D(i,j,k)+sendW(jkW)
                 sendW(jkW)=0.0_r8
               END DO
@@ -5587,8 +5603,8 @@
             kc=(k-LBk)*Jlen+mc
             DO j=Jmin,Jmax
               jkE=1+(j-Jmin)+kc
-!>            sendE(jkE)=A(i,j,k)
-!>
+!^            sendE(jkE)=A(i,j,k)
+!^
               ad_A(i,j,k)=ad_A(i,j,k)+sendE(jkE)
               sendE(jkE)=0.0_r8
             END DO
@@ -5603,8 +5619,8 @@
               kc=(k-LBk)*Jlen+mc
               DO j=Jmin,Jmax
                 jkE=joff+1+(j-Jmin)+kc
-!>              sendE(jkE)=B(i,j,k)
-!>
+!^              sendE(jkE)=B(i,j,k)
+!^
                 ad_B(i,j,k)=ad_B(i,j,k)+sendE(jkE)
                 sendE(jkE)=0.0_r8
               END DO
@@ -5620,8 +5636,8 @@
               kc=(k-LBk)*Jlen+mc
               DO j=Jmin,Jmax
                 jkE=joff+1+(j-Jmin)+kc
-!>              sendE(jkE)=C(i,j,k)
-!>
+!^              sendE(jkE)=C(i,j,k)
+!^
                 ad_C(i,j,k)=ad_C(i,j,k)+sendE(jkE)
                 sendE(jkE)=0.0_r8
               END DO
@@ -5637,8 +5653,8 @@
               kc=(k-LBk)*Jlen+mc
               DO j=Jmin,Jmax
                 jkE=joff+1+(j-Jmin)+kc
-!>              sendE(jkE)=D(i,j,k)
-!>
+!^              sendE(jkE)=D(i,j,k)
+!^
                 ad_D(i,j,k)=ad_D(i,j,k)+sendE(jkE)
                 sendE(jkE)=0.0_r8
               END DO
@@ -5646,16 +5662,16 @@
           END DO
         END IF
       END IF
+
 #  ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 61, __LINE__,                         &
-     &                 __FILE__//":ad_mp_exchange3d")
+      CALL wclock_off (ng, model, 61, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE ad_mp_exchange3d
 !
@@ -5676,7 +5692,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar, boundary
       integer, intent(in) :: LBij, UBij, LBk, UBk
       integer, intent(in) :: Nghost
@@ -5698,7 +5714,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, ikS, ikN, ioff
       integer :: j, jkW, jkE, joff
       integer :: k, m, mc, Ierror, Klen, Lstr, pp
@@ -5717,8 +5733,11 @@
       real(r8), dimension(Nvar*HaloBry(ng)*(UBk-LBk+1)) :: recvW, recvE
       real(r8), dimension(Nvar*HaloBry(ng)*(UBk-LBk+1)) :: sendS, sendN
       real(r8), dimension(Nvar*HaloBry(ng)*(UBk-LBk+1)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ad_mp_exchange3d_bry"
 
 #  include "set_bounds.h"
 
@@ -5728,8 +5747,7 @@
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 63, __LINE__,                          &
-     &                __FILE__//":ad_mp_exchange3d_bry")
+      CALL wclock_on (ng, model, 63, __LINE__, MyFile)
 #  endif
 !
 !-----------------------------------------------------------------------
@@ -5803,8 +5821,8 @@
           DO k=LBk,UBk
             sizeN=sizeN+1
             ikN=1+(k-LBk)+mc
-!>          A(j,k)=recvN(ikN)
-!>
+!^          A(j,k)=recvN(ikN)
+!^
             recvN(ikN)=ad_A(j,k)
             ad_A(j,k)=0.0_r8
           END DO
@@ -5817,8 +5835,8 @@
             DO k=LBk,UBk
               sizeN=sizeN+1
               ikN=ioff+1+(k-LBk)+mc
-!>            B(j,k)=recvN(ikN)
-!>
+!^            B(j,k)=recvN(ikN)
+!^
               recvN(ikN)=ad_B(j,k)
               ad_B(j,k)=0.0_r8
             END DO
@@ -5832,8 +5850,8 @@
             DO k=LBk,UBk
               sizeN=sizeN+1
               ikN=ioff+1+(k-LBk)+mc
-!>            C(j,k)=recvN(ikN)
-!>
+!^            C(j,k)=recvN(ikN)
+!^
               recvN(ikN)=ad_C(j,k)
               ad_C(j,k)=0.0_r8
             END DO
@@ -5847,8 +5865,8 @@
             DO k=LBk,UBk
               sizeN=sizeN+1
               ikN=ioff+1+(k-LBk)+mc
-!>            D(j,k)=recvN(ikN)
-!>
+!^            D(j,k)=recvN(ikN)
+!^
               recvN(ikN)=ad_D(j,k)
               ad_D(j,k)=0.0_r8
             END DO
@@ -5868,8 +5886,8 @@
           DO k=LBk,UBk
             sizeS=sizeS+1
             ikS=1+(k-LBk)+mc
-!>          A(j,k)=recvS(ikS)
-!>
+!^          A(j,k)=recvS(ikS)
+!^
             recvS(ikS)=ad_A(j,k)
             ad_A(j,k)=0.0_r8
           END DO
@@ -5882,8 +5900,8 @@
             DO k=LBk,UBk
               sizeS=sizeS+1
               ikS=ioff+1+(k-LBk)+mc
-!>            B(j,k)=recvS(ikS)
-!>
+!^            B(j,k)=recvS(ikS)
+!^
               recvS(ikS)=ad_B(j,k)
               ad_B(j,k)=0.0_r8
             END DO
@@ -5897,8 +5915,8 @@
             DO k=LBk,UBk
               sizeS=sizeS+1
               ikS=ioff+1+(k-LBk)+mc
-!>            C(j,k)=recvS(ikS)
-!>
+!^            C(j,k)=recvS(ikS)
+!^
               recvS(ikS)=ad_C(j,k)
               ad_C(j,k)=0.0_r8
             END DO
@@ -5912,8 +5930,8 @@
             DO k=LBk,UBk
               sizeS=sizeS+1
               ikS=ioff+1+(k-LBk)+mc
-!>            D(j,k)=recvS(ikS)
-!>
+!^            D(j,k)=recvS(ikS)
+!^
               recvS(ikS)=ad_D(j,k)
               ad_D(j,k)=0.0_r8
             END DO
@@ -5927,30 +5945,30 @@
 !
 #  if defined MPI
       IF (Sexchange) THEN
-!>      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
-!>   &                  OCN_COMM_WORLD, Srequest, Serror)
-!>
+!^      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
+!^   &                  OCN_COMM_WORLD, Srequest, Serror)
+!^
         CALL mpi_irecv (sendS, NSsize, MP_FLOAT, Stile, Ntag,           &
      &                  OCN_COMM_WORLD, Srequest, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
-!>   &                  OCN_COMM_WORLD, Nrequest, Nerror)
-!>
+!^      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
+!^   &                  OCN_COMM_WORLD, Nrequest, Nerror)
+!^
         CALL mpi_irecv (sendN, NSsize, MP_FLOAT, Ntile, Stag,           &
      &                  OCN_COMM_WORLD, Nrequest, Nerror)
       END IF
       IF (Sexchange) THEN
-!>      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
-!>   &                  OCN_COMM_WORLD, Serror)
-!>
+!^      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
+!^   &                  OCN_COMM_WORLD, Serror)
+!^
         CALL mpi_send  (recvS, sizeS, MP_FLOAT, Stile, Stag,            &
      &                  OCN_COMM_WORLD, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
-!>   &                  OCN_COMM_WORLD, Nerror)
-!>
+!^      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
+!^   &                  OCN_COMM_WORLD, Nerror)
+!^
         CALL mpi_send  (recvN, sizeN, MP_FLOAT, Ntile, Ntag,            &
      &                  OCN_COMM_WORLD, Nerror)
       END IF
@@ -5977,8 +5995,8 @@
           j=Jstr+m-1
           DO k=LBk,UBk
             ikS=1+(k-LBk)+mc
-!>          sendS(ikS)=A(j,k)
-!>
+!^          sendS(ikS)=A(j,k)
+!^
             ad_A(j,k)=ad_A(j,k)+sendS(ikS)
             sendS(ikS)=0.0_r8
           END DO
@@ -5990,8 +6008,8 @@
             j=Jstr+m-1
             DO k=LBk,UBk
               ikS=ioff+1+(k-LBk)+mc
-!>            sendS(ikS)=B(j,k)
-!>
+!^            sendS(ikS)=B(j,k)
+!^
               ad_B(j,k)=ad_B(j,k)+sendS(ikS)
               sendS(ikS)=0.0_r8
             END DO
@@ -6004,8 +6022,8 @@
             j=Jstr+m-1
             DO k=LBk,UBk
               ikS=ioff+1+(k-LBk)+mc
-!>            sendS(ikS)=C(j,k)
-!>
+!^            sendS(ikS)=C(j,k)
+!^
               ad_C(j,k)=ad_C(j,k)+sendS(ikS)
               sendS(ikS)=0.0_r8
             END DO
@@ -6018,8 +6036,8 @@
             j=Jstr+m-1
             DO k=LBk,UBk
               ikS=ioff+1+(k-LBk)+mc
-!>            sendS(ikS)=D(j,k)
-!>
+!^            sendS(ikS)=D(j,k)
+!^
               ad_D(j,k)=ad_D(j,k)+sendS(ikS)
               sendS(ikS)=0.0_r8
             END DO
@@ -6044,8 +6062,8 @@
           j=Jend-GsendN+m
           DO k=LBk,UBk
             ikN=1+(k-LBk)+mc
-!>          sendN(ikN)=A(j,k)
-!>
+!^          sendN(ikN)=A(j,k)
+!^
             ad_A(j,k)=ad_A(j,k)+sendN(ikN)
             sendN(ikN)=0.0_r8
           END DO
@@ -6057,8 +6075,8 @@
             j=Jend-GsendN+m
             DO k=LBk,UBk
               ikN=ioff+1+(k-LBk)+mc
-!>            sendN(ikN)=B(j,k)
-!>
+!^            sendN(ikN)=B(j,k)
+!^
               ad_B(j,k)=ad_B(j,k)+sendN(ikN)
               sendN(ikN)=0.0_r8
             END DO
@@ -6071,8 +6089,8 @@
             j=Jend-GsendN+m
             DO k=LBk,UBk
               ikN=ioff+1+(k-LBk)+mc
-!>            sendN(ikN)=C(j,k)
-!>
+!^            sendN(ikN)=C(j,k)
+!^
               ad_C(j,k)=ad_C(j,k)+sendN(ikN)
               sendN(ikN)=0.0_r8
             END DO
@@ -6085,8 +6103,8 @@
             j=Jend-GsendN+m
             DO k=LBk,UBk
               ikN=ioff+1+(k-LBk)+mc
-!>            sendN(ikN)=D(j,k)
-!>
+!^            sendN(ikN)=D(j,k)
+!^
               ad_D(j,k)=ad_D(j,k)+sendN(ikN)
               sendN(ikN)=0.0_r8
             END DO
@@ -6110,8 +6128,8 @@
           DO k=LBk,UBk
             sizeE=sizeE+1
             jkE=1+(k-LBk)+mc
-!>          A(i,k)=recvE(jkE)
-!>
+!^          A(i,k)=recvE(jkE)
+!^
             recvE(jkE)=ad_A(i,k)
             ad_A(i,k)=0.0_r8
           ENDDO
@@ -6124,8 +6142,8 @@
             DO k=LBk,UBk
               sizeE=sizeE+1
               jkE=joff+1+(k-LBk)+mc
-!>            B(i,k)=recvE(jkE)
-!>
+!^            B(i,k)=recvE(jkE)
+!^
               recvE(jkE)=ad_B(i,k)
               ad_B(i,k)=0.0_r8
             END DO
@@ -6139,8 +6157,8 @@
             DO k=LBk,UBk
               sizeE=sizeE+1
               jkE=joff+1+(k-LBk)+mc
-!>            C(i,k)=recvE(jkE)
-!>
+!^            C(i,k)=recvE(jkE)
+!^
               recvE(jkE)=ad_C(i,k)
               ad_C(i,k)=0.0_r8
             END DO
@@ -6154,8 +6172,8 @@
             DO k=LBk,UBk
               sizeE=sizeE+1
               jkE=joff+1+(k-LBk)+mc
-!>            D(i,k)=recvE(jkE)
-!>
+!^            D(i,k)=recvE(jkE)
+!^
               recvE(jkE)=ad_D(i,k)
               ad_D(i,k)=0.0_r8
             END DO
@@ -6175,8 +6193,8 @@
           DO k=LBk,UBk
             sizeW=sizeW+1
             jkW=1+(k-LBk)+mc
-!>          A(i,k)=recvW(jkW)
-!>
+!^          A(i,k)=recvW(jkW)
+!^
             recvW(jkW)=ad_A(i,k)
             ad_A(i,k)=0.0_r8
           END DO
@@ -6189,8 +6207,8 @@
             DO k=LBk,UBk
               sizeW=sizeW+1
               jkW=joff+1+(k-LBk)+mc
-!>            B(i,k)=recvW(jkW)
-!>
+!^            B(i,k)=recvW(jkW)
+!^
               recvW(jkW)=ad_B(i,k)
               ad_B(i,k)=0.0_r8
             END DO
@@ -6204,8 +6222,8 @@
             DO k=LBk,UBk
               sizeW=sizeW+1
               jkW=joff+1+(k-LBk)+mc
-!>            C(i,k)=recvW(jkW)
-!>
+!^            C(i,k)=recvW(jkW)
+!^
               recvW(jkW)=ad_C(i,k)
               ad_C(i,k)=0.0_r8
             END DO
@@ -6219,8 +6237,8 @@
             DO k=LBk,UBk
               sizeW=sizeW+1
               jkW=joff+1+(k-LBk)+mc
-!>            D(i,k)=recvW(jkW)
-!>
+!^            D(i,k)=recvW(jkW)
+!^
               recvW(jkW)=ad_D(i,k)
               ad_D(i,k)=0.0_r8
             END DO
@@ -6234,30 +6252,30 @@
 !
 #  if defined MPI
       IF (Wexchange) THEN
-!>      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
-!>   &                  OCN_COMM_WORLD, Wrequest, Werror)
-!>
+!^      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
+!^   &                  OCN_COMM_WORLD, Wrequest, Werror)
+!^
         CALL mpi_irecv (sendW, EWsize, MP_FLOAT, Wtile, Etag,           &
      &                  OCN_COMM_WORLD, Wrequest, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
-!>   &                  OCN_COMM_WORLD, Erequest, Eerror)
-!>
+!^      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
+!^   &                  OCN_COMM_WORLD, Erequest, Eerror)
+!^
         CALL mpi_irecv (sendE, EWsize, MP_FLOAT, Etile, Wtag,           &
      &                  OCN_COMM_WORLD, Erequest, Eerror)
       END IF
       IF (Wexchange) THEN
-!>      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
-!>   &                  OCN_COMM_WORLD, Werror)
-!>
+!^      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
+!^   &                  OCN_COMM_WORLD, Werror)
+!^
         CALL mpi_send  (recvW, sizeW, MP_FLOAT, Wtile, Wtag,            &
      &                  OCN_COMM_WORLD, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
-!>   &                  OCN_COMM_WORLD, Eerror)
-!>
+!^      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
+!^   &                  OCN_COMM_WORLD, Eerror)
+!^
         CALL mpi_send  (recvE, sizeE, MP_FLOAT, Etile, Etag,            &
      &                  OCN_COMM_WORLD, Eerror)
       END IF
@@ -6282,8 +6300,8 @@
           i=Istr+m-1
           DO k=LBk,UBk
             jkW=1+(k-LBk)+mc
-!>          sendW(jkW)=A(i,k)
-!>
+!^          sendW(jkW)=A(i,k)
+!^
             ad_A(i,k)=ad_A(i,k)+sendW(jkW)
             sendW(jkW)=0.0_r8
           END DO
@@ -6295,8 +6313,8 @@
             i=Istr+m-1
             DO k=LBk,UBk
               jkW=joff+1+(k-LBk)+mc
-!>            sendW(jkW)=B(i,k)
-!>
+!^            sendW(jkW)=B(i,k)
+!^
               ad_B(i,k)=ad_B(i,k)+sendW(jkW)
               sendW(jkW)=0.0_r8
             END DO
@@ -6309,8 +6327,8 @@
             i=Istr+m-1
             DO k=LBk,UBk
               jkW=joff+1+(k-LBk)+mc
-!>            sendW(jkW)=C(i,k)
-!>
+!^            sendW(jkW)=C(i,k)
+!^
               ad_C(i,k)=ad_C(i,k)+sendW(jkW)
               sendW(jkW)=0.0_r8
             END DO
@@ -6323,8 +6341,8 @@
             i=Istr+m-1
             DO k=LBk,UBk
               jkW=joff+1+(k-LBk)+mc
-!>            sendW(jkW)=D(i,k)
-!>
+!^            sendW(jkW)=D(i,k)
+!^
               ad_D(i,k)=ad_D(i,k)+sendW(jkW)
               sendW(jkW)=0.0_r8
             END DO
@@ -6349,8 +6367,8 @@
           i=Iend-GsendE+m
           DO k=LBk,UBk
             jkE=1+(k-LBk)+mc
-!>          sendE(jkE)=A(i,k)
-!>
+!^          sendE(jkE)=A(i,k)
+!^
             ad_A(i,k)=ad_A(i,k)+sendE(jkE)
             sendE(jkE)=0.0_r8
           END DO
@@ -6362,8 +6380,8 @@
             i=Iend-GsendE+m
             DO k=LBk,UBk
               jkE=joff+1+(k-LBk)+mc
-!>            sendE(jkE)=B(i,k)
-!>
+!^            sendE(jkE)=B(i,k)
+!^
               ad_B(i,k)=ad_B(i,k)+sendE(jkE)
               sendE(jkE)=0.0_r8
             END DO
@@ -6376,8 +6394,8 @@
             i=Iend-GsendE+m
             DO k=LBk,UBk
               jkE=joff+1+(k-LBk)+mc
-!>            sendE(jkE)=C(i,k)
-!>
+!^            sendE(jkE)=C(i,k)
+!^
               ad_C(i,k)=ad_C(i,k)+sendE(jkE)
               sendE(jkE)=0.0_r8
             END DO
@@ -6390,8 +6408,8 @@
             i=Iend-GsendE+m
             DO k=LBk,UBk
               jkE=joff+1+(k-LBk)+mc
-!>            sendE(jkE)=D(i,k)
-!>
+!^            sendE(jkE)=D(i,k)
+!^
               ad_D(i,k)=ad_D(i,k)+sendE(jkE)
               sendE(jkE)=0.0_r8
             END DO
@@ -6405,10 +6423,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 63, __LINE__,                         &
-     &                 __FILE__//":ad_mp_exchange3d_bry")
+      CALL wclock_off (ng, model, 63, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE ad_mp_exchange3d_bry
 !
@@ -6430,7 +6447,7 @@
 !  Imported variable declarations.
 !
       logical, intent(in) :: EW_periodic, NS_periodic
-
+!
       integer, intent(in) :: ng, tile, model, Nvar
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt
       integer, intent(in) :: Nghost
@@ -6452,7 +6469,7 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-
+!
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen, IKTlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen, JKTlen
       integer :: k, kc, m, mc, Ierror, Klen, Lstr, Tlen, pp
@@ -6477,18 +6494,21 @@
      &                                      (UBt-LBt+1)) :: recvW, recvE
       real(r8), dimension(Nvar*HaloSizeI(ng)*(UBk-LBk+1)*               &
      &                                      (UBt-LBt+1)) :: recvS, recvN
-
+!
       character (len=MPI_MAX_ERROR_STRING) :: string
 
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", ad_mp_exchange4d"
+
 #  include "set_bounds.h"
+
 #  ifdef PROFILE
 !
 !-----------------------------------------------------------------------
 !  Turn on time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_on (ng, model, 62, __LINE__,                          &
-     &                __FILE__//":ad_mp_exchange4d")
+      CALL wclock_on (ng, model, 62, __LINE__, MyFile)
 #  endif
 !
 !-----------------------------------------------------------------------
@@ -6566,8 +6586,8 @@
               DO i=Imin,Imax
                 sizeN=sizeN+1
                 ikN=1+(i-Imin)+kc
-!>              A(i,j,k,l)=recvN(ikN)
-!>
+!^              A(i,j,k,l)=recvN(ikN)
+!^
                 recvN(ikN)=ad_A(i,j,k,l)
                 ad_A(i,j,k,l)=0.0_r8
               END DO
@@ -6586,8 +6606,8 @@
                 DO i=Imin,Imax
                   sizeN=sizeN+1
                   ikN=ioff+1+(i-Imin)+kc
-!>                B(i,j,k,l)=recvN(ikN)
-!>
+!^                B(i,j,k,l)=recvN(ikN)
+!^
                   recvN(ikN)=ad_B(i,j,k,l)
                   ad_B(i,j,k,l)=0.0_r8
                 END DO
@@ -6607,8 +6627,8 @@
                 DO i=Imin,Imax
                   sizeN=sizeN+1
                   ikN=ioff+1+(i-Imin)+kc
-!>                C(i,j,k,l)=recvN(ikN)
-!>
+!^                C(i,j,k,l)=recvN(ikN)
+!^
                   recvN(ikN)=ad_C(i,j,k,l)
                   ad_C(i,j,k,l)=0.0_r8
                 END DO
@@ -6634,8 +6654,8 @@
               DO i=Imin,Imax
                 sizeS=sizeS+1
                 ikS=1+(i-Imin)+kc
-!>              A(i,j,k,l)=recvS(ikS)
-!>
+!^              A(i,j,k,l)=recvS(ikS)
+!^
                 recvS(ikS)=ad_A(i,j,k,l)
                 ad_A(i,j,k,l)=0.0_r8
               END DO
@@ -6654,8 +6674,8 @@
                 DO i=Imin,Imax
                   sizeS=sizeS+1
                   ikS=ioff+1+(i-Imin)+kc
-!>                B(i,Jstr-m,k,l)=recvS(ikS)
-!>
+!^                B(i,Jstr-m,k,l)=recvS(ikS)
+!^
                   recvS(ikS)=ad_B(i,j,k,l)
                   ad_B(i,j,k,l)=0.0_r8
                 END DO
@@ -6675,8 +6695,8 @@
                 DO i=Imin,Imax
                   sizeS=sizeS+1
                   ikS=ioff+1+(i-Imin)+kc
-!>                C(i,Jstr-m,k,l)=recvS(ikS)
-!>
+!^                C(i,Jstr-m,k,l)=recvS(ikS)
+!^
                   recvS(ikS)=ad_C(i,j,k,l)
                   ad_C(i,j,k,l)=0.0_r8
                 END DO
@@ -6692,30 +6712,30 @@
 !
 #  if defined MPI
       IF (Sexchange) THEN
-!>      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
-!>   &                  OCN_COMM_WORLD, Srequest, Serror)
-!>
+!^      CALL mpi_irecv (recvS, NSsize, MP_FLOAT, Stile, Ntag,           &
+!^   &                  OCN_COMM_WORLD, Srequest, Serror)
+!^
         CALL mpi_irecv (sendS, NSsize, MP_FLOAT, Stile, Ntag,           &
      &                  OCN_COMM_WORLD, Srequest, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
-!>   &                  OCN_COMM_WORLD, Nrequest, Nerror)
-!>
+!^      CALL mpi_irecv (recvN, NSsize, MP_FLOAT, Ntile, Stag,           &
+!^   &                  OCN_COMM_WORLD, Nrequest, Nerror)
+!^
         CALL mpi_irecv (sendN, NSsize, MP_FLOAT, Ntile, Stag,           &
      &                  OCN_COMM_WORLD, Nrequest, Nerror)
       END IF
       IF (Sexchange) THEN
-!>      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
-!>   &                  OCN_COMM_WORLD, Serror)
-!>
+!^      CALL mpi_send  (sendS, sizeS, MP_FLOAT, Stile, Stag,            &
+!^   &                  OCN_COMM_WORLD, Serror)
+!^
         CALL mpi_send  (recvS, sizeS, MP_FLOAT, Stile, Stag,            &
      &                  OCN_COMM_WORLD, Serror)
       END IF
       IF (Nexchange) THEN
-!>      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
-!>   &                  OCN_COMM_WORLD, Nerror)
-!>
+!^      CALL mpi_send  (sendN, sizeN, MP_FLOAT, Ntile, Ntag,            &
+!^   &                  OCN_COMM_WORLD, Nerror)
+!^
         CALL mpi_send  (recvN, sizeN, MP_FLOAT, Ntile, Ntag,            &
      &                  OCN_COMM_WORLD, Nerror)
       END IF
@@ -6746,8 +6766,8 @@
               kc=(k-LBk)*Ilen+lc
               DO i=Imin,Imax
                 ikS=1+(i-Imin)+kc
-!>              sendS(ikS)=A(i,j,k,l)
-!>
+!^              sendS(ikS)=A(i,j,k,l)
+!^
                 ad_A(i,j,k,l)=ad_A(i,j,k,l)+sendS(ikS)
                 sendS(ikS)=0.0_r8
               END DO
@@ -6765,8 +6785,8 @@
                 kc=(k-LBk)*Ilen+lc
                 DO i=Imin,Imax
                   ikS=ioff+1+(i-Imin)+kc
-!>                sendS(ikS)=B(i,j,k,l)
-!>
+!^                sendS(ikS)=B(i,j,k,l)
+!^
                   ad_B(i,j,k,l)=ad_B(i,j,k,l)+sendS(ikS)
                   sendS(ikS)=0.0_r8
                 END DO
@@ -6785,8 +6805,8 @@
                 kc=(k-LBk)*Ilen+lc
                 DO i=Imin,Imax
                   ikS=ioff+1+(i-Imin)+kc
-!>                sendS(ikS)=C(i,j,k,l)
-!>
+!^                sendS(ikS)=C(i,j,k,l)
+!^
                   ad_C(i,j,k,l)=ad_C(i,j,k,l)+sendS(ikS)
                   sendS(ikS)=0.0_r8
                 END DO
@@ -6817,8 +6837,8 @@
               kc=(k-LBk)*Ilen+lc
               DO i=Imin,Imax
                 ikN=1+(i-Imin)+kc
-!>              sendN(ikN)=A(i,j,k,l)
-!>
+!^              sendN(ikN)=A(i,j,k,l)
+!^
                 ad_A(i,j,k,l)=ad_A(i,j,k,l)+sendN(ikN)
                 sendN(ikN)=0.0_r8
               END DO
@@ -6836,8 +6856,8 @@
                 kc=(k-LBk)*Ilen+lc
                 DO i=Imin,Imax
                   ikN=ioff+1+(i-Imin)+kc
-!>                sendN(ikN)=B(i,j,k,l)
-!>
+!^                sendN(ikN)=B(i,j,k,l)
+!^
                   ad_B(i,j,k,l)=ad_B(i,j,k,l)+sendN(ikN)
                   sendN(ikN)=0.0_r8
                 END DO
@@ -6856,8 +6876,8 @@
                 kc=(k-LBk)*Ilen+lc
                 DO i=Imin,Imax
                   ikN=ioff+1+(i-Imin)+kc
-!>                sendN(ikN)=C(i,j,k,l)
-!>
+!^                sendN(ikN)=C(i,j,k,l)
+!^
                   ad_C(i,j,k,l)=ad_C(i,j,k,l)+sendN(ikN)
                   sendN(ikN)=0.0_r8
                 END DO
@@ -6887,8 +6907,8 @@
               DO j=Jmin,Jmax
                 sizeE=sizeE+1
                 jkE=1+(j-Jmin)+kc
-!>              A(i,j,k,l)=recvE(jkE)
-!>
+!^              A(i,j,k,l)=recvE(jkE)
+!^
                 recvE(jkE)=ad_A(i,j,k,l)
                 ad_A(i,j,k,l)=0.0_r8
               END DO
@@ -6907,8 +6927,8 @@
                 DO j=Jmin,Jmax
                   sizeE=sizeE+1
                   jkE=joff+1+(j-Jmin)+kc
-!>                B(i,j,k,l)=recvE(jkE)
-!>
+!^                B(i,j,k,l)=recvE(jkE)
+!^
                   recvE(jkE)=ad_B(i,j,k,l)
                   ad_B(i,j,k,l)=0.0_r8
                 END DO
@@ -6928,8 +6948,8 @@
                 DO j=Jmin,Jmax
                   sizeE=sizeE+1
                   jkE=joff+1+(j-Jmin)+kc
-!>                C(i,j,k,l)=recvE(jkE)
-!>
+!^                C(i,j,k,l)=recvE(jkE)
+!^
                   recvE(jkE)=ad_C(i,j,k,l)
                   ad_C(i,j,k,l)=0.0_r8
                 END DO
@@ -6955,8 +6975,8 @@
               DO j=Jmin,Jmax
                 sizeW=sizeW+1
                 jkW=1+(j-Jmin)+kc
-!>              A(i,j,k,l)=recvW(jkW)
-!>
+!^              A(i,j,k,l)=recvW(jkW)
+!^
                 recvW(jkW)=ad_A(i,j,k,l)
                 ad_A(i,j,k,l)=0.0_r8
               END DO
@@ -6975,8 +6995,8 @@
                 DO j=Jmin,Jmax
                   sizeW=sizeW+1
                   jkW=joff+1+(j-Jmin)+kc
-!>                B(i,j,k,l)=recvW(jkW)
-!>
+!^                B(i,j,k,l)=recvW(jkW)
+!^
                   recvW(jkW)=ad_B(i,j,k,l)
                   ad_B(i,j,k,l)=0.0_r8
                 END DO
@@ -6996,8 +7016,8 @@
                 DO j=Jmin,Jmax
                   sizeW=sizeW+1
                   jkW=joff+1+(j-Jmin)+kc
-!>                C(i,j,k,l)=recvW(jkW)
-!>
+!^                C(i,j,k,l)=recvW(jkW)
+!^
                   recvW(jkW)=ad_C(i,j,k,l)
                   ad_C(i,j,k,l)=0.0_r8
                 END DO
@@ -7013,30 +7033,30 @@
 !
 #  if defined MPI
       IF (Wexchange) THEN
-!>      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
-!>   &                  OCN_COMM_WORLD, Wrequest, Werror)
-!>
+!^      CALL mpi_irecv (recvW, EWsize, MP_FLOAT, Wtile, Etag,           &
+!^   &                  OCN_COMM_WORLD, Wrequest, Werror)
+!^
         CALL mpi_irecv (sendW, EWsize, MP_FLOAT, Wtile, Etag,           &
      &                  OCN_COMM_WORLD, Wrequest, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
-!>   &                  OCN_COMM_WORLD, Erequest, Eerror)
-!>
+!^      CALL mpi_irecv (recvE, EWsize, MP_FLOAT, Etile, Wtag,           &
+!^   &                  OCN_COMM_WORLD, Erequest, Eerror)
+!^
         CALL mpi_irecv (sendE, EWsize, MP_FLOAT, Etile, Wtag,           &
      &                  OCN_COMM_WORLD, Erequest, Eerror)
       END IF
       IF (Wexchange) THEN
-!>      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
-!>   &                  OCN_COMM_WORLD, Werror)
-!>
+!^      CALL mpi_send  (sendW, sizeW, MP_FLOAT, Wtile, Wtag,            &
+!^   &                  OCN_COMM_WORLD, Werror)
+!^
         CALL mpi_send  (recvW, sizeW, MP_FLOAT, Wtile, Wtag,            &
      &                  OCN_COMM_WORLD, Werror)
       END IF
       IF (Eexchange) THEN
-!>      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
-!>   &                  OCN_COMM_WORLD, Eerror)
-!>
+!^      CALL mpi_send  (sendE, sizeE, MP_FLOAT, Etile, Etag,            &
+!^   &                  OCN_COMM_WORLD, Eerror)
+!^
         CALL mpi_send  (recvE, sizeE, MP_FLOAT, Etile, Etag,            &
      &                  OCN_COMM_WORLD, Eerror)
       END IF
@@ -7065,8 +7085,8 @@
               kc=(k-LBk)*Jlen+lc
               DO j=Jmin,Jmax
                 jkW=1+(j-Jmin)+kc
-!>              sendW(jkW)=A(i,j,k,l)
-!>
+!^              sendW(jkW)=A(i,j,k,l)
+!^
                 ad_A(i,j,k,l)=ad_A(i,j,k,l)+sendW(jkW)
                 sendW(jkW)=0.0_r8
               END DO
@@ -7084,8 +7104,8 @@
                 kc=(k-LBk)*Jlen+lc
                 DO j=Jmin,Jmax
                   jkW=joff+1+(j-Jmin)+kc
-!>                sendW(jkW)=B(i,j,k,l)
-!>
+!^                sendW(jkW)=B(i,j,k,l)
+!^
                   ad_B(i,j,k,l)=ad_B(i,j,k,l)+sendW(jkW)
                   sendW(jkW)=0.0_r8
                 END DO
@@ -7104,8 +7124,8 @@
                 kc=(k-LBk)*Jlen+lc
                 DO j=Jmin,Jmax
                   jkW=joff+1+(j-Jmin)+kc
-!>                sendW(jkW)=C(i,j,k,l)
-!>
+!^                sendW(jkW)=C(i,j,k,l)
+!^
                   ad_C(i,j,k,l)=ad_C(i,j,k,l)+sendW(jkW)
                   sendW(jkW)=0.0_r8
                 END DO
@@ -7136,8 +7156,8 @@
               kc=(k-LBk)*Jlen+lc
               DO j=Jmin,Jmax
                 jkE=1+(j-Jmin)+kc
-!>              sendE(jkE)=A(i,j,k,l)
-!>
+!^              sendE(jkE)=A(i,j,k,l)
+!^
                 ad_A(i,j,k,l)=ad_A(i,j,k,l)+sendE(jkE)
                 sendE(jkE)=0.0_r8
               END DO
@@ -7155,8 +7175,8 @@
                 kc=(k-LBk)*Jlen+lc
                 DO j=Jmin,Jmax
                   jkE=joff+1+(j-Jmin)+kc
-!>                sendE(jkE)=B(i,j,k,l)
-!>
+!^                sendE(jkE)=B(i,j,k,l)
+!^
                   ad_B(i,j,k,l)=ad_B(i,j,k,l)+sendE(jkE)
                   sendE(jkE)=0.0_r8
                 END DO
@@ -7175,8 +7195,8 @@
                 kc=(k-LBk)*Jlen+lc
                 DO j=Jmin,Jmax
                   jkE=joff+1+(j-Jmin)+kc
-!>                sendE(jkE)=C(i,j,k,l)
-!>
+!^                sendE(jkE)=C(i,j,k,l)
+!^
                   ad_C(i,j,k,l)=ad_C(i,j,k,l)+sendE(jkE)
                   sendE(jkE)=0.0_r8
                 END DO
@@ -7191,10 +7211,9 @@
 !  Turn off time clocks.
 !-----------------------------------------------------------------------
 !
-      CALL wclock_off (ng, model, 62, __LINE__,                         &
-     &                __FILE__//":ad_mp_exchange4d")
+      CALL wclock_off (ng, model, 62, __LINE__, MyFile)
 #  endif
-
+!
       RETURN
       END SUBROUTINE ad_mp_exchange4d
 # endif

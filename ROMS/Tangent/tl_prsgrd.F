@@ -1,26 +1,18 @@
 #include "cppdefs.h"
-      MODULE tl_prsgrd_mod
 #if defined TANGENT && defined SOLVE3D
-!
-!svn $Id: tl_prsgrd.F 995 2020-01-10 04:01:28Z arango $
-!================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
-!    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
-!=======================================================================
-!                                                                      !
-!  This routine computes the tangent linear baroclinic hydrostatic     !
-!  pressure gradient term.                                             !
-!                                                                      !
-!=======================================================================
-!
-      implicit none
-
-      PRIVATE
-      PUBLIC  :: tl_prsgrd
-
-      CONTAINS
-
+!!
+!!svn $Id: tl_prsgrd.F 1099 2022-01-06 21:01:01Z arango $
+!!================================================= Hernan G. Arango ===
+!! Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!!   Licensed under a MIT/X style license                              !
+!!   See License_ROMS.txt                                              !
+!!======================================================================
+!!                                                                     !
+!! This routine computes the tangent linear baroclinic hydrostatic     !
+!! pressure gradient term.                                             !
+!!                                                                     !
+!!======================================================================
+!!
 # if defined PJ_GRADPQ4
 !!#  include "tl_prsgrd44.h"
 # elif defined PJ_GRADPQ2
@@ -32,7 +24,7 @@
 # else
 #  include "tl_prsgrd31.h"
 # endif
-
-#endif
-
+#else
+      MODULE tl_prsgrd_mod
       END MODULE tl_prsgrd_mod
+#endif

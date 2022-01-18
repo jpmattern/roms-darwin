@@ -2,9 +2,9 @@
       MODULE lmd_vmix_mod
 #if defined NONLINEAR && defined LMD_MIXING && defined SOLVE3D
 !
-!svn $Id: lmd_vmix.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: lmd_vmix.F 1099 2022-01-06 21:01:01Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                           Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
@@ -53,10 +53,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 18, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 18, __LINE__, MyFile)
 # endif
       IF (.not.PerfectRST(ng).or.iic(ng).ne.ntstart(ng)) THEN
         CALL lmd_vmix_tile (ng, tile,                                   &
@@ -86,8 +89,9 @@
         CALL lmd_finish (ng, tile)
       END IF
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 18, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 18, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE lmd_vmix
 !
@@ -557,6 +561,82 @@
 !
 !  Apply boundary conditions.
 !
+      DO k=0,N(ng)
+        IF (DOMAIN(ng)%Western_Edge(tile)) THEN
+          DO j=Jstr,Jend
+            DO itrc=1,NAT
+              Akt(Istr-1,j,k,itrc)=Akt(Istr,j,k,itrc)
+            END DO
+            Akv(Istr-1,j,k)=Akv(Istr,j,k)
+          END DO
+        END IF
+        IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
+          DO j=Jstr,Jend
+            DO itrc=1,NAT
+              Akt(Iend-1,j,k,itrc)=Akt(Iend,j,k,itrc)
+            END DO
+            Akv(Iend-1,j,k)=Akv(Iend,j,k)
+          END DO
+
+        END IF
+        IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
+          DO i=Istr,Iend
+            DO itrc=1,NAT
+              Akt(i,Jstr-1,k,itrc)=Akt(i,Jstr,k,itrc)
+            END DO
+            Akv(i,Jstr-1,k)=Akv(i,Jstr,k)
+          END DO
+        END IF
+        IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
+          DO i=Istr,Iend
+            DO itrc=1,NAT
+              Akt(i,Jend+1,k,itrc)=Akt(i,Jend,k,itrc)
+            END DO
+            Akv(i,Jend+1,k)=Akv(i,Jend,k)
+          END DO
+        END IF
+        IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
+          DO itrc=1,NAT
+            Akt(Istr-1,Jstr-1,k,itrc)=0.5_r8*                           &
+     &                                (Akt(Istr  ,Jstr-1,k,itrc)+       &
+     &                                 Akt(Istr-1,Jstr  ,k,itrc))
+          END DO
+          Akv(Istr-1,Jstr-1,k)=0.5_r8*                                  &
+     &                         (Akv(Istr  ,Jstr-1,k)+                   &
+     &                          Akv(Istr-1,Jstr  ,k))
+        END IF
+        IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
+          DO itrc=1,NAT
+            Akt(Iend+1,Jstr-1,k,itrc)=0.5_r8*                           &
+     &                                (Akt(Iend  ,Jstr-1,k,itrc)+       &
+     &                                 Akt(Iend+1,Jstr  ,k,itrc))
+          END DO
+          Akv(Iend+1,Jstr-1,k)=0.5_r8*                                  &
+     &                         (Akv(Iend  ,Jstr-1,k)+                   &
+     &                          Akv(Iend+1,Jstr  ,k))
+        END IF
+        IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
+          DO itrc=1,NAT
+            Akt(Istr-1,Jend+1,k,itrc)=0.5_r8*                           &
+     &                                (Akt(Istr  ,Jend+1,k,itrc)+       &
+     &                                 Akt(Istr-1,Jend  ,k,itrc))
+          END DO
+          Akv(Istr-1,Jend+1,k)=0.5_r8*                                  &
+     &                         (Akv(Istr  ,Jend+1,k)+                   &
+     &                          Akv(Istr-1,Jend  ,k))
+        END IF
+        IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
+          DO itrc=1,NAT
+            Akt(Iend+1,Jend+1,k,itrc)=0.5_r8*                           &
+     &                                (Akt(Iend  ,Jend+1,k,itrc)+       &
+     &                                 Akt(Iend+1,Jend  ,k,itrc))
+          END DO
+          Akv(Iend+1,Jend+1,k)=0.5_r8*                                  &
+     &                         (Akv(Iend  ,Jend+1,k)+                   &
+     &                          Akv(Iend+1,Jend  ,k))
+        END IF
+      END DO
+!
       CALL bc_w3d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj, 0, N(ng),                   &
      &                  Akv)
@@ -577,6 +657,7 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    Akt)
 # endif
+!
       RETURN
       END SUBROUTINE lmd_finish_tile
 #endif

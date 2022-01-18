@@ -1,11 +1,11 @@
-      SUBROUTINE biology (ng,tile)
+      MODULE biology_mod
 !
-!svn $Id: npzd_Franks.h 995 2020-01-10 04:01:28Z arango $
-!************************************************** Hernan G. Arango ***
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group        Craig V. Lewis   !
+!svn $Id: npzd_Franks.h 1099 2022-01-06 21:01:01Z arango $
+!================================================== Hernan G. Arango ===
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group        Craig V. Lewis   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
-!***********************************************************************
+!=======================================================================
 !                                                                      !
 !  Nutrient-Phytoplankton-Zooplankton-Detritus Model.                  !
 !                                                                      !
@@ -20,6 +20,17 @@
 !                                                                      !
 !  Adapted from code written originally by Craig V. Lewis.             !
 !                                                                      !
+!=======================================================================
+!
+      implicit none
+!
+      PRIVATE
+      PUBLIC  :: biology
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE biology (ng,tile)
 !***********************************************************************
 !
       USE mod_param
@@ -34,6 +45,9 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 #include "tile.h"
 !
 !  Set header file name.
@@ -44,40 +58,41 @@
       IF (Lbiofile(iNLM).and.(tile.eq.0)) THEN
 #endif
         Lbiofile(iNLM)=.FALSE.
-        BIONAME(iNLM)=__FILE__
+        BIONAME(iNLM)=MyFile
       END IF
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 15, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 15, __LINE__, MyFile)
 #endif
-      CALL biology_tile (ng, tile,                                      &
-     &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &
-     &                   IminS, ImaxS, JminS, JmaxS,                    &
-     &                   nstp(ng), nnew(ng),                            &
+      CALL npzd_franks_tile (ng, tile,                                  &
+     &                       LBi, UBi, LBj, UBj, N(ng), NT(ng),         &
+     &                       IminS, ImaxS, JminS, JmaxS,                &
+     &                       nstp(ng), nnew(ng),                        &
 #ifdef MASKING
-     &                   GRID(ng) % rmask,                              &
+     &                       GRID(ng) % rmask,                          &
 #endif
-     &                   GRID(ng) % Hz,                                 &
-     &                   GRID(ng) % z_r,                                &
-     &                   GRID(ng) % z_w,                                &
-     &                   OCEAN(ng) % t)
+     &                       GRID(ng) % Hz,                             &
+     &                       GRID(ng) % z_r,                            &
+     &                       GRID(ng) % z_w,                            &
+     &                       OCEAN(ng) % t)
 
 #ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 15, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 15, __LINE__, MyFile)
 #endif
+!
       RETURN
       END SUBROUTINE biology
 !
 !-----------------------------------------------------------------------
-      SUBROUTINE biology_tile (ng, tile,                                &
-     &                         LBi, UBi, LBj, UBj, UBk, UBt,            &
-     &                         IminS, ImaxS, JminS, JmaxS,              &
-     &                         nstp, nnew,                              &
+      SUBROUTINE npzd_franks_tile (ng, tile,                            &
+     &                             LBi, UBi, LBj, UBj, UBk, UBt,        &
+     &                             IminS, ImaxS, JminS, JmaxS,          &
+     &                             nstp, nnew,                          &
 #ifdef MASKING
-     &                         rmask,                                   &
+     &                             rmask,                               &
 #endif
-     &                         Hz, z_r, z_w,                            &
-     &                         t)
+     &                             Hz, z_r, z_w,                        &
+     &                             t)
 !-----------------------------------------------------------------------
 !
       USE mod_param
@@ -567,6 +582,8 @@
         END DO
 
       END DO J_LOOP
-
+!
       RETURN
-      END SUBROUTINE biology_tile
+      END SUBROUTINE npzd_franks_tile
+
+      END MODULE biology_mod

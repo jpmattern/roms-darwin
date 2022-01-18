@@ -1,11 +1,12 @@
 #include "cppdefs.h"
       MODULE ad_misfit_mod
+
 #if  defined ADJOINT && defined FOUR_DVAR  && defined OBSERVATIONS && \
     !defined WEAK_CONSTRAINT
 !
-!svn $Id: ad_misfit.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: ad_misfit.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -20,7 +21,7 @@
 !=======================================================================
 !
       implicit none
-
+!
       CONTAINS
 !
 !***********************************************************************
@@ -571,9 +572,9 @@
   10        FORMAT (10x,a,t25,4(1x,i10))
   20        FORMAT (/,10x,'Total',t47,2(1x,i10),                        &
      &              /,10x,'Obs Tally',t47,2(1x,i10),/)
-  30        FORMAT (3x,' AD_MISFIT   - Added observations misfit ',     &
-     &              'forcing,',t62,'t = ',a,/,19x,'(Observation ',      &
-     &              'records = ',i7.7,' - ',i7.7,', iic = ',i7.7,')')
+  30        FORMAT (2x,' AD_MISFIT       - Added observations misfit ', &
+     &              'forcing,',t75,a,/,22x,'(Observation ',             &
+     &              'records = ',i0,' - ',i0,', iic = ',i0,')')
           END IF
         END IF
       END IF

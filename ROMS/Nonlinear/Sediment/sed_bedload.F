@@ -7,9 +7,9 @@
 
 #if defined NONLINEAR && defined SEDIMENT && defined BEDLOAD
 !
-!svn $Id: sed_bedload.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: sed_bedload.F 1099 2022-01-06 21:01:01Z arango $
 !==================================================== John C. Warner ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group      Hernan G. Arango   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group      Hernan G. Arango   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -36,10 +36,10 @@
 !=======================================================================
 !
       implicit none
-
+!
       PRIVATE
       PUBLIC  :: sed_bedload
-
+!
       CONTAINS
 !
 !***********************************************************************
@@ -62,10 +62,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 16, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 16, __LINE__, MyFile)
 # endif
       CALL sed_bedload_tile (ng, tile,                                  &
      &                       LBi, UBi, LBj, UBj,                        &
@@ -117,8 +120,9 @@
      &                       SEDBED(ng) % bed_mass,                     &
      &                       SEDBED(ng) % bottom)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 16, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 16, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE sed_bedload
 !
@@ -698,18 +702,18 @@
 !        DO j=Jstr,Jend
 !          DO i=Istr,Iend
 !            cff1=1.0_r8/(Srho(ised,ng)*(1.0_r8-bed(i,j,1,iporo)))
-!            rhs_bed=(FX(i+1,j)-FX(i,j)+                                 &
-!     &               FE(i,j+1)-FE(i,j))*pm(i,j)*pn(i,j)
+!            rhs_bed=(FX(i+1,j)-FX(i,j)+                                &
+!    &                FE(i,j+1)-FE(i,j))*pm(i,j)*pn(i,j)
 !            cff2=MAX(rhs_bed*cff1+h(i,j)-Dcrit(ng),0.0_r8)
 !            cff=cff2/ABS(cff2+eps)
-!            FX(i  ,j  )=MAX(FX(i  ,j  ),0.0_r8)*cff+                    &
-!     &                  MIN(FX(i  ,j  ),0.0_r8)
-!            FX(i+1,j  )=MAX(FX(i+1,j  ),0.0_r8)+                        &
-!     &                  MIN(FX(i+1,j  ),0.0_r8)*cff
-!            FE(i  ,j  )=MAX(FE(i  ,j  ),0.0_r8)*cff+                    &
-!     &                  MIN(FE(i  ,j  ),0.0_r8)
-!            FE(i  ,j+1)=MAX(FE(i  ,j+1),0.0_r8)+                        &
-!     &                  MIN(FE(i  ,j+1),0.0_r8)*cff
+!            FX(i  ,j  )=MAX(FX(i  ,j  ),0.0_r8)*cff+                   &
+!    &                   MIN(FX(i  ,j  ),0.0_r8)
+!            FX(i+1,j  )=MAX(FX(i+1,j  ),0.0_r8)+                       &
+!    &                   MIN(FX(i+1,j  ),0.0_r8)*cff
+!            FE(i  ,j  )=MAX(FE(i  ,j  ),0.0_r8)*cff+                   &
+!    &                   MIN(FE(i  ,j  ),0.0_r8)
+!            FE(i  ,j+1)=MAX(FE(i  ,j+1),0.0_r8)+                       &
+!    &                   MIN(FE(i  ,j+1),0.0_r8)*cff
 !          END DO
 !        END DO
 !
@@ -891,7 +895,7 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    bottom)
 # endif
-
+!
       RETURN
       END SUBROUTINE sed_bedload_tile
 #endif

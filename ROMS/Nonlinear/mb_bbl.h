@@ -1,8 +1,8 @@
-      SUBROUTINE bblm (ng,tile)
+      MODULE bbl_mod
 !
-!svn $Id: mb_bbl.h 995 2020-01-10 04:01:28Z arango $
+!svn $Id: mb_bbl.h 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group          Meinte Blaas   !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group          Meinte Blaas   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -43,6 +43,17 @@
 !                                                                      !
 !=======================================================================
 !
+      implicit none
+
+      PRIVATE
+      PUBLIC  :: bblm
+
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE bblm (ng,tile)
+!***********************************************************************
+!
       USE mod_param
       USE mod_bbl
       USE mod_forces
@@ -57,67 +68,71 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 37, __LINE__, __FILE__)
+      CALL wclock_on (ng, iNLM, 37, __LINE__, MyFile)
 # endif
-      CALL bblm_tile (ng, tile,                                         &
-     &                LBi, UBi, LBj, UBj,                               &
-     &                IminS, ImaxS, JminS, JmaxS,                       &
-     &                nrhs(ng),                                         &
-     &                GRID(ng) % h,                                     &
-     &                GRID(ng) % z_r,                                   &
-     &                GRID(ng) % z_w,                                   &
-     &                GRID(ng) % angler,                                &
-     &                GRID(ng) % ZoBot,                                 &
+      CALL mb_bbl_tile (ng, tile,                                       &
+     &                  LBi, UBi, LBj, UBj,                             &
+     &                  IminS, ImaxS, JminS, JmaxS,                     &
+     &                  nrhs(ng),                                       &
+     &                  GRID(ng) % h,                                   &
+     &                  GRID(ng) % z_r,                                 &
+     &                  GRID(ng) % z_w,                                 &
+     &                  GRID(ng) % angler,                              &
+     &                  GRID(ng) % ZoBot,                               &
 # ifdef MB_CALC_UB
-     &                FORCES(ng) % Hwave,                               &
+     &                  FORCES(ng) % Hwave,                             &
 # else
-     &                FORCES(ng) % Ub_swan,                             &
+     &                  FORCES(ng) % Ub_swan,                           &
 # endif
-     &                FORCES(ng) % Dwave,                               &
-     &                FORCES(ng) % Pwave_bot,                           &
-     &                OCEAN(ng) % rho,                                  &
-     &                OCEAN(ng) % u,                                    &
-     &                OCEAN(ng) % v,                                    &
-     &                SEDBED(ng) % bottom,                              &
-     &                BBL(ng) % Ubot,                                   &
-     &                BBL(ng) % Vbot,                                   &
-     &                BBL(ng) % Ur,                                     &
-     &                BBL(ng) % Vr,                                     &
-     &                BBL(ng) % bustrc,                                 &
-     &                BBL(ng) % bvstrc,                                 &
-     &                BBL(ng) % bustrw,                                 &
-     &                BBL(ng) % bvstrw,                                 &
-     &                BBL(ng) % bustrcwmax,                             &
-     &                BBL(ng) % bvstrcwmax,                             &
-     &                FORCES(ng) % bustr,                               &
-     &                FORCES(ng) % bvstr)
+     &                  FORCES(ng) % Dwave,                             &
+     &                  FORCES(ng) % Pwave_bot,                         &
+     &                  OCEAN(ng) % rho,                                &
+     &                  OCEAN(ng) % u,                                  &
+     &                  OCEAN(ng) % v,                                  &
+     &                  SEDBED(ng) % bottom,                            &
+     &                  BBL(ng) % Ubot,                                 &
+     &                  BBL(ng) % Vbot,                                 &
+     &                  BBL(ng) % Ur,                                   &
+     &                  BBL(ng) % Vr,                                   &
+     &                  BBL(ng) % bustrc,                               &
+     &                  BBL(ng) % bvstrc,                               &
+     &                  BBL(ng) % bustrw,                               &
+     &                  BBL(ng) % bvstrw,                               &
+     &                  BBL(ng) % bustrcwmax,                           &
+     &                  BBL(ng) % bvstrcwmax,                           &
+     &                  FORCES(ng) % bustr,                             &
+     &                  FORCES(ng) % bvstr)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 37, __LINE__, __FILE__)
+      CALL wclock_off (ng, iNLM, 37, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE bblm
 !
 !***********************************************************************
-      SUBROUTINE bblm_tile (ng, tile,                                   &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      IminS, ImaxS, JminS, JmaxS,                 &
-     &                      nrhs,                                       &
-     &                      h, z_r, z_w, angler, ZoBot,                 &
+      SUBROUTINE mb_bbl_tile (ng, tile,                                 &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        IminS, ImaxS, JminS, JmaxS,               &
+     &                        nrhs,                                     &
+     &                        h, z_r, z_w, angler, ZoBot,               &
 # ifdef MB_CALC_UB
-     &                      Hwave,                                      &
+     &                        Hwave,                                    &
 # else
-     &                      Ub_swan,                                    &
+     &                        Ub_swan,                                  &
 # endif
-     &                      Dwave, Pwave_bot,                           &
-     &                      rho, u, v, bottom,                          &
-     &                      Ubot, Vbot, Ur, Vr,                         &
-     &                      bustrc, bvstrc,                             &
-     &                      bustrw, bvstrw,                             &
-     &                      bustrcwmax, bvstrcwmax,                     &
-     &                      bustr, bvstr)
+     &                        Dwave, Pwave_bot,                         &
+     &                        rho, u, v, bottom,                        &
+     &                        Ubot, Vbot, Ur, Vr,                       &
+     &                        bustrc, bvstrc,                           &
+     &                        bustrw, bvstrw,                           &
+     &                        bustrcwmax, bvstrcwmax,                   &
+     &                        bustr, bvstr)
 !***********************************************************************
 !
       USE mod_param
@@ -696,6 +711,8 @@
      &                    bottom(:,:,izdef),                            &
      &                    bottom(:,:,izapp))
 #endif
-
+!
       RETURN
-      END SUBROUTINE bblm_tile
+      END SUBROUTINE mb_bbl_tile
+
+      END MODULE bbl_mod

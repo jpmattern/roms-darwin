@@ -2,9 +2,9 @@
 #ifdef FLOATS
       SUBROUTINE read_FltPar (model, inp, out, Lwrite)
 !
-!svn $Id: read_fltpar.F 1031 2020-07-14 01:39:55Z arango $
+!svn $Id: read_fltpar.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -29,6 +29,7 @@
 !  Imported variable declarations
 !
       logical, intent(in) :: Lwrite
+!
       integer, intent(in) :: model, inp, out
 !
 !  Local variable declarations.
@@ -39,20 +40,23 @@
       integer, dimension(Ngrids) :: ncount, nentry
 
       integer, allocatable :: Fcoor(:,:), Fcount(:,:), Ftype(:,:)
-
+!
       real(r8) :: xfloat, yfloat, zfloat
 
       real(dp), dimension(nRval) :: Rval
 
       real(r8), allocatable :: Ft0(:,:), Fx0(:,:), Fy0(:,:), Fz0(:,:)
       real(r8), allocatable :: Fdt(:,:), Fdx(:,:), Fdy(:,:), Fdz(:,:)
-
+!
       character (len=1  ), parameter :: blank = ' '
 
       character (len=35 ) :: frmt
       character (len=40 ) :: KeyWord
       character (len=256) :: fname, line
       character (len=256), dimension(nCval) :: Cval
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 !
 !-----------------------------------------------------------------------
 !  Read in initial float locations.
@@ -208,23 +212,13 @@
 
 # ifdef FLOAT_BIOLOGY
       fname=fbionam
-      IF (.not.find_file(1, fname, 'FBIONAM')) GO TO 40
-      GO TO 50
- 40   IF (Master) THEN
-        IF (LEN_TRIM(fname).eq.0) THEN
-          WRITE (out,110) ng, 'Oops unassigned file name. '//           &
-     &                        'Check assimilation input script...'
-        ELSE
-          WRITE (out,110) ng, TRIM(fname)
+      IF (.not.find_file(1, out, fname, 'FBIONAM')) THEN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+      ELSE
+        IF (Master.and.Lwrite) THEN
+          WRITE (out,120) 'biological floats behavior File:  ',         &
+     &                    TRIM(fname)
         END IF
-      END IF
-      exit_flag=4
-      IF (FoundError(exit_flag, NoError, __LINE__,                      &
-     &               __FILE__)) RETURN
- 50   CONTINUE
-      IF (Master.and.Lwrite) THEN
-        WRITE (out,120) 'biological floats behavior File:  ',           &
-     &                  TRIM(fname)
       END IF
 # endif
 !

@@ -2,9 +2,9 @@
       MODULE rp_diag_mod
 #ifdef TL_IOMS
 !
-!svn $Id: rp_diag.F 995 2020-01-10 04:01:28Z arango $
+!svn $Id: rp_diag.F 1099 2022-01-06 21:01:01Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2020 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !=======================================================================
@@ -15,10 +15,10 @@
 !=======================================================================
 !
       implicit none
-
+!
       PRIVATE
       PUBLIC  :: rp_diag
-
+!
       CONTAINS
 !
 !***********************************************************************
@@ -36,10 +36,13 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
+!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iRPM, 7, __LINE__, __FILE__)
+      CALL wclock_on (ng, iRPM, 7, __LINE__, MyFile)
 # endif
       CALL rp_diag_tile (ng, tile,                                      &
      &                   LBi, UBi, LBj, UBj,                            &
@@ -59,8 +62,9 @@
      &                   OCEAN(ng) % tl_vbar,                           &
      &                   OCEAN(ng) % tl_zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, iRPM, 7, __LINE__, __FILE__)
+      CALL wclock_off (ng, iRPM, 7, __LINE__, MyFile)
 # endif
+!
       RETURN
       END SUBROUTINE rp_diag
 !
@@ -131,7 +135,7 @@
       integer :: NSUB, i, j, k, trd
 
 # ifdef DISTRIBUTE
-      real(r8), dimension(3) :: buffer
+      real(r8), dimension(3) :: rbuffer
       character (len=3), dimension(3) :: op_handle
 # else
       integer :: my_threadnum
@@ -251,16 +255,16 @@
         IF (tile_count.eq.NSUB) THEN
           tile_count=0
 # ifdef DISTRIBUTE
-          buffer(1)=volume
-          buffer(2)=avgke
-          buffer(3)=avgpe
+          rbuffer(1)=volume
+          rbuffer(2)=avgke
+          rbuffer(3)=avgpe
           op_handle(1)='SUM'
           op_handle(2)='SUM'
           op_handle(3)='SUM'
-          CALL mp_reduce (ng, iRPM, 3, buffer, op_handle)
-          volume=buffer(1)
-          avgke=buffer(2)
-          avgpe=buffer(3)
+          CALL mp_reduce (ng, iRPM, 3, rbuffer, op_handle)
+          volume=rbuffer(1)
+          avgke=rbuffer(2)
+          avgpe=rbuffer(3)
           trd=MyMaster
 # else
           trd=my_threadnum()
@@ -315,6 +319,7 @@
         END IF
 !$OMP END CRITICAL (RP_DIAGNOSTICS)
       END IF
+!
       RETURN
       END SUBROUTINE rp_diag_tile
 #endif

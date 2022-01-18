@@ -1,7 +1,7 @@
 /*
-** svn $Id: lake_jersey.h 995 2020-01-10 04:01:28Z arango $
+** svn $Id: lake_jersey.h 1099 2022-01-06 21:01:01Z arango $
 *******************************************************************************
-** Copyright (c) 2002-2020 The ROMS/TOMS Group                               **
+** Copyright (c) 2002-2022 The ROMS/TOMS Group                               **
 **   Licensed under a MIT/X style license                                    **
 **   See License_ROMS.txt                                                    **
 *******************************************************************************
@@ -33,7 +33,7 @@
 
 /* Bottom boundary layer options */
 
-#defined SSW_BBL
+#define SSW_BBL
 #ifdef SG_BBL
 # define SG_CALC_ZNOT
 # undef  SG_LOGINT

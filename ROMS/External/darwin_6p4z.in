@@ -1,0 +1,2358 @@
+!  NEMURO Ecosystem Model Parameters.
+!
+!svn $Id: nemuro.in 810 2016-08-05 01:58:16Z arango $
+!========================================================= Hernan G. Arango ===
+!  Copyright (c) 2002-2016 The ROMS/TOMS Group                                !
+!    Licensed under a MIT/X style license                                     !
+!    See License_ROMS.txt                                                     !
+!==============================================================================
+!                                                                             !
+! Input parameters can be entered in ANY order, provided that the parameter   !
+! KEYWORD (usually, upper case) is typed correctly followed by "="  or "=="   !
+! symbols. Any comment lines are allowed and must begin with an exclamation   !
+! mark (!) in column one.  Comments may  appear to the right of a parameter   !
+! specification to improve documentation.  Comments will be ignored  during   !
+! reading.  Blank lines are also allowed and ignored. Continuation lines in   !
+! a parameter specification are allowed and must be preceded by a backslash   !
+! (\).  In some instances, more than one value is required for a parameter.   !
+! If fewer values are provided, the  last value  is assigned for the entire   !
+! parameter array.  The multiplication symbol (*),  without blank spaces in   !
+! between, is allowed for a parameter specification.  For example, in a two   !
+! grids nested application:                                                   !
+!                                                                             !
+!    AKT_BAK == 2*1.0d-6  2*5.0d-6              ! m2/s                        !
+!                                                                             !
+! indicates that the first two entries of array AKT_BAK,  in fortran column-  !
+! major order, will have the same value of "1.0d-6" for grid 1,  whereas the  !
+! next two entries will have the same value of "5.0d-6" for grid 2.           !
+!                                                                             !
+! In multiple levels of nesting and/or multiple connected domains  step-ups,  !
+! "Ngrids" entries are expected for some of these parameters.  In such case,  !
+! the order of the entries for a parameter is extremely important.  It  must  !
+! follow the same order (1:Ngrids) as in the state variable declaration. The  !
+! USER may follow the above guidelines for specifying his/her values.  These  !
+! parameters are marked by "==" plural symbol after the KEYWORD.              !
+!                                                                             !
+!==============================================================================
+!
+! NOTICE: Input parameter units are specified within brackets and default
+! ******  values are specified within braces.
+!
+! Switch to control the computation of biology within nested and/or multiple
+! connected grids.
+
+    Lbiology == T
+
+! Plankton group names (to be written out as plankton_type into output files)
+! only active for option(s) "! DARWIN_RANDOM_TRAITS"
+! Continuation lines ("\") may be used, spaces are not allowed in a group name.
+
+   grp_names == pico-prokaryote            \
+                pico-eukaryote             \
+                coccolithophore            \
+                diazotroph                 \
+                diatom                     \
+                mixotrophic-dinoflagellate \
+                zooplankton
+
+!vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+!
+! created by create_darwin_headerfiles (written by J. Paul Mattern)
+!
+
+! chlorophyll absorption (m^-1 (mg Chl m^-3)^-1)
+
+      aphy_chl == 1.0d0 1.0d0 1.0d0 1.0d0
+
+! chlorophyll PS absorption (m^-1 (mg Chl m^-3)^-1)
+
+   aphy_chl_ps == 1.0d0 1.0d0 1.0d0 1.0d0
+
+! phytoplankton backscatter (m^-1 (mg C m^-3)^-1)
+
+      bphy_mgC == 1.0d0 1.0d0 1.0d0 1.0d0
+
+! phytoplankton backscatter (m^-1 (mg C m^-3)^-1)
+
+     bbphy_mgC == 1.0d0 1.0d0 1.0d0 1.0d0
+
+! small phytoplankton growth rate (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     Smallgrow == 0.7d0
+
+! big phytoplankton growth rates (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+       Biggrow == 0.4d0
+
+! small phytoplankton growth rate threshold (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+Smallgrowrange == 0.0d0
+
+! big phytoplankton growth rate threshold (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  Biggrowrange == 0.0d0
+
+! diazotroph growth multiplier (dimensionless)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  diaz_growfac == 2.0d0
+
+! coccolithophore growth multiplier (dimensionless)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ cocco_growfac == 1.3d0
+
+! diatom growth multiplier (dimensionless)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+diatom_growfac == 0.95d0
+
+! small phytoplankton mortality rate (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     Smallmort == 10.0d0
+
+! big phytoplankton mortality rate (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+       Bigmort == 10.0d0
+
+! small phytoplankton mortality rate threshold (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+Smallmortrange == 0.0d0
+
+! big phytoplankton mortality rate threshold (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  Bigmortrange == 0.0d0
+
+! small phytoplankton mortality export fraction (dimensionless)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+   Smallexport == 0.2d0
+
+! big phytoplankton mortality export fraction (dimensionless)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     Bigexport == 0.5d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    tempcoeff1 == 0.333333333333d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+tempcoeff2_small == 0.001d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+tempcoeff2_big == 0.0003d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    tempcoeff3 == 1.04d0
+
+! 32. _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS & DARWIN_TEMP_RANGE"
+
+       tempmax == 30.0d0
+
+! 30. _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS & DARWIN_TEMP_RANGE"
+
+     temprange == 32.0d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS & DARWIN_TEMP_RANGE"
+
+     tempdecay == 4.0d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+      val_R_NC == 0.133333333333d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ val_R_NC_diaz == 0.333333333333d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+      val_R_PC == 0.00833333333333d0
+
+! 32 for Fannys runs (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+val_R_SiC_diatom == 0.133333333333d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     val_R_FeC == 8.33333333333d-06
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+! original value: "30.0d0 * val_R_FeC"
+
+val_R_FeC_diaz == 0.00025d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  val_R_PICPOC == 0.8d0
+
+! for atten_chl   = atten_p * 16 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+    val_R_ChlC == 0.133333333333d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  val_R_NC_zoo == 0.133333333333d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  val_R_PC_zoo == 0.00833333333333d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ val_R_SiC_zoo == 0.0d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ val_R_FeC_zoo == 8.33333333333d-06
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+val_R_PICPOC_zoo == 0.0d0
+
+! for atten_chl = atten_p * 16 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+val_R_ChlC_zoo == 0.0d0
+
+! small phytoplankton sinking rate (m d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.0d0/pday"
+
+SmallSink_pday == 0.0d0
+
+! big phytoplankton sinking rate (m d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.5d0/pday"
+
+  BigSink_pday == 0.5d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     SmallPsat == 0.015d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+       BigPsat == 0.035d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+      ProcPsat == 0.01d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     UniDzPsat == 0.012d0
+
+! by default same as big (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     CoccoPsat == 0.035d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+SmallPsatrange == 0.02d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  BigPsatrange == 0.02d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ ProcPsatrange == 0.005d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+UniDzPsatrange == 0.02d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+CoccoPsatrange == 0.02d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    ksatNH4fac == 0.5d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    ksatNO2fac == 1.0d0
+
+! unknown description (coefficient for NH4 inhibition of NO uptake ((mmol N/m3)-1))
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  val_amminhib == 4.6d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  val_ksatsio2 == 1.0d0
+
+! 0.8 _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+  smallksatpar == 0.012d0
+
+! 0.3 _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+smallksatparstd == 0.02d0
+
+! 2.0 _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+  smallkinhpar == 0.006d0
+
+! 0.5 _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+smallkinhparstd == 0.0001d0
+
+! 0.35 _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+    Bigksatpar == 0.012d0
+
+! 0.1 _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+ Bigksatparstd == 0.006d0
+
+! 0.5 _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+    Bigkinhpar == 0.001d0
+
+! 0.1 _d 0 (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+ Bigkinhparstd == 5.0d-05
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS & DARWIN_NINE_SPECIES_SETUP"
+
+  LLProkinhpar == 0.006d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS & DARWIN_NINE_SPECIES_SETUP"
+
+  Coccokinhpar == 0.0005d0
+
+! DUMMY VAL (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+inhibcoef_geid_val == 0.0d0
+
+! unknown description (mmol C (uEin)-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+  smallmQyield == 5.0d-05
+
+! unknown description (mmol C (uEin)-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+smallmQyieldrange == 0.0001d0
+
+! unknown description (mmol C (uEin)-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    BigmQyield == 3.0d-05
+
+! unknown description (mmol C (uEin)-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+BigmQyieldrange == 4.0d-05
+
+! unknown description (mg Chl (mmol C))
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ smallchl2cmax == 0.2d0
+
+! unknown description (mg Chl (mmol C))
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+smallchl2cmaxrange == 0.3d0
+
+! unknown description (mg Chl (mmol C))
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+   Bigchl2cmax == 0.5d0
+
+! unknown description (mg Chl (mmol C))
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+Bigchl2cmaxrange == 0.3d0
+
+! multiplication with chla gives absorption m-1 (m^2 (mg_chl)^-1)
+! only active for option(s) " ! DARWIN_RADTRANS"
+
+  aphy_chl_ave == 0.02d0
+
+! inverse time scale for Chl acclimation (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+val_acclimtimescl == 5.78703703704d-07
+
+! old defaults for 2 grazers (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ oldTwoGrazers == F
+
+! maximum grazing rate (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "1.0d0/(2.0d0*pday)"
+
+GrazeFast_pday == 0.5d0
+
+! was 1/30 days (unknown s d-1)
+! original value (including pday correction): "1.0d0/(7.0d0*pday)"
+
+GrazeSlow_pday == 0.142857d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ ZooexfacSmall == 0.2d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+   ZooexfacBig == 0.7d0
+
+! small zooplankton mortality rate (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "1.0d0/(30.0d0*pday)"
+
+ZoomortSmall_pday == 0.033333d0
+
+! big zooplankton mortality rate (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "1.0d0/(30.0d0*pday)"
+
+ZoomortBig_pday == 0.033333d0
+
+! small zooplankton quadratic mortality rate ((mmol C m^-3)^-1 s^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ ZoomortSmall2 == 0.0d0
+
+! big zooplankton quadratic mortality rate ((mmol C m^-3)^-1 s^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+   ZoomortBig2 == 0.0d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ ExGrazfracbig == 0.8d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ExGrazfracsmall == 0.8d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+       palathi == 1.0d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+       palatlo == 0.2d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    diatomgraz == 0.7d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     coccograz == 0.6d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    olargegraz == 1.0d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+   GrazeEfflow == 0.2d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+   GrazeEffmod == 0.5d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    GrazeEffhi == 0.7d0
+
+! grazing rate (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "1.0d0/(2.0d0*pday)"
+
+GrazeRate_pday == 0.5d0
+
+! fraction of sloppy feeding that goes to particulate (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+    ExGrazfrac == 0.8d0
+
+! need to set in data.traits (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+     val_palat == 0.0d0
+
+! grazing efficiency (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+   val_ass_eff == 0.7d0
+
+! unknown description (= 0.1 mmol P m-3)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+ kgrazesat_val == 12.0d0
+
+! zooplankton mortality rate (d^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "1.0d0/(30.0d0*pday)"
+
+  Zoomort_pday == 0.033333d0
+
+! zooplankton quadratic mortality rate ((mmol C m^-3)^-1 s^-1)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+      Zoomort2 == 0.0d0
+
+! fraction of dead zoo that goes to particulate (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+      Zooexfac == 0.7d0
+
+! diameter (not used so far) (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+         ZooDM == 100.0d0
+
+! sort plankton types by biovol (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+gud_sort_biovol == F
+
+! compute eff half sat for uptake of non-quota elem (dimensionless)
+
+GUD_effective_ksat == T
+
+! 1: use Ward et al formulation, 2: use Follett et al (dimensionless)
+
+gud_select_kn_allom == 2
+
+! biovol = 10**(logvolbase+...) (dimensionless)
+
+    logvolbase == -0.9000d0
+
+! used to compute biovol (not always active) (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     logvolinc == 1.026d0
+
+! used to compute biovol (not always active) (dimensionless)
+
+       biovol0 == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! used to compute biovol (not always active) (dimensionless)
+
+     biovolfac == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
+
+! used to compute biovol (not always active) (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    logvol0ind == 1 2 3 3 3 4 4
+
+! group value used to determine biovol (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+ grp_logvolind ==0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! group value for biovol (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_biovol ==0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! number of plankton variables in group (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_nplank == 1 1 1 1 1 1 4
+
+! group perform photosynthesis (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     grp_photo == 1 1 1 1 1 1 0
+
+! 1: particle-associated, 2: free-living (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+  grp_bacttype == 0 0 0 0 0 0 0
+
+! group value for isAerobic (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+   grp_aerobic == 0 0 0 0 0 0 0
+
+! group is denitrifier (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     grp_denit == 0 0 0 0 0 0 0
+
+! group is predator (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      grp_pred == 0 0 0 0 0 1 1
+
+! group is prey (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      grp_prey == 1 1 1 1 1 1 1
+
+! group has silicate (diatom) (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     grp_hasSi == 0 0 0 0 1 0 0
+
+! group has PIC (coccolithophore) (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_hasPIC == 0 0 1 0 0 0 0
+
+! group is diazotroph (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     grp_diazo == 0 0 0 1 0 0 0
+
+! group uses NH4 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_useNH4 == 1 1 1 1 1 1 0
+
+! group uses NO2 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_useNO2 == 1 1 1 1 1 1 0
+
+! group uses NO3 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_useNO3 == 1 1 1 1 1 1 0
+
+! group value for combNO (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_combNO == 1 1 1 1 1 1 0
+
+! group absorption spectra type (dimensionless)
+! only active for option(s) "DARWIN_RADTRANS &  ! DARWIN_RANDOM_TRAITS"
+
+    grp_aptype == 4 1 6 8 5 9 11
+
+! group value for tempmort (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+  grp_tempMort == 0 0 0 0 0 0 0
+
+! group value for tempmort2 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+ grp_tempMort2 == 0 0 0 0 0 0 0
+
+! group value for Xmin (mmol C m^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      grp_Xmin == 6*120.0d-20
+
+! group value N:C ratio (mmol N (mmol C)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      grp_R_NC == 3*0.13333333333333333d0 1*0.3333333333333333d0 3*0.13333333333333333d0
+
+! group value P:C ratio (mmol P (mmol C)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      grp_R_PC == 7*0.008333333333333333d0
+
+! group value Si:C ratio (mmol Si (mmol C)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     grp_R_SiC == 4*0.0d0 0.13333333333333333d0 2*0.0d0
+
+! group value Fe:C ratio (mmol Fe (mmol C)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_R_FeC == 3*0.008333333333333333d-3 1*0.03333333333333333d-3 2*0.008333333333333333d-3 1*0.001333333333333333d-3
+
+! group value Chl:C ratio (mg Chl (mmol C)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    grp_R_ChlC == 0.133333333333d0 0.133333333333d0 0.133333333333d0 0.133333333333d0 0.133333333333d0 0.133333333333d0 0.0d0
+
+! group value PIC:POC ratio (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+  grp_R_PICPOC == 2*0.0d0 0.8d0 4*0.0d0
+
+! group value for fraction of linear mortality to POM (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+grp_ExportFracMort == 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0
+
+! group value for frac of quad mort to POM (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+grp_ExportFracMort2 == 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0
+
+! group value for fraction of exudation to POM (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value: "UNINIT_RL"
+
+grp_ExportFrac == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! group mortality rate (d^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.02d0 / pday"
+
+!grp_mort_pday == 6*0.051840d0 0.017280d0
+ grp_mort_pday == 0.051840d0 0.051840d0 0.051840d0 0.051840d0 0.051840d0 0.051840d0 0.017280d0
+
+! group quadratic mortality rate ((mmol C m^-3)^-1 s^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     grp_mort2 == 6.0d-7 6.0d-7 6.0d-7 6.0d-7 8.0d-7 12.0d-7 12.0d-7
+
+! group value for phytoTempCoeff value (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+grp_tempcoeff1 == 0.333333333333d0 0.333333333333d0 0.333333333333d0 0.333333333333d0 0.333333333333d0 0.333333333333d0 0.0d0
+
+! group value for phytoTempExp2 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+grp_tempcoeff2 == 6*0.0003d0 0.0d0
+
+! group value for phytoTempExp1 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+grp_tempcoeff3 == 1.04d0 1.04d0 1.04d0 1.04d0 1.04d0 1.04d0 0.0d0
+
+! group value for phytoTempOptimum (deg_C)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+   grp_tempopt == 2.0d0 2.0d0 2.0d0 2.0d0 2.0d0 2.0d0 0.0d0
+
+! group value for phytoDecayPower (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+ grp_tempdecay == 4.0d0 4.0d0 4.0d0 4.0d0 4.0d0 4.0d0 0.0d0
+
+! standard deviation of size preference (dimensionless)
+! only active for option(s) "DARWIN_ALLOMETRIC_PALAT &  ! DARWIN_RANDOM_TRAITS"
+
+    grp_pp_sig == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
+
+! group value for mQyield (mmol C (uEin)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS & DARWIN_GEIDER"
+
+   grp_mQyield == 6*4.0d-5 0.0d0
+
+! group value max chl:C ratio (mg Chl (mmol C)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS & DARWIN_GEIDER"
+
+  grp_chl2cmax == 0.2d0 0.2d0 0.2d0 0.2d0 0.3d0 0.2d0 0.0d0
+
+! group value for Geider light inhibition coefficient (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS & DARWIN_GEIDER"
+
+grp_inhibcoef_geid == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! group value for ksatPAR ((uEin m^-2 s^-1)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+   grp_ksatPAR == 0.012d0 0.012d0 0.012d0 0.012d0 0.012d0 0.012d0 0.012d0
+
+! group value plankton PAR inhibition coefficient ((uEin m^-2 s^-1)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS &  ! DARWIN_GEIDER"
+
+   grp_kinhPAR == 0.006d0 0.006d0 0.006d0 0.006d0 0.006d0 0.006d0 0.006d0
+
+! group value for ksatNH4 multiplier (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+grp_ksatNH4fac == 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0 0.5d0
+
+! group value for ksatNO2 multiplier (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+grp_ksatNO2fac == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
+
+! group coefficient for NH4 inhibition of NO uptake ((mmol N/m^3)^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+  grp_amminhib == 4.6d0 4.6d0 4.6d0 4.6d0 4.6d0 4.6d0 0.0d0
+
+! inverse time scale for Chl acclimation (d^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "1d0/(20*pday)"
+
+grp_acclimtimescl_pday == 6*0.500000d0 0.0d0
+
+! a-coefficient for grazemax (d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "21.9d0 / pday"
+
+   a_graz_pday == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 1.0d0 3.0d0 
+
+! b-coefficient for grazemax (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+        b_graz == -0.16d0 -0.16d0 -0.16d0 -0.16d0 -0.16d0 -0.16d0 -0.16d0
+
+! a-coefficient for kgrazesat (mmol C m^-3 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! value set manually here to make kgrazesat zero for non-predators
+
+!          a_kg == 6*1.5d0 1*1.5d0
+          a_kg == 5*0.0d0 2*1.5d0
+
+! b-coefficient for kgrazesat (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+          b_kg == 7*0
+
+! a-coefficient for wsink (m d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.28d-1 / pday"
+
+a_biosink_pday == 6*0.060060d0 0.000000d0
+
+! b-coefficient for wsink (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_biosink == 6*0.2833333333333333d0 0.0d0
+
+! a-coefficient for wswim (m d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.00d0 / pday"
+
+a_bioswim_pday == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! b-coefficient for wswim (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_bioswim == 0.18d0 0.18d0 0.18d0 0.18d0 0.18d0 0.18d0 0.18d0
+
+! a-coefficient for pp_opt (um^-3)
+! only active for option(s) "DARWIN_ALLOMETRIC_PALAT &  ! DARWIN_RANDOM_TRAITS"
+
+      a_prdpry == 1024.0d0 1024.0d0 1024.0d0 1024.0d0 1024.0d0 1024.0d0 1024.0d0
+
+! b-coefficient for pp_opt (dimensionless)
+! only active for option(s) "DARWIN_ALLOMETRIC_PALAT &  ! DARWIN_RANDOM_TRAITS"
+
+      b_prdpry == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! a-coefficient for PCmax (d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "1.00d0 / pday"
+
+a_vmax_DIC_pday == 0.9d0 0.9d0 1.4d0 0.95d0 3.9d0 1.0d0 1.0d0
+
+! b-coefficient for PCmax (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    b_vmax_DIC == 0.08d0 0.08d0 -0.08d0 -0.08d0 -0.08d0 -0.08d0 0.0d0
+
+! a-coefficient for qcarbon (um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     a_qcarbon == 1.8d-11 1.8d-11 1.8d-11 1.8d-11 1.8d-11 1.8d-11 1.8d-11
+
+! b-coefficient for qcarbon (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_qcarbon == 0.94d0 0.94d0 0.94d0 0.94d0 0.94d0 0.94d0 0.94d0
+
+! a-coefficient for respiration (mmol C cell^-1 s^-1)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_respir == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! b-coefficient for respiration (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_respir == 0.93d0 0.93d0 0.93d0 0.93d0 0.93d0 0.93d0 0.93d0
+
+! a-coefficient for kexcC (s^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_kexc_c == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! b-coefficient for kexcC (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_kexc_c == -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0
+
+! a-coefficient for Vmax_NO3 (mmol N (mmol C)^-1 d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.51d0 / pday"
+
+a_vmax_NO3_pday == 0.51d0 0.51d0 0.51d0 0.51d0 0.51d0 0.51d0 0.51d0
+
+! b-coefficient for Vmax_NO3 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    b_vmax_NO3 == -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0
+
+! a-coefficient for ksatNO3 (mmol N m-3 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_kn_NO3 == 0.17d0 0.17d0 0.17d0 0.17d0 0.17d0 0.17d0 0.0d0
+
+! b-coefficient for ksatNO3 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_kn_NO3 == 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0
+
+! a-coefficient for Qnmin (mmol N (mmol C)^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_qmin_n == 0.07d0 0.07d0 0.07d0 0.07d0 0.07d0 0.07d0 0.07d0
+
+! b-coefficient for Qnmin (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_qmin_n == -0.17d0 -0.17d0 -0.17d0 -0.17d0 -0.17d0 -0.17d0 -0.17d0
+
+! a-coefficient for Qnmax (mmol N (mmol C)^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_qmax_n == 0.25d0 0.25d0 0.25d0 0.25d0 0.25d0 0.25d0 0.25d0
+
+! b-coefficient for Qnmax (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_qmax_n == -0.13d0 -0.13d0 -0.13d0 -0.13d0 -0.13d0 -0.13d0 -0.13d0
+
+! a-coefficient for kexcN (s^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_kexc_n == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! b-coefficient for kexcN (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_kexc_n == -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0
+
+! a-coefficient for Vmax_NO2 (mmol N (mmol C)^-1 d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.51d0 / pday"
+
+a_vmax_NO2_pday == 0.51d0 0.51d0 0.51d0 0.51d0 0.51d0 0.51d0 0.51d0
+
+! b-coefficient for Vmax_NO2 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    b_vmax_NO2 == -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0
+
+! a-coefficient for ksatNO2 (mmol N m-3 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_kn_NO2 == 0.17d0 0.17d0 0.17d0 0.17d0 0.17d0 0.17d0 0.0d0
+
+! b-coefficient for ksatNO2 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_kn_NO2 == 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0
+
+! a-coefficient for Vmax_NH4 (mmol N (mmol C)^-1 d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.26d0 / pday"
+
+a_vmax_NH4_pday == 0.26d0 0.26d0 0.26d0 0.26d0 0.26d0 0.26d0 0.26d0
+
+! b-coefficient for Vmax_NH4 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    b_vmax_NH4 == -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0
+
+! a-coefficient for ksatNH4 (mmol N m-3 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_kn_NH4 == 0.085d0 0.085d0 0.085d0 0.085d0 0.085d0 0.085d0 0.085d0
+
+! b-coefficient for ksatNH4 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_kn_NH4 == 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0
+
+! a-coefficient for Vmax_N (mmol N (mmol C)^-1 d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "1.28d0 / pday"
+
+ a_vmax_N_pday == 1.28d0 1.28d0 1.28d0 1.28d0 1.28d0 1.28d0 1.28d0
+
+! b-coefficient for Vmax_N (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_vmax_N == -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0
+
+! a-coefficient for Vmax_PO4 (mmol P (mmol C)^-1 d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.77d-1 / pday"
+
+a_vmax_PO4_pday == 0.077d0 0.077d0 0.077d0 0.077d0 0.077d0 0.077d0 0.077d0
+
+! b-coefficient for Vmax_PO4 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    b_vmax_PO4 == -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0
+
+! a-coefficient for ksatPO4 (mmol P m-3 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_kn_PO4 == 0.026d0 0.026d0 0.026d0 0.026d0 0.026d0 0.026d0 0.0d0
+
+! b-coefficient for ksatPO4 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_kn_PO4 == 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0
+
+! a-coefficient for Qpmin (mmol P (mmol C)^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_qmin_p == 6*0.005d0 0.008d0
+
+! b-coefficient for Qpmin (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_qmin_p == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! a-coefficient for Qpmax (mmol P (mmol C)^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_qmax_p == 6*0.02d0 0.01d0
+
+! b-coefficient for Qpmax (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_qmax_p == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! a-coefficient for kexcP (d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.24d-1 / pday"
+
+ a_kexc_p_pday == 0.024d0 0.024d0 0.024d0 0.024d0 0.024d0 0.024d0 0.024d0
+
+! b-coefficient for kexcP (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_kexc_p == -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0 -0.33d0
+
+! a-coefficient for Vmax_SiO2 (mmol Si (mmol C)^-1 d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.77d-1 / pday"
+
+a_vmax_SiO2_pday == 0.077d0 0.077d0 0.077d0 0.077d0 0.077d0 0.077d0 0.077d0
+
+! b-coefficient for Vmax_SiO2 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+   b_vmax_SiO2 == -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0
+
+! a-coefficient for ksatSiO2 (mmol Si m-3 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     a_kn_SiO2 == 0.024d0 0.024d0 0.024d0 0.024d0 0.024d0 0.024d0 0.024d0
+
+! b-coefficient for ksatSiO2 (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_kn_SiO2 == 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0
+
+! a-coefficient for Qsimin (mmol Si (mmol C)^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     a_qmin_si == 0.002d0 0.002d0 0.002d0 0.002d0 0.002d0 0.002d0 0.002d0
+
+! b-coefficient for Qsimin (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_qmin_si == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! a-coefficient for Qsimax (mmol Si (mmol C)^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     a_qmax_si == 0.004d0 0.004d0 0.004d0 0.004d0 0.004d0 0.004d0 0.004d0
+
+! b-coefficient for Qsimax (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_qmax_si == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! a-coefficient for kexcSi (d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.00d0  / pday"
+
+a_kexc_si_pday == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! b-coefficient for kexcSi (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_kexc_si == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! a-coefficient for Vmax_FeT (mmol Fe (mmol C)^-1 d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "14.0d-6 / pday"
+
+a_vmax_FeT_pday == 0.000014d0 0.000014d0 0.000014d0 0.000014d0 0.000014d0 0.000014d0 0.000014d0
+
+! b-coefficient for Vmax_FeT (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+    b_vmax_FeT == -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0 -0.27d0
+
+! a-coefficient for ksatFeT (mmol Fe m-3 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      a_kn_feT == 8.0d-05 8.0d-05 8.0d-05 8.0d-05 8.0d-05 8.0d-05 0.0d0
+
+! b-coefficient for ksatFeT (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+      b_kn_FeT == 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0 0.27d0
+
+! a-coefficient for Qfemin (mmol Fe (mmol C)^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     a_qmin_fe == 1.5d-06 1.5d-06 1.5d-06 1.5d-06 1.5d-06 1.5d-06 1.5d-06
+
+! b-coefficient for Qfemin (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_qmin_fe == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! a-coefficient for Qfemax (mmol Fe (mmol C)^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     a_qmax_fe == 8.0d-05 8.0d-05 8.0d-05 8.0d-05 8.0d-05 8.0d-05 8.0d-05
+
+! b-coefficient for Qfemax (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_qmax_fe == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! a-coefficient for kexcFe (d^-1 um^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value (including pday correction): "0.00d0  / pday"
+
+a_kexc_fe_pday == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! b-coefficient for kexcFe (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+     b_kexc_fe == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0
+
+! group value for ExportFracPreyPred (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+grp_ExportFracPreyPred == 49*0.6d0
+
+! group value for asseff (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+   grp_ass_eff == 49*0.5d0
+
+! min phyto (below which grazing and mort doesnt happ (unknown)
+! only active for option(s) "DARWIN_RANDOM_TRAITS"
+
+        phymin == 1.200000d-18
+
+! atten coefficient water (m-1)
+
+      katten_w == 0.04d0
+
+! atten coefficient chl ((mmol chl/m3)-1)
+
+    katten_chl == 0.04d0
+
+! fraction Qsw that is PAR (dimensionless)
+
+       parfrac == 0.4d0
+
+! phytoplankton temperature coefficient for photoFun (dimensionless)
+! only active for option(s) "DARWIN_TEMP_VERSION == 1"
+
+      tempnorm == 0.3d0
+
+! solubility of Fe dust (m s^-1)
+
+     TempAeArr == -4000.0d0
+
+! solubility of Fe dust (m s^-1)
+
+     alpfe == 1.0d0
+
+! iron chem scavenging rate (year^-1)
+! only active for option(s) " ! DARWIN_PART_SCAV_POP &  ! DARWIN_PART_SCAV"
+! original value (including pyear correction): "0.4d0/pyear"
+
+    scav_pyear == 0.4d0
+
+! total ligand (mmol m^-3)
+
+    ligand_tot == 0.001d0
+
+! ligand stability rate ratio (m^3 mol^-1)
+
+   ligand_stab == 200000.0d0
+
+! maximum value for free iron (mmol Fe m^-3)
+! only active for option(s) "DARWIN_MINFE"
+
+     freefemax == 0.1d-3
+
+! iron chem scavenging rate (d^-1)
+! only active for option(s) "DARWIN_PART_SCAV_POP | DARWIN_PART_SCAV"
+! original value (including pday correction): "0.005d0 / pday"
+
+ scav_rat_pday == 0.015000d0
+
+! iron chem scavenging coefficient (dimensionless)
+! only active for option(s) "DARWIN_PART_SCAV_POP | DARWIN_PART_SCAV"
+
+    scav_inter == 0.079d0
+
+! iron chem scavenging coefficient (dimensionless)
+! only active for option(s) "DARWIN_PART_SCAV_POP | DARWIN_PART_SCAV"
+
+      scav_exp == 0.58d0
+
+! scavenging POP:POC ratio (mmol P/mmol C)
+! only active for option(s) "DARWIN_PART_SCAV_POP"
+
+ scav_R_POPPOC == 0.00011321d0
+
+! iron flux (mmol Fe m^-2 d^-1)
+! only active for option(s) " ! DARWIN_IRON_SED_SOURCE_VARIABLE"
+! original value (including pday correction): "1.0d0 * 1.0d-3 / pday"
+
+fesedflux_pday == 0.0000001d0
+
+! iron flux relative to POC flux (mmol Fe/mmol C)
+! only active for option(s) "DARWIN_IRON_SED_SOURCE_VARIABLE"
+
+ fesedflux_pcm == 0.00068d0
+
+! sedimentary C:P ratio for iron flux computation (mmol C/mmol P)
+! only active for option(s) "DARWIN_IRON_SED_SOURCE_VARIABLE"
+
+    R_CP_fesed == 106.0d0
+
+! oxidation rates for ammonium (d^-1)
+! original value (including pday correction): "1.0d0/(.50d0*pday)"
+
+    Knita_pday == 2.0d0
+
+! oxidation rates for nitrite (d^-1)
+! original value (including pday correction): "1.0d0/(10.0d0*pday)"
+
+    Knitb_pday == 0.1d0
+
+! critical light level after which oxidation starts (uEin/m2/s)
+
+       PAR_oxi == 10.0d0
+
+! DOC remin rate (d^-1)
+! original value (including pday correction): "1.0d0/(100.0d0*pday)"
+
+     Kdoc_pday == 0.033333d0
+
+! DOP remin rate (d^-1)
+! original value (including pday correction): "1.0d0/(100.0d0*pday)"
+
+     Kdop_pday == 0.033333d0
+
+! DON remin rate (d^-1)
+! original value (including pday correction): "1.0d0/(100.0d0*pday)"
+
+     Kdon_pday == 0.033333d0
+
+! DOFe remin rate (d^-1)
+! original value (including pday correction): "1.0d0/(100.0d0*pday)"
+
+    KdoFe_pday == 0.033333d0
+
+! POC remin rate (d^-1)
+! original value (including pday correction): "1.0d0/(50.0d0*pday)"
+
+     KPOC_pday == 0.033333d0
+
+! POP remin rate (d^-1)
+! original value (including pday correction): "KPOC"
+
+     KPOP_pday == 0.033333d0
+
+! PON remin rate (d^-1)
+! original value (including pday correction): "KPOC"
+
+     KPON_pday == 0.033333d0
+
+! POFe remin rate (d^-1)
+! original value (including pday correction): "KPOC"
+
+    KPOFe_pday == 0.033333d0
+
+! POSi remin rate (d^-1)
+! original value (including pday correction): "1.0d0/(300.0d0*pday)"
+
+    KPOSi_pday == 0.006667d0
+
+! POC sinking rate (m/s s d^-1)
+! original value (including pday correction): "10.0d0/pday"
+
+  wC_sink_pday == 10.0d0
+
+! POP sinking rate (d^-1)
+! original value (including pday correction): "wC_sink"
+
+  wP_sink_pday == 10.0d0
+
+! PON sinking rate (d^-1)
+! original value (including pday correction): "wC_sink"
+
+  wN_sink_pday == 10.0d0
+
+! POFe sinking rate (d^-1)
+! original value (including pday correction): "wC_sink"
+
+ wFe_sink_pday == 10.0d0
+
+! POSi sinking rate (d^-1)
+! original value (including pday correction): "wC_sink"
+
+ wSi_sink_pday == 10.0d0
+
+! PIC sinking rate (m/s s d^-1)
+! original value (including pday correction): "15.0d0/pday"
+
+wPIC_sink_pday == 15.0d0
+
+! PIC dissociation rate (d^-1)
+! original value (including pday correction): "1.0d0/(300.0d0*pday)"
+
+   Kdissc_pday == 0.00333333d0
+
+! CO2 fraction of air (dimensionless)
+! only active for option(s) "DARWIN_CARBON"
+
+gud_atmos_pCO2 == 278.0d-6
+
+! O:P ratio (mmol O (mmol P)-1)
+! only active for option(s) "DARWIN_CARBON"
+
+          R_OP == 170.0d0
+
+! m^-3 per kg seawater conversion (m^3/kg)
+! only active for option(s) "DARWIN_CARBON"
+
+       m3perkg == 0.000976086d0
+
+! surface minimum Si for pH computation (mmol Si m^-3)
+! only active for option(s) "DARWIN_CARBON"
+
+ surfSiMinInit == 1.000000d-08
+
+! surface minimum salinity for pH computation (dimensionless)
+! only active for option(s) "DARWIN_CARBON"
+
+   surfSaltMin == 4.0d0
+
+! surface maximum salinity for pH computation (dimensionless)
+! only active for option(s) "DARWIN_CARBON"
+
+   surfSaltMax == 50.0d0
+
+! surface minimum temperature for pH computation (deg C)
+! only active for option(s) "DARWIN_CARBON"
+
+   surfTempMin == -4.0d0
+
+! surface maximum temperature for pH computation (deg C)
+! only active for option(s) "DARWIN_CARBON"
+
+   surfTempMax == 39.0d0
+
+! surface minimum DIC for pH computation (mmol C m^-3)
+! only active for option(s) "DARWIN_CARBON"
+
+    surfDICMin == 400.0d0
+
+! surface maximum DIC for pH computation (mmol C m^-3)
+! only active for option(s) "DARWIN_CARBON"
+
+    surfDICMax == 4000.0d0
+
+! surface minimum alkalinity for pH computation (mmol C m^-3)
+! only active for option(s) "DARWIN_CARBON"
+
+    surfALKMin == 400.0d0
+
+! surface maximum alkalinity for pH computation (mmol C m^-3)
+! only active for option(s) "DARWIN_CARBON"
+
+    surfALKMax == 4000.0d0
+
+! surface minimum PO4 for pH computation (mmol P m^-3)
+! only active for option(s) "DARWIN_CARBON"
+
+    surfPO4Min == 1.000000d-10
+
+! surface maximum PO4 for pH computation (mmol P m^-3)
+! only active for option(s) "DARWIN_CARBON"
+
+    surfPO4Max == 10.0d0
+
+! surface maximum Si for pH computation (mmol Si m^-3)
+! only active for option(s) "DARWIN_CARBON"
+
+     surfSiMax == 500.0d0
+
+! critical oxygen for O2/NO3 remineralization (mmol O)
+! only active for option(s) "DARWIN_CARBON"
+
+        O2crit == 6.0d0
+
+! ratio of n to p in denitrification process (mmol N/(mmol P))
+! only active for option(s) "DARWIN_DENIT"
+
+      denit_NP == 120.0d0
+
+! ratio no3 used relative to all n in denit process (dimensionless)
+! only active for option(s) "DARWIN_DENIT"
+
+     denit_NO3 == 104.0d0
+
+! critical NO3 below which no denit (or remin) happen (mmol N m^-3)
+! only active for option(s) "DARWIN_DENIT"
+
+       NO3crit == 0.01d0
+
+! minimum light for photosynthesis (uEin/m2/s)
+
+        PARmin == 0.1d0
+
+! maximum chl:N ratio (mg chl/mmol N)
+! only active for option(s) "DARWIN_GEIDER & DARWIN_CHLQUOTA & DARWIN_NQUOTA"
+
+      chl2nmax == 3.0d0
+
+! cost of biosynthesis (mmol C/mmol N)
+! only active for option(s) "DARWIN_GEIDER & DARWIN_CHLQUOTA & DARWIN_NQUOTA"
+
+     synthcost == 0.0d0
+
+! mimimum palatability threshold (dimensionless)
+! only active for option(s) "DARWIN_ALLOMETRIC_PALAT &  ! DARWIN_RANDOM_TRAITS"
+
+     palat_min == 0.0d0
+
+! for quota-style grazing ((mmol C m-3)-1)
+
+    inhib_graz == 1.0d0
+
+! grazing inhib. exponent (0.0 turns it off) (dimensionless)
+
+inhib_graz_exp == 0.0d0
+
+! exponent for limiting quota uptake in grazing (dimensionless)
+
+       hillnum == 1.0d0
+
+! grazing exponential 1=holling 2, 2=holling 3 (dimensionless)
+
+       hollexp == 2.0d0
+
+! minimum total prey conc (mmol C m-1)
+
+    phygrazmin == 120.0d-10
+
+! max growth rate for bacteria (d^-1)
+! original value (including pday correction): "5/pday"
+
+  pmaxPON_pday == 5.0d0
+
+! max growth rate for bacteria (d^-1)
+! original value (including pday correction): "5/pday"
+
+  pmaxDON_pday == 5.0d0
+
+! max growth coeff for bact and aerobic growth (s^-1/(mmol oxygen m^-3) s d^-1)
+! original value (including pday correction): "290.820D0/pday"
+
+  pcoefO2_pday == 290.82d0
+
+! max growth rate for bacteria (d^-1)
+! original value (including pday correction): "20/pday"
+
+  pmaxDIN_pday == 20.0d0
+
+! ksatPON base value (mmol N m^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+       ksatPOM == 1.0d0
+
+! ksatDON base value (mmol N m^-3)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+       ksatDOM == 1.0d0
+
+! DIN half-saturation concentration (mmol N m-3)
+
+       ksatDIN == 0.01d0
+
+! frac of POM that is hydrolized into DOM for bact (dimensionless)
+
+  alpha_hydrol == 2.0d0
+
+! yield value for aerobic bacteria (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+           yod == 0.2d0
+
+! yield02 value for aerobic bacteria (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value: "yod/467*4/(1-yod)*106d0"
+
+           yoe == 0.226981d0
+
+! yield value for denitrifying bacteria (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+           ynd == 0.16d0
+
+! yieldNO3 value for denitrifying bacteria (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+! original value: "ynd/467*5/(1-ynd)*106d0"
+
+           yne == 0.216172d0
+
+! organic P CDOM fraction (mmol CDOM/mmol P)
+! only active for option(s) "DARWIN_CDOM"
+
+      fracCDOM == 0.02d0
+
+! CDOM degradation rate (d^-1)
+! only active for option(s) "DARWIN_CDOM"
+! original value (including pday correction): "1.d0 / (200d0*pday)"
+
+CDOMdegrd_pday == 0.003333d0
+
+! CDOM bleaching rate (d^-1)
+! only active for option(s) "DARWIN_CDOM"
+! original value (including pday correction): "1.d0 / (15d0*pday)"
+
+CDOMbleach_pday == 0.259200d0
+
+! light normalization coeff for CDOM bleaching (uEin/m2/s)
+! only active for option(s) "DARWIN_CDOM"
+
+       PARCDOM == 70.0d0
+
+! CDOM N:P ratio (mmol N/mmol P)
+! only active for option(s) "DARWIN_CDOM"
+
+     R_NP_CDOM == 16.0d0
+
+! CDOM Fe:P ratio (mmol Fe/mmol P)
+! only active for option(s) "DARWIN_CDOM"
+
+    R_FeP_CDOM == 1.0d-3
+
+! CDOM C:P ratio (mmol C/mmol P)
+! only active for option(s) "DARWIN_CDOM"
+
+     R_CP_CDOM == 120.0d0
+
+! unknown description (unknown)
+! only active for option(s) "DARWIN_CDOM & DARWIN_RADTRANS"
+
+     CDOMcoeff == 21.0d0
+
+! MinVal used in the biological code (unknown)
+
+        BioMin == 1.0d-16
+
+! phytoplankton random number generation seed (dimensionless)
+
+seed_phytoplankton == -1 -1 -1 -1 -1
+
+! Darwin 1D integer (dimensionless)
+
+darwin_debug_1di == 1
+
+! Darwin 2D float (dimensionless)
+
+darwin_debug_2df == 1.0d0
+
+! allow group to adjust buoyancy (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS & DARWIN_PLANK_BUOYCTRL"
+
+  grp_buoyctrl == F F F F F
+
+!^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+!
+
+! Radiative transfer data file. Only required when DARWIN_RADTRANS is
+! active.
+
+RADTRANSFILE == /home/pmattern/roms/data/darwin/radtrans_monod_1d_cdom.nc
+
+! Harmonic/biharmonic horizontal diffusion of biological tracer for
+! nonlinear model and adjoint-based algorithms: [1:NBT,Ngrids].
+
+        TNU2 == 36*70.0d0                   ! m2/s
+        TNU4 == 36*0.0d0                   ! m4/s
+
+     ad_TNU2 == 36*4.0d0                   ! m2/s
+     ad_TNU4 == 36*0.0d0                   ! m4/s
+
+! Logical switches (TRUE/FALSE) to increase/decrease horizontal diffusivity
+! in specific areas of the application domain (like sponge areas) for the
+! desired grid: [Ngrids]
+
+LtracerSponge == 36*F
+
+! Vertical mixing coefficients for biological tracers for nonlinear
+! model and basic state scale factor in adjoint-based algorithms:
+! [1:NBT,Ngrids].
+
+     AKT_BAK == 36*1.0d-5                  ! m2/s
+
+  ad_AKT_fac == 36*1.0d0                   ! nondimensional
+
+! Nudging/relaxation time scales, inverse scales will be computed
+! internally: [1:NBT,Ngrids].
+
+       TNUDG == 36*3.0d0                  ! days
+
+! Set horizontal and vertical advection schemes for biological tracers.
+! A different advection scheme is allowed for each tracer. For example,
+! a positive-definite (monotonic) algorithm can be activated for
+! salinity and biological tracers, while a different one is set for
+! temperature. [1:NAT+NPT,Ngrids] values are expected.
+!
+!   Keyword    Advection Algorithm
+!
+!   A4         4th-order Akima (horizontal/vertical)
+!   C2         2nd-order centered differences (horizontal/vertical)
+!   C4         4th-order centered differences (horizontal/vertical)
+!   HSIMT      3th-order HSIMT-TVD (horizontal/vertical)
+!   MPDATA     recursive flux corrected MPDATA (horizontal/vertical)
+!   SPLINES    parabolic splines (only vertical)
+!   SU3        split third-order upstream (horizontal/vertical)
+!   U3         3rd-order upstream-biased (only horizontal)
+!
+! The user has the option of specifying the full Keyword or the first
+! two letters, regardless if using uppercase or lowercase. If nested
+! grids, specify values for each grid.
+
+   Hadvection == HSIMT    \                     ! idbio( 1), DIC
+                 HSIMT    \                     ! idbio( 2), NH4
+                 HSIMT    \                     ! idbio( 3), NO2
+                 HSIMT    \                     ! idbio( 4), NO3
+                 HSIMT    \                     ! idbio( 5), PO4
+                 HSIMT    \                     ! idbio( 6), SiO2
+                 HSIMT    \                     ! idbio( 7), FeT
+                 HSIMT    \                     ! idbio( 8), DOC
+                 HSIMT    \                     ! idbio( 9), DON
+                 HSIMT    \                     ! idbio(10), DOP
+                 HSIMT    \                     ! idbio(11), DOFe
+                 HSIMT    \                     ! idbio(12), POC
+                 HSIMT    \                     ! idbio(13), PON
+                 HSIMT    \                     ! idbio(14), POP
+                 HSIMT    \                     ! idbio(15), POSi
+                 HSIMT    \                     ! idbio(16), POFe
+                 HSIMT    \                     ! idbio(17), PIC
+                 HSIMT    \                     ! idbio(18), alkalinity
+                 HSIMT    \                     ! idbio(19), O2
+                 HSIMT    \                     ! idbio(20), CDOM
+                 HSIMT    \                     ! idbio(21), phytoplankton01
+                 HSIMT    \                     ! idbio(22), phytoplankton02
+                 HSIMT    \                     ! idbio(23), phytoplankton03
+                 HSIMT    \                     ! idbio(24), phytoplankton04
+                 HSIMT    \                     ! idbio(25), phytoplankton05
+                 HSIMT    \                     ! idbio(26), phytoplankton06
+                 HSIMT    \                     ! idbio(27), zooplankton01
+                 HSIMT    \                     ! idbio(28), zooplankton02
+                 HSIMT    \                     ! idbio(29), zooplankton03
+                 HSIMT    \                     ! idbio(30), zooplankton04
+                 HSIMT    \                     ! idbio(31), chlorophyll01
+                 HSIMT    \                     ! idbio(32), chlorophyll02
+                 HSIMT    \                     ! idbio(33), chlorophyll03
+                 HSIMT    \                     ! idbio(34), chlorophyll04
+                 HSIMT    \                     ! idbio(35), chlorophyll05
+                 HSIMT                          ! idbio(36), chlorophyll06
+
+   Vadvection == HSIMT    \                     ! idbio( 1), DIC
+                 HSIMT    \                     ! idbio( 2), NH4
+                 HSIMT    \                     ! idbio( 3), NO2
+                 HSIMT    \                     ! idbio( 4), NO3
+                 HSIMT    \                     ! idbio( 5), PO4
+                 HSIMT    \                     ! idbio( 6), SiO2
+                 HSIMT    \                     ! idbio( 7), FeT
+                 HSIMT    \                     ! idbio( 8), DOC
+                 HSIMT    \                     ! idbio( 9), DON
+                 HSIMT    \                     ! idbio(10), DOP
+                 HSIMT    \                     ! idbio(11), DOFe
+                 HSIMT    \                     ! idbio(12), POC
+                 HSIMT    \                     ! idbio(13), PON
+                 HSIMT    \                     ! idbio(14), POP
+                 HSIMT    \                     ! idbio(15), POSi
+                 HSIMT    \                     ! idbio(16), POFe
+                 HSIMT    \                     ! idbio(17), PIC
+                 HSIMT    \                     ! idbio(18), alkalinity
+                 HSIMT    \                     ! idbio(19), O2
+                 HSIMT    \                     ! idbio(20), CDOM
+                 HSIMT    \                     ! idbio(21), phytoplankton01
+                 HSIMT    \                     ! idbio(22), phytoplankton02
+                 HSIMT    \                     ! idbio(23), phytoplankton03
+                 HSIMT    \                     ! idbio(24), phytoplankton04
+                 HSIMT    \                     ! idbio(25), phytoplankton05
+                 HSIMT    \                     ! idbio(26), phytoplankton06
+                 HSIMT    \                     ! idbio(27), zooplankton01
+                 HSIMT    \                     ! idbio(28), zooplankton02
+                 HSIMT    \                     ! idbio(29), zooplankton03
+                 HSIMT    \                     ! idbio(30), zooplankton04
+                 HSIMT    \                     ! idbio(31), chlorophyll01
+                 HSIMT    \                     ! idbio(32), chlorophyll02
+                 HSIMT    \                     ! idbio(33), chlorophyll03
+                 HSIMT    \                     ! idbio(34), chlorophyll04
+                 HSIMT    \                     ! idbio(35), chlorophyll05
+                 HSIMT                          ! idbio(36), chlorophyll06
+
+! Adjoint-based algorithms can have different horizontal and schemes
+! for active and inert tracers.
+
+ad_Hadvection == U3                             ! idbio(:), compact
+
+ad_Vadvection == C4                             ! idbio(:), compact
+
+! Set lateral boundary conditions keyword. Notice that a value is expected
+! for each boundary segment per nested grid for each state variable.
+!
+! The biological tracer variables require [1:4,1:NBT,Ngrids] values. The
+! boundary order is: 1=west, 2=south, 3=east, and 4=north. That is,
+! anticlockwise starting at the western boundary.
+!
+! The keyword is case insensitive and usually has three characters. However,
+! it is possible to have compound keywords, if applicable. For example, the
+! keyword "RadNud" implies radiation boundary condition with nudging. This
+! combination is usually used in active/passive radiation conditions.
+!
+! NOTICE: It is possible to specify the lateral boundary conditions for
+! ======  all biological tracers in a compact form with a single entry.
+! If so, all the biological tracers are assumed to have the same boundary
+! condition as in the single entry.
+!
+!   Keyword    Lateral Boundary Condition Type
+!
+!   Cla        Clamped                                _____N_____     j=Mm
+!   Clo        Closed                                |     4     |
+!   Gra        Gradient                              |           |
+!   Nes        Nested                              1 W           E 3
+!   Nud        Nudging                               |           |
+!   Per        Periodic                              |_____S_____|
+!   Rad        Radiation                                   2          j=1
+!                                                   i=1         i=Lm
+!                   W       S       E       N
+!                   e       o       a       o
+!                   s       u       s       r
+!                   t       t       t       t
+!                           h               h
+!
+!                   1       2       3       4
+
+   LBC(isTvar) ==   RadNud  RadNud  RadNud  RadNud \    ! idbio( 1) DIC
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 2) NH4
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 3) NO2
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 4) NO3
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 5) PO4
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 6) SiO2
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 7) FeT
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 8) DOC
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 9) DON
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(10) DOP
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(11) DOFe
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(12) POC
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(13) PON
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(14) POP
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(15) POSi
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(16) POFe
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(17) PIC
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(18) alkalinity
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(19) O2
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(20) CDOM
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(21) phytoplankton01
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(22) phytoplankton02
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(23) phytoplankton03
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(24) phytoplankton04
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(25) phytoplankton05
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(26) phytoplankton06
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(27) zooplankton01
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(28) zooplankton02
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(29) zooplankton03
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(30) zooplankton04
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(31) chlorophyll01
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(32) chlorophyll02
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(33) chlorophyll03
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(34) chlorophyll04
+                    RadNud  RadNud  RadNud  RadNud \    ! idbio(35) chlorophyll05
+                    RadNud  RadNud  RadNud  RadNud      ! idbio(36) chlorophyll06
+
+! Adjoint-based algorithms can have different lateral boundary
+! conditions keywords.
+
+ad_LBC(isTvar) ==   Cla     Cla     Cla     Cla \    ! idbio( 1)
+                    Cla     Cla     Cla     Cla \    ! idbio( 2)
+                    Cla     Cla     Cla     Cla \    ! idbio( 3)
+                    Cla     Cla     Cla     Cla \    ! idbio( 4)
+                    Cla     Cla     Cla     Cla \    ! idbio( 5)
+                    Cla     Cla     Cla     Cla \    ! idbio( 6)
+                    Cla     Cla     Cla     Cla \    ! idbio( 7)
+                    Cla     Cla     Cla     Cla \    ! idbio( 8)
+                    Cla     Cla     Cla     Cla \    ! idbio( 9)
+                    Cla     Cla     Cla     Cla \    ! idbio(10)
+                    Cla     Cla     Cla     Cla      ! idbio(11)
+
+! Logical switches (TRUE/FALSE) to activate biological tracers point
+! Sources/Sinks (like river runoff) and to specify which tracer variables
+! to consider: [NBT,Ngrids] values are expected. See glossary below for
+! details.
+
+  LtracerSrc == 36*F
+
+! Logical switches (TRUE/FALSE) to read and process biological tracer
+! climatology fields: [NBT,Ngrids] values are expected. See glossary below
+! for details.
+
+  LtracerCLM == 36*F
+
+! Logical switches (TRUE/FALSE) to nudge the desired biological tracer
+! climatology field. If not analytical climatology fields, users need to
+! turn on the logical switches above to process the fields from the
+! climatology NetCDF file that are needed for nudging; [NBT,Ngrids]
+! values are expected. See glossary below for details.
+
+  LnudgeTCLM == 36*F
+
+! Logical switches (TRUE/FALSE) to activate writing of biological fields
+! into HISTORY output file: [1:NBT,Ngrids].
+
+Hout(idTvar) == 36*T    ! ..., NO3, ...          biological tracers
+Hout(idTsur) == 36*F    ! ..., NO3_sflux, ...    surface tracer flux
+Hout(idBSMa) == 36*T    ! ..., POC, ...          sediment variables
+
+! Logical switches (TRUE/FALSE) to activate writing of biological fields
+! into QUICKSAVE output file: [1:NBT,Ngrids].
+
+Qout(idTvar) == 36*F    ! ..., NO3, ...          biological tracers
+Qout(idsurT) == 36*F    ! ..., NO3_sur, ...      surface biological tracer
+Qout(idTsur) == 36*F    ! ..., NO3_sflux, ...    surface tracer flux
+Qout(idBSMa) == 36*T    ! ..., POC, ...          sediment variables
+
+! Logical switches (TRUE/FALSE) to activate writing of time-averaged fields
+! into AVERAGE output file: [1;NBT,Ngrids].
+
+Aout(idTvar) == 36*T    ! ..., NO3, ...          biological tracer
+Aout(idTTav) == 36*F    ! ..., NO3_2, ...        quadratic <t*t> tracer terms
+Aout(idUTav) == 36*F    ! ..., u_NO3, ...        quadratic <u*t> tracer terms
+Aout(idVTav) == 36*F    ! ..., v_NO3, ...        quadratic <v*t> tracer terms
+Aout(iHUTav) == 36*F    ! ..., Huon_NO3, ...     tracer volume flux, <Huon*t>
+Aout(iHVTav) == 36*F    ! ..., Hvom_NO3, ...     tracer volume flux, <Hvom*t>
+Aout(idBSMa) == 36*T    ! ..., POC, ...          sediment variables
+
+! Logical switches (TRUE/FALSE) to activate writing of time-averaged,
+! biological tracer diagnostic terms into DIAGNOSTIC output file:
+! [1:NBT,Ngrids].
+
+Dout(iPP)      == T
+Dout(iNfix)    == T
+Dout(iDenit)   == T
+Dout(iDenitN)  == T
+Dout(iConsPO4) == T
+Dout(iConsSi)  == T
+Dout(iConsFe)  == T
+Dout(iConsDIN) == T
+Dout(iPPplank) == 10*T
+Dout(iGRplank) == 10*T
+
+!
+!  GLOSSARY:
+!  =========
+!
+!------------------------------------------------------------------------------
+!
+!  Lbiology       Switch to control the computation of a particular module
+!                   within nested and/or multiple connected grids. By default
+!                   this switch is set to TRUE in "mod_scalars" for all grids.
+!                   Ngrids values are expected. The USER has the option, for
+!                   example, to compute the biology in just one of the nested
+!                   grids. If so, this switch needs to be consistent with the
+!                   dimension parameter NBT in "mod_param".  In order to make
+!                   the model more efficient in memory usage, NBT(:) should
+!                   be zero in such grids.
+!
+!------------------------------------------------------------------------------
+! Physical Parameters, [1:NBT,1:Ngrids] values are expected.
+!------------------------------------------------------------------------------
+!
+!  TNU2           Nonlinear model lateral, harmonic, constant, mixing
+!                   coefficient (m2/s) for biological tracer variables;
+!                   [1:NBT,1:Ngrids] values are expected. If variable
+!                   horizontal diffusion is activated, TNU2 is the mixing
+!                   coefficient for the largest grid-cell in the domain.
+!
+!  TNU4           Nonlinear model lateral, biharmonic, constant, mixing
+!                   coefficient (m4/s) for biological tracer variables;
+!                   [1:NBT,1:Ngrids] values are expected. If variable
+!                   horizontal diffusion is activated, TNU4 is the mixing
+!                   coefficient for the largest grid-cell in the domain.
+!
+!  ad_TNU2        Adjoint-based algorithms lateral, harmonic, constant,
+!                   mixing coefficient (m2/s) for biological tracer variables;
+!                   [1:NBT,1:Ngrids] values are expected. If variable
+!                   horizontal diffusion is activated, ad_TNU2 is the mixing
+!                   coefficient for the largest grid-cell in the domain.
+!
+!  ad_TNU4        Adjoint-based algorithms lateral, biharmonic, constant,
+!                   mixing coefficient (m4/s) for biological tracer variables;
+!                   [1:NBT,1:Ngrids] values are expected. If variable
+!                   horizontal diffusion is activated, ad_TNU4 is the mixing
+!                   coefficient for the largest grid-cell in the domain.
+!
+!  LtracerSponge  Logical switches (TRUE/FALSE) to increase/decrease horizontal
+!                   diffusivity of biological tracers in specific areas of the
+!                   domain. It can be used to specify sponge areas with larger
+!                   horizontal mixing coefficients for damping of high
+!                   frequency noise due to open boundary conditions or nesting.
+!                   The CPP option SPONGE is now deprecated and replaced with
+!                   this switch to facilitate or not sponge areas over a
+!                   particular nested grid; [1:NBT,1:Ngrids] values are
+!                   expected.
+!
+!                   The horizontal mixing distribution is specified in
+!                   "ini_hmixcoef.F" as:
+!
+!                     diff2(i,j,itrc) = diff_factor(i,j) * diff2(i,j,itrc)
+!                     diff4(i,j,itrc) = diff_factor(i,j) * diff4(i,j,itrc)
+!
+!                   The variable "diff_factor" can be read from the grid
+!                   NetCDF file. Alternately, the horizontal diffusion in the
+!                   sponge area can be set-up with analytical functions in
+!                   "ana_sponge.h" using CPP ANA_SPONGE when these switches
+!                   are turned ON for a particular grid.
+!
+!  AKT_BAK        Background vertical mixing coefficient (m2/s) for biological
+!                   tracer variables, [1:NBT,1:Ngrids] values are expected.
+!
+!
+!  ad_AKT_fac     Adjoint-based algorithms vertical mixing, basic state,
+!                   scale factor (nondimensional) for biological tracer
+!                   variables; [1:NBT,1:Ngrids] values are expected. In
+!                   some applications, a smaller/larger values of vertical
+!                   mixing are necessary for stability. It is only used
+!                   when FORWARD_MIXING is activated.
+!
+!  TNUDG          Nudging time scale (days), [1:NBT,1:Ngrids]. Inverse scale
+!                   will be computed internally.
+!
+!------------------------------------------------------------------------------
+! Tracer advection scheme.
+!------------------------------------------------------------------------------
+!
+! It is more advantageous to set the horizontal and vertical advection schemes
+! for each tracer with switches instead of a single CPP flag for all of them.
+! Positive-definite and monotonic algorithms (i.e., MPDATA and HSIMT) are
+! appropriate and useful for positive fields like salinity, inert, biological,
+! and sediment tracers.  However, since the temperature has a dynamic range
+! with negative and positive values in the ocean, other advection schemes are
+! more appropriate.
+!
+! Currently, the following tracer advection schemes are available and are
+! activated using the associated Keyword:
+!
+!   Keyword    Advection Algorithm
+!
+!   A4         4th-order Akima (horizontal/vertical)
+!   C2         2nd-order centered differences (horizontal/vertical)
+!   C4         4th-order centered differences (horizontal/vertical)
+!   HSIMT      3th-order HSIMT with TVD limiter (horizontal/vertical)
+!   MPDATA     recursive flux corrected MPDATA (horizontal/vertical)
+!   SPLINES    parabolic splines reconstruction (only vertical)
+!   SU3        split third-order upstream (horizontal/vertical)
+!   U3         3rd-order upstresm-bias (only horizontal)
+!
+! The user has the option of specifying the full Keyword or the first
+! two letters, regardless if using uppercase or lowercase.
+!
+! If using either HSIMT (Wu and Zhu, 2010) or MPDATA (Margolin and
+! Smolarkiewicz, 1998) options, the user needs to set the same scheme
+! for both horizontal and vertical advection to preserve monotonicity.
+!
+! Hadvection     Horizontal advection for each active (temperature and
+!                  salinity) and inert tracers, [1:NAT+NPT,Ngrids]
+!                  values are expected.
+!
+! Vadvection     Vertical advection for each active (temperature and
+!                  salinity) and inert tracers, [1:NAT+NPT,Ngrids]
+!                  values are expected.
+!
+! ad_Hadvection  Horizontal advection for each active (temperature and
+!                  salinity) and inert tracers in the adjoint-based
+!                  algorithms, [1:NAT+NPT,Ngrids] values are expected.
+!
+! ad_Vadvection  Vertical advection for each active (temperature and
+!                  salinity) and inert tracers in the adjoint-based
+!                  algorithms, [1:NAT+NPT,Ngrids] values are expected.
+!
+! Examples:
+!
+!  Hadvection == A4       \                     ! temperature
+!                MPDATA   \                     ! salinity
+!                HSIMT    \                     ! dye_01, inert(1)
+!                HSIMT                          ! dy2_02, inert(2)
+!
+!  Vadvection == A4       \                     ! temperature
+!                MPDATA   \                     ! salinity
+!                HSIMT    \                     ! dye_01, inert(1)
+!                HSIMT                          ! dye_02, inert(2)
+!
+! or in nested applications
+!
+!  Hadvection == U3       \                     ! temperature, Grid 1
+!                HSIMT    \                     ! salinity,    Grid 1
+!                U3       \                     ! temperature, Grid 2
+!                HSIMT    \                     ! salinity,    Grid 2
+!                U3       \                     ! temperature, Grid 3
+!                HSIMT                          ! salinity,    Grid 3
+!
+!  Vadvection == C4       \                     ! temperature, Grid 1
+!                HSIMT    \                     ! salinity,    Grid 1
+!                C4       \                     ! temperature, Grid 2
+!                HSIMT    \                     ! salinity,    Grid 2
+!                C4       \                     ! temperature, Grid 3
+!                HSIMT                          ! salinity,    Grid 3
+!
+! It is convinient to use the compact specification format for biological and
+! sediment passive tracers as:
+!
+!  Hadvection == HSIMT                          ! idbio(:), compact
+!
+!  Vadvection == HSIMT                          ! idbio(:), compact
+!
+! when all the passive tracers have the same horizontal and vertical tracer
+! advection scheme.
+!
+!------------------------------------------------------------------------------
+! Lateral boundary conditions parameters.
+!------------------------------------------------------------------------------
+!
+! The lateral boundary conditions are now specified with logical switches
+! instead of CPP flags to allow nested grid configurations. Their values are
+! load into structured array:
+!
+!    LBC(1:4, nLBCvar, Ngrids)
+!
+! where 1:4 are the number of boundary edges, nLBCvar are the number LBC state
+! variables, and Ngrids is the number of nested grids. For Example, to apply
+! gradient boundary conditions to any tracer we use:
+!
+!    LBC(iwest,  isTvar(itrc), ng) % gradient
+!    LBC(ieast,  isTvar(itrc), ng) % gradient
+!    LBC(isouth, isTvar(itrc), ng) % gradient
+!    LBC(inorth, isTvar(itrc), ng) % gradient
+!
+! The lateral boundary conditions for biological tracers are entered with
+! a keyword. This keyword is case insensitive and usually has three characters.
+! However, it is possible to have compound keywords, if applicable. For example,
+! the keyword "RadNud" implies radiation boundary condition with nudging. This
+! combination is usually used in active/passive radiation conditions.
+!
+! It is possible to specify the lateral boundary conditions for all biological
+! tracers in a compact form with a single entry.  for example, in a East-West
+! periodic application we can just have:
+!
+!                   W       S       E       N
+!                   e       o       a       o
+!                   s       u       s       r
+!                   t       t       t       t
+!                           h               h
+!
+!                   1       2       3       4
+!
+!  LBC(isTvar) ==   Per     Clo     Per     Clo
+!
+! Then, the standard input processing routine will assume that all the
+! biological tracers have the same lateral boundary condition specified by
+! the single entry.
+!
+!   Keyword    Lateral Boundary Condition Type
+!
+!   Cla        Clamped                                _____N_____     j=Mm
+!   Clo        Closed                                |     4     |
+!   Gra        Gradient                              |           |
+!   Nes        Nested                              1 W           E 3
+!   Nud        Nudging                               |           |
+!   Per        Periodic                              |_____S_____|
+!   Rad        Radiation                                   2          j=1
+!                                                   i=1         i=Lm
+!
+!  LBC(isTvar)    Biological Tracers, [1:4, 1:NBT, Ngrids] values are expected.
+!
+! Similarly, the adjoint-based algorithms (ADM, TLM, RPM) can have different
+! lateral boundary conditions keywords:
+!
+!  ad_LBC(isTvar) Biological Tracers, [1:4, 1:NBT, Ngrids] values are expected.
+!
+!------------------------------------------------------------------------------
+!  Tracer point Sources/Sink sources switches: [1:NBT,1:Ngrids].
+!------------------------------------------------------------------------------
+!
+!  LtracerSrc     Logical switches (T/F) to activate biological tracer
+!                   variables point Sources/Sinks.
+!
+!                     LtracerSrc(idbio( 1),ng)    Small Phytoplankton biomass
+!                     LtracerSrc(idbio( 2),ng)    Large Phytoplankton biomass
+!                     LtracerSrc(idbio( 3),ng)    Small Zooplankton biomass
+!                     LtracerSrc(idbio( 4),ng)    Large Zooplankton biomass
+!                     LtracerSrc(idbio( 5),ng)    Predator Zooplankton biomass
+!                     LtracerSrc(idbio( 6),ng)    Nitrate concentration
+!                     LtracerSrc(idbio( 7),ng)    Ammonium concentration
+!                     LtracerSrc(idbio( 8),ng)    Particulate Organic Nitrogen
+!                     LtracerSrc(idbio( 9),ng)    Dissolved Organic Nitrogen
+!                     LtracerSrc(idbio(10),ng)    Silicate concentration
+!                     LtracerSrc(idbio(11),ng)    Particulate organic silica
+!
+!                   Recall that these switches are usually activated to add
+!                   river runoff as a point source. At minimum, it is necessary
+!                   to specify both temperature and salinity for all rivers.
+!                   The other tracers are optional. The user needs to know the
+!                   correspondence between biological variables and indices
+!                   idbio(1:NBT) when activating one or more of these switches.
+!
+!                   These logical switches REPLACES and ELIMINATES the need to
+!                   have or read the variable "river_flag(river)" in the input
+!                   rivers forcing NetCDF file:
+!
+!                     double river_flag(river)
+!                        river_flag:long_name = "river runoff tracer flag"
+!                        river_flag:option_0 = "all tracers are off"
+!                        river_flag:option_1 = "only temperature"
+!                        river_flag:option_2 = "only salinity"
+!                        river_flag:option_3 = "both temperature and salinity"
+!                        river_flag:units = "nondimensional"
+!
+!                   This logic was too cumbersome and complicated when
+!                   additional tracers are considered. However, this change
+!                   is backward compatible.
+!
+!                   The LtracerSrc switch will be used to activate the reading
+!                   of respective tracer variable from input river forcing
+!                   NetCDF file. If you want to add other tracer variables
+!                   (other than temperature and salinity) as a source for a
+!                   particular river(s), you just need to specify such values
+!                   on those river(s). Then, set the values to ZERO on the
+!                   other river(s) that do NOT require such river forcing for
+!                   that tracer. Recall that you need to specify the tracer
+!                   values for all rivers, even if their values are zero.
+!
+!------------------------------------------------------------------------------
+!  Tracer climatology processing switches: [1:NBT,1:Ngrids].
+!------------------------------------------------------------------------------
+!
+!  LtracerCLM     Logical switches (T/F) to process biological tracer variables
+!                   climatology.  The CPP option TCLIMATOLOGY is now obsolete
+!                   and replaced with these switches to facilitate nesting
+!                   applications. Currently, the CLIMA(ng)%tclm is used for
+!                   horizontal mixing, sponges, and nudging.
+!
+!                     LtracerCLM(idbio( 1),ng)    Small Phytoplankton biomass
+!                     LtracerCLM(idbio( 2),ng)    Large Phytoplankton biomass
+!                     LtracerCLM(idbio( 3),ng)    Small Zooplankton biomass
+!                     LtracerCLM(idbio( 4),ng)    Large Zooplankton biomass
+!                     LtracerCLM(idbio( 5),ng)    Predator Zooplankton biomass
+!                     LtracerCLM(idbio( 6),ng)    Nitrate concentration
+!                     LtracerCLM(idbio( 7),ng)    Ammonium concentration
+!                     LtracerCLM(idbio( 8),ng)    Particulate Organic Nitrogen
+!                     LtracerCLM(idbio( 9),ng)    Dissolved Organic Nitrogen
+!                     LtracerCLM(idbio(10),ng)    Silicate concentration
+!                     LtracerCLM(idbio(11),ng)    Particulate organic silica
+!
+!                   These switches also controls which climatology tracer
+!                   fields needs to be processed.  So we may reduce the
+!                   memory allocation for the CLIMA(ng)%tclm array.
+!
+!------------------------------------------------------------------------------
+!  Logical switches for nudging to climatology: [1:NBT,1:Ngrids].
+!------------------------------------------------------------------------------
+!
+!  LnudgeTCLM     Logical switches (T/F) to activate the nugding of biological
+!                   tracer variables climatology. These switches also control
+!                   which biological tracer variables to nudge. The CPP option
+!                   TCLM_NUDGING is now obsolete and replaced with these
+!                   switches to facilitate nesting.
+!
+!                     LnudgeTCLM(idbio( 1),ng)    Small Phytoplankton biomass
+!                     LnudgeTCLM(idbio( 2),ng)    Large Phytoplankton biomass
+!                     LnudgeTCLM(idbio( 3),ng)    Small Zooplankton biomass
+!                     LnudgeTCLM(idbio( 4),ng)    Large Zooplankton biomass
+!                     LnudgeTCLM(idbio( 5),ng)    Predator Zooplankton biomass
+!                     LnudgeTCLM(idbio( 6),ng)    Nitrate concentration
+!                     LnudgeTCLM(idbio( 7),ng)    Ammonium concentration
+!                     LnudgeTCLM(idbio( 8),ng)    Particulate Organic Nitrogen
+!                     LnudgeTCLM(idbio( 9),ng)    Dissolved Organic Nitrogen
+!                     LnudgeTCLM(idbio(10),ng)    Silicate concentration
+!                     LnuegeTCLM(idbio(11),ng)    Particulate organic silica
+!
+!                   User also needs to TURN ON the respective logical switches
+!                   "LtracerCLM", described above, to process the required 3D
+!                   biological tracer climatology data. This data can be set
+!                   with analytical functions (ANA_TCLIMA) or read from input
+!                   climatology NetCDF file(s).
+!
+!                   The nudging coefficients CLIMA(ng)%Tnudgcof can be set
+!                   with analytical functions in "ana_nudgcoef.h"  using CPP
+!                   option ANA_NUDGCOEF.  Otherwise, it will be read from
+!                   NetCDF file NUDNAME.
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of fields into HISTORY files.
+!------------------------------------------------------------------------------
+!
+!  Hout           Logical switches to write out biological fields into
+!                   output History NetCDF file, [1:NBT,1:Ngrids] values
+!                   are expected:
+!
+!                   Hout(idTvar)               biological tracers
+!                   Hout(idTsur)               biological tracers surface flux
+!
+!                   idTvar(idbio( 1))=iSphy    Small Phytoplankton biomass
+!                   idTvar(idbio( 2))=iLphy    Large Phytoplankton biomass
+!                   idTvar(idbio( 3))=iSzoo    Small Zooplankton biomass
+!                   idTvar(idbio( 4))=iLzoo    Large Zooplankton biomass
+!                   idTvar(idbio( 5))=iPzoo    Predator Zooplankton biomass
+!                   idTvar(idbio( 6))=iNO3_    Nitrate concentration
+!                   idTvar(idbio( 7))=iNH4_    Ammonium concentration
+!                   idTvar(idbio( 8))=iPON_    Particulate Organic Nitrogen
+!                   idTvar(idbio( 9))=iDON_    Dissolved Organic Nitrogen
+!                   idTvar(idbio(10))=iSiOH    Silicate concentration
+!                   idTvar(idbio(11))=iopal    Particulate organic silica
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of fields into QUICKSAVE file.
+!------------------------------------------------------------------------------
+!
+!  Qout             Logical switches to write out biological fields into
+!                     output QUICKSAVE NetCDF file, [1:NBT,1:Ngrids] values
+!                     are expected:
+!
+!                     Qout(idTvar)      biological tracers
+!                     Qout(idsurT)      surface biological tracers
+!                     Qout(idTsur)      biological tracers surface flux
+!
+!                     The idTvar(idbio(:)), idsurR(idbio(:)), and
+!                     idTsur(idbio(:)) indices are provided above.
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of fields into AVERAGE file.
+!------------------------------------------------------------------------------
+!
+!  Aout           Logical switches to write out biological fields into
+!                   output AVERAGE NetCDF file, [1:NBT,1:Ngrids] values
+!                   are expected:
+!
+!                   Aout(idTvar)               biological tracers
+!
+!                   Aout(idTTav)               quadratic <t*t> tracers terms
+!                   Aout(idUTav)               quadratic <u*t> tracers terms
+!                   Aout(idVTav)               quadratic <v*t> tracers terms
+!                   Aout(iHUTav)               tracer u-volume flux, <Huon*t>
+!                   Aout(iHVTav)               tracer v-volume flux, <Hvom*t>
+!
+!                   The idTvar(idbio(:)) are the same to those in the HISTORY
+!                   file.
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of time-averaged fields into
+! DIAGNOSTIC file.
+!------------------------------------------------------------------------------
+!
+!  Time-averaged, biological tracers  diagnostic terms, [1:NBT,Ngrids] values
+!  expected: (if DIAGNOSTICS_TS)
+!
+!                 Dout(idDtrc(idbio(1:NBT),iT....),1:Ngrids)
+!
+!  Dout(iTrate)   Write out time rate of change.
+!  Dout(iThadv)   Write out horizontal total advection.
+!  Dout(iTxadv)   Write out horizontal  XI-advection.
+!  Dout(iTyadv)   Write out horizontal ETA-advection.
+!  Dout(iTvadv)   Write out vertical advection.
+!  Dout(iThdif)   Write out horizontal total diffusion, if TS_DIF2 or TS_DIF4.
+!  Dout(iTxdif)   Write out horizonta1  XI-diffusion, if TS_DIF2 or TS_DIF4.
+!  Dout(iTydif)   Write out horizontal ETA-diffusion, if TS_DIF2 or TS_DIF4.
+!  Dout(iTsdif)   Write out horizontal   S-diffusion, if TS_DIF2 or TS_DIF4 and
+!                   rotated tensor (MIX_GEO_TS or MIX_ISO_TS).
+!  Dout(iTvdif)   Write out vertical diffusion.
+!

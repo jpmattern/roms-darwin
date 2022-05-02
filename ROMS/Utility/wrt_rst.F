@@ -901,10 +901,9 @@
 # endif
 # if defined BIO_SEDIMENTVARIABLES
 !
-!  Write out bioloical sediment variables.
+!  Write out biological sediment variables.
 !
       DO itrc=1,Nsed
-        ! TODO verify thi is correct
         scale=1.0_r8
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, iNLM, RST(ng)%ncid,                      &

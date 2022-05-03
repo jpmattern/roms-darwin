@@ -115,7 +115,7 @@
 !-----------------------------------------------------------------------
 !
       USE mod_biology
-      USE mod_scalars, ONLY: itemp,isalt,rho0,Cp
+      USE mod_scalars, ONLY: itemp,isalt,rho0,Cp,iic
       USE mod_darwin_sms
 #if defined DARWIN_VERBOSE
       USE mod_parallel, only: Master
@@ -196,6 +196,7 @@
 !  Local variable declarations.
 !
       integer :: Iter, i, ibio, isink, itime, itrc, iTrcMax, j, k, ks
+      integer :: bstp, bnew
 #if defined DIAGNOSTICS_BIO_MAPPING
       integer :: idia
 #endif
@@ -227,6 +228,16 @@
       !TODO read this somewhere
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: inputFe
 #include "set_bounds.h"
+!
+!  If this is not a biology time-step return; otherwise, update the
+!  time-stepping accordingly
+!
+    IF (MOD(iic(ng)-1,ndtbio(ng)).eq.0) THEN
+      bstp=nstp
+      bnew=nnew
+    ELSE
+      RETURN
+    END IF
 !
 !  Compute inverse thickness to avoid repeated divisions.
 !
@@ -261,7 +272,7 @@
 !
 !  Extract biological variables from tracer arrays, place them into
 !  scratch arrays, and restrict their values to be positive definite.
-!  At input, all tracers (index nnew) from predictor step have
+!  At input, all tracers (index bnew) from predictor step have
 !  transport units (m Tunits) since we do not have yet the new
 !  values for zeta and Hz. These are known after the 2D barotropic
 !  time-stepping.
@@ -270,7 +281,7 @@
           ibio=idbio(itrc)
           DO k=1,N(ng)
             DO i=Istr,Iend
-              Bio_old(i,k,ibio)=MAX(0.0_r8,t(i,j,k,nstp,ibio))
+              Bio_old(i,k,ibio)=MAX(0.0_r8,t(i,j,k,bstp,ibio))
               Bio(i,k,ibio)=Bio_old(i,k,ibio)
             END DO
           END DO
@@ -280,8 +291,8 @@
 !
         DO k=1,N(ng)
           DO i=Istr,Iend
-            Bio(i,k,itemp)=t(i,j,k,nstp,itemp)
-            Bio(i,k,isalt)=t(i,j,k,nstp,isalt)
+            Bio(i,k,itemp)=t(i,j,k,bstp,itemp)
+            Bio(i,k,isalt)=t(i,j,k,bstp,isalt)
           END DO
         END DO
 #if defined DARWIN_VERBOSE_NUT || defined DARWIN_VERBOSE_PLANK
@@ -498,7 +509,7 @@
 !
 !-----------------------------------------------------------------------
 !  Update global tracer variables: Add increment due to BGC processes
-!  to tracer array in time index "nnew". Index "nnew" is solution after
+!  to tracer array in time index "bnew". Index "bnew" is solution after
 !  advection and mixing and has transport units (m Tunits) hence the
 !  increment is multiplied by Hz.  Notice that we need to subtract
 !  original values "Bio_old" at the top of the routine to just account
@@ -506,7 +517,7 @@
 !  into account any constraints (non-negative concentrations, carbon
 !  concentration range) specified before entering BGC kernel. If "Bio"
 !  were unchanged by BGC processes, the increment would be exactly
-!  zero. Notice that final tracer values, t(:,:,:,nnew,:) are not
+!  zero. Notice that final tracer values, t(:,:,:,bnew,:) are not
 !  bounded >=0 so that we can preserve total inventory of nutrients
 !  when advection causes tracer concentration to go negative.
 !-----------------------------------------------------------------------
@@ -516,7 +527,7 @@
           DO k=1,N(ng)
             DO i=Istr,Iend
               cff=Bio(i,k,ibio)-Bio_old(i,k,ibio)
-              t(i,j,k,nnew,ibio)=t(i,j,k,nnew,ibio)+cff*Hz(i,j,k)
+              t(i,j,k,bnew,ibio)=t(i,j,k,bnew,ibio)+cff*Hz(i,j,k)
             END DO
           END DO
         END DO

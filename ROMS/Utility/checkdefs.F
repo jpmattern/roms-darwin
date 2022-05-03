@@ -53,7 +53,7 @@
 #if defined DARWIN
 ! introduced to allow values set by precompiler
   21  FORMAT (1x,a,t27,a,i0,a)
-  22  FORMAT (1x,a,t27,a,e,a)
+  22  FORMAT (1x,a,t27,a,e6.4,a)
 #endif
 !
       IF (Master) THEN

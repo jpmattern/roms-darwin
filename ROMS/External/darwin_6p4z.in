@@ -43,6 +43,12 @@
 
     Lbiology == T
 
+! Number of baroclinic (DT) time-steps to take for each Biology time-step.
+! This number is a multiple: 1 is every time-step, 2 is every other, etc.
+! You will want to make sure that NDTBIO is a multiple of NAVG and NHIS.
+
+     NDTBIO == 1
+
 ! Plankton group names (to be written out as plankton_type into output files)
 ! only active for option(s) "! DARWIN_RANDOM_TRAITS"
 ! Continuation lines ("\") may be used, spaces are not allowed in a group name.
@@ -852,7 +858,7 @@ grp_acclimtimescl_pday == 6*0.500000d0 0.0d0
 ! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
 ! original value (including pday correction): "21.9d0 / pday"
 
-   a_graz_pday == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 1.0d0 3.0d0 
+   a_graz_pday == 0.0d0 0.0d0 0.0d0 0.0d0 0.0d0 1.0d0 3.0d0
 
 ! b-coefficient for grazemax (dimensionless)
 ! only active for option(s) " ! DARWIN_RANDOM_TRAITS"

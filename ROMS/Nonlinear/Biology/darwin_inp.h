@@ -124,6 +124,10 @@
         Nfiles(1:Ngrids)=0
       END IF
 #endif
+! set up default time-stepping
+      DO ng=1,Ngrids
+        dtbio(ng) = dt(ng)
+      END DO
 !
 !-----------------------------------------------------------------------
 !  Read in Darwin model parameters.
@@ -139,6 +143,11 @@
           SELECT CASE (TRIM(KeyWord))
             CASE ('Lbiology')
               Npts=load_l(Nval, Cval, Ngrids, Lbiology)
+            CASE ('NDTBIO')
+              Npts=load_i(Nval, Rval, Ngrids, ndtbio)
+              DO ng=1,Ngrids
+                dtbio(ng) = dt(ng) * REAL(ndtbio(ng),r8)
+              END DO
 #include <darwin_inp_sub1.h>
 #if defined DARWIN_RADTRANS_IO
             CASE ('RADTRANSFILE')
@@ -157,11 +166,6 @@
               ! this does not work if multiple values are on the same line
               !WRITE (grp_names(Nval),'(a)') trim(Cval(Nval))
 #endif
-            CASE ('NDTBIO')
-              Npts=load_i(Nval, Rval, Ngrids, ndtbio)
-              DO ng=1,Ngrids
-                dtbio(ng) = dt(ng) * REAL(ndtbio(ng),r8)
-              END DO
             CASE ('TNU2')
               Npts=load_r(Nval, Rval, NBT, Ngrids, Rbio)
               DO ng=1,Ngrids
@@ -626,15 +630,15 @@
 !
 !  Report variables
 !
-            WRITE (out,70) ndtbio(ng), 'ndtbio',                        &
-     &            'Number of DT time-steps for each Biology step.'
-            WRITE (out,70) dtbio(ng), 'dtbio',                          &
-     &            'DT time-steps (seconds) for each Biology step.'
             WRITE (out,'(/1x,a,i0,a)')                                  &
      &        'Darwin variable information (Grid ',ng,'):'
             WRITE (out,'(1x,a)')                                        &
      &        '====================================='
             WRITE (out,'(2x,a,i0)') 'Number of biological tracers: ',NBT
+            WRITE (out,71) ndtbio(ng), 'ndtbio',                        &
+     &            'Number of DT time-steps for each Biology step.'
+            WRITE (out,70) dtbio(ng), 'dtbio',                          &
+     &            'DT time-steps (seconds) for each Biology step.'
             DO itrc=1,NBT
               i=idbio(itrc)
               WRITE(out,'(4x,a,i3,"/",i0,": ",a)')                      &

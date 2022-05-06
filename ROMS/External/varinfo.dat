@@ -7092,7 +7092,7 @@
   'nulvar'
   1.0d0
 
-'chlorophyll_west'
+'chlorophyll'
   'chlorophyll western boundary condition'
   'mg chl m-3'
   'chlorophyll, scalar, series'
@@ -7101,7 +7101,7 @@
   'nulvar'
   1.0d0
 
-'chlorophyll_east'
+'chlorophyll'
   'chlorophyll eastern boundary condition'
   'mg chl m-3'
   'chlorophyll, scalar, series'
@@ -7110,7 +7110,7 @@
   'nulvar'
   1.0d0
 
-'chlorophyll_south'
+'chlorophyll'
   'chlorophyll southern boundary condition'
   'mg chl m-3'
   'chlorophyll, scalar, series'
@@ -7119,7 +7119,7 @@
   'nulvar'
   1.0d0
 
-'chlorophyll_north'
+'chlorophyll'
   'chlorophyll northern boundary condition'
   'mg chl m-3'
   'chlorophyll, scalar, series'

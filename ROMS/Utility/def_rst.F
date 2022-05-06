@@ -759,23 +759,21 @@
 !  Define biological sediment variables.
 !
         DO itrc=1,Nsed
-          IF (Hout(idBSMa(itrc),ng)) THEN
-            Vinfo( 1)=Vname(1,idBSMa(itrc))
-            Vinfo( 2)=Vname(2,idBSMa(itrc))
-            Vinfo( 3)=Vname(3,idBSMa(itrc))
-            Vinfo(14)=Vname(4,idBSMa(itrc))
-            Vinfo(16)=Vname(1,idtime)
+          Vinfo( 1)=Vname(1,idBSMa(itrc))
+          Vinfo( 2)=Vname(2,idBSMa(itrc))
+          Vinfo( 3)=Vname(3,idBSMa(itrc))
+          Vinfo(14)=Vname(4,idBSMa(itrc))
+          Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
-            Vinfo(20)='mask_rho'
+          Vinfo(20)='mask_rho'
 #  endif
-            Vinfo(22)='coordinates'
-            Aval(5)=REAL(Iinfo(1,idBSMa(itrc),ng),r8)
-            status=def_var(ng, iNLM, RST(ng)%ncid,                      &
-     &                     RST(ng)%Vid(idBSMa(itrc)), NF_FOUT,          &
-     &                     nvd3, t2dgrd, Aval, Vinfo, ncname)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
-          END IF
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idBSMa(itrc),ng),r8)
+          status=def_var(ng, iNLM, RST(ng)%ncid,                        &
+     &                   RST(ng)%Vid(idBSMa(itrc)), NF_FOUT,            &
+     &                   nvd3, t2dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
         END DO
 
 # endif
@@ -2016,7 +2014,7 @@
         END DO
 # if defined BIO_SEDIMENTVARIABLES
         DO itrc=1,Nsed
-          IF (.not.got_var(idBSMa(itrc)).and.Hout(idBSMa(itrc),ng)) THEN
+          IF (.not.got_var(idBSMa(itrc))) THEN
             IF (Master) WRITE (stdout,40) TRIM(Vname(1,idBSMa(itrc))),  &
      &                                    TRIM(ncname)
             exit_flag=3

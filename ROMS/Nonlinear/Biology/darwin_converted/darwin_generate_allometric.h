@@ -15,7 +15,9 @@
         DO ig=1,nGroup
           IF (logvol0ind(ig,ng) .GT. 0) THEN
             IF (biovol0(ig,ng) .NE. 0.0_r8) THEN
-              IF (Master) WRITE(out,'(2A)') 'DARWIN_GENERATE_ALLOMETRIC: ','cannot set both biovol0(ng) and logvol0ind(ng)'
+              IF (Master) WRITE(out,'(2A)')                             &
+     &          'DARWIN_GENERATE_ALLOMETRIC: ',                         &
+              'cannot set both biovol0(ng) and logvol0ind(ng)'
               exit_flag=5
               RETURN
             ENDIF
@@ -28,7 +30,8 @@
         DO ig=1,nGroup
          DO ip=1,grp_nplank(ig,ng)
           IF (grp_logvolind(ip,ig,ng) .GT. 0 .AND.grp_biovol(ip,ig,ng) .GT. 0.0_r8) THEN
-            IF (Master) WRITE(out,'(2A)') 'DARWIN_GENERATE_ALLOMETRIC: ','cannot set both grp_biovol(ng) and grp_logvolind(ng)'
+          IF (Master) WRITE(out,'(2A)') 'DARWIN_GENERATE_ALLOMETRIC: ', &
+     &      'cannot set both grp_biovol(ng) and grp_logvolind(ng)'
             exit_flag=5
             RETURN
           ELSEIF (grp_logvolind(ip,ig,ng) .GT. 0) THEN
@@ -39,7 +42,10 @@
             IF (biovol0(ig,ng) .GT. 0.0_r8) THEN
              grp_biovol(ip,ig,ng) = biovol0(ig,ng) * biovolfac(ig,ng)**(ip-1)
             ELSE
-             IF (Master) WRITE(out,'(3A)') 'DARWIN_GENERATE_ALLOMETRIC: ','Need to set one of grp_biovol(ng), grp_logvolind(ng), ','biovol0(ng), logvol0ind(ng)'
+              IF (Master) WRITE(out,'(3A)')                             &
+     &          'DARWIN_GENERATE_ALLOMETRIC: ',                         &
+     &          'Need to set one of grp_biovol(ng), grp_logvolind(ng),  &
+     &','biovol0(ng), logvol0ind(ng)'
              exit_flag=5
              RETURN
             ENDIF
@@ -48,12 +54,16 @@
          ENDDO
          DO ip=grp_nplank(ig,ng)+1,nplank
           IF (grp_biovol(ip,ig,ng) .NE. 0.0_r8) THEN
-            IF (Master) WRITE(out,'(2A,I5,A,I5,A)') 'DARWIN_GENERATE_ALLOMETRIC: ','index',ip,'group(ng)',ig,'out of range for grp_biovol(ng)'
+            IF (Master) WRITE(out,'(2A,I5,A,I5,A)')                     &
+     &        'DARWIN_GENERATE_ALLOMETRIC: ','index',ip,'group(ng)',ig, &
+     &        'out of range for grp_biovol(ng)'
             exit_flag=5
             RETURN
           ENDIF
           IF (grp_logvolind(ip,ig,ng) .NE. 0) THEN
-            IF (Master) WRITE(out,'(2A,I5,A,I5,A)') 'DARWIN_GENERATE_ALLOMETRIC: ','index',ip,'group(ng)',ig,'out of range for grp_logvolind(ng)'
+            IF (Master) WRITE(out,'(2A,I5,A,I5,A)')                     &
+     &        'DARWIN_GENERATE_ALLOMETRIC: ','index',ip,'group(ng)',ig, &
+     &        'out of range for grp_logvolind(ng)'
             exit_flag=5
             RETURN
           ENDIF
@@ -120,7 +130,9 @@
          DO ig=1,ngroup
           DO ip2=1,grp_nplank(ig,ng)
            IF (ip .GT. nPlank) THEN
-            IF (Master) WRITE(out,'(2A)') 'DARWIN_GENERATE_ALLOMETRIC: ','need SUM(grp_nplank(ng)) = nPlank, nPlank too small'
+             IF (Master) WRITE(out,'(2A)')                              &
+     &         'DARWIN_GENERATE_ALLOMETRIC: ',                          &
+     &         'need SUM(grp_nplank(ng)) = nPlank, nPlank too small'
             exit_flag=5
             RETURN
            ENDIF
@@ -131,7 +143,9 @@
           ENDDO
          ENDDO
          IF (ip .NE. nPlank + 1) THEN
-          IF (Master) WRITE(out,'(2A,2I4)') 'DARWIN_GENERATE_ALLOMETRIC: ','need SUM(grp_nplank(ng)) = nPlank, not ',ip-1,nPlank
+           IF (Master) WRITE(out,'(2A,2I4)')                            &
+     &       'DARWIN_GENERATE_ALLOMETRIC: ',                            &
+     &       'need SUM(grp_nplank(ng)) = nPlank, not ',ip-1,nPlank
           exit_flag=5
           RETURN
          ENDIF
@@ -202,7 +216,7 @@
      &        ': PCmax=   ',PCmax(ip,ng),                               &
      &        ', a_vmax_DIC=',a_vmax_DIC(ig,ng),                        &
      &        ', biovol=',biovol(ip,ng),                                &
-     &        ', b_vmax_DIC=',b_vmax_DIC(ig,ng)                        
+     &        ', b_vmax_DIC=',b_vmax_DIC(ig,ng)
           end if
 #endif
 
@@ -216,7 +230,7 @@
      &        ': Vmax_NO3=',Vmax_NO3(ip,ng),                            &
      &        ', a_vmax_NO3=',a_vmax_NO3(ig,ng),                        &
      &        ', biovol=',biovol(ip,ng),                                &
-     &        ', b_vmax_NO3=',b_vmax_NO3(ig,ng)                        
+     &        ', b_vmax_NO3=',b_vmax_NO3(ig,ng)
           end if
 #endif
           Vmax_N(ip,ng) = a_vmax_N(ig,ng) * biovol(ip,ng)**b_vmax_N(ig,ng)
@@ -256,12 +270,15 @@
 ! we compute it for NO3 and scale for others
            IF (gud_select_kn_allom(ng).EQ.1) THEN
 ! following Ward et al.
-            kappa=(ksatNO3(ip,ng)*PCmax(ip,ng)*Qnmin(ip,ng)*(Qnmax(ip,ng)-Qnmin(ip,ng)))/(Vmax_NO3(ip,ng)*Qnmax(ip,ng) +PCmax(ip,ng)*Qnmin(ip,ng)*(Qnmax(ip,ng)-Qnmin(ip,ng)))
+             kappa=(ksatNO3(ip,ng)*PCmax(ip,ng)*Qnmin(ip,ng)*(Qnmax(ip, &
+     &         ng)-Qnmin(ip,ng)))/(Vmax_NO3(ip,ng)*Qnmax(ip,ng) +       &
+     &         PCmax(ip,ng)*Qnmin(ip,ng)*(Qnmax(ip,ng)-Qnmin(ip,ng)))
            ELSEIF (gud_select_kn_allom(ng).EQ.2) THEN
 ! following Follett et al.
             kappa = (ksatNO3(ip,ng)*PCmax(ip,ng)*Qnmin(ip,ng))/Vmax_NO3(ip,ng)
            ELSE
-            IF (Master) WRITE(out,'(2A)')'DARWIN_GENERATE_ALLOMETRIC: ','illegal value for gud_select_kn_allom(ng)'
+             IF (Master) WRITE(out,'(2A)')'DARWIN_GENERATE_ALLOMETRIC:  &
+     &','illegal value for gud_select_kn_allom(ng)'
             exit_flag=5
             RETURN
            ENDIF
@@ -407,7 +424,8 @@
 ! standard deviation of size preference
               pp_sig(iz) = grp_pp_sig(gz,ng)
               prd_pry = biovol(iz,ng) / biovol(ip,ng)
-              palat(ip,iz,ng) =EXP(-(LOG(prd_pry/pp_opt(iz))**2) / (2*pp_sig(iz)**2))/ pp_sig(iz)/2.0_r8
+              palat(ip,iz,ng) =EXP(-(LOG(prd_pry/pp_opt(iz))**2) / (2*  &
+     &          pp_sig(iz)**2))/ pp_sig(iz)/2.0_r8
               IF (palat(ip,iz,ng).LT.palat_min(ng)) THEN
                 palat(ip,iz,ng) = 0.0_r8
               ENDIF
@@ -418,7 +436,10 @@
               ExportFracPreyPred(ip,iz,ng) = grp_ExportFracPreyPred(ig,gz,ng)
 #if defined DARWIN_VERBOSE_PLANK_OLD
               IF(Master) THEN
-                write(*,'(a,i2,1x,a,i2,1x,a16,2x,10(f,1x,a,1x))')       'PLANK',ic_+iz-1,'-> PLANK',ic_+ip-1,'(a) palat=',palat(ip,iz,ng), ' asseff=',asseff(ip,iz,ng),' ExportFracPreyPred=', ExportFracPreyPred(ig,gz,ng) 
+                write(*,'(a,i2,1x,a,i2,1x,a16,2x,10(f,1x,a,1x))')       &
+     &            'PLANK',ic_+iz-1,'-> PLANK',ic_+ip-1,'(a) palat=',    &
+     &            palat(ip,iz,ng), ' asseff=',asseff(ip,iz,ng),         &
+     &            ' ExportFracPreyPred=', ExportFracPreyPred(ig,gz,ng)
               END IF
 #endif
             ELSE
@@ -427,11 +448,12 @@
               ExportFracPreyPred(ip,iz,ng) = 0.0_r8
 #if defined DARWIN_VERBOSE_PLANK_OLD
               IF(Master) THEN
-                write(*,'(a,i2,1x,a,i2,1x,a16,2x,10(f,1x,a,1x))')       'PLANK',ic_+iz-1,'-> PLANK',ic_+ip-1,'(b) palat=',palat(ip,iz,ng), ' asseff=',asseff(ip,iz,ng),' ExportFracPreyPred=', ExportFracPreyPred(ig,gz,ng) 
+                write(*,'(a,i2,1x,a,i2,1x,a16,2x,10(f,1x,a,1x))')       &
+     &            'PLANK',ic_+iz-1,'-> PLANK',ic_+ip-1,'(b) palat=',    &
+     &            palat(ip,iz,ng), ' asseff=',asseff(ip,iz,ng),         &
+     &            ' ExportFracPreyPred=', ExportFracPreyPred(ig,gz,ng)
               END IF
 #endif
             ENDIF
           ENDDO
         ENDDO
-
-

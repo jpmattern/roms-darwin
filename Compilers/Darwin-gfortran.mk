@@ -60,7 +60,7 @@ ifdef USE_ROMS
            FFLAGS += -fbounds-check
            FFLAGS += -fbacktrace
            FFLAGS += -fcheck=all
-           FFLAGS += -fsanitize=address -fsanitize=undefined
+           # FFLAGS += -fsanitize=address -fsanitize=undefined
            FFLAGS += -finit-real=nan -ffpe-trap=invalid,zero,overflow
            FFLAGS += -fmax-stack-var-size=64000000
  else
@@ -167,7 +167,7 @@ endif
 
 ifdef USE_NETCDF4
         NF_CONFIG ?= nf-config
-    NETCDF_INCDIR ?= $(shell $(NF_CONFIG) --prefix)/include
+    NETCDF_INCDIR ?= $(shell $(NF_CONFIG) --includedir)
              LIBS += $(shell $(NF_CONFIG) --flibs)
            INCDIR += $(NETCDF_INCDIR) $(INCDIR)
 else

@@ -67,7 +67,7 @@
 #if defined DARWIN_VERBOSE_PLANK
           preygraz_rate(:) = 0.0_r8
           grazphy_all(:,:) = 0.0_r8
-#endif 
+#endif
 
 !=======================================================================
           DO iz = iMinPred, iMaxPred
@@ -156,7 +156,7 @@
 !               write(*,'(a20,f10.6," (",f10.6,3(a,f10.6),")",a,i2.2,a)')&
 !     &            'grazphy = ',grazphy,                                 &
 !     &            tmp,'*',palat(ip,iz,ng),'*',X(ip),                    &
-!     &            '/',sumpref,' (due to plankton',iz,')' 
+!     &            '/',sumpref,' (due to plankton',iz,')'
 !                preygraz_rate(ip)=preygraz_rate(ip) + grazphy/X(ip)
 !              END IF
 !#endif
@@ -174,9 +174,9 @@
                   write(*,'(a20,f14.10)')                               &
      &              'preygraz = ',preygraz(ip)
                   write(*,'(a20,f14.10)') 'change : ',                  &
-     &              dt(ng)*(- preygraz(ip))
+     &              dtbio(ng)*(- preygraz(ip))
                   write(*,'(a20,f14.10,99(", ",f14.10))') 'contrib : ', &
-     &              dt(ng)*grazphy_all(ip,:)
+     &              dtbio(ng)*grazphy_all(ip,:)
                   write(*,'(a20,f10.6)')                                &
      &              'graz rate (d-1): ',preygraz_rate(ip)*86400.0_r8
                 END IF
@@ -200,7 +200,7 @@
 
 #if defined DARWIN_VERBOSE_PLANK_OLD
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-              write(*,'(a,i2,1x,a16,2x,10(f,1x,a,1x))') 'PLANK', ic_+iz-1, 'predgrazc=', grazphy, '*',asseff(ip,iz,ng),'*',regQc 
+              write(*,'(a,i2,1x,a16,2x,10(f,1x,a,1x))') 'PLANK', ic_+iz-1, 'predgrazc=', grazphy, '*',asseff(ip,iz,ng),'*',regQc
             END IF
 #endif
               predgrazc(iz) = predgrazc(iz) + grazphy*asseff(ip,iz,ng)*regQc
@@ -257,56 +257,56 @@
 
 !==== tendencies =======================================================
 
-          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dt(ng)*(+ graz2OC - graz2POC)
-          Bio(i,k,iDON )=Bio(i,k,iDON )  + dt(ng)*(+ graz2ON - graz2PON)
-          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dt(ng)*(+ graz2OP - graz2POP)
-          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dt(ng)*(+ graz2OFe - graz2POFe)
-          Bio(i,k,iPOC )=Bio(i,k,iPOC )  + dt(ng)*(+ graz2POC)
-          Bio(i,k,iPON )=Bio(i,k,iPON )  + dt(ng)*(+ graz2PON)
-          Bio(i,k,iPOP )=Bio(i,k,iPOP )  + dt(ng)*(+ graz2POP)
-          Bio(i,k,iPOSi)=Bio(i,k,iPOSi)  + dt(ng)*(+ graz2POSi)
-          Bio(i,k,iPOFe)=Bio(i,k,iPOFe)  + dt(ng)*(+ graz2POFe)
+          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dtbio(ng)*(+ graz2OC - graz2POC)
+          Bio(i,k,iDON )=Bio(i,k,iDON )  + dtbio(ng)*(+ graz2ON - graz2PON)
+          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dtbio(ng)*(+ graz2OP - graz2POP)
+          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dtbio(ng)*(+ graz2OFe - graz2POFe)
+          Bio(i,k,iPOC )=Bio(i,k,iPOC )  + dtbio(ng)*(+ graz2POC)
+          Bio(i,k,iPON )=Bio(i,k,iPON )  + dtbio(ng)*(+ graz2PON)
+          Bio(i,k,iPOP )=Bio(i,k,iPOP )  + dtbio(ng)*(+ graz2POP)
+          Bio(i,k,iPOSi)=Bio(i,k,iPOSi)  + dtbio(ng)*(+ graz2POSi)
+          Bio(i,k,iPOFe)=Bio(i,k,iPOFe)  + dtbio(ng)*(+ graz2POFe)
 #if defined DARWIN_CARBON
-          Bio(i,k,iPIC )=Bio(i,k,iPIC )  + dt(ng)*(+ graz2PIC)
+          Bio(i,k,iPIC )=Bio(i,k,iPIC )  + dtbio(ng)*(+ graz2PIC)
 #endif
 #if defined DARWIN_CDOM
           graz2CDOM = fracCDOM(ng)*(graz2OP - graz2POP)
-          Bio(i,k,iCDOM)=Bio(i,k,iCDOM)  + dt(ng)*(+ graz2CDOM)
-          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dt(ng)*(- R_CP_CDOM(ng)*graz2CDOM)
-          Bio(i,k,iDON )=Bio(i,k,iDON )  + dt(ng)*(- R_NP_CDOM(ng)*graz2CDOM)
-          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dt(ng)*(- graz2CDOM)
-          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dt(ng)*(- R_FeP_CDOM(ng)*graz2CDOM)
+          Bio(i,k,iCDOM)=Bio(i,k,iCDOM)  + dtbio(ng)*(+ graz2CDOM)
+          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dtbio(ng)*(- R_CP_CDOM(ng)*graz2CDOM)
+          Bio(i,k,iDON )=Bio(i,k,iDON )  + dtbio(ng)*(- R_NP_CDOM(ng)*graz2CDOM)
+          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dtbio(ng)*(- graz2CDOM)
+          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dtbio(ng)*(- R_FeP_CDOM(ng)*graz2CDOM)
 #endif
           DO ip = iMinPrey, iMaxPrey
 #if defined DARWIN_VERBOSE_PLANK_OLD
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ip-1,           '-preygraz', dt(ng)*(- preygraz(ip))
+              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ip-1,           '-preygraz', dtbio(ng)*(- preygraz(ip))
             END IF
 #endif
-           Bio(i,k,ic_+ip-1)= Bio(i,k,ic_+ip-1)  + dt(ng)*(- preygraz(ip))
+           Bio(i,k,ic_+ip-1)= Bio(i,k,ic_+ip-1)  + dtbio(ng)*(- preygraz(ip))
           ENDDO
           DO iz = iMinPred, iMaxPred
 #if defined DARWIN_VERBOSE_PLANK_OLD
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+iz-1,           '+predgrazc', dt(ng)*(+ predgrazc(iz))
+              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+iz-1,           '+predgrazc', dtbio(ng)*(+ predgrazc(iz))
             END IF
 #endif
-           Bio(i,k,ic_+iz-1)=Bio(i,k,ic_+iz-1)  + dt(ng)*(+ predgrazc(iz))
+           Bio(i,k,ic_+iz-1)=Bio(i,k,ic_+iz-1)  + dtbio(ng)*(+ predgrazc(iz))
           ENDDO
 #if defined DARWIN_NQUOTA
-          Bio(i,k,in_:en_)=Bio(i,k,in_:en_)  + dt(ng)*(+ predgrazn(:) - preygraz(:)*Qn(:))
+          Bio(i,k,in_:en_)=Bio(i,k,in_:en_)  + dtbio(ng)*(+ predgrazn(:) - preygraz(:)*Qn(:))
 #endif
 #if defined DARWIN_PQUOTA
-          Bio(i,k,ip_:ep_)=Bio(i,k,ip_:ep_)  + dt(ng)*(+ predgrazp(:) - preygraz(:)*Qp(:))
+          Bio(i,k,ip_:ep_)=Bio(i,k,ip_:ep_)  + dtbio(ng)*(+ predgrazp(:) - preygraz(:)*Qp(:))
 #endif
 #if defined DARWIN_SIQUOTA
-          Bio(i,k,isi:esi)=Bio(i,k,isi:esi)  + dt(ng)*(- preygraz(:)*Qsi(:))
+          Bio(i,k,isi:esi)=Bio(i,k,isi:esi)  + dtbio(ng)*(- preygraz(:)*Qsi(:))
 #endif
 #if defined DARWIN_FEQUOTA
-          Bio(i,k,ife:efe)=Bio(i,k,ife:efe)  + dt(ng)*(+ predgrazfe(:) - preygraz(:)*Qfe(:))
+          Bio(i,k,ife:efe)=Bio(i,k,ife:efe)  + dtbio(ng)*(+ predgrazfe(:) - preygraz(:)*Qfe(:))
 #endif
 #if defined DARWIN_CHLQUOTA
-          Bio(i,k,iChl:eChl)=Bio(i,k,iChl:eChl)  + dt(ng)*(- preygraz(1:nChl)*QChl(:))
+          Bio(i,k,iChl:eChl)=Bio(i,k,iChl:eChl)  + dtbio(ng)*(- preygraz(1:nChl)*QChl(:))
 #endif
 
           DO ip = 1, nGRplank
@@ -374,13 +374,13 @@
      &          ' (',mort2(ip,ng),'*',Xe,'*',Xe,'*',                    &
      &          MAX(mort2TempFuncMin(ip,ng), mort2TempFunc(i,k)),')'
               write(*,'(a20,f14.10)')                                   &
-     &          'respir_c = ',respir_c                                
+     &          'respir_c = ',respir_c
               write(*,'(a20,f14.10)') 'change : ',                      &
-     &           dt(ng)*(- mort_c(ip) - respir_c)
+     &           dtbio(ng)*(- mort_c(ip) - respir_c)
               write(*,'(a20,3(f10.6,a))')                               &
-     &          '(contrib : ',mortX*dt(ng),', ',                        &
-     &          mortX2*dt(ng),', ',                                     &
-     &          respir_c*dt(ng),')'
+     &          '(contrib : ',mortX*dtbio(ng),', ',                        &
+     &          mortX2*dtbio(ng),', ',                                     &
+     &          respir_c*dtbio(ng),')'
               write(*,'(a20,f10.6)')                                    &
      &          'mort rate (d-1) :',                                    &
      &          ((mortX+mortX2+respir_c)/X(ip))*86400.0_r8
@@ -392,22 +392,22 @@
 #endif
 #if defined DARWIN_VERBOSE_PLANK_OLD
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ip-1,           '-mort_c', dt(ng)*(- mort_c(ip))
-              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ip-1,           '-respir_c', dt(ng)*(- respir_c)
+              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ip-1,           '-mort_c', dtbio(ng)*(- mort_c(ip))
+              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ip-1,           '-respir_c', dtbio(ng)*(- respir_c)
             END IF
 #endif
-            Bio(i,k,ic_+ip-1)=Bio(i,k,ic_+ip-1)  + dt(ng)*(- mort_c(ip) - respir_c)
+            Bio(i,k,ic_+ip-1)=Bio(i,k,ic_+ip-1)  + dtbio(ng)*(- mort_c(ip) - respir_c)
 #if defined DARWIN_NQUOTA
-            Bio(i,k,in_+ip-1)=Bio(i,k,in_+ip-1)  + dt(ng)*(- mort_c(ip)*Qn(ip))
+            Bio(i,k,in_+ip-1)=Bio(i,k,in_+ip-1)  + dtbio(ng)*(- mort_c(ip)*Qn(ip))
 #endif
 #if defined DARWIN_PQUOTA
-            Bio(i,k,ip_+ip-1)=Bio(i,k,ip_+ip-1)  + dt(ng)*(- mort_c(ip)*Qp(ip))
+            Bio(i,k,ip_+ip-1)=Bio(i,k,ip_+ip-1)  + dtbio(ng)*(- mort_c(ip)*Qp(ip))
 #endif
 #if defined DARWIN_SIQUOTA
-            Bio(i,k,isi+ip-1)=Bio(i,k,isi+ip-1)  + dt(ng)*(- mort_c(ip)*Qsi(ip))
+            Bio(i,k,isi+ip-1)=Bio(i,k,isi+ip-1)  + dtbio(ng)*(- mort_c(ip)*Qsi(ip))
 #endif
 #if defined DARWIN_FEQUOTA
-            Bio(i,k,ife+ip-1)=Bio(i,k,ife+ip-1)  + dt(ng)*(- mort_c(ip)*Qfe(ip))
+            Bio(i,k,ife+ip-1)=Bio(i,k,ife+ip-1)  + dtbio(ng)*(- mort_c(ip)*Qfe(ip))
 #endif
 
 #if defined DARWIN_EXUDE
@@ -420,48 +420,46 @@
             exude_DOFe=exude_DOFe+(1.0_r8-ExportFrac(ip,ng))*kexcFe(ip,ng)*Xe*Qfe(ip)
             exude_POFe=exude_POFe+ ExportFrac(ip,ng) *kexcFe(ip,ng)*Xe*Qfe(ip)
             exude_POSi = exude_POSi + kexcSi(ip,ng)*Xe*Qsi(ip)
-            Bio(i,k,ic_+ip-1)=Bio(i,k,ic_+ip-1)  + dt(ng)*(- kexcC(ip,ng)*Xe)
+            Bio(i,k,ic_+ip-1)=Bio(i,k,ic_+ip-1)  + dtbio(ng)*(- kexcC(ip,ng)*Xe)
 #if defined DARWIN_NQUOTA
-            Bio(i,k,in_+ip-1)=Bio(i,k,in_+ip-1)  + dt(ng)*(- kexcN(ip,ng)*Xe*Qn(ip))
+            Bio(i,k,in_+ip-1)=Bio(i,k,in_+ip-1)  + dtbio(ng)*(- kexcN(ip,ng)*Xe*Qn(ip))
 #endif
 #if defined DARWIN_PQUOTA
-            Bio(i,k,ip_+ip-1)=Bio(i,k,ip_+ip-1)  + dt(ng)*(- kexcP(ip,ng)*Xe*Qp(ip))
+            Bio(i,k,ip_+ip-1)=Bio(i,k,ip_+ip-1)  + dtbio(ng)*(- kexcP(ip,ng)*Xe*Qp(ip))
 #endif
 #if defined DARWIN_SIQUOTA
-            Bio(i,k,isi+ip-1)=Bio(i,k,isi+ip-1)  + dt(ng)*(- kexcSi(ip,ng)*Xe*Qsi(ip))
+            Bio(i,k,isi+ip-1)=Bio(i,k,isi+ip-1)  + dtbio(ng)*(- kexcSi(ip,ng)*Xe*Qsi(ip))
 #endif
 #if defined DARWIN_FEQUOTA
-            Bio(i,k,ife+ip-1)=Bio(i,k,ife+ip-1)  + dt(ng)*(- kexcFe(ip,ng)*Xe*Qfe(ip))
+            Bio(i,k,ife+ip-1)=Bio(i,k,ife+ip-1)  + dtbio(ng)*(- kexcFe(ip,ng)*Xe*Qfe(ip))
 #endif
 #endif
           ENDDO
 
 #if defined DARWIN_CHLQUOTA
           DO ip = 1, nChl
-            Bio(i,k,iChl+ip-1)=Bio(i,k,iChl+ip-1)  + dt(ng)*(- mort_c(ip)*QChl(ip))
+            Bio(i,k,iChl+ip-1)=Bio(i,k,iChl+ip-1)  + dtbio(ng)*(- mort_c(ip)*QChl(ip))
           ENDDO
 #endif
 
-          Bio(i,k,iDIC )=Bio(i,k,iDIC )  + dt(ng)*(+ respir)
+          Bio(i,k,iDIC )=Bio(i,k,iDIC )  + dtbio(ng)*(+ respir)
 
-          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dt(ng)*(+ exude_DOC)
-          Bio(i,k,iDON )=Bio(i,k,iDON )  + dt(ng)*(+ exude_DON)
-          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dt(ng)*(+ exude_DOP)
-          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dt(ng)*(+ exude_DOFe)
+          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dtbio(ng)*(+ exude_DOC)
+          Bio(i,k,iDON )=Bio(i,k,iDON )  + dtbio(ng)*(+ exude_DON)
+          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dtbio(ng)*(+ exude_DOP)
+          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dtbio(ng)*(+ exude_DOFe)
 
-          Bio(i,k,iPIC )=Bio(i,k,iPIC )  + dt(ng)*(+ exude_PIC)
-          Bio(i,k,iPOC )=Bio(i,k,iPOC )  + dt(ng)*(+ exude_POC)
-          Bio(i,k,iPON )=Bio(i,k,iPON )  + dt(ng)*(+ exude_PON)
-          Bio(i,k,iPOP )=Bio(i,k,iPOP )  + dt(ng)*(+ exude_POP)
-          Bio(i,k,iPOSi)=Bio(i,k,iPOSi)  + dt(ng)*(+ exude_POSi)
-          Bio(i,k,iPOFe)=Bio(i,k,iPOFe)  + dt(ng)*(+ exude_POFe)
+          Bio(i,k,iPIC )=Bio(i,k,iPIC )  + dtbio(ng)*(+ exude_PIC)
+          Bio(i,k,iPOC )=Bio(i,k,iPOC )  + dtbio(ng)*(+ exude_POC)
+          Bio(i,k,iPON )=Bio(i,k,iPON )  + dtbio(ng)*(+ exude_PON)
+          Bio(i,k,iPOP )=Bio(i,k,iPOP )  + dtbio(ng)*(+ exude_POP)
+          Bio(i,k,iPOSi)=Bio(i,k,iPOSi)  + dtbio(ng)*(+ exude_POSi)
+          Bio(i,k,iPOFe)=Bio(i,k,iPOFe)  + dtbio(ng)*(+ exude_POFe)
 #if defined DARWIN_CDOM
           exude_CDOM = fracCDOM(ng)*exude_DOP
-          Bio(i,k,iCDOM)=Bio(i,k,iCDOM)  + dt(ng)*(+ exude_CDOM)
-          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dt(ng)*(- R_CP_CDOM(ng)*exude_CDOM)
-          Bio(i,k,iDON )=Bio(i,k,iDON )  + dt(ng)*(- R_NP_CDOM(ng)*exude_CDOM)
-          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dt(ng)*(- exude_CDOM)
-          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dt(ng)*(- R_FeP_CDOM(ng)*exude_CDOM)
+          Bio(i,k,iCDOM)=Bio(i,k,iCDOM)  + dtbio(ng)*(+ exude_CDOM)
+          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dtbio(ng)*(- R_CP_CDOM(ng)*exude_CDOM)
+          Bio(i,k,iDON )=Bio(i,k,iDON )  + dtbio(ng)*(- R_NP_CDOM(ng)*exude_CDOM)
+          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dtbio(ng)*(- exude_CDOM)
+          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dtbio(ng)*(- R_FeP_CDOM(ng)*exude_CDOM)
 #endif
-
-

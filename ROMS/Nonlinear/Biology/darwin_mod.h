@@ -49,6 +49,8 @@
 !
 !  Set biological tracer identification indices.
 !
+      integer, allocatable :: ndtbio(:) ! number of time-steps
+      real(r8), allocatable :: dtbio(:) ! biology time-step in s
       integer, allocatable :: idbio(:)  ! Biological tracers
 #if defined DARWIN_ROMSSINKING
       integer, allocatable :: idsink(:)
@@ -399,6 +401,19 @@
 !-----------------------------------------------------------------------
 !
 #include <darwin_mod_sub2.h>
+!
+!  Allocate biological time-stepping
+!
+      IF (.not.allocated(ndtbio)) THEN
+        allocate ( ndtbio(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+      ndtbio(1:Ngrids)=1
+      IF (.not.allocated(dtbio)) THEN
+        allocate ( dtbio(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+      dtbio(1:Ngrids)=0.0_r8
 !
 !  Allocate biological tracer vector.
 !

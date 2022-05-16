@@ -146,7 +146,7 @@
               write(*,'(a20,f10.6," (",f10.6,a,f10.6,a,f12.6,a,")")')   &
      &          'limitNH4 = ',limitNH4,                                 &
      &          useNH4(ic,ng)*Bio(i,k,iNH4),                            &
-     &          '/(',Bio(i,k,iNH4),'+',ksatNH4(ic,ng),')' 
+     &          '/(',Bio(i,k,iNH4),'+',ksatNH4(ic,ng),')'
             END IF
 #endif
             limitNO2 = useNO2(ic,ng)*Bio(i,k,iNO2)/(Bio(i,k,iNO2) + combNO(ic,ng)*(Bio(i,k,iNO3) + ksatNO3(ic,ng) - ksatNO2(ic,ng)) + ksatNO2(ic,ng))*inhibNH4
@@ -156,7 +156,7 @@
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
               write(*,'(a20,f10.6," (",f10.6,2("+",f10.6),")",a)')      &
      &          'limitn = ',limitn,                                     &
-     &          limitNH4,limitNO2,limitNO3,' (NH4,NO2,NO3)' 
+     &          limitNH4,limitNO2,limitNO3,' (NH4,NO2,NO3)'
             END IF
 #endif
 ! normalize to sum (approx) 1
@@ -266,7 +266,7 @@
      &          '1-EXP(-',alpha_I_growth,'*',chl2c,'/',PCm
               write(*,'(a20,f10.6," (",f10.6,3(a,f13.6),")))")')        &
      &          'PC = ',PC,                                             &
-     &          PCm,'*(1-EXP(-',alpha_I_growth,'*',chl2c,'/',PCm 
+     &          PCm,'*(1-EXP(-',alpha_I_growth,'*',chl2c,'/',PCm
             END IF
 #endif
             ELSE
@@ -323,10 +323,10 @@
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
               write(*,'(a20,f10.6," (",f10.6,2("*",f10.6),")")')        &
      &          'growth = ',growth,                                     &
-     &          PC,ngrow,X 
+     &          PC,ngrow,X
               write(*,'(a20,f10.6," (",f10.6,1("*",f12.6),")")')        &
      &          'grow rate (d-1): ',PC*86400.0_r8,                      &
-     &          PC,86400.0_r8 
+     &          PC,86400.0_r8
             END IF
 #endif
 
@@ -375,7 +375,7 @@
               write(*,'(a20,f14.10," (",f14.10,5(a,f15.10),")")')       &
      &          'synthChl = ',synthChl,                                 &
      &          rhochl,'*',growth,'+',acclimtimescl(ic,ng),'*(',        &
-     &          acclim,'-',chl2c,')*',X 
+     &          acclim,'-',chl2c,')*',X
             END IF
 #endif
 #else
@@ -408,33 +408,33 @@
 !=======================================================================
 #if defined DARWIN_VERBOSE_PLANK_OLD
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ic-1, '+uptakeDIC', dt(ng)*(+ uptakeDIC)
+              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ic-1, '+uptakeDIC', dtbio(ng)*(+ uptakeDIC)
             END IF
 #endif
 #if defined DARWIN_VERBOSE_PLANK
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
               write(*,'(a20,f10.6," (",f10.6,"+",f10.6,"*",f10.6,")")') &
-     &          'new value = ',Bio(i,k,ic_+ic-1)+ dt(ng)*(+ uptakeDIC), &
-     &          Bio(i,k,ic_+ic-1),dt(ng),uptakeDIC
+     &          'new value = ',Bio(i,k,ic_+ic-1)+ dtbio(ng)*(+ uptakeDIC), &
+     &          Bio(i,k,ic_+ic-1),dtbio(ng),uptakeDIC
               write(*,'(a20,f14.10)') 'change : ',                      &
-     &           dt(ng)*(+ uptakeDIC)
+     &           dtbio(ng)*(+ uptakeDIC)
             END IF
 #endif
-            Bio(i,k,ic_+ic-1)=Bio(i,k,ic_+ic-1)  + dt(ng)*(+ uptakeDIC)
+            Bio(i,k,ic_+ic-1)=Bio(i,k,ic_+ic-1)  + dtbio(ng)*(+ uptakeDIC)
 #if defined DARWIN_NQUOTA
-            Bio(i,k,in_+ic-1)=Bio(i,k,in_+ic-1)  + dt(ng)*(+ uptakeN)
+            Bio(i,k,in_+ic-1)=Bio(i,k,in_+ic-1)  + dtbio(ng)*(+ uptakeN)
 #endif
 #if defined DARWIN_PQUOTA
-            Bio(i,k,ip_+ic-1)=Bio(i,k,ip_+ic-1)  + dt(ng)*(+ uptakePO4)
+            Bio(i,k,ip_+ic-1)=Bio(i,k,ip_+ic-1)  + dtbio(ng)*(+ uptakePO4)
 #endif
 #if defined DARWIN_SIQUOTA
-            Bio(i,k,isi+ic-1)=Bio(i,k,isi+ic-1)  + dt(ng)*(+ uptakeSiO2)
+            Bio(i,k,isi+ic-1)=Bio(i,k,isi+ic-1)  + dtbio(ng)*(+ uptakeSiO2)
 #endif
 #if defined DARWIN_FEQUOTA
-            Bio(i,k,ife+ic-1)=Bio(i,k,ife+ic-1)  + dt(ng)*(+ uptakeFeT)
+            Bio(i,k,ife+ic-1)=Bio(i,k,ife+ic-1)  + dtbio(ng)*(+ uptakeFeT)
 #endif
 #if defined DARWIN_CHLQUOTA
-            Bio(i,k,iChl+ic-1)=Bio(i,k,iChl+ic-1)  + dt(ng)*(+ synthChl)
+            Bio(i,k,iChl+ic-1)=Bio(i,k,iChl+ic-1)  + dtbio(ng)*(+ synthChl)
 #endif
 
 #if defined DARWIN_DEBUG
@@ -553,10 +553,10 @@
 
 #if defined DARWIN_VERBOSE_PLANK_OLD
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ic-1, '+growth', dt(ng)*(+ growth)
+              write(*,'(a,i2,1x,a16,2x,f)') 'PLANK', ic_+ic-1, '+growth', dtbio(ng)*(+ growth)
             END IF
 #endif
-            Bio(i,k,ic_+ic-1)=Bio(i,k,ic_+ic-1)  + dt(ng)*(+ growth)
+            Bio(i,k,ic_+ic-1)=Bio(i,k,ic_+ic-1)  + dtbio(ng)*(+ growth)
 
 !==== Cumulative consum, remin, and prod ===============================
             consumNO3 = consumNO3 + uptakeNO3
@@ -596,32 +596,32 @@
 !=======================================================================
 !=======================================================================
 
-          Bio(i,k,iDIC )=Bio(i,k,iDIC )  + dt(ng)*(- consumDIC - consumDIC_PIC)
-          Bio(i,k,iNH4 )=Bio(i,k,iNH4 )  + dt(ng)*(- consumNH4)
-          Bio(i,k,iNO2 )=Bio(i,k,iNO2 )  + dt(ng)*(- consumNO2)
-          Bio(i,k,iNO3 )=Bio(i,k,iNO3 )  + dt(ng)*(- consumNO3)
-          Bio(i,k,iPO4 )=Bio(i,k,iPO4 )  + dt(ng)*(- consumPO4)
-          Bio(i,k,iSiO2)=Bio(i,k,iSiO2)  + dt(ng)*(- consumSiO2)
-          Bio(i,k,iFeT )=Bio(i,k,iFeT )  + dt(ng)*(- consumFeT)
+          Bio(i,k,iDIC )=Bio(i,k,iDIC )  + dtbio(ng)*(- consumDIC - consumDIC_PIC)
+          Bio(i,k,iNH4 )=Bio(i,k,iNH4 )  + dtbio(ng)*(- consumNH4)
+          Bio(i,k,iNO2 )=Bio(i,k,iNO2 )  + dtbio(ng)*(- consumNO2)
+          Bio(i,k,iNO3 )=Bio(i,k,iNO3 )  + dtbio(ng)*(- consumNO3)
+          Bio(i,k,iPO4 )=Bio(i,k,iPO4 )  + dtbio(ng)*(- consumPO4)
+          Bio(i,k,iSiO2)=Bio(i,k,iSiO2)  + dtbio(ng)*(- consumSiO2)
+          Bio(i,k,iFeT )=Bio(i,k,iFeT )  + dtbio(ng)*(- consumFeT)
 #if defined DARWIN_VERBOSE_NUT
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
               write(*,*) 'consumption'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'DIC = ',Bio(i,k,iDIC ),                                &
-     &          ' (',Bio(i,k,iDIC )-dt(ng)*(consumDIC - consumDIC_PIC), &
-     &          '+',dt(ng),'*(-',consumDIC,'-',consumDIC_PIC,')'
+     &          ' (',Bio(i,k,iDIC )-dtbio(ng)*(consumDIC - consumDIC_PIC), &
+     &          '+',dtbio(ng),'*(-',consumDIC,'-',consumDIC_PIC,')'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'NH4 = ',Bio(i,k,iNH4 ),                                &
-     &          ' (',Bio(i,k,iNH4 )-dt(ng)*(- consumNH4),               &
-     &          '+',dt(ng),'*(-',consumNH4,')'
+     &          ' (',Bio(i,k,iNH4 )-dtbio(ng)*(- consumNH4),               &
+     &          '+',dtbio(ng),'*(-',consumNH4,')'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'NO2 = ',Bio(i,k,iNO2 ),                                &
-     &          ' (',Bio(i,k,iNO2 )-dt(ng)*(- consumNO2),               &
-     &          '+',dt(ng),'*(-',consumNO2,')'
+     &          ' (',Bio(i,k,iNO2 )-dtbio(ng)*(- consumNO2),               &
+     &          '+',dtbio(ng),'*(-',consumNO2,')'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'NO3 = ',Bio(i,k,iNO3 ),                                &
-     &          ' (',Bio(i,k,iNO3 )-dt(ng)*(- consumNO3),               &
-     &          '+',dt(ng),'*(-',consumNO3,')'
+     &          ' (',Bio(i,k,iNO3 )-dtbio(ng)*(- consumNO3),               &
+     &          '+',dtbio(ng),'*(-',consumNO3,')'
             END IF
 #endif
 
@@ -675,7 +675,7 @@
             write(*,*) 'bacterial production'
             write(*,'(a20,f18.12," (",9(f18.12,a))')                    &
      &        'prodNO2 = ',prodNO2,                                     &
-     &        Knita(ng),'*',Bio(i,k,iNH4),')' 
+     &        Knita(ng),'*',Bio(i,k,iNH4),')'
             write(*,'(a20,f18.12," (",9(f18.12,a))')                    &
      &        'prodNO3 = ',prodNO3,                                     &
      &        Knitb(ng),'*',Bio(i,k,iNO2),')'
@@ -743,38 +743,38 @@
 
 #if defined DARWIN_CARBON
 ! production of O2 by photosynthesis
-          Bio(i,k,iO2 )=Bio(i,k,iO2 )  + dt(ng)*(+ R_OP(ng)*consumPO4)
+          Bio(i,k,iO2 )=Bio(i,k,iO2 )  + dtbio(ng)*(+ R_OP(ng)*consumPO4)
 ! loss of O2 by remineralization
           IF (Bio(i,k,iO2) .GT. O2crit(ng)) THEN
-            Bio(i,k,iO2)=Bio(i,k,iO2)  + dt(ng)*(- consumO2)
+            Bio(i,k,iO2)=Bio(i,k,iO2)  + dtbio(ng)*(- consumO2)
           ENDIF
 
-          Bio(i,k,iALK)=Bio(i,k,iALK)  + dt(ng)*(- (prodNO3 - consumNO3)- 2.0_r8*(consumDIC_PIC - disscPIC))
+          Bio(i,k,iALK)=Bio(i,k,iALK)  + dtbio(ng)*(- (prodNO3 - consumNO3)- 2.0_r8*(consumDIC_PIC - disscPIC))
 #endif /* DARWIN_CARBON */
 
-          Bio(i,k,iDIC )=Bio(i,k,iDIC )  + dt(ng)*(+ reminDOC + disscPIC)
-          Bio(i,k,iNH4 )=Bio(i,k,iNH4 )  + dt(ng)*(+ reminDON - prodNO2)
-          Bio(i,k,iNO2 )=Bio(i,k,iNO2 )  + dt(ng)*(+ prodNO2 - prodNO3)
-          Bio(i,k,iNO3 )=Bio(i,k,iNO3 )  + dt(ng)*(+ prodNO3)
+          Bio(i,k,iDIC )=Bio(i,k,iDIC )  + dtbio(ng)*(+ reminDOC + disscPIC)
+          Bio(i,k,iNH4 )=Bio(i,k,iNH4 )  + dtbio(ng)*(+ reminDON - prodNO2)
+          Bio(i,k,iNO2 )=Bio(i,k,iNO2 )  + dtbio(ng)*(+ prodNO2 - prodNO3)
+          Bio(i,k,iNO3 )=Bio(i,k,iNO3 )  + dtbio(ng)*(+ prodNO3)
 #if defined DARWIN_VERBOSE_NUT
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
               write(*,*) 'remineralization'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'DIC = ',Bio(i,k,iDIC ),                                &
-     &          ' (',Bio(i,k,iDIC )-dt(ng)*(+ reminDOC + disscPIC),     &
-     &          '+',dt(ng),'*(',reminDOC,'+',disscPIC,')'
+     &          ' (',Bio(i,k,iDIC )-dtbio(ng)*(+ reminDOC + disscPIC),     &
+     &          '+',dtbio(ng),'*(',reminDOC,'+',disscPIC,')'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'NH4 = ',Bio(i,k,iNH4 ),                                &
-     &          ' (',Bio(i,k,iNH4 )-dt(ng)*(+ reminDON - prodNO2),      &
-     &          '+',dt(ng),'*(',reminDON,'-',prodNO2,')'
+     &          ' (',Bio(i,k,iNH4 )-dtbio(ng)*(+ reminDON - prodNO2),      &
+     &          '+',dtbio(ng),'*(',reminDON,'-',prodNO2,')'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'NO2 = ',Bio(i,k,iNO2 ),                                &
-     &          ' (',Bio(i,k,iNO2 )-dt(ng)*(+ prodNO2 - prodNO3),       &
-     &          '+',dt(ng),'*(',prodNO2,'-',prodNO3,')'
+     &          ' (',Bio(i,k,iNO2 )-dtbio(ng)*(+ prodNO2 - prodNO3),       &
+     &          '+',dtbio(ng),'*(',prodNO2,'-',prodNO3,')'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'NO3 = ',Bio(i,k,iNO3 ),                                &
-     &          ' (',Bio(i,k,iNO3 )-dt(ng)*(+ prodNO3),                 &
-     &          '+',dt(ng),'*',prodNO3,')'
+     &          ' (',Bio(i,k,iNO3 )-dtbio(ng)*(+ prodNO3),                 &
+     &          '+',dtbio(ng),'*',prodNO3,')'
             END IF
 #endif
           diags(i,k,iDenitN) = 0.0_r8
@@ -787,62 +787,60 @@
             denit = denit + denit_NP(ng)*reminPOP
 #endif
             diags(i,k,iDenit) = denit
-            Bio(i,k,iNH4)=Bio(i,k,iNH4)  + dt(ng)*(- denitNH4)
-            Bio(i,k,iNO3)=Bio(i,k,iNO3)  + dt(ng)*(- denit_NO3(ng)/denit_NP(ng)*denit)
-            Bio(i,k,iALK)=Bio(i,k,iALK)  + dt(ng)*(+ denit_NO3(ng)/denit_NP(ng)*denit)
+            Bio(i,k,iNH4)=Bio(i,k,iNH4)  + dtbio(ng)*(- denitNH4)
+            Bio(i,k,iNO3)=Bio(i,k,iNO3)  + dtbio(ng)*(- denit_NO3(ng)/denit_NP(ng)*denit)
+            Bio(i,k,iALK)=Bio(i,k,iALK)  + dtbio(ng)*(+ denit_NO3(ng)/denit_NP(ng)*denit)
             diags(i,k,iDenitN) = denitNH4 + denit_NO3(ng)/denit_NP(ng)*denit
 #if defined DARWIN_VERBOSE_NUT
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
               write(*,*) 'denitrification'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'NH4 = ',Bio(i,k,iNH4 ),                                &
-     &          ' (',Bio(i,k,iNH4 )-dt(ng)*(- denitNH4),                &
-     &          '+',dt(ng),'*(-',denitNH4,')'
+     &          ' (',Bio(i,k,iNH4 )-dtbio(ng)*(- denitNH4),                &
+     &          '+',dtbio(ng),'*(-',denitNH4,')'
               write(*,'(a20,f18.12,9(a,f18.12))')                       &
      &          'NO3 = ',Bio(i,k,iNO3 ),                                &
-     &          ' (',Bio(i,k,iNO3 )-dt(ng)*(-denit_NO3(ng)/denit_NP(ng) &
+     &          ' (',Bio(i,k,iNO3 )-dtbio(ng)*(-denit_NO3(ng)/denit_NP(ng) &
      &          *denit),                                                &
-     &          '+',dt(ng),'*(-',denit_NO3(ng),'/',denit_NP(ng),        &
+     &          '+',dtbio(ng),'*(-',denit_NO3(ng),'/',denit_NP(ng),        &
      &          '*',denit,')'
             END IF
 #endif
           ENDIF
 #endif /* DARWIN_DENIT */
 
-          Bio(i,k,iPO4 )=Bio(i,k,iPO4 )  + dt(ng)*(+ reminDOP)
-          Bio(i,k,iFeT )=Bio(i,k,iFeT )  + dt(ng)*(+ reminDOFe)
-          Bio(i,k,iSiO2)=Bio(i,k,iSiO2)  + dt(ng)*(+ reminPOSi)
+          Bio(i,k,iPO4 )=Bio(i,k,iPO4 )  + dtbio(ng)*(+ reminDOP)
+          Bio(i,k,iFeT )=Bio(i,k,iFeT )  + dtbio(ng)*(+ reminDOFe)
+          Bio(i,k,iSiO2)=Bio(i,k,iSiO2)  + dtbio(ng)*(+ reminPOSi)
 
 ! DOC is created by #4 PA-assoc solubilization and consumed by #5
-          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dt(ng)*(+ solubilPOC - consumDOC)
-          Bio(i,k,iDON )=Bio(i,k,iDON )  + dt(ng)*(+ solubilPON - consumDON)
-          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dt(ng)*(+ solubilPOP - consumDOP)
-          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dt(ng)*(+ solubilPOFe - consumDOFe)
+          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dtbio(ng)*(+ solubilPOC - consumDOC)
+          Bio(i,k,iDON )=Bio(i,k,iDON )  + dtbio(ng)*(+ solubilPON - consumDON)
+          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dtbio(ng)*(+ solubilPOP - consumDOP)
+          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dtbio(ng)*(+ solubilPOFe - consumDOFe)
 
-          Bio(i,k,iPIC )=Bio(i,k,iPIC )  + dt(ng)*(- disscPIC)
-          Bio(i,k,iPOC )=Bio(i,k,iPOC )  + dt(ng)*(- consumPOC)
-          Bio(i,k,iPON )=Bio(i,k,iPON )  + dt(ng)*(- consumPON)
-          Bio(i,k,iPOP )=Bio(i,k,iPOP )  + dt(ng)*(- consumPOP)
-          Bio(i,k,iPOFe)=Bio(i,k,iPOFe)  + dt(ng)*(- consumPOFe)
-          Bio(i,k,iPOSi)=Bio(i,k,iPOSi)  + dt(ng)*(- consumPOSi)
+          Bio(i,k,iPIC )=Bio(i,k,iPIC )  + dtbio(ng)*(- disscPIC)
+          Bio(i,k,iPOC )=Bio(i,k,iPOC )  + dtbio(ng)*(- consumPOC)
+          Bio(i,k,iPON )=Bio(i,k,iPON )  + dtbio(ng)*(- consumPON)
+          Bio(i,k,iPOP )=Bio(i,k,iPOP )  + dtbio(ng)*(- consumPOP)
+          Bio(i,k,iPOFe)=Bio(i,k,iPOFe)  + dtbio(ng)*(- consumPOFe)
+          Bio(i,k,iPOSi)=Bio(i,k,iPOSi)  + dtbio(ng)*(- consumPOSi)
 
 #if defined DARWIN_CDOM
-          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dt(ng)*(+ reminPOC - reminPOC_CDOM + degrCDOM_DOC)
-          Bio(i,k,iDON )=Bio(i,k,iDON )  + dt(ng)*(+ reminPON - reminPON_CDOM + degrCDOM_DON)
-          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dt(ng)*(+ reminPOP - reminPOP_CDOM + degrCDOM_DOP)
-          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dt(ng)*(+ reminPOFe - reminPOFe_CDOM + degrCDOM_DOFe)
+          Bio(i,k,iDOC )=Bio(i,k,iDOC )  + dtbio(ng)*(+ reminPOC - reminPOC_CDOM + degrCDOM_DOC)
+          Bio(i,k,iDON )=Bio(i,k,iDON )  + dtbio(ng)*(+ reminPON - reminPON_CDOM + degrCDOM_DON)
+          Bio(i,k,iDOP )=Bio(i,k,iDOP )  + dtbio(ng)*(+ reminPOP - reminPOP_CDOM + degrCDOM_DOP)
+          Bio(i,k,iDOFe)=Bio(i,k,iDOFe)  + dtbio(ng)*(+ reminPOFe - reminPOFe_CDOM + degrCDOM_DOFe)
 
-          Bio(i,k,iCDOM)=Bio(i,k,iCDOM)  + dt(ng)*(+ reminPOP_CDOM - degrCDOM_DOP)
+          Bio(i,k,iCDOM)=Bio(i,k,iCDOM)  + dtbio(ng)*(+ reminPOP_CDOM - degrCDOM_DOP)
 #else
-          Bio(i,k,iDIC )=Bio(i,k,iDIC )  + dt(ng)*(+ reminPOC)
-          Bio(i,k,iNH4 )=Bio(i,k,iNH4 )  + dt(ng)*(+ reminPON)
-          Bio(i,k,iPO4 )=Bio(i,k,iPO4 )  + dt(ng)*(+ reminPOP)
-          Bio(i,k,iFeT )=Bio(i,k,iFeT )  + dt(ng)*(+ reminPOFe)
+          Bio(i,k,iDIC )=Bio(i,k,iDIC )  + dtbio(ng)*(+ reminPOC)
+          Bio(i,k,iNH4 )=Bio(i,k,iNH4 )  + dtbio(ng)*(+ reminPON)
+          Bio(i,k,iPO4 )=Bio(i,k,iPO4 )  + dtbio(ng)*(+ reminPOP)
+          Bio(i,k,iFeT )=Bio(i,k,iFeT )  + dtbio(ng)*(+ reminPOFe)
 #endif /* DARWIN_CDOM */
 
           diags(i,k,iConsDIN) = consumNH4 + consumNO2 + consumNO3
           diags(i,k,iConsPO4) = consumPO4
           diags(i,k,iConsSi) = consumSiO2
           diags(i,k,iConsFe) = consumFeT
-
-

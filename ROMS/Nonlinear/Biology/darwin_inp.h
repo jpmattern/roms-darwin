@@ -635,10 +635,6 @@
             WRITE (out,'(1x,a)')                                        &
      &        '====================================='
             WRITE (out,'(2x,a,i0)') 'Number of biological tracers: ',NBT
-            WRITE (out,71) ndtbio(ng), 'ndtbio',                        &
-     &            'Number of DT time-steps for each Biology step.'
-            WRITE (out,70) dtbio(ng), 'dtbio',                          &
-     &            'DT time-steps (seconds) for each Biology step.'
             DO itrc=1,NBT
               i=idbio(itrc)
               WRITE(out,'(4x,a,i3,"/",i0,": ",a)')                      &
@@ -648,6 +644,10 @@
 !  Report input parameters.
 !
             WRITE (out,50) ng
+            WRITE (out,71) ndtbio(ng), 'ndtbio',                        &
+     &            'Number of DT time-steps for each Biology step.'
+            WRITE (out,70) dtbio(ng), 'dtbio',                          &
+     &            'DT time-steps (seconds) for each Biology step.'
 #include <darwin_inp_sub2.h>
 #if defined DARWIN_RADTRANS_IO
             IF (.not.find_file(ng, DRT(ng)%name, 'RADTRANSFILE')) THEN

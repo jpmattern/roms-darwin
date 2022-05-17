@@ -1243,8 +1243,7 @@
           Aval(5)=REAL(Iinfo(1,idCflx,ng),r8)
           status=def_var(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idCflx),   &
      &                   NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  Define pCO2.
@@ -1262,8 +1261,7 @@
           Aval(5)=REAL(Iinfo(1,idpCO2,ng),r8)
           status=def_var(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idpCO2),   &
      &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
 !  Define pH.
@@ -1281,8 +1279,7 @@
           Aval(5)=REAL(Iinfo(1,idpH,ng),r8)
           status=def_var(ng, iNLM, HIS(ng)%ncid, HIS(ng)%Vid(idpH),     &
      &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 # endif
 # ifdef LMD_SKPP
@@ -1596,8 +1593,7 @@
             status=def_var(ng, iNLM, HIS(ng)%ncid,                      &
      &                     HIS(ng)%Vid(idBSMa(itrc)), NF_FOUT,          &
      &                     nvd3, t2dgrd, Aval, Vinfo, ncname)
-            IF (FoundError(exit_flag, NoError, __LINE__,                &
-     &                     __FILE__)) RETURN
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END DO
 
@@ -3786,7 +3782,11 @@
 !
       logical :: got_var(NV)
 !
+#if defined DARWIN_INTERNAL_EXTRAATT
+      integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
+#else
       integer, parameter :: Natt = 25
+#endif
 
       integer :: i, j, ifield, itrc, nvd3, nvd4
       integer :: recdim, status
@@ -5003,6 +5003,13 @@
             Vinfo(20)='mask_rho'
 #  endif
             Vinfo(22)='coordinates'
+#  if defined DARWIN_INTERNAL_EXTRAATT
+            DO i=1,nplank
+              IF (itrc.eq.i+ic_-1) THEN
+                Vinfo(26)=trim(grp_names(group(i,ng)))
+              END IF
+            END DO
+#  endif
             Aval(5)=REAL(r3dvar,r8)
             HIS(ng)%pioTrc(itrc)%dkind=PIO_FOUT
             HIS(ng)%pioTrc(itrc)%gtype=r3dvar

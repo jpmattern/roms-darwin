@@ -132,8 +132,8 @@
       USE mod_sedbed
       USE mod_sediment
 # endif
-# if defined DARWIN_CARBON_EXTRAOUT 
-      USE mod_biology
+# if defined DARWIN_CARBON_EXTRAOUT
+      USE mod_biology,     ONLY : iDIC
 # endif
 !
       USE exchange_2d_mod
@@ -430,7 +430,7 @@
         END DO
 
 #  if defined DARWIN_CARBON_EXTRAOUT
-        IF (Aout(idTvar(iTIC_),ng)) THEN
+        IF (Aout(idTvar(iDIC),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgCO2flx(i,j)=OCEAN(ng)%CO2flx(i,j)
@@ -1466,7 +1466,7 @@
         END DO
 
 #  if defined DARWIN_CARBON_EXTRAOUT
-        IF (Aout(idTvar(iTIC_),ng)) THEN
+        IF (Aout(idTvar(iDIC),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgCO2flx(i,j)=                               &
@@ -2620,7 +2620,7 @@
         END DO
 
 #  if defined DARWIN_CARBON_EXTRAOUT
-        IF (Aout(idTvar(iTIC_),ng)) THEN
+        IF (Aout(idTvar(iDIC),ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgCO2flx(i,j)=rfac(i,j)*                     &

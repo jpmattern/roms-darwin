@@ -172,7 +172,13 @@
 
           real(r8), pointer :: avgrho(:,:,:)
           real(r8), pointer :: avgt(:,:,:,:)
+#  if defined DARWIN_CARBON_EXTRAOUT
 
+          real(r8), pointer :: avgCO2flx(:,:)
+          real(r8), pointer :: avgPCO2(:,:,:)
+          real(r8), pointer :: avgPH(:,:,:)
+
+#  endif
 #  if defined LMD_MIXING || defined MY25_MIXING || defined GLS_MIXING
           real(r8), pointer :: avgAKv(:,:,:)
           real(r8), pointer :: avgAKt(:,:,:)
@@ -311,6 +317,9 @@
       USE mod_param
       USE mod_ncparam
       USE mod_scalars
+#if defined DARWIN_CARBON_EXTRAOUT
+      USE mod_biology,     ONLY : iDIC
+#endif
 !
 !  Imported variable declarations.
 !
@@ -392,6 +401,20 @@
         Dmem(ng)=Dmem(ng)+REAL(N(ng)*NT(ng),r8)*size2d
       END IF
 
+#  if defined DARWIN_CARBON_EXTRAOUT
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        allocate ( AVERAGE(ng) % avgCO2flx(LBi:UBi,LBj:UBj) )
+        Dmem(ng)=Dmem(ng)+size2d
+      END IF
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        allocate ( AVERAGE(ng) % avgPCO2(LBi:UBi,LBj:UBj,N(ng)) )
+        Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      END IF
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        allocate ( AVERAGE(ng) % avgPH(LBi:UBi,LBj:UBj,N(ng)) )
+        Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      END IF
+#  endif
 #  if defined LMD_MIXING || defined MY25_MIXING || defined GLS_MIXING
       IF (Aout(idVvis,ng)) THEN
         allocate ( AVERAGE(ng) % avgAKv(LBi:UBi,LBj:UBj,0:N(ng)) )
@@ -795,6 +818,23 @@
      &                   __LINE__, 'AVERAGE(ng)%avgt')) RETURN
       END IF
 
+#   if defined DARWIN_CARBON_EXTRAOUT
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        IF (.not.destroy(ng, AVERAGE(ng)%avgCO2flx, MyFile,             &
+     &                   __LINE__, 'AVERAGE(ng)%avgCO2flx')) RETURN
+      END IF
+
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        IF (.not.destroy(ng, AVERAGE(ng)%avgPCO2, MyFile,               &
+     &                   __LINE__, 'AVERAGE(ng)%avgPCO2')) RETURN
+      END IF
+
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        IF (.not.destroy(ng, AVERAGE(ng)%avgPH, MyFile,                 &
+     &                   __LINE__, 'AVERAGE(ng)%avgPH')) RETURN
+      END IF
+
+#   endif
 #   if defined LMD_MIXING || defined MY25_MIXING || defined GLS_MIXING
       IF (Aout(idVvis,ng)) THEN
         IF (.not.destroy(ng, AVERAGE(ng)%avgAKv, MyFile,                &

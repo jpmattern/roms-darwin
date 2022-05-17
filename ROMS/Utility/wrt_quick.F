@@ -862,8 +862,7 @@
      &                     GRID(ng) % rmask,                            &
 #   endif
      &                     OCEAN(ng) % CO2flx)
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) TRIM(Vname(1,idCflx)), QCK(ng)%Rindex
           END IF
@@ -885,8 +884,7 @@
      &                     GRID(ng) % rmask,                            &
 #   endif
      &                     OCEAN(ng) % pCO2)
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) TRIM(Vname(1,idpCO2)), QCK(ng)%Rindex
           END IF
@@ -908,8 +906,7 @@
      &                     GRID(ng) % rmask,                            &
 #   endif
      &                     OCEAN(ng) % pH)
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) TRIM(Vname(1,idpH)), QCK(ng)%Rindex
           END IF
@@ -1230,8 +1227,7 @@
      &                       GRID(ng) % rmask,                          &
 #  endif
      &                       bio_sediment(ng) % mass(:,:,itrc))
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
+          IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
               WRITE (stdout,10) TRIM(Vname(1,idBSMa(itrc))),            &
      &                          QCK(ng)%Rindex

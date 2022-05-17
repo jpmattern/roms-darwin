@@ -3545,7 +3545,11 @@
 !
 !  Local variable declarations.
 !
+#if defined DARWIN_INTERNAL_EXTRAATT
+      integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
+#else
       integer, parameter :: Natt = 25
+#endif
 
       integer :: brydim, FileH, i, ie, is, j, lstr
       integer :: srdim, stadim, status, swdim, trcdim, usrdim

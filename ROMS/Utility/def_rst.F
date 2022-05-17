@@ -772,8 +772,7 @@
           status=def_var(ng, iNLM, RST(ng)%ncid,                        &
      &                   RST(ng)%Vid(idBSMa(itrc)), NF_FOUT,            &
      &                   nvd3, t2dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
 
 # endif
@@ -2112,7 +2111,11 @@
 !
       logical :: Ldefine, got_var(NV)
 !
+#if defined DARWIN_INTERNAL_EXTRAATT
+      integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
+#else
       integer, parameter :: Natt = 25
+#endif
 
       integer :: i, j, nvd3, nvd4, nvd5
       integer :: recdim, status

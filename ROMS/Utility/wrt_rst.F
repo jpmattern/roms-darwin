@@ -914,8 +914,7 @@
      &                     GRID(ng) % rmask,                            &
 #  endif
      &                     bio_sediment(ng) % mass(:,:,itrc))
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) TRIM(Vname(1,idBSMa(itrc))),              &
      &                        RST(ng)%Rindex

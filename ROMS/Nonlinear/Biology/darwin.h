@@ -42,7 +42,7 @@
       END IF
 !
 #if defined PROFILE
-      CALL wclock_on (ng, iNLM, 15)
+      CALL wclock_on (ng, iNLM, 15, __LINE__, MyFile)
 #endif /* PROFILE */
       CALL darwin_tile  (ng, tile,                                      &
      &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &

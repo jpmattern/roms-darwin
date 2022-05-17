@@ -1052,8 +1052,7 @@
      &                     GRID(ng) % rmask,                            &
 #   endif
      &                     AVERAGE(ng) % avgCO2flx)
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) TRIM(Vname(1,idCflx)), AVG(ng)%Rindex
           END IF
@@ -1075,8 +1074,7 @@
      &                     GRID(ng) % rmask,                            &
 #   endif
      &                     AVERAGE(ng) % avgPCO2)
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) TRIM(Vname(1,idpCO2)), AVG(ng)%Rindex
           END IF
@@ -1098,8 +1096,7 @@
      &                     GRID(ng) % rmask,                            &
 #   endif
      &                     AVERAGE(ng) % avgPH)
-        IF (FoundError(status, nf90_noerr, __LINE__,                    &
-     &                 __FILE__)) THEN
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
             WRITE (stdout,10) TRIM(Vname(1,idpH)), AVG(ng)%Rindex
           END IF
@@ -3289,6 +3286,92 @@
         END IF
       END IF
 
+#   if defined DARWIN_CARBON_EXTRAOUT
+!
+!  Write out air-sea CO2.
+!
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        scale=1.0_dp
+        IF (AVG(ng)%pioVar(idCflx)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r2dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r2dvar(ng)
+        END IF
+        status=nf_fwrite2d(ng, iNLM, AVG(ng)%pioFile,                   &
+     &                     AVG(ng)%pioVar(idCflx),                      &
+     &                     AVG(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, scale,                   &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgrho)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idCflx)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out pCO2.
+!
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        scale=1.0_dp
+        IF (AVG(ng)%pioVar(idpCO2)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, iNLM, AVG(ng)%pioFile,                   &
+     &                     AVG(ng)%pioVar(idpCO2),                      &
+     &                     AVG(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgrho)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idpCO2)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out pH.
+!
+      IF (Aout(idTvar(iDIC),ng)) THEN
+        scale=1.0_dp
+        IF (AVG(ng)%pioVar(idpH)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, iNLM, AVG(ng)%pioFile,                   &
+     &                     AVG(ng)%pioVar(idpH),                        &
+     &                     AVG(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgrho)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,10) TRIM(Vname(1,idpH)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#   endif
 #   ifdef LMD_SKPP
 !
 !  Write out depth of surface boundary layer.

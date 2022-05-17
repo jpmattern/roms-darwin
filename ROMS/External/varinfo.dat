@@ -2915,6 +2915,1587 @@
   1.0d0
 
 !
+! created by create_darwin_headerfiles (written by J. Paul Mattern)
+!
+
+!
+!-----------------------------------------------------------------------
+!  Define names of Darwin ecosystem model variables.
+!-----------------------------------------------------------------------
+!
+
+
+'DIC'
+  'DIC concentration'
+  'mmol C m-3'
+  'DIC, scalar, series'
+  'ocean_time'
+  'idTvar(iDIC)'
+  'r3dvar'
+  1.0d0
+
+'NH4'
+  'NH4 concentration'
+  'mmol N m-3'
+  'NH4, scalar, series'
+  'ocean_time'
+  'idTvar(iNH4)'
+  'r3dvar'
+  1.0d0
+
+'NO2'
+  'NO2 concentration'
+  'mmol N m-3'
+  'NO2, scalar, series'
+  'ocean_time'
+  'idTvar(iNO2)'
+  'r3dvar'
+  1.0d0
+
+'NO3'
+  'NO3 concentration'
+  'mmol N m-3'
+  'NO3, scalar, series'
+  'ocean_time'
+  'idTvar(iNO3)'
+  'r3dvar'
+  1.0d0
+
+'PO4'
+  'PO4 concentration'
+  'mmol P m-3'
+  'PO4, scalar, series'
+  'ocean_time'
+  'idTvar(iPO4)'
+  'r3dvar'
+  1.0d0
+
+'SiO2'
+  'SiO2 concentration'
+  'mmol Si m-3'
+  'SiO2, scalar, series'
+  'ocean_time'
+  'idTvar(iSiO2)'
+  'r3dvar'
+  1.0d0
+
+'FeT'
+  'FeT concentration'
+  'mmol Fe m-3'
+  'FeT, scalar, series'
+  'ocean_time'
+  'idTvar(iFeT)'
+  'r3dvar'
+  1.0d0
+
+'DOC'
+  'DOC concentration'
+  'mmol C m-3'
+  'DOC, scalar, series'
+  'ocean_time'
+  'idTvar(iDOC)'
+  'r3dvar'
+  1.0d0
+
+'DON'
+  'DON concentration'
+  'mmol N m-3'
+  'DON, scalar, series'
+  'ocean_time'
+  'idTvar(iDON)'
+  'r3dvar'
+  1.0d0
+
+'DOP'
+  'DOP concentration'
+  'mmol P m-3'
+  'DOP, scalar, series'
+  'ocean_time'
+  'idTvar(iDOP)'
+  'r3dvar'
+  1.0d0
+
+'DOFe'
+  'DOFe concentration'
+  'mmol Fe m-3'
+  'DOFe, scalar, series'
+  'ocean_time'
+  'idTvar(iDOFe)'
+  'r3dvar'
+  1.0d0
+
+'POC'
+  'POC concentration'
+  'mmol C m-3'
+  'POC, scalar, series'
+  'ocean_time'
+  'idTvar(iPOC)'
+  'r3dvar'
+  1.0d0
+
+'PON'
+  'PON concentration'
+  'mmol N m-3'
+  'PON, scalar, series'
+  'ocean_time'
+  'idTvar(iPON)'
+  'r3dvar'
+  1.0d0
+
+'POP'
+  'POP concentration'
+  'mmol P m-3'
+  'POP, scalar, series'
+  'ocean_time'
+  'idTvar(iPOP)'
+  'r3dvar'
+  1.0d0
+
+'POSi'
+  'POSi concentration'
+  'mmol Si m-3'
+  'POSi, scalar, series'
+  'ocean_time'
+  'idTvar(iPOSi)'
+  'r3dvar'
+  1.0d0
+
+'POFe'
+  'POFe concentration'
+  'mmol Fe m-3'
+  'POFe, scalar, series'
+  'ocean_time'
+  'idTvar(iPOFe)'
+  'r3dvar'
+  1.0d0
+
+'PIC'
+  'PIC concentration'
+  'mmol C m-3'
+  'PIC, scalar, series'
+  'ocean_time'
+  'idTvar(iPIC)'
+  'r3dvar'
+  1.0d0
+
+'total_chlorophyll'
+  'total chlorophyll concentration'
+  'mg chl m-3'
+  'total chlorophyll, scalar, series'
+  'ocean_time'
+  'idTvar(iTChl)'
+  'r3dvar'
+  1.0d0
+
+'alkalinity'
+  'alkalinity concentration'
+  'eq m-3'
+  'alkalinity, scalar, series'
+  'ocean_time'
+  'idTvar(iALK)'
+  'r3dvar'
+  1.0d0
+
+'O2'
+  'O2 concentration'
+  'mmol O m-3'
+  'O2, scalar, series'
+  'ocean_time'
+  'idTvar(iO2)'
+  'r3dvar'
+  1.0d0
+
+'CDOM'
+  'CDOM concentration'
+  'mmol m-3'
+  'CDOM, scalar, series'
+  'ocean_time'
+  'idTvar(iCDOM)'
+  'r3dvar'
+  1.0d0
+
+'plankton'
+  'plankton concentration'
+  'mmol C m-3'
+  'plankton, scalar, series'
+  'ocean_time'
+  'idTvar(ic_)'
+  'r3dvar'
+  1.0d0
+
+'Nquota'
+  'Nquota concentration'
+  'mmol N m-3'
+  'Nquota, scalar, series'
+  'ocean_time'
+  'idTvar(in_)'
+  'r3dvar'
+  1.0d0
+
+'Pquota'
+  'Pquota concentration'
+  'mmol P m-3'
+  'Pquota, scalar, series'
+  'ocean_time'
+  'idTvar(ip_)'
+  'r3dvar'
+  1.0d0
+
+'Siquota'
+  'Siquota concentration'
+  'mmol Si m-3'
+  'Siquota, scalar, series'
+  'ocean_time'
+  'idTvar(isi)'
+  'r3dvar'
+  1.0d0
+
+'Fequota'
+  'Fequota concentration'
+  'mmol Fe m-3'
+  'Fequota, scalar, series'
+  'ocean_time'
+  'idTvar(ife)'
+  'r3dvar'
+  1.0d0
+
+'chlorophyll'
+  'chlorophyll concentration'
+  'mg chl m-3'
+  'chlorophyll, scalar, series'
+  'ocean_time'
+  'idTvar(iChl)'
+  'r3dvar'
+  1.0d0
+
+'DIC_west'
+  'DIC western boundary condition'
+  'mmol C m-3'
+  'DIC_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iDIC)'
+  'nulvar'
+  1.0d0
+
+'DIC_east'
+  'DIC eastern boundary condition'
+  'mmol C m-3'
+  'DIC_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iDIC)'
+  'nulvar'
+  1.0d0
+
+'DIC_south'
+  'DIC southern boundary condition'
+  'mmol C m-3'
+  'DIC_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iDIC)'
+  'nulvar'
+  1.0d0
+
+'DIC_north'
+  'DIC northern boundary condition'
+  'mmol C m-3'
+  'DIC_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iDIC)'
+  'nulvar'
+  1.0d0
+
+'NH4_west'
+  'NH4 western boundary condition'
+  'mmol N m-3'
+  'NH4_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iNH4)'
+  'nulvar'
+  1.0d0
+
+'NH4_east'
+  'NH4 eastern boundary condition'
+  'mmol N m-3'
+  'NH4_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iNH4)'
+  'nulvar'
+  1.0d0
+
+'NH4_south'
+  'NH4 southern boundary condition'
+  'mmol N m-3'
+  'NH4_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iNH4)'
+  'nulvar'
+  1.0d0
+
+'NH4_north'
+  'NH4 northern boundary condition'
+  'mmol N m-3'
+  'NH4_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iNH4)'
+  'nulvar'
+  1.0d0
+
+'NO2_west'
+  'NO2 western boundary condition'
+  'mmol N m-3'
+  'NO2_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iNO2)'
+  'nulvar'
+  1.0d0
+
+'NO2_east'
+  'NO2 eastern boundary condition'
+  'mmol N m-3'
+  'NO2_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iNO2)'
+  'nulvar'
+  1.0d0
+
+'NO2_south'
+  'NO2 southern boundary condition'
+  'mmol N m-3'
+  'NO2_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iNO2)'
+  'nulvar'
+  1.0d0
+
+'NO2_north'
+  'NO2 northern boundary condition'
+  'mmol N m-3'
+  'NO2_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iNO2)'
+  'nulvar'
+  1.0d0
+
+'NO3_west'
+  'NO3 western boundary condition'
+  'mmol N m-3'
+  'NO3_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iNO3)'
+  'nulvar'
+  1.0d0
+
+'NO3_east'
+  'NO3 eastern boundary condition'
+  'mmol N m-3'
+  'NO3_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iNO3)'
+  'nulvar'
+  1.0d0
+
+'NO3_south'
+  'NO3 southern boundary condition'
+  'mmol N m-3'
+  'NO3_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iNO3)'
+  'nulvar'
+  1.0d0
+
+'NO3_north'
+  'NO3 northern boundary condition'
+  'mmol N m-3'
+  'NO3_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iNO3)'
+  'nulvar'
+  1.0d0
+
+'PO4_west'
+  'PO4 western boundary condition'
+  'mmol P m-3'
+  'PO4_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iPO4)'
+  'nulvar'
+  1.0d0
+
+'PO4_east'
+  'PO4 eastern boundary condition'
+  'mmol P m-3'
+  'PO4_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iPO4)'
+  'nulvar'
+  1.0d0
+
+'PO4_south'
+  'PO4 southern boundary condition'
+  'mmol P m-3'
+  'PO4_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iPO4)'
+  'nulvar'
+  1.0d0
+
+'PO4_north'
+  'PO4 northern boundary condition'
+  'mmol P m-3'
+  'PO4_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iPO4)'
+  'nulvar'
+  1.0d0
+
+'SiO2_west'
+  'SiO2 western boundary condition'
+  'mmol Si m-3'
+  'SiO2_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iSiO2)'
+  'nulvar'
+  1.0d0
+
+'SiO2_east'
+  'SiO2 eastern boundary condition'
+  'mmol Si m-3'
+  'SiO2_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iSiO2)'
+  'nulvar'
+  1.0d0
+
+'SiO2_south'
+  'SiO2 southern boundary condition'
+  'mmol Si m-3'
+  'SiO2_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iSiO2)'
+  'nulvar'
+  1.0d0
+
+'SiO2_north'
+  'SiO2 northern boundary condition'
+  'mmol Si m-3'
+  'SiO2_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iSiO2)'
+  'nulvar'
+  1.0d0
+
+'FeT_west'
+  'FeT western boundary condition'
+  'mmol Fe m-3'
+  'FeT_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iFeT)'
+  'nulvar'
+  1.0d0
+
+'FeT_east'
+  'FeT eastern boundary condition'
+  'mmol Fe m-3'
+  'FeT_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iFeT)'
+  'nulvar'
+  1.0d0
+
+'FeT_south'
+  'FeT southern boundary condition'
+  'mmol Fe m-3'
+  'FeT_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iFeT)'
+  'nulvar'
+  1.0d0
+
+'FeT_north'
+  'FeT northern boundary condition'
+  'mmol Fe m-3'
+  'FeT_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iFeT)'
+  'nulvar'
+  1.0d0
+
+'DOC_west'
+  'DOC western boundary condition'
+  'mmol C m-3'
+  'DOC_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iDOC)'
+  'nulvar'
+  1.0d0
+
+'DOC_east'
+  'DOC eastern boundary condition'
+  'mmol C m-3'
+  'DOC_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iDOC)'
+  'nulvar'
+  1.0d0
+
+'DOC_south'
+  'DOC southern boundary condition'
+  'mmol C m-3'
+  'DOC_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iDOC)'
+  'nulvar'
+  1.0d0
+
+'DOC_north'
+  'DOC northern boundary condition'
+  'mmol C m-3'
+  'DOC_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iDOC)'
+  'nulvar'
+  1.0d0
+
+'DON_west'
+  'DON western boundary condition'
+  'mmol N m-3'
+  'DON_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iDON)'
+  'nulvar'
+  1.0d0
+
+'DON_east'
+  'DON eastern boundary condition'
+  'mmol N m-3'
+  'DON_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iDON)'
+  'nulvar'
+  1.0d0
+
+'DON_south'
+  'DON southern boundary condition'
+  'mmol N m-3'
+  'DON_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iDON)'
+  'nulvar'
+  1.0d0
+
+'DON_north'
+  'DON northern boundary condition'
+  'mmol N m-3'
+  'DON_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iDON)'
+  'nulvar'
+  1.0d0
+
+'DOP_west'
+  'DOP western boundary condition'
+  'mmol P m-3'
+  'DOP_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iDOP)'
+  'nulvar'
+  1.0d0
+
+'DOP_east'
+  'DOP eastern boundary condition'
+  'mmol P m-3'
+  'DOP_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iDOP)'
+  'nulvar'
+  1.0d0
+
+'DOP_south'
+  'DOP southern boundary condition'
+  'mmol P m-3'
+  'DOP_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iDOP)'
+  'nulvar'
+  1.0d0
+
+'DOP_north'
+  'DOP northern boundary condition'
+  'mmol P m-3'
+  'DOP_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iDOP)'
+  'nulvar'
+  1.0d0
+
+'DOFe_west'
+  'DOFe western boundary condition'
+  'mmol Fe m-3'
+  'DOFe_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iDOFe)'
+  'nulvar'
+  1.0d0
+
+'DOFe_east'
+  'DOFe eastern boundary condition'
+  'mmol Fe m-3'
+  'DOFe_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iDOFe)'
+  'nulvar'
+  1.0d0
+
+'DOFe_south'
+  'DOFe southern boundary condition'
+  'mmol Fe m-3'
+  'DOFe_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iDOFe)'
+  'nulvar'
+  1.0d0
+
+'DOFe_north'
+  'DOFe northern boundary condition'
+  'mmol Fe m-3'
+  'DOFe_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iDOFe)'
+  'nulvar'
+  1.0d0
+
+'POC_west'
+  'POC western boundary condition'
+  'mmol C m-3'
+  'POC_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iPOC)'
+  'nulvar'
+  1.0d0
+
+'POC_east'
+  'POC eastern boundary condition'
+  'mmol C m-3'
+  'POC_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iPOC)'
+  'nulvar'
+  1.0d0
+
+'POC_south'
+  'POC southern boundary condition'
+  'mmol C m-3'
+  'POC_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iPOC)'
+  'nulvar'
+  1.0d0
+
+'POC_north'
+  'POC northern boundary condition'
+  'mmol C m-3'
+  'POC_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iPOC)'
+  'nulvar'
+  1.0d0
+
+'PON_west'
+  'PON western boundary condition'
+  'mmol N m-3'
+  'PON_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iPON)'
+  'nulvar'
+  1.0d0
+
+'PON_east'
+  'PON eastern boundary condition'
+  'mmol N m-3'
+  'PON_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iPON)'
+  'nulvar'
+  1.0d0
+
+'PON_south'
+  'PON southern boundary condition'
+  'mmol N m-3'
+  'PON_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iPON)'
+  'nulvar'
+  1.0d0
+
+'PON_north'
+  'PON northern boundary condition'
+  'mmol N m-3'
+  'PON_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iPON)'
+  'nulvar'
+  1.0d0
+
+'POP_west'
+  'POP western boundary condition'
+  'mmol P m-3'
+  'POP_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iPOP)'
+  'nulvar'
+  1.0d0
+
+'POP_east'
+  'POP eastern boundary condition'
+  'mmol P m-3'
+  'POP_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iPOP)'
+  'nulvar'
+  1.0d0
+
+'POP_south'
+  'POP southern boundary condition'
+  'mmol P m-3'
+  'POP_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iPOP)'
+  'nulvar'
+  1.0d0
+
+'POP_north'
+  'POP northern boundary condition'
+  'mmol P m-3'
+  'POP_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iPOP)'
+  'nulvar'
+  1.0d0
+
+'POSi_west'
+  'POSi western boundary condition'
+  'mmol Si m-3'
+  'POSi_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iPOSi)'
+  'nulvar'
+  1.0d0
+
+'POSi_east'
+  'POSi eastern boundary condition'
+  'mmol Si m-3'
+  'POSi_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iPOSi)'
+  'nulvar'
+  1.0d0
+
+'POSi_south'
+  'POSi southern boundary condition'
+  'mmol Si m-3'
+  'POSi_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iPOSi)'
+  'nulvar'
+  1.0d0
+
+'POSi_north'
+  'POSi northern boundary condition'
+  'mmol Si m-3'
+  'POSi_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iPOSi)'
+  'nulvar'
+  1.0d0
+
+'POFe_west'
+  'POFe western boundary condition'
+  'mmol Fe m-3'
+  'POFe_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iPOFe)'
+  'nulvar'
+  1.0d0
+
+'POFe_east'
+  'POFe eastern boundary condition'
+  'mmol Fe m-3'
+  'POFe_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iPOFe)'
+  'nulvar'
+  1.0d0
+
+'POFe_south'
+  'POFe southern boundary condition'
+  'mmol Fe m-3'
+  'POFe_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iPOFe)'
+  'nulvar'
+  1.0d0
+
+'POFe_north'
+  'POFe northern boundary condition'
+  'mmol Fe m-3'
+  'POFe_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iPOFe)'
+  'nulvar'
+  1.0d0
+
+'PIC_west'
+  'PIC western boundary condition'
+  'mmol C m-3'
+  'PIC_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iPIC)'
+  'nulvar'
+  1.0d0
+
+'PIC_east'
+  'PIC eastern boundary condition'
+  'mmol C m-3'
+  'PIC_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iPIC)'
+  'nulvar'
+  1.0d0
+
+'PIC_south'
+  'PIC southern boundary condition'
+  'mmol C m-3'
+  'PIC_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iPIC)'
+  'nulvar'
+  1.0d0
+
+'PIC_north'
+  'PIC northern boundary condition'
+  'mmol C m-3'
+  'PIC_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iPIC)'
+  'nulvar'
+  1.0d0
+
+'total_chlorophyll_west'
+  'total chlorophyll western boundary condition'
+  'mg chl m-3'
+  'total chlorophyll_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iTChl)'
+  'nulvar'
+  1.0d0
+
+'total_chlorophyll_east'
+  'total chlorophyll eastern boundary condition'
+  'mg chl m-3'
+  'total chlorophyll_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iTChl)'
+  'nulvar'
+  1.0d0
+
+'total_chlorophyll_south'
+  'total chlorophyll southern boundary condition'
+  'mg chl m-3'
+  'total chlorophyll_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iTChl)'
+  'nulvar'
+  1.0d0
+
+'total_chlorophyll_north'
+  'total chlorophyll northern boundary condition'
+  'mg chl m-3'
+  'total chlorophyll_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iTChl)'
+  'nulvar'
+  1.0d0
+
+'alkalinity_west'
+  'alkalinity western boundary condition'
+  'eq m-3'
+  'alkalinity_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iALK)'
+  'nulvar'
+  1.0d0
+
+'alkalinity_east'
+  'alkalinity eastern boundary condition'
+  'eq m-3'
+  'alkalinity_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iALK)'
+  'nulvar'
+  1.0d0
+
+'alkalinity_south'
+  'alkalinity southern boundary condition'
+  'eq m-3'
+  'alkalinity_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iALK)'
+  'nulvar'
+  1.0d0
+
+'alkalinity_north'
+  'alkalinity northern boundary condition'
+  'eq m-3'
+  'alkalinity_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iALK)'
+  'nulvar'
+  1.0d0
+
+'O2_west'
+  'O2 western boundary condition'
+  'mmol O m-3'
+  'O2_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iO2)'
+  'nulvar'
+  1.0d0
+
+'O2_east'
+  'O2 eastern boundary condition'
+  'mmol O m-3'
+  'O2_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iO2)'
+  'nulvar'
+  1.0d0
+
+'O2_south'
+  'O2 southern boundary condition'
+  'mmol O m-3'
+  'O2_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iO2)'
+  'nulvar'
+  1.0d0
+
+'O2_north'
+  'O2 northern boundary condition'
+  'mmol O m-3'
+  'O2_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iO2)'
+  'nulvar'
+  1.0d0
+
+'CDOM_west'
+  'CDOM western boundary condition'
+  'mmol m-3'
+  'CDOM_west, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iCDOM)'
+  'nulvar'
+  1.0d0
+
+'CDOM_east'
+  'CDOM eastern boundary condition'
+  'mmol m-3'
+  'CDOM_east, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iCDOM)'
+  'nulvar'
+  1.0d0
+
+'CDOM_south'
+  'CDOM southern boundary condition'
+  'mmol m-3'
+  'CDOM_south, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iCDOM)'
+  'nulvar'
+  1.0d0
+
+'CDOM_north'
+  'CDOM northern boundary condition'
+  'mmol m-3'
+  'CDOM_north, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iCDOM)'
+  'nulvar'
+  1.0d0
+
+'plankton_west'
+  'plankton western boundary condition'
+  'mmol C m-3'
+  'plankton, scalar, series'
+  'bry_time'
+  'idTbry(iwest,ic_)'
+  'nulvar'
+  1.0d0
+
+'plankton_east'
+  'plankton eastern boundary condition'
+  'mmol C m-3'
+  'plankton, scalar, series'
+  'bry_time'
+  'idTbry(ieast,ic_)'
+  'nulvar'
+  1.0d0
+
+'plankton_south'
+  'plankton southern boundary condition'
+  'mmol C m-3'
+  'plankton, scalar, series'
+  'bry_time'
+  'idTbry(isouth,ic_)'
+  'nulvar'
+  1.0d0
+
+'plankton_north'
+  'plankton northern boundary condition'
+  'mmol C m-3'
+  'plankton, scalar, series'
+  'bry_time'
+  'idTbry(inorth,ic_)'
+  'nulvar'
+  1.0d0
+
+'Nquota_west'
+  'Nquota western boundary condition'
+  'mmol N m-3'
+  'Nquota, scalar, series'
+  'bry_time'
+  'idTbry(iwest,in_)'
+  'nulvar'
+  1.0d0
+
+'Nquota_east'
+  'Nquota eastern boundary condition'
+  'mmol N m-3'
+  'Nquota, scalar, series'
+  'bry_time'
+  'idTbry(ieast,in_)'
+  'nulvar'
+  1.0d0
+
+'Nquota_south'
+  'Nquota southern boundary condition'
+  'mmol N m-3'
+  'Nquota, scalar, series'
+  'bry_time'
+  'idTbry(isouth,in_)'
+  'nulvar'
+  1.0d0
+
+'Nquota_north'
+  'Nquota northern boundary condition'
+  'mmol N m-3'
+  'Nquota, scalar, series'
+  'bry_time'
+  'idTbry(inorth,in_)'
+  'nulvar'
+  1.0d0
+
+'Pquota_west'
+  'Pquota western boundary condition'
+  'mmol P m-3'
+  'Pquota, scalar, series'
+  'bry_time'
+  'idTbry(iwest,ip_)'
+  'nulvar'
+  1.0d0
+
+'Pquota_east'
+  'Pquota eastern boundary condition'
+  'mmol P m-3'
+  'Pquota, scalar, series'
+  'bry_time'
+  'idTbry(ieast,ip_)'
+  'nulvar'
+  1.0d0
+
+'Pquota_south'
+  'Pquota southern boundary condition'
+  'mmol P m-3'
+  'Pquota, scalar, series'
+  'bry_time'
+  'idTbry(isouth,ip_)'
+  'nulvar'
+  1.0d0
+
+'Pquota_north'
+  'Pquota northern boundary condition'
+  'mmol P m-3'
+  'Pquota, scalar, series'
+  'bry_time'
+  'idTbry(inorth,ip_)'
+  'nulvar'
+  1.0d0
+
+'Siquota_west'
+  'Siquota western boundary condition'
+  'mmol Si m-3'
+  'Siquota, scalar, series'
+  'bry_time'
+  'idTbry(iwest,isi)'
+  'nulvar'
+  1.0d0
+
+'Siquota_east'
+  'Siquota eastern boundary condition'
+  'mmol Si m-3'
+  'Siquota, scalar, series'
+  'bry_time'
+  'idTbry(ieast,isi)'
+  'nulvar'
+  1.0d0
+
+'Siquota_south'
+  'Siquota southern boundary condition'
+  'mmol Si m-3'
+  'Siquota, scalar, series'
+  'bry_time'
+  'idTbry(isouth,isi)'
+  'nulvar'
+  1.0d0
+
+'Siquota_north'
+  'Siquota northern boundary condition'
+  'mmol Si m-3'
+  'Siquota, scalar, series'
+  'bry_time'
+  'idTbry(inorth,isi)'
+  'nulvar'
+  1.0d0
+
+'Fequota_west'
+  'Fequota western boundary condition'
+  'mmol Fe m-3'
+  'Fequota, scalar, series'
+  'bry_time'
+  'idTbry(iwest,ife)'
+  'nulvar'
+  1.0d0
+
+'Fequota_east'
+  'Fequota eastern boundary condition'
+  'mmol Fe m-3'
+  'Fequota, scalar, series'
+  'bry_time'
+  'idTbry(ieast,ife)'
+  'nulvar'
+  1.0d0
+
+'Fequota_south'
+  'Fequota southern boundary condition'
+  'mmol Fe m-3'
+  'Fequota, scalar, series'
+  'bry_time'
+  'idTbry(isouth,ife)'
+  'nulvar'
+  1.0d0
+
+'Fequota_north'
+  'Fequota northern boundary condition'
+  'mmol Fe m-3'
+  'Fequota, scalar, series'
+  'bry_time'
+  'idTbry(inorth,ife)'
+  'nulvar'
+  1.0d0
+
+'chlorophyll'
+  'chlorophyll western boundary condition'
+  'mg chl m-3'
+  'chlorophyll, scalar, series'
+  'bry_time'
+  'idTbry(iwest,iChl)'
+  'nulvar'
+  1.0d0
+
+'chlorophyll'
+  'chlorophyll eastern boundary condition'
+  'mg chl m-3'
+  'chlorophyll, scalar, series'
+  'bry_time'
+  'idTbry(ieast,iChl)'
+  'nulvar'
+  1.0d0
+
+'chlorophyll'
+  'chlorophyll southern boundary condition'
+  'mg chl m-3'
+  'chlorophyll, scalar, series'
+  'bry_time'
+  'idTbry(isouth,iChl)'
+  'nulvar'
+  1.0d0
+
+'chlorophyll'
+  'chlorophyll northern boundary condition'
+  'mg chl m-3'
+  'chlorophyll, scalar, series'
+  'bry_time'
+  'idTbry(inorth,iChl)'
+  'nulvar'
+  1.0d0
+
+'river_DIC'
+  'river runoff DIC concentration'
+  'mmol C m-3'
+  'river_DIC, scalar, series'
+  'river_time'
+  'idRtrc(iDIC)'
+  'nulvar'
+  1.0d0
+
+'river_NH4'
+  'river runoff NH4 concentration'
+  'mmol N m-3'
+  'river_NH4, scalar, series'
+  'river_time'
+  'idRtrc(iNH4)'
+  'nulvar'
+  1.0d0
+
+'river_NO2'
+  'river runoff NO2 concentration'
+  'mmol N m-3'
+  'river_NO2, scalar, series'
+  'river_time'
+  'idRtrc(iNO2)'
+  'nulvar'
+  1.0d0
+
+'river_NO3'
+  'river runoff NO3 concentration'
+  'mmol N m-3'
+  'river_NO3, scalar, series'
+  'river_time'
+  'idRtrc(iNO3)'
+  'nulvar'
+  1.0d0
+
+'river_PO4'
+  'river runoff PO4 concentration'
+  'mmol P m-3'
+  'river_PO4, scalar, series'
+  'river_time'
+  'idRtrc(iPO4)'
+  'nulvar'
+  1.0d0
+
+'river_SiO2'
+  'river runoff SiO2 concentration'
+  'mmol Si m-3'
+  'river_SiO2, scalar, series'
+  'river_time'
+  'idRtrc(iSiO2)'
+  'nulvar'
+  1.0d0
+
+'river_FeT'
+  'river runoff FeT concentration'
+  'mmol Fe m-3'
+  'river_FeT, scalar, series'
+  'river_time'
+  'idRtrc(iFeT)'
+  'nulvar'
+  1.0d0
+
+'river_DOC'
+  'river runoff DOC concentration'
+  'mmol C m-3'
+  'river_DOC, scalar, series'
+  'river_time'
+  'idRtrc(iDOC)'
+  'nulvar'
+  1.0d0
+
+'river_DON'
+  'river runoff DON concentration'
+  'mmol N m-3'
+  'river_DON, scalar, series'
+  'river_time'
+  'idRtrc(iDON)'
+  'nulvar'
+  1.0d0
+
+'river_DOP'
+  'river runoff DOP concentration'
+  'mmol P m-3'
+  'river_DOP, scalar, series'
+  'river_time'
+  'idRtrc(iDOP)'
+  'nulvar'
+  1.0d0
+
+'river_DOFe'
+  'river runoff DOFe concentration'
+  'mmol Fe m-3'
+  'river_DOFe, scalar, series'
+  'river_time'
+  'idRtrc(iDOFe)'
+  'nulvar'
+  1.0d0
+
+'river_POC'
+  'river runoff POC concentration'
+  'mmol C m-3'
+  'river_POC, scalar, series'
+  'river_time'
+  'idRtrc(iPOC)'
+  'nulvar'
+  1.0d0
+
+'river_PON'
+  'river runoff PON concentration'
+  'mmol N m-3'
+  'river_PON, scalar, series'
+  'river_time'
+  'idRtrc(iPON)'
+  'nulvar'
+  1.0d0
+
+'river_POP'
+  'river runoff POP concentration'
+  'mmol P m-3'
+  'river_POP, scalar, series'
+  'river_time'
+  'idRtrc(iPOP)'
+  'nulvar'
+  1.0d0
+
+'river_POSi'
+  'river runoff POSi concentration'
+  'mmol Si m-3'
+  'river_POSi, scalar, series'
+  'river_time'
+  'idRtrc(iPOSi)'
+  'nulvar'
+  1.0d0
+
+'river_POFe'
+  'river runoff POFe concentration'
+  'mmol Fe m-3'
+  'river_POFe, scalar, series'
+  'river_time'
+  'idRtrc(iPOFe)'
+  'nulvar'
+  1.0d0
+
+'river_PIC'
+  'river runoff PIC concentration'
+  'mmol C m-3'
+  'river_PIC, scalar, series'
+  'river_time'
+  'idRtrc(iPIC)'
+  'nulvar'
+  1.0d0
+
+'river_total_chlorophyll'
+  'river runoff total chlorophyll concentration'
+  'mg chl m-3'
+  'river_total chlorophyll, scalar, series'
+  'river_time'
+  'idRtrc(iTChl)'
+  'nulvar'
+  1.0d0
+
+'river_alkalinity'
+  'river runoff alkalinity concentration'
+  'eq m-3'
+  'river_alkalinity, scalar, series'
+  'river_time'
+  'idRtrc(iALK)'
+  'nulvar'
+  1.0d0
+
+'river_O2'
+  'river runoff O2 concentration'
+  'mmol O m-3'
+  'river_O2, scalar, series'
+  'river_time'
+  'idRtrc(iO2)'
+  'nulvar'
+  1.0d0
+
+'river_CDOM'
+  'river runoff CDOM concentration'
+  'mmol m-3'
+  'river_CDOM, scalar, series'
+  'river_time'
+  'idRtrc(iCDOM)'
+  'nulvar'
+  1.0d0
+
+'river_plankton'
+  'river runoff plankton concentration'
+  'mmol C m-3'
+  'river_plankton, scalar, series'
+  'river_time'
+  'idRtrc(ic_)'
+  'nulvar'
+  1.0d0
+
+'river_Nquota'
+  'river runoff Nquota concentration'
+  'mmol N m-3'
+  'river_Nquota, scalar, series'
+  'river_time'
+  'idRtrc(in_)'
+  'nulvar'
+  1.0d0
+
+'river_Pquota'
+  'river runoff Pquota concentration'
+  'mmol P m-3'
+  'river_Pquota, scalar, series'
+  'river_time'
+  'idRtrc(ip_)'
+  'nulvar'
+  1.0d0
+
+'river_Siquota'
+  'river runoff Siquota concentration'
+  'mmol Si m-3'
+  'river_Siquota, scalar, series'
+  'river_time'
+  'idRtrc(isi)'
+  'nulvar'
+  1.0d0
+
+'river_Fequota'
+  'river runoff Fequota concentration'
+  'mmol Fe m-3'
+  'river_Fequota, scalar, series'
+  'river_time'
+  'idRtrc(ife)'
+  'nulvar'
+  1.0d0
+
+'river_chlorophyll'
+  'river runoff chlorophyll concentration'
+  'mg chl m-3'
+  'river_chlorophyll, scalar, series'
+  'river_time'
+  'idRtrc(iChl)'
+  'nulvar'
+  1.0d0
+
+!
+! for Darwin BIO_SEDIMENTVARIABLES
+!
+
+'PIC_sed'
+  'PIC sediment mass'
+  'mmol C m-2'
+  'PIC, scalar, series'
+  'ocean_time'
+  'idBSMa(iPIC)'
+  'r2dvar'
+  1.0d0
+
+'POC_sed'
+  'POC sediment mass'
+  'mmol C m-2'
+  'POC, scalar, series'
+  'ocean_time'
+  'idBSMa(iPOC)'
+  'r2dvar'
+  1.0d0
+
+'PON_sed'
+  'PON sediment mass'
+  'mmol N m-2'
+  'PON, scalar, series'
+  'ocean_time'
+  'idBSMa(iPON)'
+  'r2dvar'
+  1.0d0
+
+'POP_sed'
+  'POP sediment mass'
+  'mmol P m-2'
+  'POP, scalar, series'
+  'ocean_time'
+  'idBSMa(iPOP)'
+  'r2dvar'
+  1.0d0
+
+'POSi_sed'
+  'POSi sediment mass'
+  'mmol Si m-2'
+  'POSi, scalar, series'
+  'ocean_time'
+  'idBSMa(iPOSi)'
+  'r2dvar'
+  1.0d0
+
+'POFe_sed'
+  'POFe sediment mass'
+  'mmol Fe m-2'
+  'POFe, scalar, series'
+  'ocean_time'
+  'idBSMa(iPOFe)'
+  'r2dvar'
+  1.0d0
+
+'plankton_C_sed'
+  'plankton C sediment mass'
+  'mmol C m-2'
+  'plankton_C_sed, scalar, series'
+  'ocean_time'
+  'idBSMa(isedc)'
+  'r2dvar'
+  1.0d0
+
+'plankton_N_sed'
+  'plankton N sediment mass'
+  'mmol N m-2'
+  'plankton_N_sed, scalar, series'
+  'ocean_time'
+  'idBSMa(isedn)'
+  'r2dvar'
+  1.0d0
+
+'plankton_P_sed'
+  'plankton P sediment mass'
+  'mmol P m-2'
+  'plankton_P_sed, scalar, series'
+  'ocean_time'
+  'idBSMa(isedp)'
+  'r2dvar'
+  1.0d0
+
+'plankton_Si_sed'
+  'plankton Si sediment mass'
+  'mmol Si m-2'
+  'plankton_Si_sed, scalar, series'
+  'ocean_time'
+  'idBSMa(isedsi)'
+  'r2dvar'
+  1.0d0
+
+'plankton_Fe_sed'
+  'plankton Fe sediment mass'
+  'mmol Fe m-2'
+  'plankton_Fe_sed, scalar, series'
+  'ocean_time'
+  'idBSMa(isedfe)'
+  'r2dvar'
+  1.0d0
+
+'chl_sed'
+  'chlorophyll sediment mass'
+  'mg chl m-2'
+  'plankton_chl_sed, scalar, series'
+  'ocean_time'
+  'idBSMa(isedchl)'
+  'r2dvar'
+  1.0d0
+
+!
 !---------------------------------------------------------------------
 !  Define names of variables associated with Fennel et al (2006),
 !  NEMURO, NPZD or Hypoxia ecosystem models.
@@ -5902,1583 +7483,3 @@
   'nulvar'
   1.0d0
 
-!
-! created by create_darwin_headerfiles (written by J. Paul Mattern)
-!
-
-!
-!-----------------------------------------------------------------------
-!  Define names of Darwin ecosystem model variables.
-!-----------------------------------------------------------------------
-!
-
-
-'DIC'
-  'DIC concentration'
-  'mmol C m-3'
-  'DIC, scalar, series'
-  'ocean_time'
-  'idTvar(iDIC)'
-  'r3dvar'
-  1.0d0
-
-'NH4'
-  'NH4 concentration'
-  'mmol N m-3'
-  'NH4, scalar, series'
-  'ocean_time'
-  'idTvar(iNH4)'
-  'r3dvar'
-  1.0d0
-
-'NO2'
-  'NO2 concentration'
-  'mmol N m-3'
-  'NO2, scalar, series'
-  'ocean_time'
-  'idTvar(iNO2)'
-  'r3dvar'
-  1.0d0
-
-'NO3'
-  'NO3 concentration'
-  'mmol N m-3'
-  'NO3, scalar, series'
-  'ocean_time'
-  'idTvar(iNO3)'
-  'r3dvar'
-  1.0d0
-
-'PO4'
-  'PO4 concentration'
-  'mmol P m-3'
-  'PO4, scalar, series'
-  'ocean_time'
-  'idTvar(iPO4)'
-  'r3dvar'
-  1.0d0
-
-'SiO2'
-  'SiO2 concentration'
-  'mmol Si m-3'
-  'SiO2, scalar, series'
-  'ocean_time'
-  'idTvar(iSiO2)'
-  'r3dvar'
-  1.0d0
-
-'FeT'
-  'FeT concentration'
-  'mmol Fe m-3'
-  'FeT, scalar, series'
-  'ocean_time'
-  'idTvar(iFeT)'
-  'r3dvar'
-  1.0d0
-
-'DOC'
-  'DOC concentration'
-  'mmol C m-3'
-  'DOC, scalar, series'
-  'ocean_time'
-  'idTvar(iDOC)'
-  'r3dvar'
-  1.0d0
-
-'DON'
-  'DON concentration'
-  'mmol N m-3'
-  'DON, scalar, series'
-  'ocean_time'
-  'idTvar(iDON)'
-  'r3dvar'
-  1.0d0
-
-'DOP'
-  'DOP concentration'
-  'mmol P m-3'
-  'DOP, scalar, series'
-  'ocean_time'
-  'idTvar(iDOP)'
-  'r3dvar'
-  1.0d0
-
-'DOFe'
-  'DOFe concentration'
-  'mmol Fe m-3'
-  'DOFe, scalar, series'
-  'ocean_time'
-  'idTvar(iDOFe)'
-  'r3dvar'
-  1.0d0
-
-'POC'
-  'POC concentration'
-  'mmol C m-3'
-  'POC, scalar, series'
-  'ocean_time'
-  'idTvar(iPOC)'
-  'r3dvar'
-  1.0d0
-
-'PON'
-  'PON concentration'
-  'mmol N m-3'
-  'PON, scalar, series'
-  'ocean_time'
-  'idTvar(iPON)'
-  'r3dvar'
-  1.0d0
-
-'POP'
-  'POP concentration'
-  'mmol P m-3'
-  'POP, scalar, series'
-  'ocean_time'
-  'idTvar(iPOP)'
-  'r3dvar'
-  1.0d0
-
-'POSi'
-  'POSi concentration'
-  'mmol Si m-3'
-  'POSi, scalar, series'
-  'ocean_time'
-  'idTvar(iPOSi)'
-  'r3dvar'
-  1.0d0
-
-'POFe'
-  'POFe concentration'
-  'mmol Fe m-3'
-  'POFe, scalar, series'
-  'ocean_time'
-  'idTvar(iPOFe)'
-  'r3dvar'
-  1.0d0
-
-'PIC'
-  'PIC concentration'
-  'mmol C m-3'
-  'PIC, scalar, series'
-  'ocean_time'
-  'idTvar(iPIC)'
-  'r3dvar'
-  1.0d0
-
-'total_chlorophyll'
-  'total chlorophyll concentration'
-  'mg chl m-3'
-  'total chlorophyll, scalar, series'
-  'ocean_time'
-  'idTvar(iTChl)'
-  'r3dvar'
-  1.0d0
-
-'alkalinity'
-  'alkalinity concentration'
-  'eq m-3'
-  'alkalinity, scalar, series'
-  'ocean_time'
-  'idTvar(iALK)'
-  'r3dvar'
-  1.0d0
-
-'O2'
-  'O2 concentration'
-  'mmol O m-3'
-  'O2, scalar, series'
-  'ocean_time'
-  'idTvar(iO2)'
-  'r3dvar'
-  1.0d0
-
-'CDOM'
-  'CDOM concentration'
-  'mmol m-3'
-  'CDOM, scalar, series'
-  'ocean_time'
-  'idTvar(iCDOM)'
-  'r3dvar'
-  1.0d0
-
-'plankton'
-  'plankton concentration'
-  'mmol C m-3'
-  'plankton, scalar, series'
-  'ocean_time'
-  'idTvar(ic_)'
-  'r3dvar'
-  1.0d0
-
-'Nquota'
-  'Nquota concentration'
-  'mmol N m-3'
-  'Nquota, scalar, series'
-  'ocean_time'
-  'idTvar(in_)'
-  'r3dvar'
-  1.0d0
-
-'Pquota'
-  'Pquota concentration'
-  'mmol P m-3'
-  'Pquota, scalar, series'
-  'ocean_time'
-  'idTvar(ip_)'
-  'r3dvar'
-  1.0d0
-
-'Siquota'
-  'Siquota concentration'
-  'mmol Si m-3'
-  'Siquota, scalar, series'
-  'ocean_time'
-  'idTvar(isi)'
-  'r3dvar'
-  1.0d0
-
-'Fequota'
-  'Fequota concentration'
-  'mmol Fe m-3'
-  'Fequota, scalar, series'
-  'ocean_time'
-  'idTvar(ife)'
-  'r3dvar'
-  1.0d0
-
-'chlorophyll'
-  'chlorophyll concentration'
-  'mg chl m-3'
-  'chlorophyll, scalar, series'
-  'ocean_time'
-  'idTvar(iChl)'
-  'r3dvar'
-  1.0d0
-
-'DIC_west'
-  'DIC western boundary condition'
-  'mmol C m-3'
-  'DIC_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iDIC)'
-  'nulvar'
-  1.0d0
-
-'DIC_east'
-  'DIC eastern boundary condition'
-  'mmol C m-3'
-  'DIC_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iDIC)'
-  'nulvar'
-  1.0d0
-
-'DIC_south'
-  'DIC southern boundary condition'
-  'mmol C m-3'
-  'DIC_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iDIC)'
-  'nulvar'
-  1.0d0
-
-'DIC_north'
-  'DIC northern boundary condition'
-  'mmol C m-3'
-  'DIC_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iDIC)'
-  'nulvar'
-  1.0d0
-
-'NH4_west'
-  'NH4 western boundary condition'
-  'mmol N m-3'
-  'NH4_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iNH4)'
-  'nulvar'
-  1.0d0
-
-'NH4_east'
-  'NH4 eastern boundary condition'
-  'mmol N m-3'
-  'NH4_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iNH4)'
-  'nulvar'
-  1.0d0
-
-'NH4_south'
-  'NH4 southern boundary condition'
-  'mmol N m-3'
-  'NH4_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iNH4)'
-  'nulvar'
-  1.0d0
-
-'NH4_north'
-  'NH4 northern boundary condition'
-  'mmol N m-3'
-  'NH4_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iNH4)'
-  'nulvar'
-  1.0d0
-
-'NO2_west'
-  'NO2 western boundary condition'
-  'mmol N m-3'
-  'NO2_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iNO2)'
-  'nulvar'
-  1.0d0
-
-'NO2_east'
-  'NO2 eastern boundary condition'
-  'mmol N m-3'
-  'NO2_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iNO2)'
-  'nulvar'
-  1.0d0
-
-'NO2_south'
-  'NO2 southern boundary condition'
-  'mmol N m-3'
-  'NO2_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iNO2)'
-  'nulvar'
-  1.0d0
-
-'NO2_north'
-  'NO2 northern boundary condition'
-  'mmol N m-3'
-  'NO2_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iNO2)'
-  'nulvar'
-  1.0d0
-
-'NO3_west'
-  'NO3 western boundary condition'
-  'mmol N m-3'
-  'NO3_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iNO3)'
-  'nulvar'
-  1.0d0
-
-'NO3_east'
-  'NO3 eastern boundary condition'
-  'mmol N m-3'
-  'NO3_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iNO3)'
-  'nulvar'
-  1.0d0
-
-'NO3_south'
-  'NO3 southern boundary condition'
-  'mmol N m-3'
-  'NO3_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iNO3)'
-  'nulvar'
-  1.0d0
-
-'NO3_north'
-  'NO3 northern boundary condition'
-  'mmol N m-3'
-  'NO3_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iNO3)'
-  'nulvar'
-  1.0d0
-
-'PO4_west'
-  'PO4 western boundary condition'
-  'mmol P m-3'
-  'PO4_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iPO4)'
-  'nulvar'
-  1.0d0
-
-'PO4_east'
-  'PO4 eastern boundary condition'
-  'mmol P m-3'
-  'PO4_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iPO4)'
-  'nulvar'
-  1.0d0
-
-'PO4_south'
-  'PO4 southern boundary condition'
-  'mmol P m-3'
-  'PO4_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iPO4)'
-  'nulvar'
-  1.0d0
-
-'PO4_north'
-  'PO4 northern boundary condition'
-  'mmol P m-3'
-  'PO4_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iPO4)'
-  'nulvar'
-  1.0d0
-
-'SiO2_west'
-  'SiO2 western boundary condition'
-  'mmol Si m-3'
-  'SiO2_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iSiO2)'
-  'nulvar'
-  1.0d0
-
-'SiO2_east'
-  'SiO2 eastern boundary condition'
-  'mmol Si m-3'
-  'SiO2_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iSiO2)'
-  'nulvar'
-  1.0d0
-
-'SiO2_south'
-  'SiO2 southern boundary condition'
-  'mmol Si m-3'
-  'SiO2_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iSiO2)'
-  'nulvar'
-  1.0d0
-
-'SiO2_north'
-  'SiO2 northern boundary condition'
-  'mmol Si m-3'
-  'SiO2_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iSiO2)'
-  'nulvar'
-  1.0d0
-
-'FeT_west'
-  'FeT western boundary condition'
-  'mmol Fe m-3'
-  'FeT_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iFeT)'
-  'nulvar'
-  1.0d0
-
-'FeT_east'
-  'FeT eastern boundary condition'
-  'mmol Fe m-3'
-  'FeT_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iFeT)'
-  'nulvar'
-  1.0d0
-
-'FeT_south'
-  'FeT southern boundary condition'
-  'mmol Fe m-3'
-  'FeT_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iFeT)'
-  'nulvar'
-  1.0d0
-
-'FeT_north'
-  'FeT northern boundary condition'
-  'mmol Fe m-3'
-  'FeT_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iFeT)'
-  'nulvar'
-  1.0d0
-
-'DOC_west'
-  'DOC western boundary condition'
-  'mmol C m-3'
-  'DOC_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iDOC)'
-  'nulvar'
-  1.0d0
-
-'DOC_east'
-  'DOC eastern boundary condition'
-  'mmol C m-3'
-  'DOC_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iDOC)'
-  'nulvar'
-  1.0d0
-
-'DOC_south'
-  'DOC southern boundary condition'
-  'mmol C m-3'
-  'DOC_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iDOC)'
-  'nulvar'
-  1.0d0
-
-'DOC_north'
-  'DOC northern boundary condition'
-  'mmol C m-3'
-  'DOC_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iDOC)'
-  'nulvar'
-  1.0d0
-
-'DON_west'
-  'DON western boundary condition'
-  'mmol N m-3'
-  'DON_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iDON)'
-  'nulvar'
-  1.0d0
-
-'DON_east'
-  'DON eastern boundary condition'
-  'mmol N m-3'
-  'DON_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iDON)'
-  'nulvar'
-  1.0d0
-
-'DON_south'
-  'DON southern boundary condition'
-  'mmol N m-3'
-  'DON_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iDON)'
-  'nulvar'
-  1.0d0
-
-'DON_north'
-  'DON northern boundary condition'
-  'mmol N m-3'
-  'DON_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iDON)'
-  'nulvar'
-  1.0d0
-
-'DOP_west'
-  'DOP western boundary condition'
-  'mmol P m-3'
-  'DOP_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iDOP)'
-  'nulvar'
-  1.0d0
-
-'DOP_east'
-  'DOP eastern boundary condition'
-  'mmol P m-3'
-  'DOP_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iDOP)'
-  'nulvar'
-  1.0d0
-
-'DOP_south'
-  'DOP southern boundary condition'
-  'mmol P m-3'
-  'DOP_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iDOP)'
-  'nulvar'
-  1.0d0
-
-'DOP_north'
-  'DOP northern boundary condition'
-  'mmol P m-3'
-  'DOP_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iDOP)'
-  'nulvar'
-  1.0d0
-
-'DOFe_west'
-  'DOFe western boundary condition'
-  'mmol Fe m-3'
-  'DOFe_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iDOFe)'
-  'nulvar'
-  1.0d0
-
-'DOFe_east'
-  'DOFe eastern boundary condition'
-  'mmol Fe m-3'
-  'DOFe_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iDOFe)'
-  'nulvar'
-  1.0d0
-
-'DOFe_south'
-  'DOFe southern boundary condition'
-  'mmol Fe m-3'
-  'DOFe_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iDOFe)'
-  'nulvar'
-  1.0d0
-
-'DOFe_north'
-  'DOFe northern boundary condition'
-  'mmol Fe m-3'
-  'DOFe_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iDOFe)'
-  'nulvar'
-  1.0d0
-
-'POC_west'
-  'POC western boundary condition'
-  'mmol C m-3'
-  'POC_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iPOC)'
-  'nulvar'
-  1.0d0
-
-'POC_east'
-  'POC eastern boundary condition'
-  'mmol C m-3'
-  'POC_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iPOC)'
-  'nulvar'
-  1.0d0
-
-'POC_south'
-  'POC southern boundary condition'
-  'mmol C m-3'
-  'POC_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iPOC)'
-  'nulvar'
-  1.0d0
-
-'POC_north'
-  'POC northern boundary condition'
-  'mmol C m-3'
-  'POC_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iPOC)'
-  'nulvar'
-  1.0d0
-
-'PON_west'
-  'PON western boundary condition'
-  'mmol N m-3'
-  'PON_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iPON)'
-  'nulvar'
-  1.0d0
-
-'PON_east'
-  'PON eastern boundary condition'
-  'mmol N m-3'
-  'PON_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iPON)'
-  'nulvar'
-  1.0d0
-
-'PON_south'
-  'PON southern boundary condition'
-  'mmol N m-3'
-  'PON_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iPON)'
-  'nulvar'
-  1.0d0
-
-'PON_north'
-  'PON northern boundary condition'
-  'mmol N m-3'
-  'PON_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iPON)'
-  'nulvar'
-  1.0d0
-
-'POP_west'
-  'POP western boundary condition'
-  'mmol P m-3'
-  'POP_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iPOP)'
-  'nulvar'
-  1.0d0
-
-'POP_east'
-  'POP eastern boundary condition'
-  'mmol P m-3'
-  'POP_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iPOP)'
-  'nulvar'
-  1.0d0
-
-'POP_south'
-  'POP southern boundary condition'
-  'mmol P m-3'
-  'POP_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iPOP)'
-  'nulvar'
-  1.0d0
-
-'POP_north'
-  'POP northern boundary condition'
-  'mmol P m-3'
-  'POP_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iPOP)'
-  'nulvar'
-  1.0d0
-
-'POSi_west'
-  'POSi western boundary condition'
-  'mmol Si m-3'
-  'POSi_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iPOSi)'
-  'nulvar'
-  1.0d0
-
-'POSi_east'
-  'POSi eastern boundary condition'
-  'mmol Si m-3'
-  'POSi_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iPOSi)'
-  'nulvar'
-  1.0d0
-
-'POSi_south'
-  'POSi southern boundary condition'
-  'mmol Si m-3'
-  'POSi_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iPOSi)'
-  'nulvar'
-  1.0d0
-
-'POSi_north'
-  'POSi northern boundary condition'
-  'mmol Si m-3'
-  'POSi_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iPOSi)'
-  'nulvar'
-  1.0d0
-
-'POFe_west'
-  'POFe western boundary condition'
-  'mmol Fe m-3'
-  'POFe_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iPOFe)'
-  'nulvar'
-  1.0d0
-
-'POFe_east'
-  'POFe eastern boundary condition'
-  'mmol Fe m-3'
-  'POFe_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iPOFe)'
-  'nulvar'
-  1.0d0
-
-'POFe_south'
-  'POFe southern boundary condition'
-  'mmol Fe m-3'
-  'POFe_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iPOFe)'
-  'nulvar'
-  1.0d0
-
-'POFe_north'
-  'POFe northern boundary condition'
-  'mmol Fe m-3'
-  'POFe_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iPOFe)'
-  'nulvar'
-  1.0d0
-
-'PIC_west'
-  'PIC western boundary condition'
-  'mmol C m-3'
-  'PIC_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iPIC)'
-  'nulvar'
-  1.0d0
-
-'PIC_east'
-  'PIC eastern boundary condition'
-  'mmol C m-3'
-  'PIC_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iPIC)'
-  'nulvar'
-  1.0d0
-
-'PIC_south'
-  'PIC southern boundary condition'
-  'mmol C m-3'
-  'PIC_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iPIC)'
-  'nulvar'
-  1.0d0
-
-'PIC_north'
-  'PIC northern boundary condition'
-  'mmol C m-3'
-  'PIC_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iPIC)'
-  'nulvar'
-  1.0d0
-
-'total_chlorophyll_west'
-  'total chlorophyll western boundary condition'
-  'mg chl m-3'
-  'total chlorophyll_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iTChl)'
-  'nulvar'
-  1.0d0
-
-'total_chlorophyll_east'
-  'total chlorophyll eastern boundary condition'
-  'mg chl m-3'
-  'total chlorophyll_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iTChl)'
-  'nulvar'
-  1.0d0
-
-'total_chlorophyll_south'
-  'total chlorophyll southern boundary condition'
-  'mg chl m-3'
-  'total chlorophyll_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iTChl)'
-  'nulvar'
-  1.0d0
-
-'total_chlorophyll_north'
-  'total chlorophyll northern boundary condition'
-  'mg chl m-3'
-  'total chlorophyll_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iTChl)'
-  'nulvar'
-  1.0d0
-
-'alkalinity_west'
-  'alkalinity western boundary condition'
-  'eq m-3'
-  'alkalinity_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iALK)'
-  'nulvar'
-  1.0d0
-
-'alkalinity_east'
-  'alkalinity eastern boundary condition'
-  'eq m-3'
-  'alkalinity_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iALK)'
-  'nulvar'
-  1.0d0
-
-'alkalinity_south'
-  'alkalinity southern boundary condition'
-  'eq m-3'
-  'alkalinity_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iALK)'
-  'nulvar'
-  1.0d0
-
-'alkalinity_north'
-  'alkalinity northern boundary condition'
-  'eq m-3'
-  'alkalinity_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iALK)'
-  'nulvar'
-  1.0d0
-
-'O2_west'
-  'O2 western boundary condition'
-  'mmol O m-3'
-  'O2_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iO2)'
-  'nulvar'
-  1.0d0
-
-'O2_east'
-  'O2 eastern boundary condition'
-  'mmol O m-3'
-  'O2_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iO2)'
-  'nulvar'
-  1.0d0
-
-'O2_south'
-  'O2 southern boundary condition'
-  'mmol O m-3'
-  'O2_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iO2)'
-  'nulvar'
-  1.0d0
-
-'O2_north'
-  'O2 northern boundary condition'
-  'mmol O m-3'
-  'O2_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iO2)'
-  'nulvar'
-  1.0d0
-
-'CDOM_west'
-  'CDOM western boundary condition'
-  'mmol m-3'
-  'CDOM_west, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iCDOM)'
-  'nulvar'
-  1.0d0
-
-'CDOM_east'
-  'CDOM eastern boundary condition'
-  'mmol m-3'
-  'CDOM_east, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iCDOM)'
-  'nulvar'
-  1.0d0
-
-'CDOM_south'
-  'CDOM southern boundary condition'
-  'mmol m-3'
-  'CDOM_south, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iCDOM)'
-  'nulvar'
-  1.0d0
-
-'CDOM_north'
-  'CDOM northern boundary condition'
-  'mmol m-3'
-  'CDOM_north, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iCDOM)'
-  'nulvar'
-  1.0d0
-
-'plankton_west'
-  'plankton western boundary condition'
-  'mmol C m-3'
-  'plankton, scalar, series'
-  'bry_time'
-  'idTbry(iwest,ic_)'
-  'nulvar'
-  1.0d0
-
-'plankton_east'
-  'plankton eastern boundary condition'
-  'mmol C m-3'
-  'plankton, scalar, series'
-  'bry_time'
-  'idTbry(ieast,ic_)'
-  'nulvar'
-  1.0d0
-
-'plankton_south'
-  'plankton southern boundary condition'
-  'mmol C m-3'
-  'plankton, scalar, series'
-  'bry_time'
-  'idTbry(isouth,ic_)'
-  'nulvar'
-  1.0d0
-
-'plankton_north'
-  'plankton northern boundary condition'
-  'mmol C m-3'
-  'plankton, scalar, series'
-  'bry_time'
-  'idTbry(inorth,ic_)'
-  'nulvar'
-  1.0d0
-
-'Nquota_west'
-  'Nquota western boundary condition'
-  'mmol N m-3'
-  'Nquota, scalar, series'
-  'bry_time'
-  'idTbry(iwest,in_)'
-  'nulvar'
-  1.0d0
-
-'Nquota_east'
-  'Nquota eastern boundary condition'
-  'mmol N m-3'
-  'Nquota, scalar, series'
-  'bry_time'
-  'idTbry(ieast,in_)'
-  'nulvar'
-  1.0d0
-
-'Nquota_south'
-  'Nquota southern boundary condition'
-  'mmol N m-3'
-  'Nquota, scalar, series'
-  'bry_time'
-  'idTbry(isouth,in_)'
-  'nulvar'
-  1.0d0
-
-'Nquota_north'
-  'Nquota northern boundary condition'
-  'mmol N m-3'
-  'Nquota, scalar, series'
-  'bry_time'
-  'idTbry(inorth,in_)'
-  'nulvar'
-  1.0d0
-
-'Pquota_west'
-  'Pquota western boundary condition'
-  'mmol P m-3'
-  'Pquota, scalar, series'
-  'bry_time'
-  'idTbry(iwest,ip_)'
-  'nulvar'
-  1.0d0
-
-'Pquota_east'
-  'Pquota eastern boundary condition'
-  'mmol P m-3'
-  'Pquota, scalar, series'
-  'bry_time'
-  'idTbry(ieast,ip_)'
-  'nulvar'
-  1.0d0
-
-'Pquota_south'
-  'Pquota southern boundary condition'
-  'mmol P m-3'
-  'Pquota, scalar, series'
-  'bry_time'
-  'idTbry(isouth,ip_)'
-  'nulvar'
-  1.0d0
-
-'Pquota_north'
-  'Pquota northern boundary condition'
-  'mmol P m-3'
-  'Pquota, scalar, series'
-  'bry_time'
-  'idTbry(inorth,ip_)'
-  'nulvar'
-  1.0d0
-
-'Siquota_west'
-  'Siquota western boundary condition'
-  'mmol Si m-3'
-  'Siquota, scalar, series'
-  'bry_time'
-  'idTbry(iwest,isi)'
-  'nulvar'
-  1.0d0
-
-'Siquota_east'
-  'Siquota eastern boundary condition'
-  'mmol Si m-3'
-  'Siquota, scalar, series'
-  'bry_time'
-  'idTbry(ieast,isi)'
-  'nulvar'
-  1.0d0
-
-'Siquota_south'
-  'Siquota southern boundary condition'
-  'mmol Si m-3'
-  'Siquota, scalar, series'
-  'bry_time'
-  'idTbry(isouth,isi)'
-  'nulvar'
-  1.0d0
-
-'Siquota_north'
-  'Siquota northern boundary condition'
-  'mmol Si m-3'
-  'Siquota, scalar, series'
-  'bry_time'
-  'idTbry(inorth,isi)'
-  'nulvar'
-  1.0d0
-
-'Fequota_west'
-  'Fequota western boundary condition'
-  'mmol Fe m-3'
-  'Fequota, scalar, series'
-  'bry_time'
-  'idTbry(iwest,ife)'
-  'nulvar'
-  1.0d0
-
-'Fequota_east'
-  'Fequota eastern boundary condition'
-  'mmol Fe m-3'
-  'Fequota, scalar, series'
-  'bry_time'
-  'idTbry(ieast,ife)'
-  'nulvar'
-  1.0d0
-
-'Fequota_south'
-  'Fequota southern boundary condition'
-  'mmol Fe m-3'
-  'Fequota, scalar, series'
-  'bry_time'
-  'idTbry(isouth,ife)'
-  'nulvar'
-  1.0d0
-
-'Fequota_north'
-  'Fequota northern boundary condition'
-  'mmol Fe m-3'
-  'Fequota, scalar, series'
-  'bry_time'
-  'idTbry(inorth,ife)'
-  'nulvar'
-  1.0d0
-
-'chlorophyll'
-  'chlorophyll western boundary condition'
-  'mg chl m-3'
-  'chlorophyll, scalar, series'
-  'bry_time'
-  'idTbry(iwest,iChl)'
-  'nulvar'
-  1.0d0
-
-'chlorophyll'
-  'chlorophyll eastern boundary condition'
-  'mg chl m-3'
-  'chlorophyll, scalar, series'
-  'bry_time'
-  'idTbry(ieast,iChl)'
-  'nulvar'
-  1.0d0
-
-'chlorophyll'
-  'chlorophyll southern boundary condition'
-  'mg chl m-3'
-  'chlorophyll, scalar, series'
-  'bry_time'
-  'idTbry(isouth,iChl)'
-  'nulvar'
-  1.0d0
-
-'chlorophyll'
-  'chlorophyll northern boundary condition'
-  'mg chl m-3'
-  'chlorophyll, scalar, series'
-  'bry_time'
-  'idTbry(inorth,iChl)'
-  'nulvar'
-  1.0d0
-
-'river_DIC'
-  'river runoff DIC concentration'
-  'mmol C m-3'
-  'river_DIC, scalar, series'
-  'river_time'
-  'idRtrc(iDIC)'
-  'nulvar'
-  1.0d0
-
-'river_NH4'
-  'river runoff NH4 concentration'
-  'mmol N m-3'
-  'river_NH4, scalar, series'
-  'river_time'
-  'idRtrc(iNH4)'
-  'nulvar'
-  1.0d0
-
-'river_NO2'
-  'river runoff NO2 concentration'
-  'mmol N m-3'
-  'river_NO2, scalar, series'
-  'river_time'
-  'idRtrc(iNO2)'
-  'nulvar'
-  1.0d0
-
-'river_NO3'
-  'river runoff NO3 concentration'
-  'mmol N m-3'
-  'river_NO3, scalar, series'
-  'river_time'
-  'idRtrc(iNO3)'
-  'nulvar'
-  1.0d0
-
-'river_PO4'
-  'river runoff PO4 concentration'
-  'mmol P m-3'
-  'river_PO4, scalar, series'
-  'river_time'
-  'idRtrc(iPO4)'
-  'nulvar'
-  1.0d0
-
-'river_SiO2'
-  'river runoff SiO2 concentration'
-  'mmol Si m-3'
-  'river_SiO2, scalar, series'
-  'river_time'
-  'idRtrc(iSiO2)'
-  'nulvar'
-  1.0d0
-
-'river_FeT'
-  'river runoff FeT concentration'
-  'mmol Fe m-3'
-  'river_FeT, scalar, series'
-  'river_time'
-  'idRtrc(iFeT)'
-  'nulvar'
-  1.0d0
-
-'river_DOC'
-  'river runoff DOC concentration'
-  'mmol C m-3'
-  'river_DOC, scalar, series'
-  'river_time'
-  'idRtrc(iDOC)'
-  'nulvar'
-  1.0d0
-
-'river_DON'
-  'river runoff DON concentration'
-  'mmol N m-3'
-  'river_DON, scalar, series'
-  'river_time'
-  'idRtrc(iDON)'
-  'nulvar'
-  1.0d0
-
-'river_DOP'
-  'river runoff DOP concentration'
-  'mmol P m-3'
-  'river_DOP, scalar, series'
-  'river_time'
-  'idRtrc(iDOP)'
-  'nulvar'
-  1.0d0
-
-'river_DOFe'
-  'river runoff DOFe concentration'
-  'mmol Fe m-3'
-  'river_DOFe, scalar, series'
-  'river_time'
-  'idRtrc(iDOFe)'
-  'nulvar'
-  1.0d0
-
-'river_POC'
-  'river runoff POC concentration'
-  'mmol C m-3'
-  'river_POC, scalar, series'
-  'river_time'
-  'idRtrc(iPOC)'
-  'nulvar'
-  1.0d0
-
-'river_PON'
-  'river runoff PON concentration'
-  'mmol N m-3'
-  'river_PON, scalar, series'
-  'river_time'
-  'idRtrc(iPON)'
-  'nulvar'
-  1.0d0
-
-'river_POP'
-  'river runoff POP concentration'
-  'mmol P m-3'
-  'river_POP, scalar, series'
-  'river_time'
-  'idRtrc(iPOP)'
-  'nulvar'
-  1.0d0
-
-'river_POSi'
-  'river runoff POSi concentration'
-  'mmol Si m-3'
-  'river_POSi, scalar, series'
-  'river_time'
-  'idRtrc(iPOSi)'
-  'nulvar'
-  1.0d0
-
-'river_POFe'
-  'river runoff POFe concentration'
-  'mmol Fe m-3'
-  'river_POFe, scalar, series'
-  'river_time'
-  'idRtrc(iPOFe)'
-  'nulvar'
-  1.0d0
-
-'river_PIC'
-  'river runoff PIC concentration'
-  'mmol C m-3'
-  'river_PIC, scalar, series'
-  'river_time'
-  'idRtrc(iPIC)'
-  'nulvar'
-  1.0d0
-
-'river_total_chlorophyll'
-  'river runoff total chlorophyll concentration'
-  'mg chl m-3'
-  'river_total chlorophyll, scalar, series'
-  'river_time'
-  'idRtrc(iTChl)'
-  'nulvar'
-  1.0d0
-
-'river_alkalinity'
-  'river runoff alkalinity concentration'
-  'eq m-3'
-  'river_alkalinity, scalar, series'
-  'river_time'
-  'idRtrc(iALK)'
-  'nulvar'
-  1.0d0
-
-'river_O2'
-  'river runoff O2 concentration'
-  'mmol O m-3'
-  'river_O2, scalar, series'
-  'river_time'
-  'idRtrc(iO2)'
-  'nulvar'
-  1.0d0
-
-'river_CDOM'
-  'river runoff CDOM concentration'
-  'mmol m-3'
-  'river_CDOM, scalar, series'
-  'river_time'
-  'idRtrc(iCDOM)'
-  'nulvar'
-  1.0d0
-
-'river_plankton'
-  'river runoff plankton concentration'
-  'mmol C m-3'
-  'river_plankton, scalar, series'
-  'river_time'
-  'idRtrc(ic_)'
-  'nulvar'
-  1.0d0
-
-'river_Nquota'
-  'river runoff Nquota concentration'
-  'mmol N m-3'
-  'river_Nquota, scalar, series'
-  'river_time'
-  'idRtrc(in_)'
-  'nulvar'
-  1.0d0
-
-'river_Pquota'
-  'river runoff Pquota concentration'
-  'mmol P m-3'
-  'river_Pquota, scalar, series'
-  'river_time'
-  'idRtrc(ip_)'
-  'nulvar'
-  1.0d0
-
-'river_Siquota'
-  'river runoff Siquota concentration'
-  'mmol Si m-3'
-  'river_Siquota, scalar, series'
-  'river_time'
-  'idRtrc(isi)'
-  'nulvar'
-  1.0d0
-
-'river_Fequota'
-  'river runoff Fequota concentration'
-  'mmol Fe m-3'
-  'river_Fequota, scalar, series'
-  'river_time'
-  'idRtrc(ife)'
-  'nulvar'
-  1.0d0
-
-'river_chlorophyll'
-  'river runoff chlorophyll concentration'
-  'mg chl m-3'
-  'river_chlorophyll, scalar, series'
-  'river_time'
-  'idRtrc(iChl)'
-  'nulvar'
-  1.0d0
-
-!
-! for Darwin BIO_SEDIMENTVARIABLES
-!
-
-'PIC_sed'
-  'PIC sediment mass'
-  'mmol C m-2'
-  'PIC, scalar, series'
-  'ocean_time'
-  'idBSMa(iPIC)'
-  'r2dvar'
-  1.0d0
-
-'POC_sed'
-  'POC sediment mass'
-  'mmol C m-2'
-  'POC, scalar, series'
-  'ocean_time'
-  'idBSMa(iPOC)'
-  'r2dvar'
-  1.0d0
-
-'PON_sed'
-  'PON sediment mass'
-  'mmol N m-2'
-  'PON, scalar, series'
-  'ocean_time'
-  'idBSMa(iPON)'
-  'r2dvar'
-  1.0d0
-
-'POP_sed'
-  'POP sediment mass'
-  'mmol P m-2'
-  'POP, scalar, series'
-  'ocean_time'
-  'idBSMa(iPOP)'
-  'r2dvar'
-  1.0d0
-
-'POSi_sed'
-  'POSi sediment mass'
-  'mmol Si m-2'
-  'POSi, scalar, series'
-  'ocean_time'
-  'idBSMa(iPOSi)'
-  'r2dvar'
-  1.0d0
-
-'POFe_sed'
-  'POFe sediment mass'
-  'mmol Fe m-2'
-  'POFe, scalar, series'
-  'ocean_time'
-  'idBSMa(iPOFe)'
-  'r2dvar'
-  1.0d0
-
-'plankton_C_sed'
-  'plankton C sediment mass'
-  'mmol C m-2'
-  'plankton_C_sed, scalar, series'
-  'ocean_time'
-  'idBSMa(isedc)'
-  'r2dvar'
-  1.0d0
-
-'plankton_N_sed'
-  'plankton N sediment mass'
-  'mmol N m-2'
-  'plankton_N_sed, scalar, series'
-  'ocean_time'
-  'idBSMa(isedn)'
-  'r2dvar'
-  1.0d0
-
-'plankton_P_sed'
-  'plankton P sediment mass'
-  'mmol P m-2'
-  'plankton_P_sed, scalar, series'
-  'ocean_time'
-  'idBSMa(isedp)'
-  'r2dvar'
-  1.0d0
-
-'plankton_Si_sed'
-  'plankton Si sediment mass'
-  'mmol Si m-2'
-  'plankton_Si_sed, scalar, series'
-  'ocean_time'
-  'idBSMa(isedsi)'
-  'r2dvar'
-  1.0d0
-
-'plankton_Fe_sed'
-  'plankton Fe sediment mass'
-  'mmol Fe m-2'
-  'plankton_Fe_sed, scalar, series'
-  'ocean_time'
-  'idBSMa(isedfe)'
-  'r2dvar'
-  1.0d0
-
-'chl_sed'
-  'chlorophyll sediment mass'
-  'mg chl m-2'
-  'plankton_chl_sed, scalar, series'
-  'ocean_time'
-  'idBSMa(isedchl)'
-  'r2dvar'
-  1.0d0

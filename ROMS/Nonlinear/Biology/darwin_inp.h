@@ -1153,6 +1153,20 @@
           END DO
 #endif /* !DARWIN_RANDOM_TRAITS */
 !
+!  Report sizes.
+!
+          WRITE (out,'(/1x,a,i0,a)')                                    &
+     &      'Plankton sizes (Grid ',ng,'):'
+          WRITE (out,'(1x,a)')                                          &
+     &      '========================'
+          WRITE (out,'(20x,1x,a6,1x,a16))') 'ESD', 'biovol'
+          DO i=1,nplank
+            ! 3/(4*pi) = 0.238732414637843d0
+            WRITE (out,'(a20,1x,f6.1,1x,f16.3)') trim(plankname(i)),    &
+     &        2.0_r8*(biovol(i,ng)*0.2387324146378_r8)**(1.0_r8/3.0_r8),&
+     &        biovol(i,ng)
+          END DO
+!
 !  Report ksat parameters.
 !
           write (out,'(/1x,a,i0,a)')                                    &

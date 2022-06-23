@@ -1159,7 +1159,7 @@
      &      'Plankton sizes (Grid ',ng,'):'
           WRITE (out,'(1x,a)')                                          &
      &      '========================'
-          WRITE (out,'(20x,1x,a6,1x,a16))') 'ESD', 'biovol'
+          WRITE (out,'(20x,1x,a6,1x,a16)') 'ESD', 'biovol'
           DO i=1,nplank
             ! 3/(4*pi) = 0.238732414637843d0
             WRITE (out,'(a20,1x,f6.1,1x,f16.3)') trim(plankname(i)),    &

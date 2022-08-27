@@ -1192,7 +1192,7 @@
         DO i=1,MT
           varid=varid+1
           IF (varid.gt.MV) THEN
-            WRITE (stdout,130) MV, varid
+            WRITE (stdout,140) MV, varid
             STOP
           END IF
           idTclm(i)=varid

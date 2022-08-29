@@ -138,6 +138,7 @@
 #endif
       DO WHILE (.TRUE.)
         READ (inp,'(a)',ERR=10,END=20) line
+        !IF (Master) WRITE (out,'(a,a)') '::: reading ',TRIM(KeyWord)
         status=decode_line(line, KeyWord, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           SELECT CASE (TRIM(KeyWord))
@@ -1181,6 +1182,19 @@
      &      PCmax(i,ng),PCmax(i,ng)*day2sec,                            &
      &      ksatNO3(i,ng),ksatNO2(i,ng),ksatNH4(i,ng),                  &
      &      ksatPO4(i,ng),ksatSiO2(i,ng),ksatFeT(i,ng)
+          END DO
+!
+!  Report grazing parameters.
+!
+          write (out,'(/1x,a,i0,a)')                                    &
+     &      'Zooplankton grazing parameters (Grid ',ng,'):'
+          write (out,'(1x,a)')                                          &
+     &      '========================================'
+          write (out,'(22x,2(1x,a15))')                                 &
+     &      'grazemax','grazemax (d-1)'
+          DO i=iMinPred,iMaxPred
+            write (out,'(a20,": ",2(1x,f15.9))') trim(plankname(i)),    &
+     &      grazemax(i,ng),grazemax(i,ng)*day2sec
           END DO
 
 #if ! defined DARWIN_READ_PALAT

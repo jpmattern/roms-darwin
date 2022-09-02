@@ -1184,6 +1184,21 @@
      &      ksatPO4(i,ng),ksatSiO2(i,ng),ksatFeT(i,ng)
           END DO
 !
+!  Report mortality rates.
+!
+          write (out,'(/1x,a,i0,a)')                                    &
+     &      'Maximum mortality rates (Grid ',ng,'):'
+          write (out,'(1x,a)')                                          &
+     &      '================================='
+          write (out,'(22x,4(1x,a15))')                                 &
+     &      'mort','mort (d-1)', 'mort2','mort2 (d-1)'
+          DO i=1,nplank
+            write (out,'(a20,": ",4(1x,f15.9))') trim(plankname(i)),    &
+     &      mort(i,ng),mort(i,ng)*day2sec,                              &
+     &      mort2(i,ng),mort2(i,ng)*day2sec
+          END DO
+
+!
 !  Report grazing parameters.
 !
           write (out,'(/1x,a,i0,a)')                                    &

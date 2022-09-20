@@ -88,7 +88,7 @@
       character (len=  13) :: Hstring, Vstring
       character (len=  17) :: frmt
       character (len=  70) :: line
-      character (len=2816) :: tadv_att
+      character (len=5632) :: tadv_att
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", tadv_putatt_nf90"

@@ -23,15 +23,22 @@
             ENDIF
             logvol = logvolbase(ng) + (logvol0ind(ig,ng)-1)*logvolinc(ng)
             biovol0(ig,ng) = 10.0_r8 ** logvol
-            biovolfac(ig,ng) = 10.0_r8 ** logvolinc(ng)
+            IF (biovolfac(ig,ng).gt.0) THEN
+              ! JPM 2022-08-26: added this to permit biovolfac to allow
+              ! different spacing for different groups
+              biovolfac(ig,ng) = 10.0_r8 **                             &
+     &                           (logvolinc(ng)*biovolfac(ig,ng))
+            ELSE
+              biovolfac(ig,ng) = 10.0_r8 ** logvolinc(ng)
+            ENDIF
           ENDIF
         ENDDO
 
         DO ig=1,nGroup
          DO ip=1,grp_nplank(ig,ng)
           IF (grp_logvolind(ip,ig,ng) .GT. 0 .AND.grp_biovol(ip,ig,ng) .GT. 0.0_r8) THEN
-          IF (Master) WRITE(out,'(2A)') 'DARWIN_GENERATE_ALLOMETRIC: ', &
-     &      'cannot set both grp_biovol(ng) and grp_logvolind(ng)'
+            IF (Master) WRITE(out,'(2A)') 'DARWIN_GENERATE_ALLOMETRIC:',&
+     &        ' cannot set both grp_biovol(ng) and grp_logvolind(ng)'
             exit_flag=5
             RETURN
           ELSEIF (grp_logvolind(ip,ig,ng) .GT. 0) THEN
@@ -46,6 +53,10 @@
      &          'DARWIN_GENERATE_ALLOMETRIC: ',                         &
      &          'Need to set one of grp_biovol(ng), grp_logvolind(ng),  &
      &','biovol0(ng), logvol0ind(ng)'
+              IF (Master) THEN
+                WRITE(out,'(A,I3,A,I3,A)')                              &
+                'Error occurred at ip=',ip,' ig=',ig,'.'
+              ENDIF
              exit_flag=5
              RETURN
             ENDIF

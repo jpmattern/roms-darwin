@@ -456,7 +456,7 @@
 !
       ic=1
       DO i=iMinPred,iMaxPred
-        IF (i.gt.nPhoto) THEN
+        IF (i.gt.nPhoto .and. i.lt.iMinBact) THEN
           WRITE (plankname(i),'(a,i2.2)') 'zooplankton', ic
           ic=ic+1
         END IF

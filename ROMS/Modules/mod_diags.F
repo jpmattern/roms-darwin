@@ -3,7 +3,7 @@
 #ifdef DIAGNOSTICS
 # if defined DIAGNOSTICS_BIO
 #  if defined DIAGNOSTICS_BIO_MAPPING
-#   define SIZE_DB3D NDb3d_o 
+#   define SIZE_DB3D NDb3d_o
 #  else
 #   define SIZE_DB3D NDbio3d
 #  endif
@@ -65,6 +65,9 @@
 #  if defined BIO_FENNEL
           real(r8), pointer :: DiaBio2d(:,:,:)
           real(r8), pointer :: DiaBio3d(:,:,:,:)
+#  elif defined DARWIN
+          real(r8), pointer :: DiaBio3d(:,:,:,:)
+          real(r8), pointer :: DiaBio4d(:,:,:,:,:)
 #  elif defined ECOSIM
           real(r8), pointer :: DiaBio3d(:,:,:,:)
           real(r8), pointer :: DiaBio4d(:,:,:,:,:)
@@ -114,7 +117,7 @@
 !=======================================================================
 !
       USE mod_param
-# if defined DIAGNOSTICS_BIO && defined ECOSIM
+# if defined DIAGNOSTICS_BIO && ( defined ECOSIM || defined DARWIN )
       USE mod_biology
 # endif
 !
@@ -147,6 +150,17 @@
       IF (NDbio3d.gt.0) THEN
         allocate ( DIAGS(ng) % DiaBio3d(LBi:UBi,LBj:UBj,N(ng),SIZE_DB3D) )
         Dmem(ng)=Dmem(ng)+REAL(N(ng)*NDbio3d,r8)*size2d
+      END IF
+#  elif defined DARWIN
+      IF (NDbio3d.gt.0) THEN
+        allocate ( DIAGS(ng) % DiaBio3d(LBi:UBi,LBj:UBj,                &
+     &                                  N(ng),NDbio3d) )
+        Dmem(ng)=Dmem(ng)+REAL(nplank*NDbio3d,r8)*size2d
+      END IF
+      IF (NDbio4d.gt.0) THEN
+        allocate ( DIAGS(ng) % DiaBio4d(LBi:UBi,LBj:UBj,N(ng),          &
+     &                                  nplank,NDbio4d) )
+        Dmem(ng)=Dmem(ng)+REAL(N(ng)*nplank*NDbio4d,r8)*size2d
       END IF
 #  elif defined ECOSIM
       IF (NDbio3d.gt.0) THEN
@@ -272,6 +286,16 @@
         IF (.not.destroy(ng, DIAGS(ng)%DiaBio3d, MyFile,                &
      &                   __LINE__, 'DIAGS(ng)%DiaBio3d')) RETURN
       END IF
+#   elif defined DARWIN
+      IF (NDbio3d.gt.0) THEN
+        IF (.not.destroy(ng, DIAGS(ng)%DiaBio3d, MyFile,                &
+     &                   __LINE__, 'DIAGS(ng)%DiaBio3d')) RETURN
+      END IF
+
+      IF (NDbio4d.gt.0) THEN
+        IF (.not.destroy(ng, DIAGS(ng)%DiaBio4d, MyFile,                &
+     &                   __LINE__, 'DIAGS(ng)%DiaBio4d')) RETURN
+      END IF
 #   elif defined ECOSIM
       IF (NDbio3d.gt.0) THEN
         IF (.not.destroy(ng, DIAGS(ng)%DiaBio3d, MyFile,                &
@@ -370,7 +394,7 @@
 !=======================================================================
 !
       USE mod_param
-# if defined DIAGNOSTICS_BIO && defined ECOSIM
+# if defined DIAGNOSTICS_BIO && ( defined ECOSIM || defined DARWIN )
       USE mod_biology
 # endif
 !
@@ -439,6 +463,27 @@
             DO k=1,N(ng)
               DO i=Imin,Imax
                 DIAGS(ng) % DiaBio3d(i,j,k,idiag) = IniVal
+              END DO
+            END DO
+          END DO
+        END IF
+#  elif defined DARWIN
+        IF (NDbio3d.gt.0) THEN
+          DO idiag=1,NDbio3d
+            DO k=1,N(ng)
+              DO i=Imin,Imax
+                DIAGS(ng) % DiaBio3d(i,j,k,idiag) = IniVal
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (NDbio4d.gt.0) THEN
+          DO idiag=1,NDbio4d
+            DO iband=1,nplank
+              DO k=1,N(ng)
+                DO i=Imin,Imax
+                  DIAGS(ng) % DiaBio4d(i,j,k,iband,idiag) = IniVal
+                END DO
               END DO
             END DO
           END DO

@@ -809,7 +809,7 @@
 #endif
 
 /*
-** cae: If biology is run offline, then do not add tides. 
+** cae: If biology is run offline, then do not add tides.
 */
 #ifdef OFFLINE_BIO
 # define FORWARD_READ
@@ -843,7 +843,7 @@
 #  endif
 # endif
 # define DARWIN_INTERNAL_EXTRAATT 26
-#endif 
+#endif
 
 /*
 ** Activate internal option for biological float behavior.
@@ -1128,6 +1128,7 @@
 
 #if defined DIAGNOSTICS_BIO && \
   !(defined BIO_FENNEL      || \
+    defined DARWIN          || \
     defined ECOSIM          || \
     defined HYPOXIA_SRM)
 #  undef DIAGNOSTICS_BIO

@@ -37,7 +37,7 @@
       USE nf_fwrite2d_mod, ONLY : nf_fwrite2d
 # ifdef SOLVE3D
       USE nf_fwrite3d_mod, ONLY : nf_fwrite3d
-#  ifdef ECOSIM
+#  if defined ECOSIM || defined DARWIN
       USE nf_fwrite4d_mod, ONLY : nf_fwrite4d
 #  endif
 # endif
@@ -291,16 +291,69 @@
         END DO
       END DO
 # endif
-# if defined DIAGNOSTICS_BIO
-#  if defined BIO_FENNEL || defined HYPOXIA_SRM || defined DARWIN
+# if defined DIAGNOSTICS_BIO && defined DARWIN
+!
+!  Write out 3D biological diagnostic fields.
+!
+      !dtBIO=dt(ng)*sec2day
+      DO ivar=1,NDbio3d
+        ifield=iDbio3(ivar)
+        IF (Dout(ifield,ng)) THEN
+          scale=1.0_dp  ! no adjustment
+          gtype=gfactor*l3dvar
+          status=nf_fwrite3d(ng, iNLM, DIA(ng)%ncid,                    &
+     &                       DIA(ng)%Vid(ifield),                       &
+     &                       DIA(ng)%Rindex, gtype,                     &
+     &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
+#   ifdef MASKING
+     &                       GRID(ng) % rmask,                          &
+#   endif
+     &                       DIAGS(ng) % DiaBio3d(:,:,:,ivar),          &
+     &                       SetFillVal = .FALSE.)
+          IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+            IF (Master) THEN
+              WRITE (stdout,10) TRIM(Vname(1,ifield)), DIA(ng)%Rindex
+            END IF
+            exit_flag=3
+            ioerror=status
+            RETURN
+          END IF
+        END IF
+      END DO
+!
+!  Write out 4D biological diagnostic fields.
+!
+      DO ivar=1,NDbio4d
+        ifield=iDbio4(ivar)
+        IF (Dout(ifield,ng)) THEN
+          scale=1.0_dp  ! no adjustment
+          gtype=gfactor*l4dvar
+          status=nf_fwrite4d(ng, iNLM, DIA(ng)%ncid,                    &
+     &                       DIA(ng)%Vid(ifield),                       &
+     &                       DIA(ng)%Rindex, gtype,                     &
+     &                       LBi, UBi, LBj, UBj, 1, N(ng), 1, nplank,   &
+     &                       scale,                                     &
+#   ifdef MASKING
+     &                       GRID(ng) % rmask,                          &
+#   endif
+     &                       DIAGS(ng) % DiaBio4d(:,:,:,:,ivar),        &
+     &                       SetFillVal = .FALSE.)
+          IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+            IF (Master) THEN
+              WRITE (stdout,10) TRIM(Vname(1,ifield)), DIA(ng)%Rindex
+            END IF
+            exit_flag=3
+            ioerror=status
+            RETURN
+          END IF
+        END IF
+      END DO
+# elif defined DIAGNOSTICS_BIO
+#  if defined BIO_FENNEL || defined HYPOXIA_SRM
 !
 !  Write out 2D biological diagnostic fields.
 !
-#  if defined DARWIN
-      dtBIO=dt(ng)*sec2day
-#  else
       dtBIO=dt(ng)*sec2day/REAL(BioIter(ng),r8)
-#  endif
 
       DO ivar=1,NDbio2d
         ifield=iDbio2(ivar)
@@ -335,7 +388,7 @@
         END IF
       END DO
 #  endif
-#  if defined BIO_FENNEL || defined DARWIN
+#  if defined BIO_FENNEL
 !
 !  Write out 3D biological diagnostic fields.
 !
@@ -661,7 +714,75 @@
         END DO
       END DO
 #  endif
-#  ifdef DIAGNOSTICS_BIO
+#  if defined DIAGNOSTICS_BIO && defined DARWIN
+!
+!  Write out 3D biological diagnostic fields.
+!
+      !dtBIO=dt(ng)*sec2day
+      DO ivar=1,NDbio3d
+        ifield=iDbio3(ivar)
+        IF (Dout(ifield,ng)) THEN
+          scale=1.0_dp  ! no adjustment
+          IF (DIA(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+            ioDesc => ioDesc_dp_l3dvar(ng)
+          ELSE
+            ioDesc => ioDesc_sp_l3dvar(ng)
+          END IF
+          status=nf_fwrite3d(ng, iNLM, DIA(ng)%pioFile,                 &
+     &                       DIA(ng)%pioVar(ifield),                    &
+     &                       DIA(ng)%Rindex,                            &
+     &                       ioDesc,                                    &
+     &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
+#    ifdef MASKING
+     &                       GRID(ng) % rmask,                          &
+#    endif
+     &                       DIAGS(ng) % DiaBio3d(:,:,:,ivar),          &
+     &                       SetFillVal = .FALSE.)
+          IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+            IF (Master) THEN
+              WRITE (stdout,10) TRIM(Vname(1,ifield)), DIA(ng)%Rindex
+            END IF
+            exit_flag=3
+            ioerror=status
+            RETURN
+          END IF
+        END IF
+      END DO
+!
+!  Write out 4D biological diagnostic fields.
+!
+      !dtBIO=dt(ng)*sec2day
+      DO ivar=1,NDbio4d
+        ifield=iDbio4(ivar)
+        IF (Dout(ifield,ng)) THEN
+          scale=1.0_dp  ! no adjustment
+          IF (DIA(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+            ioDesc => ioDesc_dp_l4dvar(ng)
+          ELSE
+            ioDesc => ioDesc_sp_l4dvar(ng)
+          END IF
+          status=nf_fwrite4d(ng, iNLM, DIA(ng)%pioFile,                 &
+     &                       DIA(ng)%pioVar(ifield),                    &
+     &                       DIA(ng)%Rindex, gtype,                     &
+     &                       ioDesc,                                    &
+     &                       LBi, UBi, LBj, UBj, 1, N(ng), 1, nplank,   &
+     &                       scale,                                     &
+#    ifdef MASKING
+     &                       GRID(ng) % rmask,                          &
+#    endif
+     &                       DIAGS(ng) % DiaBio4d(:,:,:,:,ivar),        &
+     &                       SetFillVal = .FALSE.)
+          IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+            IF (Master) THEN
+              WRITE (stdout,10) TRIM(Vname(1,ifield)), DIA(ng)%Rindex
+            END IF
+            exit_flag=3
+            ioerror=status
+            RETURN
+          END IF
+        END IF
+      END DO
+#  elif definedned DIAGNOSTICS_BIO
 #   if defined BIO_FENNEL || defined HYPOXIA_SRM
 !
 !  Write out 2D biological diagnostic fields.

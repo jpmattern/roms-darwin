@@ -78,7 +78,7 @@
       USE bc_2d_mod
 # ifdef SOLVE3D
       USE bc_3d_mod
-#  ifdef ECOSIM
+#  if defined ECOSIM || defined DARWIN
       USE bc_4d_mod
 #  endif
 # endif
@@ -496,6 +496,29 @@
           END DO
         END DO
 #   endif /*BIO_FENNEL*/
+#  elif defined DARWIN
+        DO idiag=1,NDbio3d
+          DO k=1,N(ng)
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
+                DIAGS(ng)%DiaBio3d(i,j,k,idiag)=rfac(i,j)*              &
+     &                    DIAGS(ng)%DiaBio3d(i,j,k,idiag)
+              END DO
+            END DO
+          END DO
+        END DO
+        DO idiag=1,NDbio4d
+          DO iband=1,nplank
+            DO k=1,N(ng)
+              DO j=JstrR,JendR
+                DO i=IstrR,IendR
+                  DIAGS(ng)%DiaBio4d(i,j,k,iband,idiag)=rfac(i,j)*      &
+     &                      DIAGS(ng)%DiaBio4d(i,j,k,iband,idiag)
+                END DO
+              END DO
+            END DO
+          END DO
+        END DO
 #  else
         DO idiag=1,NDbio3d
           DO k=1,NDbands
@@ -624,7 +647,38 @@
 #    endif
 #   endif
 #  endif
-#  ifdef DIAGNOSTICS_BIO
+#  if defined DIAGNOSTICS_BIO && defined DARWIN
+!
+!  Biological terms 3D diagnostics.
+!
+        DO idiag=1,NDbio3d
+          CALL bc_r3d_tile (ng, tile,                                   &
+     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
+     &                      DIAGS(ng)%DiaBio3d(:,:,:,idiag))
+        END DO
+#    ifdef DISTRIBUTE
+        CALL mp_exchange4d (ng, tile, iNLM, 1,                          &
+     &                      LBi, UBi, LBj, UBj, 1, N(ng), 1, NDbio3d,   &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      DIAGS(ng)%DiaBio3d)
+#    endif
+!
+!  Biological terms 4D diagnostics.
+!
+        DO idiag=1,NDbio4d
+          CALL bc_r4d_tile (ng, tile,                                   &
+     &                      LBi, UBi, LBj, UBj, 1, N(ng), 1, nplank,    &
+     &                      DIAGS(ng)%DiaBio4d(:,:,:,:,idiag))
+#    ifdef DISTRIBUTE
+          CALL mp_exchange4d (ng, tile, iNLM, 1,                        &
+     &                        LBi, UBi, LBj, UBj, 1, N(ng), 1, nplank,  &
+     &                        NghostPoints,                             &
+     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        DIAGS(ng)%DiaBio4d(:,:,:,:,idiag))
+#    endif
+        END DO
+#  elif defined DIAGNOSTICS_BIO
 !
 !  Biological terms 2D diagnostics.
 !

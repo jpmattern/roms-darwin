@@ -114,7 +114,7 @@
 # endif
       integer :: DimIDs(nDimID)
       integer :: t2dgrd(3), u2dgrd(3), v2dgrd(3)
-# if defined ECOSIM && defined DIAGNOSTICS_BIO
+# if defined DIAGNOSTICS_BIO && ( defined ECOSIM || defined DARWIN )
       integer :: l3dgrd(4), l4dgrd(5)
 # endif
 
@@ -444,6 +444,21 @@
         l4dgrd(4)=DimIDs(33)
         l4dgrd(5)=DimIDs(12)
 #  endif
+#  if defined DIAGNOSTICS_BIO && defined DARWIN
+!
+!  Define dimension vector for diagnostic variables.
+!
+        l3dgrd(1)=DimIDs( 1)
+        l3dgrd(2)=DimIDs( 5)
+        l3dgrd(3)=DimIDs( 9)
+        l3dgrd(4)=DimIDs(12)
+!
+        l4dgrd(1)=DimIDs( 1)
+        l4dgrd(2)=DimIDs( 5)
+        l4dgrd(3)=DimIDs( 9)
+        l4dgrd(4)=DimIDs(25)  ! nplank
+        l4dgrd(5)=DimIDs(12)
+#  endif
 # endif
 !
 !  Initialize unlimited time record dimension.
@@ -595,7 +610,50 @@
         END DO
 # endif
 
-# if defined DIAGNOSTICS_BIO
+# if defined DIAGNOSTICS_BIO && defined DARWIN
+!
+!  Define 3D biological diagnostic fields.
+!
+        DO ivar=1,NDbio3d
+          ifield=iDbio3(ivar)
+          IF (Dout(ifield,ng)) THEN
+            Vinfo( 1)=Vname(1,ifield)
+            WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,ifield))
+            Vinfo( 3)=Vname(3,ifield)
+            Vinfo(14)=Vname(4,ifield)
+            Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+            Vinfo(20)='mask_rho'
+#   endif
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
+            status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
+     &                     NF_FOUT, nvd4, l3dgrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
+        END DO
+!
+!  Define 4D biological diagnostic fields.
+!
+        DO ivar=1,NDbio4d
+          ifield=iDbio4(ivar)
+          IF (Dout(ifield,ng)) THEN
+            Vinfo( 1)=Vname(1,ifield)
+            WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,ifield))
+            Vinfo( 3)=Vname(3,ifield)
+            Vinfo(14)=Vname(4,ifield)
+            Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+            Vinfo(20)='mask_rho'
+#   endif
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
+            status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
+     &                     NF_FOUT, nvd5, l4dgrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
+        END DO
+# elif defined DIAGNOSTICS_BIO
 !
 !  Define 2D biological diagnostic fields.
 !
@@ -779,7 +837,22 @@
             END DO
           END DO
 # endif
-# ifdef DIAGNOSTICS_BIO
+# if defined DIAGNOSTICS_BIO && defined DARWIN
+          DO ivar=1,NDbio3d
+            ifield=iDbio3(ivar)
+            IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
+              got_var(ifield)=.TRUE.
+              DIA(ng)%Vid(ifield)=var_id(i)
+            END IF
+          END DO
+          DO ivar=1,NDbio4d
+            ifield=iDbio4(ivar)
+            IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
+              got_var(ifield)=.TRUE.
+              DIA(ng)%Vid(ifield)=var_id(i)
+            END IF
+          END DO
+# elif defined DIAGNOSTICS_BIO
           DO ivar=1,NDbio2d
             ifield=iDbio2(ivar)
             IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
@@ -871,7 +944,26 @@
           END DO
         END DO
 # endif
-# ifdef DIAGNOSTICS_BIO
+# if defined DIAGNOSTICS_BIO && defined DARWIN
+        DO ivar=1,NDbio3d
+          ifield=iDbio3(ivar)
+          IF (.not.got_var(ifield).and.Dout(ifield,ng)) THEN
+            IF (Master) WRITE (stdout,60) TRIM(Vname(1,ifield)),        &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            RETURN
+          END IF
+        END DO
+        DO ivar=1,NDbio4d
+          ifield=iDbio4(ivar)
+          IF (.not.got_var(ifield).and.Dout(ifield,ng)) THEN
+            IF (Master) WRITE (stdout,60) TRIM(Vname(1,ifield)),        &
+     &                                    TRIM(ncname)
+            exit_flag=3
+            RETURN
+          END IF
+        END DO
+# elif defined DIAGNOSTICS_BIO
         DO ivar=1,NDbio2d
           ifield=iDbio2(ivar)
           IF (.not.got_var(ifield).and.Dout(ifield,ng)) THEN
@@ -1289,6 +1381,21 @@
         l4dgrd(4)=DimIDs(33)
         l4dgrd(5)=DimIDs(12)
 #   endif
+#   if defined DIAGNOSTICS_BIO && defined DARWIN
+!
+!  Define dimension vector for diagnostic variables.
+!
+        l3dgrd(1)=DimIDs( 1)
+        l3dgrd(2)=DimIDs( 5)
+        l3dgrd(3)=DimIDs( 9)
+        l3dgrd(4)=DimIDs(12)
+!
+        l4dgrd(1)=DimIDs( 1)
+        l4dgrd(2)=DimIDs( 5)
+        l4dgrd(3)=DimIDs( 9)
+        l4dgrd(4)=DimIDs(25)  ! nplank
+        l4dgrd(5)=DimIDs(12)
+#   endif
 #  endif
 !
 !  Initialize unlimited time record dimension.
@@ -1521,7 +1628,7 @@
           END IF
         END DO
 
-#   elif defined ECOSIM
+#   elif defined ECOSIM || defined DARWIN
 !
 !  Define 3D biological diagnostic fields.
 !
@@ -1703,7 +1810,7 @@
               DIA(ng)%pioVar(ifield)%gtype=r3dvar
             END IF
           END DO
-#   elif defined ECOSIM
+#   elif defined ECOSIM || defined DARWIN
           DO ivar=1,NDbio3d
             ifield=iDbio3(ivar)
             IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
@@ -1805,7 +1912,7 @@
             RETURN
           END IF
         END DO
-#   elif defined ECOSIM
+#   elif defined ECOSIM || defined DARWIN
         DO ivar=1,NDbio3d
           ifield=iDbio3(ivar)
           IF (.not.got_var(ifield).and.Dout(ifield,ng)) THEN

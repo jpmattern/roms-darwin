@@ -149,8 +149,11 @@
      &          '/(',Bio(i,k,iNH4),'+',ksatNH4(ic,ng),')'
             END IF
 #endif
-            limitNO2 = useNO2(ic,ng)*Bio(i,k,iNO2)/(Bio(i,k,iNO2) + combNO(ic,ng)*(Bio(i,k,iNO3) + ksatNO3(ic,ng) - ksatNO2(ic,ng)) + ksatNO2(ic,ng))*inhibNH4
-            limitNO3 = useNO3(ic,ng)*Bio(i,k,iNO3)/(combNO(ic,ng)*Bio(i,k,iNO2) + Bio(i,k,iNO3) + ksatNO3(ic,ng))*inhibNH4
+            limitNO2 = useNO2(ic,ng)*Bio(i,k,iNO2)/(Bio(i,k,iNO2) +     &
+     &        combNO(ic,ng)*(Bio(i,k,iNO3) + ksatNO3(ic,ng) -           &
+     &        ksatNO2(ic,ng)) + ksatNO2(ic,ng))*inhibNH4
+            limitNO3 = useNO3(ic,ng)*Bio(i,k,iNO3)/(combNO(ic,ng)*      &
+     &        Bio(i,k,iNO2) + Bio(i,k,iNO3) + ksatNO3(ic,ng))*inhibNH4
             limitn = limitNH4 + limitNO2 + limitNO3
 #if defined DARWIN_VERBOSE_PLANK
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
@@ -272,7 +275,7 @@
             ELSE
 #if defined DARWIN_VERBOSE_PLANK_OLD
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-              write(*,'(a,i2,1x,a16,2x,10(f,1x,a,1x))') 'PLANK', ic_+ic-1, '(b) PC=', 0.0_r8, 'PCm=', PCm, 'PARtot=', PARtot, '' 
+              write(*,'(a,i2,1x,a16,2x,10(f,1x,a,1x))') 'PLANK', ic_+ic-1, '(b) PC=', 0.0_r8, 'PCm=', PCm, 'PARtot=', PARtot, ''
             END IF
 #endif
               PC = 0.0_r8

@@ -117,7 +117,7 @@
                       idTbry(isouth,ic_+ic)=varid
                     ELSE IF (j==4) THEN
                       idTbry(inorth,ic_+ic)=varid
-                    END IF 
+                    END IF
                     ! for labelling use ic+1 (1,2,3,...)
                     ic=ic+1
                     DO ng=1,Ngrids
@@ -168,7 +168,7 @@
                   WRITE (Vname(1,varid),'(a,i2.2)')                     &
      &              TRIM(ADJUSTL(Vinfo(1))),i
                   WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
-     &              TRIM(ADJUSTL(Vinfo(1))),i,' concentration' 
+     &              TRIM(ADJUSTL(Vinfo(1))),i,' concentration'
                   WRITE (Vname(3,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(3)))
                   WRITE (Vname(4,varid),'(a,a)')                        &
@@ -260,7 +260,7 @@
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
                 END DO
-#if defined DIAGNOSTICS_BIO
+#if defined DIAGNOSTICS_BIO_DEACTIVATED
 !
 !  Higher-dimensional diagnostic terms.
 !
@@ -275,7 +275,7 @@
                 DO ng=1,Ngrids
                   Dout(iDbio3(iOnes),ng)=.true.
                 END DO
-                varid=varid+1 
+                varid=varid+1
 #endif
                 varid=varid-1
                 DO i=1,nPPplank
@@ -316,5 +316,5 @@
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
                 END DO
-#endif /*DIAGNOSTICS_BIO*/
+#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
             END SELECT

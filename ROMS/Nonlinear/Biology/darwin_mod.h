@@ -47,7 +47,9 @@
       integer, parameter :: iMaxPred=DARWIN_INDEX_MAXPRED
 #endif
 !
+!-----------------------------------------------------------------------
 !  Set biological tracer identification indices.
+!-----------------------------------------------------------------------
 !
       integer, allocatable :: ndtbio(:) ! number of time-steps
       real(r8), allocatable :: dtbio(:) ! biology time-step in s
@@ -135,15 +137,22 @@
 #endif
 #if defined DIAGNOSTICS_BIO
 !
-!  Biological 2D diagnostic variable IDs.
+!-----------------------------------------------------------------------
+!  Set biological diagnostic identification indices.
+!-----------------------------------------------------------------------
 !
-      integer, allocatable :: iDbio2(:)       ! 2D biological terms
 
 !
 !  Biological 3D diagnostic variable IDs.
 !
       integer, allocatable :: iDbio3(:)       ! 3D biological terms
 
+!
+!  Biological 4D diagnostic variable IDs.
+!
+      integer, allocatable :: iDbio4(:)       ! 4D terms with nplank
+!
+      integer  :: idGrazPr = 1                ! grazing pressure
 # if defined DIAGNOSTICS_BIO_MAPPING
 !
 !  Biological 3D diagnostic variable mapping.
@@ -319,6 +328,24 @@
 #if defined DIAGNOSTICS_BIO
 !
 !-----------------------------------------------------------------------
+!  Set sources and sinks biology number of diagnostic terms.
+!-----------------------------------------------------------------------
+!
+      NDbio3d=0  ! TODO at some point set to darwin_nDiag
+      NDbio4d=1
+!
+!  Allocate biological diagnostics vectors
+!
+      IF (.not.allocated(iDbio3).and.NDbio3d.gt.0) THEN
+        allocate ( iDbio3(NDbio3d) )
+      END IF
+      IF (.not.allocated(iDbio4)) THEN
+        allocate ( iDbio4(NDbio4d) )
+      END IF
+#endif /*DIAGNOSTICS_BIO*/
+#if defined DIAGNOSTICS_BIO_DEACTIVATED
+!
+!-----------------------------------------------------------------------
 !  Interface ROMS and Darwin diagnostic terms.
 !-----------------------------------------------------------------------
 !
@@ -343,7 +370,7 @@
 !        allocate ( NDb3d_o(Ngrids) )
 !      END IF
 # endif /*DIAGNOSTICS_BIO_MAPPING*/
-#endif /*DIAGNOSTICS_BIO*/
+#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
 #if ! defined DARWIN_CDOM
       laCDOM=-1
 #endif

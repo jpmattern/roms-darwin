@@ -397,3 +397,12 @@
             CASE ('idRtrc(iCDOM)')
               idRtrc(iCDOM)=varid
 #endif
+
+#ifdef DIAGNOSTICS_BIO
+
+/*
+**  Biological tracers term diagnostics.
+*/
+            CASE ('iDbio4(idGrazPr)')
+              iDbio4(idGrazPr)=varid
+#endif

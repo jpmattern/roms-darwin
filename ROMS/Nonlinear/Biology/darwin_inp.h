@@ -556,6 +556,19 @@
               END DO
 #endif
 #if defined DIAGNOSTICS_BIO
+            CASE ('Dout(idGrazPr)')
+              IF (iDbio4(idGrazPr).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio4(idGrazPr)'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              i=iDbio4(idGrazPr)
+              DO ng=1,Ngrids
+                Dout(i,ng)=Lbio(ng)
+              END DO
+#endif /*DIAGNOSTICS_BIO*/
+#if defined DIAGNOSTICS_BIO_DEACTIVATED
             CASE ('Dout(iPP)')
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iPP)
@@ -612,7 +625,7 @@
               i=iDbio3(iGRplank)
               Npts=load_l(Nval, Cval, nGRplank, Ngrids,                  &
      &          Dout(i:i+nGRplank-1,1:Ngrids))
-#endif /*DIAGNOSTICS_BIO*/
+#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
           END SELECT
         END IF
       END DO
@@ -1369,8 +1382,17 @@
      &        TRIM(Vname(2,ifield))
             END IF
           END DO
+          DO i=1,NDbio4d
+            ifield=iDbio4(i)
+            IF (Dout(ifield,ng)) THEN
+              write(out,'(3x,a,1x,"(",a,")")') TRIM(Vname(1,ifield)),   &
+     &        TRIM(Vname(2,ifield))
+            END IF
+          END DO
         END DO
       END IF
+#endif /*DIAGNOSTICS_BIO*/
+#if defined DIAGNOSTICS_BIO_DEACTIVATED
 # if defined DIAGNOSTICS_BIO_MAPPING
 !
 !-----------------------------------------------------------------------
@@ -1426,7 +1448,7 @@
 #  endif
       END DO
 # endif /*DIAGNOSTICS_BIO_MAPPING*/
-#endif /*DIAGNOSTICS_BIO*/
+#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
 !
 !-----------------------------------------------------------------------
 !  Perform various checks.

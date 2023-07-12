@@ -73,8 +73,8 @@
      &                   FORCES(ng) % avcos,                            &
 #endif
 #if defined DIAGNOSTICS_BIO
-!     &                   DIAGS(ng) % DiaBio2d,                          &
      &                   DIAGS(ng) % DiaBio3d,                          &
+     &                   DIAGS(ng) % DiaBio4d,                          &
 #endif
      &                   OCEAN(ng) % t)
 
@@ -108,14 +108,14 @@
      &                         SpecIr, avcos,                           &
 #endif
 #if defined DIAGNOSTICS_BIO
-!     &                         DiaBio2d,                                &
      &                         DiaBio3d,                                &
+     &                         DiaBio4d,                                &
 #endif
      &                         t)
 !-----------------------------------------------------------------------
 !
       USE mod_biology
-      USE mod_scalars, ONLY: itemp,isalt,rho0,Cp,iic
+      USE mod_scalars
       USE mod_darwin_sms
 #if defined DARWIN_VERBOSE
       USE mod_parallel, only: Master
@@ -157,8 +157,8 @@
       real(r8), intent(in) :: avcos(LBi:,LBj:,:)
 # endif
 # ifdef DIAGNOSTICS_BIO
-!      real(r8), intent(inout) :: DiaBio2d(LBi:,LBj:,:)
       real(r8), intent(inout) :: DiaBio3d(LBi:,LBj:,:,:)
+      real(r8), intent(inout) :: DiaBio4d(LBi:,LBj:,:,:,:)
 # endif
       real(r8), intent(inout) :: t(LBi:,LBj:,:,:,:)
 #else /* ASSUMED_SHAPE */
@@ -187,8 +187,9 @@
       real(r8), intent(in) :: avcos(LBi:UBi,LBj:UBj,nlam)
 # endif
 # ifdef DIAGNOSTICS_BIO
-!      real(r8), intent(inout) :: DiaBio2d(LBi:UBi,LBj:UBj,NDbio2d)
       real(r8), intent(inout) :: DiaBio3d(LBi:UBi,LBj:UBj,UBk,NDbio3d)
+      real(r8), intent(inout) :: DiaBio4d(LBi:UBi,LBj:UBj,UBk,nplank,   &
+     &  NDbio4d)
 # endif
       real(r8), intent(inout) :: t(LBi:UBi,LBj:UBj,UBk,3,UBt)
 #endif /* ASSUMED_SHAPE */
@@ -215,6 +216,9 @@
       real(r8), dimension(IminS:ImaxS,N(ng)) :: drF
 
       real(r8), dimension(IminS:ImaxS,N(ng),darwin_nDiag) :: diags
+#if defined DIAGNOSTICS_BIO
+      real(r8), dimension(IminS:ImaxS,N(ng),nplank,NDbio4d) :: diags4d
+#endif /* DIAGNOSTICS_BIO */
       real(r8), dimension(IminS:ImaxS,N(ng),nplank) :: photoTempFunc
       real(r8), dimension(IminS:ImaxS,N(ng),nplank) :: grazTempFunc
       real(r8), dimension(IminS:ImaxS,N(ng)) :: reminTempFunc,          &
@@ -228,6 +232,38 @@
       !TODO read this somewhere
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: inputFe
 #include "set_bounds.h"
+#if defined DIAGNOSTICS_BIO
+!
+!-----------------------------------------------------------------------
+! If appropriate, initialize time-averaged diagnostic arrays.
+!-----------------------------------------------------------------------
+!
+      IF (((iic(ng).gt.ntsDIA(ng)).and.                                 &
+     &     (MOD(iic(ng),nDIA(ng)).eq.1)).or.                            &
+     &    ((iic(ng).ge.ntsDIA(ng)).and.(nDIA(ng).eq.1)).or.             &
+     &    ((nrrec(ng).gt.0).and.(iic(ng).eq.ntstart(ng)))) THEN
+        DO itrc=1,NDbio3d
+          DO k=1,N(ng)
+            DO j=Jstr,Jend
+              DO i=Istr,Iend
+                DiaBio3d(i,j,k,itrc)=0.0_r8
+              END DO
+            END DO
+          END DO
+        END DO
+        DO itrc=1,NDbio4d
+          DO ibio=1,nplank
+            DO k=1,N(ng)
+              DO j=Jstr,Jend
+                DO i=Istr,Iend
+                  DiaBio4d(i,j,k,ibio,itrc)=0.0_r8
+                END DO
+              END DO
+            END DO
+          END DO
+        END DO
+      END IF
+#endif /* DIAGNOSTICS_BIO */
 !
 !  If this is not a biology time-step return; otherwise, update the
 !  time-stepping accordingly
@@ -261,6 +297,9 @@
 !  Set diags to zero.
 !
         diags(:,:,:)=0.0_r8
+#if defined DIAGNOSTICS_BIO
+        diags4d(:,:,:,:)=0.0_r8
+#endif /* DIAGNOSTICS_BIO */
 !
 ! initialize drF variable
 !
@@ -417,11 +456,15 @@
 #endif
      &    photoTempFunc, reminTempFunc, uptakeTempFunc, diags)
         CALL darwin_grazing(tile, ng, IminS, ImaxS, Bio,                &
-     &    grazTempFunc, reminTempFunc, mortTempFunc, mort2TempFunc,     &
+     &    grazTempFunc, reminTempFunc, mortTempFunc, mort2TempFunc      &
 #if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK
-     &    j,                                                            &
+     &    ,  j                                                          &
 #endif
-     &    diags)
+#if defined DIAGNOSTICS_BIO
+     &    , diags, diags4d)
+#else
+     &    )
+#endif
 !
 !  sinking
 !
@@ -463,6 +506,18 @@
         END DO
 #endif
 #if defined DIAGNOSTICS_BIO
+        DO itrc=1,NDbio4d
+          DO ibio=1,nplank
+            DO k=1,N(ng)
+              DO i=Istr,Iend
+                DiaBio4d(i,j,k,ibio,itrc)=DiaBio4d(i,j,k,ibio,itrc)     &
+     &           +diags4d(i,k,ibio,itrc)
+              END DO
+            END DO
+          END DO
+        END DO
+#endif /*DIAGNOSTICS_BIO*/
+#if defined DIAGNOSTICS_BIO_DEACTIVATED
 !
 !-----------------------------------------------------------------------
 ! Copy information from diags into ROMS diagnostic arrays.
@@ -492,6 +547,15 @@
           END DO
         END DO
 # endif
+# if defined DIAGNOSTICS_BIO
+        DO itrc=1,NDbio3d
+          DO k=1,N(ng)
+            DO i=Istr,Iend
+              DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(i,k,itrc)
+            END DO
+          END DO
+        END DO
+# endif
 !      END IF
 #endif
 #if defined DARWIN_VERBOSE_NUT || defined DARWIN_VERBOSE_PLANK
@@ -505,7 +569,7 @@
           write(*,'(a20,f18.12)') 'final NO3 = ',Bio(i,k,iNO3)
 # endif
         END IF
-#endif
+#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
 !
 !-----------------------------------------------------------------------
 !  Update global tracer variables: Add increment due to BGC processes

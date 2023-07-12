@@ -734,11 +734,15 @@
 !
 !
       SUBROUTINE darwin_grazing(tile, ng, IminS, ImaxS, Bio,            &
-     &  grazTempFunc, reminTempFunc, mortTempFunc, mort2TempFunc,       &
+     &  grazTempFunc, reminTempFunc, mortTempFunc, mort2TempFunc        &
 #if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK
-     &  j,                                                              &
+     &  , j                                                             &
 #endif
-     &  diags)
+#if defined DIAGNOSTICS_BIO
+     &  , diags, diags4d)
+#else
+     &  )
+#endif /* DIAGNOSTICS_BIO */
 !
       USE mod_biology
       USE mod_scalars, ONLY: dt
@@ -755,8 +759,12 @@
      &  reminTempFunc, mortTempFunc, mort2TempFunc
 
       real(r8),intent(inout),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
+#if defined DIAGNOSTICS_BIO
       real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) ::diags
+     &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) :: diags
+      real(r8),intent(inout),                                           &
+     &  dimension(IminS:ImaxS,N(ng),nplank,NDbio4d) :: diags4d
+#endif /*DIAGNOSTICS_BIO*/
       !real(r8),intent(in),dimension(IminS:ImaxS,N(ng)) :: Light
 !
 !  Local variable declarations

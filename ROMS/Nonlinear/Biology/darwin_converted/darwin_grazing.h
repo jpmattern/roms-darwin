@@ -309,9 +309,13 @@
           Bio(i,k,iChl:eChl)=Bio(i,k,iChl:eChl)  + dtbio(ng)*(- preygraz(1:nChl)*QChl(:))
 #endif
 
+#if defined DIAGNOSTICS_BIO
           DO ip = 1, nGRplank
             diags(i,k,iGRplank+ip-1) = preygraz(ip)
+            ! TODO for testing purposes, use 42.0 here for now
+            diags4d(i,k,ip,idGrazPr) = 42.0_r8
           ENDDO
+#endif
 
 !==== mortality ========================================================
           exude_DOC = 0.0_r8

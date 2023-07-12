@@ -68,6 +68,9 @@
           preygraz_rate(:) = 0.0_r8
           grazphy_all(:,:) = 0.0_r8
 #endif
+#if defined DIAGNOSTICS_BIO
+          diags4d(i,k,:,idGrazPr) = 0.0_r8
+#endif
 
 !=======================================================================
           DO iz = iMinPred, iMaxPred
@@ -145,11 +148,11 @@
 #if defined DARWIN_GRAZING_SWITCH
               grazphy = tmp*palat(ip,iz,ng)*palat(ip,iz,ng)*X(ip)*X(ip)/sumpref
 #else
-#if defined DARWIN_VERBOSE_PLANK_OLD
+# if defined DARWIN_VERBOSE_PLANK_OLD
               IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
                 write(*,'(a,i2,1x,a16,2x,10(f,1x,a,1x))') 'PLANK', ic_+ip-1, 'grazphy=', tmp, '*', palat(ip,iz,ng), '*', X(ip), '/', sumpref
               END IF
-#endif
+# endif
               grazphy = tmp*palat(ip,iz,ng)*X(ip)/sumpref
 !#if defined DARWIN_VERBOSE_PLANK
 !              IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
@@ -163,6 +166,11 @@
 #endif
 
               preygraz(ip) = preygraz(ip) + grazphy
+#if defined DIAGNOSTICS_BIO
+              ! in units of d-1
+              diags4d(i,k,ip,idGrazPr) = diags4d(i,k,ip,idGrazPr) +     &
+     &          grazphy/X(ip) * 86400.0_r8
+#endif
 #if defined DARWIN_VERBOSE_PLANK && ! defined DARWIN_GRAZING_SWITCH
               IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
                 preygraz_rate(ip)=preygraz_rate(ip) + grazphy/X(ip)
@@ -312,8 +320,6 @@
 #if defined DIAGNOSTICS_BIO
           DO ip = 1, nGRplank
             diags(i,k,iGRplank+ip-1) = preygraz(ip)
-            ! TODO for testing purposes, use 42.0 here for now
-            diags4d(i,k,ip,idGrazPr) = 42.0_r8
           ENDDO
 #endif
 

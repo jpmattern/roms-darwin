@@ -10,3 +10,7 @@ It permits running Darwin in a regional configuration.
 ## Documentation
 
 As of now, there is no official documentation available for ROMS-Darwin in this repository, and we will attempt to add documentation on demand. If there are specific aspects or components you would like to see documented, please raise an issue, and we will prioritize its addition.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

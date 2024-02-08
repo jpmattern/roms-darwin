@@ -4,11 +4,11 @@
 
 #if defined NONLINEAR && defined SEDIMENT && !defined COHESIVE_BED
 !
-!svn $Id: sed_bed.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: sed_bed.F 1210 2024-01-03 22:03:03Z arango $
 !==================================================== John C. Warner ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group      Hernan G. Arango   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group      Hernan G. Arango   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine computes sediment bed layer stratigraphy.              !
@@ -178,7 +178,7 @@
       real(r8), intent(in) :: bvstr(LBi:UBi,LBj:UBj)
 #  endif
 #  if defined SED_MORPH
-      real(r8), intent(inout):: bed_thick(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(inout):: bed_thick(LBi:UBi,LBj:UBj,3)
 #  endif
       real(r8), intent(inout) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
 #  ifdef SUSPLOAD

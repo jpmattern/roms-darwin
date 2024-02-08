@@ -2,11 +2,11 @@
       MODULE ad_omega_mod
 #if defined ADJOINT && defined SOLVE3D
 !
-!svn $Id: ad_omega.F 1103 2022-01-13 03:38:35Z arango $
+!svn $Id: ad_omega.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine computes S-coordinate vertical velocity (m^3/s),       !
@@ -68,6 +68,7 @@
      &                    GRID(ng) % ad_Hvom,                           &
      &                    GRID(ng) % ad_z_w,                            &
      &                    OCEAN(ng) % W,                                &
+     &                    OCEAN(ng) % ad_W_sol,                         &
      &                    OCEAN(ng) % ad_W)
 # ifdef PROFILE
       CALL wclock_off (ng, model, 13, __LINE__, MyFile)
@@ -87,7 +88,7 @@
 # endif
      &                          Huon, Hvom, z_w,                        &
      &                          ad_Huon, ad_Hvom, ad_z_w,               &
-     &                          W, ad_W)
+     &                          W, ad_W_sol, ad_W)
 !***********************************************************************
 !
       USE mod_param
@@ -123,6 +124,7 @@
       real(r8), intent(inout) :: ad_Hvom(LBi:,LBj:,:)
       real(r8), intent(inout) :: ad_z_w(LBi:,LBj:,0:)
       real(r8), intent(inout) :: ad_W(LBi:,LBj:,0:)
+      real(r8), intent(inout) :: ad_W_sol(LBi:,LBj:,0:)
 
       real(r8), intent(out) :: W(LBi:,LBj:,0:)
 
@@ -140,6 +142,7 @@
       real(r8), intent(inout) :: ad_Hvom(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(inout) :: ad_z_w(LBi:UBi,LBj:UBj,0:N(ng))
       real(r8), intent(inout) :: ad_W(LBi:UBi,LBj:UBj,0:N(ng))
+      real(r8), intent(inout) :: ad_W_sol(LBi:UBi,LBj:UBj,0:N(ng))
 
       real(r8), intent(out) :: W(LBi:UBi,LBj:UBj,0:N(ng))
 # endif
@@ -169,6 +172,16 @@
 !-----------------------------------------------------------------------
 !  Vertically integrage horizontal mass flux divergence.
 !-----------------------------------------------------------------------
+!
+!  Save current adjoint solution for IO purposes.
+!
+      DO k=0,N(ng)
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            ad_W_sol(i,j,k)=ad_W(i,j,k)
+          END DO
+        END DO
+      END DO
 !
 !  Set lateral boundary conditions.
 !

@@ -2,11 +2,11 @@
       MODULE rp_v2dbc_mod
 #ifdef TL_IOMS
 !
-!svn $Id: rp_v2dbc_im.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: rp_v2dbc_im.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This subroutine sets representers tangent linear lateral boundary   !
@@ -87,13 +87,13 @@
 
       real(r8), intent(inout) :: tl_vbar(LBi:,LBj:,:)
 # else
-      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: tl_ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: tl_zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: tl_ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: tl_zeta(LBi:UBi,LBj:UBj,:)
 
-      real(r8), intent(inout) :: tl_vbar(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: tl_vbar(LBi:UBi,LBj:UBj,:)
 # endif
 !
 !  Local variable declarations.

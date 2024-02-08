@@ -3,11 +3,11 @@
 
 #ifdef FOUR_DVAR
 !
-!svn $Id: wrt_ini.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: wrt_ini.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module writes state variables initial conditions into initial  !
@@ -127,7 +127,8 @@
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-  10  FORMAT (' WRT_INI - Illegal output type, io_type = ',i0)
+  10  FORMAT (' WRT_INI - Illegal output file type, io_type = ',i0,     &
+     &        /,11x,'Check KeyWord ''OUT_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE wrt_ini
@@ -227,7 +228,8 @@
 !
       scale=1.0_dp
       gtype=gfactor*r2dvar
-      status=nf_fwrite2d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idFsur),   &
+      status=nf_fwrite2d(ng, iNLM, INI(ng)%ncid, idFsur,                &
+     &                   INI(ng)%Vid(idFsur),                           &
      &                   INI(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, scale,                     &
 # ifdef MASKING
@@ -259,7 +261,8 @@
 !
       scale=1.0_dp
       gtype=gfactor*u2dvar
-      status=nf_fwrite2d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idUbar),   &
+      status=nf_fwrite2d(ng, iNLM, INI(ng)%ncid, idUbar,                &
+     &                   INI(ng)%Vid(idUbar),                           &
      &                   INI(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, scale,                     &
 # ifdef MASKING
@@ -287,7 +290,8 @@
 !
       scale=1.0_dp
       gtype=gfactor*v2dvar
-      status=nf_fwrite2d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idVbar),   &
+      status=nf_fwrite2d(ng, iNLM, INI(ng)%ncid, idVbar,                &
+     &                   INI(ng)%Vid(idVbar),                           &
      &                   INI(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, scale,                     &
 # ifdef MASKING
@@ -317,7 +321,8 @@
 !
       scale=1.0_dp
       gtype=gfactor*u3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idUvel),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idUvel,                &
+     &                   INI(ng)%Vid(idUvel),                           &
      &                   INI(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 1, N(ng), scale,           &
 #  ifdef MASKING
@@ -345,7 +350,8 @@
 !
       scale=1.0_dp
       gtype=gfactor*v3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idVvel),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idVvel,                &
+     &                   INI(ng)%Vid(idVvel),                           &
      &                   INI(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 1, N(ng), scale,           &
 #  ifdef MASKING
@@ -374,7 +380,8 @@
       DO itrc=1,NT(ng)
         scale=1.0_dp
         gtype=gfactor*r3dvar
-        status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Tid(itrc),   &
+        status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idTvar(itrc),        &
+     &                     INI(ng)%Tid(itrc),                           &
      &                     INI(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
 #  ifdef MASKING
@@ -411,7 +418,8 @@
       END IF
       scale=1.0_dp
       gtype=gfactor*w3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idVvis),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idVvis,                &
+     &                   INI(ng)%Vid(idVvis),                           &
      &                   INI(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 0, N(ng), scale,           &
 #   ifdef MASKING
@@ -445,7 +453,8 @@
       END IF
       scale=1.0_dp
       gtype=gfactor*w3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idTdif),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idTdif,                &
+     &                   INI(ng)%Vid(idTdif),                           &
      &                   INI(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 0, N(ng), scale,           &
 #   ifdef MASKING
@@ -480,7 +489,8 @@
       END IF
       scale=1.0_dp
       gtype=gfactor*w3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idSdif),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idSdif,                &
+     &                   INI(ng)%Vid(idSdif),                           &
      &                   INI(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 0, N(ng), scale,           &
 #    ifdef MASKING
@@ -622,7 +632,7 @@
         ioDesc => ioDesc_sp_r2dvar(ng)
       END IF
 !
-      status=nf_fwrite2d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite2d(ng, iNLM, INI(ng)%pioFile, idFsur,             &
      &                   INI(ng)%pioVar(idFsur),                        &
      &                   INI(ng)%Rindex,                                &
      &                   ioDesc,                                        &
@@ -661,7 +671,7 @@
         ioDesc => ioDesc_sp_u2dvar(ng)
       END IF
 !
-      status=nf_fwrite2d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite2d(ng, iNLM, INI(ng)%pioFile, idUbar,             &
      &                   INI(ng)%pioVar(idUbar),                        &
      &                   INI(ng)%Rindex,                                &
      &                   ioDesc,                                        &
@@ -696,7 +706,7 @@
         ioDesc => ioDesc_sp_v2dvar(ng)
       END IF
 !
-      status=nf_fwrite2d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite2d(ng, iNLM, INI(ng)%pioFile, idVbar,             &
      &                   INI(ng)%pioVar(idVbar),                        &
      &                   INI(ng)%Rindex,                                &
      &                   ioDesc,                                        &
@@ -733,7 +743,7 @@
         ioDesc => ioDesc_sp_u3dvar(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idUvel,             &
      &                   INI(ng)%pioVar(idUvel),                        &
      &                   INI(ng)%Rindex,                                &
      &                   ioDesc,                                        &
@@ -768,7 +778,7 @@
         ioDesc => ioDesc_sp_v3dvar(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idVvel,             &
      &                   INI(ng)%pioVar(idVvel),                        &
      &                   INI(ng)%Rindex,                                &
      &                   ioDesc,                                        &
@@ -804,7 +814,7 @@
           ioDesc => ioDesc_sp_r3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                   &
+        status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idTvar(itrc),     &
      &                     INI(ng)%pioTrc(itrc),                        &
      &                     INI(ng)%Rindex,                              &
      &                     ioDesc,                                      &
@@ -852,7 +862,7 @@
         ioDesc => ioDesc_sp_w3dvar(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idVvis,             &
      &                   INI(ng)%pioVar(idVvis),                        &
      &                   INI(ng)%Rindex,                                &
      &                   ioDesc,                                        &
@@ -897,7 +907,7 @@
         ioDesc => ioDesc_sp_w3dvar(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idTdif,             &
      &                   INI(ng)%pioVar(idTdif),                        &
      &                   INI(ng)%Rindex,                                &
      &                   ioDesc,                                        &
@@ -943,7 +953,7 @@
         ioDesc => ioDesc_sp_w3dvar(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idSdif,             &
      &                   INI(ng)%pioVar(idSdif),                        &
      &                   INI(ng)%Rindex,                                &
      &                   ioDesc,                                        &
@@ -1090,6 +1100,16 @@
 !
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
+!  Report.
+!
+      IF (Master) THEN
+#  ifdef NESTING
+        WRITE (stdout,10) outer, inner, Tindex, OutRec, ng
+#  else
+        WRITE (stdout,10) outer, inner, Tindex, OutRec
+#  endif
+      END IF
+!
 !  Set grid type factor to write full (gfactor=1) fields or water
 !  points (gfactor=-1) fields only.
 !
@@ -1118,7 +1138,7 @@
      &                                                 Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isFsur))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isFsur))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1139,7 +1159,7 @@
      &                                                 Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUbar))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUbar))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1160,7 +1180,7 @@
      &                                                 Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVbar))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVbar))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1183,7 +1203,7 @@
      &                                              Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUvel))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUvel))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1204,7 +1224,7 @@
      &                                              Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVvel))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVvel))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1227,7 +1247,7 @@
      &                                                Tindex,itrc))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
+              WRITE (stdout,20) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
      &                          OutRec
             END IF
             exit_flag=3
@@ -1247,7 +1267,8 @@
 !
       scale=rho0                                    ! m2/s2 to N/m2 (Pa)
       gtype=gfactor*u3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idUsms),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idUsms,                &
+     &                   INI(ng)%Vid(idUsms),                           &
      &                   OutRec, gtype,                                 &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
 #   ifdef MASKING
@@ -1256,7 +1277,7 @@
      &                   FORCES(ng) % ustr(:,:,:,Tindex))
       IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idUsms)), OutRec
+          WRITE (stdout,20) TRIM(Vname(1,idUsms)), OutRec
         END IF
         exit_flag=3
         ioerror=status
@@ -1267,7 +1288,8 @@
 !
       scale=rho0                                    ! m2/s2 to N/m2 (Pa)
       gtype=gfactor*v3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idVsms),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idVsms,                &
+     &                   INI(ng)%Vid(idVsms),                           &
      &                   OutRec, gtype,                                 &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
 #   ifdef MASKING
@@ -1276,7 +1298,7 @@
      &                   FORCES(ng) % vstr(:,:,:,Tindex))
       IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idVsms)), OutRec
+          WRITE (stdout,20) TRIM(Vname(1,idVsms)), OutRec
         END IF
         exit_flag=3
         ioerror=status
@@ -1298,7 +1320,7 @@
             scale=1.0_dp
           END IF
           gtype=gfactor*r3dvar
-          status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid,                    &
+          status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idTsur(itrc),      &
      &                       INI(ng)%Vid(idTsur(itrc)),                 &
      &                       OutRec, gtype,                             &
      &                       LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,   &
@@ -1308,7 +1330,7 @@
      &                       FORCES(ng) % tflux(:,:,:,Tindex,itrc))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idTsur(itrc))),            &
+              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))),            &
      &                          OutRec
             END IF
             exit_flag=3
@@ -1326,18 +1348,8 @@
 !
       CALL netcdf_sync (ng, iNLM, INI(ng)%name, INI(ng)%ncid)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-      IF (Master) THEN
-#  ifdef NESTING
-        WRITE (stdout,20) outer, inner, Tindex, OutRec, ng
-#  else
-        WRITE (stdout,20) outer, inner, Tindex, OutRec
-#  endif
-      END IF
 !
-  10  FORMAT (/,' WRT_FRC_NF90 - error while writing variable: ',a,     &
-     &        /,16x,'into initial NetCDF file for time record: ',i0)
-  20  FORMAT (2x,'WRT_FRC_NF90     - wrote forcing  fields',            &
+  10  FORMAT (2x,'WRT_FRC_NF90     - writing forcing  fields',          &
      &        ' (Outer=',i2.2,                                          &
 #  ifdef NESTING
      &        ', Inner=',i3.3,', Index=',i0,', Rec=',i0,', Grid ',      &
@@ -1345,6 +1357,8 @@
 #  else
      &        ', Inner=',i3.3,', Index=',i0,', Rec=',i0,')')
 #  endif
+  20  FORMAT (/,' WRT_FRC_NF90 - error while writing variable: ',a,     &
+     &        /,16x,'into initial NetCDF file for time record: ',i0)
 !
       RETURN
       END SUBROUTINE wrt_frc_nf90
@@ -1387,6 +1401,16 @@
 !-----------------------------------------------------------------------
 !
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Report.
+!
+      IF (Master) THEN
+#   ifdef NESTING
+        WRITE (stdout,10) outer, inner, Tindex, OutRec, ng
+#   else
+        WRITE (stdout,10) outer, inner, Tindex, OutRec
+#   endif
+      END IF
 
 #   ifdef ADJUST_BOUNDARY
 !
@@ -1414,7 +1438,7 @@
      &                                                 Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isFsur))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isFsur))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1442,7 +1466,7 @@
      &                                                 Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUbar))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUbar))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1470,7 +1494,7 @@
      &                                                 Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVbar))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVbar))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1500,7 +1524,7 @@
      &                                              Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUvel))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUvel))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1528,7 +1552,7 @@
      &                                              Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVvel))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVvel))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1559,7 +1583,7 @@
      &                                                Tindex,itrc))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
+              WRITE (stdout,20) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
      &                          OutRec
             END IF
             exit_flag=3
@@ -1584,7 +1608,7 @@
         ioDesc => ioDesc_sp_u2dfrc(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idUsms,             &
      &                   INI(ng)%pioVar(idUsms), OutRec,                &
      &                   ioDesc,                                        &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -1594,7 +1618,7 @@
      &                   FORCES(ng) % ustr(:,:,:,Tindex))
       IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idUsms)), OutRec
+          WRITE (stdout,20) TRIM(Vname(1,idUsms)), OutRec
         END IF
         exit_flag=3
         ioerror=status
@@ -1610,7 +1634,7 @@
         ioDesc => ioDesc_sp_v2dfrc(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idVsms,             &
      &                   INI(ng)%pioVar(idVsms), OutRec,                &
      &                   ioDesc,                                        &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -1620,7 +1644,7 @@
      &                   FORCES(ng) % vstr(:,:,:,Tindex))
       IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idVsms)), OutRec
+          WRITE (stdout,20) TRIM(Vname(1,idVsms)), OutRec
         END IF
         exit_flag=3
         ioerror=status
@@ -1647,7 +1671,7 @@
             ioDesc => ioDesc_sp_r2dfrc(ng)
           END IF
 !
-          status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                 &
+          status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idTsur(itrc),   &
      &                       INI(ng)%pioVar(idTsur(itrc)), OutRec,      &
      &                       ioDesc,                                    &
      &                       LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,   &
@@ -1657,7 +1681,7 @@
      &                       FORCES(ng) % tflux(:,:,:,Tindex,itrc))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idTsur(itrc))),            &
+              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))),            &
      &                          OutRec
             END IF
             exit_flag=3
@@ -1675,18 +1699,8 @@
 !
       CALL pio_netcdf_sync (ng, iNLM, INI(ng)%name, INI(ng)%pioFile)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-      IF (Master) THEN
-#   ifdef NESTING
-        WRITE (stdout,20) outer, inner, Tindex, OutRec, ng
-#   else
-        WRITE (stdout,20) outer, inner, Tindex, OutRec
-#   endif
-      END IF
 !
-  10  FORMAT (/,' WRT_FRC_pio - error while writing variable: ',a,      &
-     &        /,15x,'into initial NetCDF file for time record: ',i0)
-  20  FORMAT (2x,'WRT_FRC_PIO      - wrote forcing  fields',            &
+  10  FORMAT (2x,'WRT_FRC_PIO      - writing forcing  fields',          &
      &        ' (Outer=',i2.2,                                          &
 #   ifdef NESTING
      &        ', Inner=',i3.3,', Index=',i0,', Rec=',i0,', Grid ',      &
@@ -1694,6 +1708,8 @@
 #   else
      &        ', Inner=',i3.3,', Index=',i0,', Rec=',i0,')')
 #   endif
+  20  FORMAT (/,' WRT_FRC_pio - error while writing variable: ',a,      &
+     &        /,15x,'into initial NetCDF file for time record: ',i0)
 !
       RETURN
       END SUBROUTINE wrt_frc_pio
@@ -1793,6 +1809,16 @@
 !
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
+!  Report.
+!
+      IF (Master) THEN
+# ifdef NESTING
+        WRITE (stdout,10) outer, inner, Tindex, OutRec, ng
+# else
+        WRITE (stdout,10) outer, inner, Tindex, OutRec
+# endif
+      END IF
+!
 !  Set grid type factor to write full (gfactor=1) fields or water
 !  points (gfactor=-1) fields only.
 !
@@ -1821,7 +1847,7 @@
      &                                                    Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isFsur))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isFsur))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1842,7 +1868,7 @@
      &                                                    Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUbar))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUbar))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1863,7 +1889,7 @@
      &                                                    Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVbar))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVbar))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1886,7 +1912,7 @@
      &                                                 Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUvel))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUvel))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1907,7 +1933,7 @@
      &                                                 Tindex))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVvel))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVvel))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -1930,7 +1956,7 @@
      &                                                   Tindex,itrc))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
+              WRITE (stdout,20) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
      &                          OutRec
             END IF
             exit_flag=3
@@ -1950,7 +1976,8 @@
 !
       scale=1.0_dp
       gtype=gfactor*u3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idUsms),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idUsms,                &
+     &                   INI(ng)%Vid(idUsms),                           &
      &                   OutRec, gtype,                                 &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
 #   ifdef MASKING
@@ -1959,7 +1986,7 @@
      &                   FORCES(ng) % ad_ustr(:,:,:,Tindex))
       IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idUsms)), OutRec
+          WRITE (stdout,20) TRIM(Vname(1,idUsms)), OutRec
         END IF
         exit_flag=3
         ioerror=status
@@ -1970,7 +1997,8 @@
 !
       scale=1.0_dp
       gtype=gfactor*v3dvar
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, INI(ng)%Vid(idVsms),   &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idVsms,                &
+     &                   INI(ng)%Vid(idVsms),                           &
      &                   OutRec, gtype,                                 &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
 #   ifdef MASKING
@@ -1979,7 +2007,7 @@
      &                   FORCES(ng) % ad_vstr(:,:,:,Tindex))
       IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idVsms)), OutRec
+          WRITE (stdout,20) TRIM(Vname(1,idVsms)), OutRec
         END IF
         exit_flag=3
         ioerror=status
@@ -1997,7 +2025,7 @@
         IF (Lstflux(itrc,ng)) THEN
           scale=1.0_dp
           gtype=gfactor*r3dvar
-          status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid,                    &
+          status=nf_fwrite3d(ng, iNLM, INI(ng)%ncid, idTsur(itrc),      &
      &                       INI(ng)%Vid(idTsur(itrc)),                 &
      &                       OutRec, gtype,                             &
      &                       LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,   &
@@ -2007,7 +2035,7 @@
      &                       FORCES(ng) % ad_tflux(:,:,:,Tindex,itrc))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idTsur(itrc))),            &
+              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))),            &
      &                          OutRec
             END IF
             exit_flag=3
@@ -2026,17 +2054,7 @@
       CALL netcdf_sync (ng, iNLM, INI(ng)%name, INI(ng)%ncid)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-      IF (Master) THEN
-# ifdef NESTING
-        WRITE (stdout,20) outer, inner, Tindex, OutRec, ng
-# else
-        WRITE (stdout,20) outer, inner, Tindex, OutRec
-# endif
-      END IF
-!
-  10  FORMAT (/,' WRT_FRC_AD_NF90 - error while writing variable: ',a,  &
-     &        /,19x,'into initial NetCDF file for time record: ',i0)
-  20  FORMAT (2x,'WRT_FRC_AD_NF90  - wrote forcing  fields',            &
+  10  FORMAT (2x,'WRT_FRC_AD_NF90  - writing forcing  fields',          &
      &        ' (Outer=',i2.2,   &
 #  ifdef NESTING
      &        ', Inner=',i3.3,', Index=',i0,', Rec=',i0,', Grid ',      &
@@ -2044,6 +2062,8 @@
 #  else
      &        ', Inner=',i3.3,', Index=',i0,', Rec=',i0,')')
 #  endif
+  20  FORMAT (/,' WRT_FRC_AD_NF90 - error while writing variable: ',a,  &
+     &        /,19x,'into initial NetCDF file for time record: ',i0)
 !
       RETURN
       END SUBROUTINE wrt_frc_AD_nf90
@@ -2086,6 +2106,16 @@
 !-----------------------------------------------------------------------
 !
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Report
+!
+      IF (Master) THEN
+#  ifdef NESTING
+        WRITE (stdout,10) outer, inner, Tindex, OutRec, ng
+#  else
+        WRITE (stdout,10) outer, inner, Tindex, OutRec
+#  endif
+      END IF
 
 #   ifdef ADJUST_BOUNDARY
 !
@@ -2113,7 +2143,7 @@
      &                                                    Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isFsur))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isFsur))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -2141,7 +2171,7 @@
      &                                                    Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUbar))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUbar))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -2169,7 +2199,7 @@
      &                                                    Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVbar))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVbar))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -2199,7 +2229,7 @@
      &                                                 Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUvel))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUvel))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -2227,7 +2257,7 @@
      &                                                 Tindex))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVvel))), OutRec
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVvel))), OutRec
           END IF
           exit_flag=3
           ioerror=status
@@ -2258,7 +2288,7 @@
      &                                                   Tindex,itrc))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
+              WRITE (stdout,20) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
      &                          OutRec
             END IF
             exit_flag=3
@@ -2283,7 +2313,7 @@
         ioDesc => ioDesc_sp_u2dfrc(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idUsms,             &
      &                   INI(ng)%pioVar(idUsms),                        &
      &                   OutRec, ioDesc,                                &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -2293,7 +2323,7 @@
      &                   FORCES(ng) % ad_ustr(:,:,:,Tindex))
       IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idUsms)), OutRec
+          WRITE (stdout,20) TRIM(Vname(1,idUsms)), OutRec
         END IF
         exit_flag=3
         ioerror=status
@@ -2309,7 +2339,7 @@
         ioDesc => ioDesc_sp_v2dfrc(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idVsms,             &
      &                   INI(ng)%pioVar(idVsms),                        &
      &                   OutRec, ioDesc,                                &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -2319,7 +2349,7 @@
      &                   FORCES(ng) % ad_vstr(:,:,:,Tindex))
       IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idVsms)), OutRec
+          WRITE (stdout,20) TRIM(Vname(1,idVsms)), OutRec
         END IF
         exit_flag=3
         ioerror=status
@@ -2342,7 +2372,7 @@
             ioDesc => ioDesc_sp_r2dfrc(ng)
           END IF
 !
-          status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile,                 &
+          status=nf_fwrite3d(ng, iNLM, INI(ng)%pioFile, idTsur(itrc),   &
      &                       INI(ng)%pioVar(idTsur(itrc)),              &
      &                       OutRec, ioDesc,                            &
      &                       LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,   &
@@ -2352,7 +2382,7 @@
      &                       FORCES(ng) % ad_tflux(:,:,:,Tindex,itrc))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idTsur(itrc))),            &
+              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))),            &
      &                          OutRec
             END IF
             exit_flag=3
@@ -2371,17 +2401,7 @@
       CALL pio_netcdf_sync (ng, iNLM, INI(ng)%name, INI(ng)%pioFile)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-      IF (Master) THEN
-#  ifdef NESTING
-        WRITE (stdout,20) outer, inner, Tindex, OutRec, ng
-#  else
-        WRITE (stdout,20) outer, inner, Tindex, OutRec
-#  endif
-      END IF
-!
-  10  FORMAT (/,' WRT_FRC_AD_PIO - error while writing variable: ',a,   &
-     &        /,19x,'into initial NetCDF file for time record: ',i0)
-  20  FORMAT (2x,'WRT_FRC_AD_PIO   - wrote forcing  fields',            &
+  10  FORMAT (2x,'WRT_FRC_AD_PIO   - writing forcing  fields',          &
      &        ' (Outer=',i2.2,   &
 #   ifdef NESTING
      &        ', Inner=',i3.3,', Index=',i0,', Rec=',i0,', Grid ',      &
@@ -2389,6 +2409,8 @@
 #   else
      &        ', Inner=',i3.3,', Index=',i0,', Rec=',i0,')')
 #   endif
+  20  FORMAT (/,' WRT_FRC_AD_PIO - error while writing variable: ',a,   &
+     &        /,19x,'into initial NetCDF file for time record: ',i0)
 !
       RETURN
       END SUBROUTINE wrt_frc_AD_pio

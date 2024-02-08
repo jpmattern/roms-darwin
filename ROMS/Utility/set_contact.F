@@ -2,11 +2,11 @@
       MODULE set_contact_mod
 #ifdef NESTING
 !
-!svn $Id: set_contact.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: set_contact.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine reads nested grids contact points for each contact     !
@@ -67,11 +67,12 @@
 # endif
         CASE DEFAULT
           IF (Master) WRITE (stdout,10) inp_lib
-          exit_flag=3
+          exit_flag=2
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-  10  FORMAT (' SET_CONTACT - Illegal output type, io_type = ',i0)
+  10  FORMAT (' SET_CONTACT - Illegal input file type, io_type = ',i0,  &
+     &        /,15x,'Check KeyWord ''INP_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE set_contact
@@ -994,7 +995,7 @@
 !  Set the switch to compute vertical interpolation weights. Currently,
 !  they are only needed in non-coincident composite grids.
 !
-      IF (.not.ANY(Lcoincident).or.ANY(Lcomposite)) THEN
+      IF (ANY(Lcoincident).or.ANY(Lcomposite)) THEN
         get_Vweights=.TRUE.
       ELSE
         get_Vweights=.FALSE.
@@ -1254,8 +1255,8 @@
           allocate ( REFINED(cr) % vbar(4,NpointsV(cr),2) )
           allocate ( REFINED(cr) % zeta(4,NpointsR(cr),2) )
 
-          allocate ( REFINED(cr) % DU_avg2(4,NpointsU(cr),2) )
-          allocate ( REFINED(cr) % DV_avg2(4,NpointsV(cr),2) )
+          allocate ( REFINED(cr) % U2d_flux(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % V2d_flux(4,NpointsV(cr),2) )
 
           allocate ( REFINED(cr) % on_u(NpointsU(cr)) )
           allocate ( REFINED(cr) % om_v(NpointsV(cr)) )
@@ -1269,8 +1270,8 @@
           allocate ( REFINED(cr) % tl_vbar(4,NpointsV(cr),2) )
           allocate ( REFINED(cr) % tl_zeta(4,NpointsR(cr),2) )
 
-          allocate ( REFINED(cr) % tl_DU_avg2(4,NpointsU(cr),2) )
-          allocate ( REFINED(cr) % tl_DV_avg2(4,NpointsV(cr),2) )
+          allocate ( REFINED(cr) % tl_U2d_flux(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % tl_V2d_flux(4,NpointsV(cr),2) )
 
           Dmem(rg)=Dmem(rg)+REAL(4*NpointsR(cr),r8)
           Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsU(cr),r8)
@@ -1282,8 +1283,8 @@
           allocate ( REFINED(cr) % ad_vbar(4,NpointsV(cr),2) )
           allocate ( REFINED(cr) % ad_zeta(4,NpointsR(cr),2) )
 
-          allocate ( REFINED(cr) % ad_DU_avg2(4,NpointsU(cr),2) )
-          allocate ( REFINED(cr) % ad_DV_avg2(4,NpointsV(cr),2) )
+          allocate ( REFINED(cr) % ad_U2d_flux(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % ad_V2d_flux(4,NpointsV(cr),2) )
 
           Dmem(rg)=Dmem(rg)+REAL(4*NpointsR(cr),r8)
           Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsU(cr),r8)
@@ -2515,8 +2516,8 @@
           allocate ( REFINED(cr) % vbar(4,NpointsV(cr),2) )
           allocate ( REFINED(cr) % zeta(4,NpointsR(cr),2) )
 
-          allocate ( REFINED(cr) % DU_avg2(4,NpointsU(cr),2) )
-          allocate ( REFINED(cr) % DV_avg2(4,NpointsV(cr),2) )
+          allocate ( REFINED(cr) % U2d_flux(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % V2d_flux(4,NpointsV(cr),2) )
 
           allocate ( REFINED(cr) % on_u(NpointsU(cr)) )
           allocate ( REFINED(cr) % om_v(NpointsV(cr)) )
@@ -2530,8 +2531,8 @@
           allocate ( REFINED(cr) % tl_vbar(4,NpointsV(cr),2) )
           allocate ( REFINED(cr) % tl_zeta(4,NpointsR(cr),2) )
 
-          allocate ( REFINED(cr) % tl_DU_avg2(4,NpointsU(cr),2) )
-          allocate ( REFINED(cr) % tl_DV_avg2(4,NpointsV(cr),2) )
+          allocate ( REFINED(cr) % tl_U2d_flux(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % tl_V2d_flux(4,NpointsV(cr),2) )
 
           Dmem(rg)=Dmem(rg)+REAL(4*NpointsR(cr),r8)
           Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsU(cr),r8)
@@ -2543,14 +2544,13 @@
           allocate ( REFINED(cr) % ad_vbar(4,NpointsV(cr),2) )
           allocate ( REFINED(cr) % ad_zeta(4,NpointsR(cr),2) )
 
-          allocate ( REFINED(cr) % ad_DU_avg2(4,NpointsU(cr),2) )
-          allocate ( REFINED(cr) % ad_DV_avg2(4,NpointsV(cr),2) )
+          allocate ( REFINED(cr) % ad_U2d_flux(4,NpointsU(cr),2) )
+          allocate ( REFINED(cr) % ad_V2d_flux(4,NpointsV(cr),2) )
 
           Dmem(rg)=Dmem(rg)+REAL(4*NpointsR(cr),r8)
           Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsU(cr),r8)
           Dmem(rg)=Dmem(rg)+3.0_r8*REAL(4*NpointsV(cr),r8)
 #  endif
-
 
 #  ifdef SOLVE3D
           allocate ( REFINED(cr) % u(4,N(rg),NpointsU(cr),2) )

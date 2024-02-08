@@ -3,11 +3,11 @@
 #if defined TANGENT && defined SOLVE3D
 # define NEUMANN
 !
-!svn $Id: tl_pre_step3d.F 1103 2022-01-13 03:38:35Z arango $
+!svn $Id: tl_pre_step3d.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This subroutine initialize computations for new time step of the    !
@@ -1023,14 +1023,8 @@
               END DO
             END DO
             DO i=Istr,Iend
-#  ifdef SED_MORPH
-              FC(i,0)=W(i,j,0)*t(i,j,1,nstp,itrc)
-              tl_FC(i,0)=tl_W(i,j,0)*t(i,j,1,nstp,itrc)+                &
-     &                   W(i,j,0)*tl_t(i,j,1,nstp,itrc)
-#  else
               FC(i,0)=0.0_r8
               tl_FC(i,0)=0.0_r8
-#  endif
               FC(i,N(ng))=0.0_r8
               tl_FC(i,N(ng))=0.0_r8
             END DO
@@ -1054,14 +1048,8 @@
               END DO
             END DO
             DO i=Istr,Iend
-#  ifdef SED_MORPH
-              FC(i,0)=W(i,j,0)*t(i,j,1,nstp,itrc)
-              tl_FC(i,0)=tl_W(i,j,0)*t(i,j,1,nstp,itrc)                 &
-     &                   W(i,j,0)*tl_t(i,j,1,nstp,itrc)
-#  else
               FC(i,0)=0.0_r8
               tl_FC(i,0)=0.0_r8
-#  endif
               FC(i,N(ng))=0.0_r8
               tl_FC(i,N(ng))=0.0_r8
             END DO
@@ -1087,16 +1075,9 @@
               END DO
             END DO
             DO i=Istr,Iend
-#  ifdef SED_MORPH
-!^            FC(i,0)=W(i,j,0)*t(i,j,1,nstp,itrc)
-!^
-              tl_FC(i,0)=tl_W(i,j,0)*t(i,j,1,nstp,itrc)+                &
-     &                   W(i,j,0)*tl_t(i,j,1,nstp,itrc)
-   else
 !^            FC(i,0)=0.0_r8
 !^
               tl_FC(i,0)=0.0_r8
-#  endif
 !^            FC(i,N(ng))=0.0_r8
 !^
               tl_FC(i,N(ng))=0.0_r8
@@ -1130,20 +1111,8 @@
               END DO
             END DO
             DO i=Istr,Iend
-#  ifdef SED_MORPH
-              FC(i,0)=W(i,j,0)*2.0_r8*                                  &
-     &                (cff2*t(i,j,1,nstp,itrc)-                         &
-     &                 cff3*t(i,j,2,nstp,itrc))
-              tl_FC(i,0)=2.0_r8*(tl_W(i,j,0)*                           &
-     &                           (cff2*t(i,j,1,nstp,itrc)-              &
-     &                            cff3*t(i,j,2,nstp,itrc))+             &
-     &                           W(i,j,0)*                              &
-     &                           (cff2*tl_t(i,j,1,nstp,itrc)-           &
-     &                            cff3*tl_t(i,j,2,nstp,itrc)))
-#  else
               FC(i,0)=0.0_r8
               tl_FC(i,0)=0.0_r8
-#  endif
               FC(i,1)=W(i,j,1)*                                         &
      &                (cff1*t(i,j,1,nstp,itrc)+                         &
      &                 cff2*t(i,j,2,nstp,itrc)-                         &

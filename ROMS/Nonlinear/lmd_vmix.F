@@ -2,11 +2,11 @@
       MODULE lmd_vmix_mod
 #if defined NONLINEAR && defined LMD_MIXING && defined SOLVE3D
 !
-!svn $Id: lmd_vmix.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: lmd_vmix.F 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                           Hernan G. Arango   !
+!    See License_ROMS.md                            Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
 !                                                                      !
 !  This subroutine computes the vertical mixing coefficients for       !
@@ -573,9 +573,9 @@
         IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
           DO j=Jstr,Jend
             DO itrc=1,NAT
-              Akt(Iend-1,j,k,itrc)=Akt(Iend,j,k,itrc)
+              Akt(Iend+1,j,k,itrc)=Akt(Iend,j,k,itrc)
             END DO
-            Akv(Iend-1,j,k)=Akv(Iend,j,k)
+            Akv(Iend+1,j,k)=Akv(Iend,j,k)
           END DO
 
         END IF

@@ -2,11 +2,11 @@
       MODULE tl_step3d_uv_mod
 #if defined TANGENT && defined SOLVE3D
 !
-!svn $Id: tl_step3d_uv.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: tl_step3d_uv.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine time-steps the tangent linear horizontal momentum      !
@@ -1393,7 +1393,7 @@
                 tl_u(i,j,k,nnew)=SOURCES(ng)%tl_Qsrc(is,k)*cff1+        &
      &                           SOURCES(ng)%Qsrc(is,k)*tl_cff1
               END DO
-            ELSE
+            ELSE IF (INT(SOURCES(ng)%Dsrc(is)).eq.1) THEN
               DO k=1,N(ng)
                 cff1=1.0_r8/(om_v(i,j)*                                 &
      &                       0.5_r8*(z_w(i,j-1,k)-z_w(i,j-1,k-1)+       &

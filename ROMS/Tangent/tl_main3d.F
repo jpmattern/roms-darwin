@@ -2,11 +2,11 @@
 #if defined TANGENT && defined SOLVE3D
       SUBROUTINE tl_main3d (RunInterval)
 !
-!svn $Id: tl_main3d.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: tl_main3d.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine is the main driver for tangent linear ROMS/TOMS when   !
@@ -39,10 +39,10 @@
       USE equilibrium_tide_mod, ONLY : equilibrium_tide
 # endif
 # if defined ATM_COUPLING_NOT_YET && defined MCT_LIB
-      USE ocean_coupler_mod,    ONLY : atmos_coupling
+      USE mct_coupler_mod,      ONLY : ocn2atm_coupling
 # endif
 # if defined WAV_COUPLING_NOT_YET && defined MCT_LIB
-      USE ocean_coupler_mod,    ONLY : waves_coupling
+      USE mct_coupler_mod,      ONLY : ocn2wav_coupling
 # endif
 # ifdef FORWARD_READ
       USE omega_mod,            ONLY : omega
@@ -368,7 +368,7 @@
               IF ((iic(ng).ne.ntstart(ng)).and.                         &
      &            MOD(iic(ng)-1,CoupleSteps(Iatmos,ng)).eq.0) THEN
                 DO tile=last_tile(ng),first_tile(ng),-1
-                  CALL atmos_coupling (ng, tile)
+                  CALL ocn2atm_coupling (ng, tile)
                 END DO
 !$OMP BARRIER
               END IF
@@ -387,7 +387,7 @@
               IF ((iic(ng).ne.ntstart(ng)).and.                         &
      &            MOD(iic(ng)-1,CoupleSteps(Iwaves,ng)).eq.0) THEN
                 DO tile=first_tile(ng),last_tile(ng),+1
-                  CALL waves_coupling (ng, tile)
+                  CALL ocn2wav_coupling (ng, tile)
                 END DO
 !$OMP BARRIER
               END IF

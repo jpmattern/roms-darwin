@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE inp_par_mod
 !
-!svn $Id: inp_par.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: inp_par.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine reads in input model parameters from standard input.   !
@@ -221,15 +221,26 @@
         END DO
       END IF
 #endif
+#ifdef SEAICE
+!
+!-----------------------------------------------------------------------
+!  Read in sea-ice model input parameters.
+!-----------------------------------------------------------------------
+!
+      OPEN (15, FILE=TRIM(bparnam), FORM='formatted', STATUS='old')
+
+      CALL read_IcePar (model, 15, out, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#endif
 #ifdef BIOLOGY
 !
 !-----------------------------------------------------------------------
 !  Read in biological model input parameters.
 !-----------------------------------------------------------------------
 !
-      OPEN (15, FILE=TRIM(bparnam), FORM='formatted', STATUS='old')
+      OPEN (25, FILE=TRIM(bparnam), FORM='formatted', STATUS='old')
 
-      CALL read_BioPar (model, 15, out, Lwrite)
+      CALL read_BioPar (model, 25, out, Lwrite)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef SEDIMENT
@@ -238,9 +249,9 @@
 !  Read in sediment model input parameters.
 !-----------------------------------------------------------------------
 !
-      OPEN (25, FILE=TRIM(sparnam), FORM='formatted', STATUS='old')
+      OPEN (35, FILE=TRIM(sparnam), FORM='formatted', STATUS='old')
 
-      CALL read_SedPar (model, 25, out, Lwrite)
+      CALL read_SedPar (model, 35, out, Lwrite)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef NESTING
@@ -959,14 +970,18 @@
      &          t44,'South Edge', t57,'East Edge',t70,'North Edge',     &
      &          /,1x,'---------',t25,'----',t31,4('----------',3x))
         DO ifield=1,nLBCvar
-          CALL lbc_report (out, ifield, LBC)
+          IF (idBvar(ifield).gt.0) THEN
+            CALL lbc_report (out, ifield, LBC)
+          END IF
         END DO
 
 #if defined ADJOINT || defined TANGENT || defined TL_IOMS
 !
         WRITE (out,130) 'TLM, RPM, and ADM'
         DO ifield=1,nLBCvar
-          CALL lbc_report (out, ifield, ad_LBC)
+          IF (idBvar(ifield).gt.0) THEN
+            CALL lbc_report (out, ifield, ad_LBC)
+          END IF
         END DO
 #endif
       END IF
@@ -1176,6 +1191,8 @@
 #endif
 
       END DO
+
+#ifdef SOLVE3D
 !
 !-----------------------------------------------------------------------
 !  Set climatology tracers (active and passive) metadata.  It needs to
@@ -1249,6 +1266,7 @@
           idTnud(i)=0
         END IF
       END DO
+#endif
 !
 !-----------------------------------------------------------------------
 !  Check C-preprocessing options and definitions.

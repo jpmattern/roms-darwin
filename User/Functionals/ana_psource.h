@@ -1,10 +1,10 @@
       SUBROUTINE ana_psource (ng, tile, model)
 !
-!! svn $Id: ana_psource.h 1103 2022-01-13 03:38:35Z arango $
+!! svn $Id: ana_psource.h 1210 2024-01-03 22:03:03Z arango $
 !!======================================================================
-!! Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
-!!   See License_ROMS.txt                                              !
+!!   See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This subroutine sets analytical tracer and mass point Sources       !
@@ -104,9 +104,9 @@
       real(r8), intent(in) :: on_u(LBi:,LBj:)
       real(r8), intent(in) :: om_v(LBi:,LBj:)
 #else
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,:)
 # ifdef SOLVE3D
       real(r8), intent(in) :: u(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),2)

@@ -2,11 +2,11 @@
       MODULE interp_floats_mod
 #if defined NONLINEAR && defined FLOATS
 !
-!svn $Id: interp_floats.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: interp_floats.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group         Mark Hadfield   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group         Mark Hadfield   !
 !    Licensed under a MIT/X style license             John M. Klinck   !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine interpolates requested field at the float trajectory   !

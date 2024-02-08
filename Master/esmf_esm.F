@@ -1,13 +1,13 @@
 #include "cppdefs.h"
       MODULE esmf_esm_mod
 
-#if defined MODEL_COUPLING && defined ESMF_LIB
+#if defined MODEL_COUPLING && defined ESMF_LIB && !defined CMEPS
 !
-!svn $Id: esmf_esm.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: esmf_esm.F 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license         Hernan G. Arango     !
-!    See License_ROMS.txt                         Ufuk Utku Turuncoglu !
+!    See License_ROMS.md                          Ufuk Utku Turuncoglu !
 !=======================================================================
 !                                                                      !
 !  This module sets the Earth System Model (ESM) coupled gridded       !
@@ -64,7 +64,11 @@
       USE esmf_ice_mod,     ONLY: ICE_SetServices
 #  endif
 # endif
+# ifdef CMEPS
+      USE cmeps_roms_mod,   ONLY: ROMS_SetServices
+# else
       USE esmf_roms_mod,    ONLY: ROMS_SetServices
+# endif
 # ifdef WAV_COUPLING
 #  if defined WAM_COUPLING
       USE esmf_wam_mod,     ONLY: WAV_SetServices
@@ -482,9 +486,10 @@
 !
 !  Query driver for information.
 !
-      CALL ESMF_GridCompGet(driver,                                     &
-     &                      name=name,                                  &
-     &                      rc=rc)
+      CALL ESMF_GridCompGet (driver,                                    &
+     &                       name=name,                                 &
+     &                       localPet=localPET,                         &
+     &                       rc=rc)
       IF (ESMF_LogFoundError(rcToCheck=rc,                              &
      &                       msg=ESMF_LOGERR_PASSTHRU,                  &
      &                       line=__LINE__,                             &
@@ -494,9 +499,9 @@
 !
 !  Read in free-format run sequence from configuration object.
 !
-      CALL ESMF_GridCompGet(driver,                                     &
-     &                      config=Config,                              &
-     &                      rc=rc)
+      CALL ESMF_GridCompGet (driver,                                    &
+     &                       config=Config,                             &
+     &                       rc=rc)
       IF (ESMF_LogFoundError(rcToCheck=rc,                              &
      &                       msg=ESMF_LOGERR_PASSTHRU,                  &
      &                       line=__LINE__,                             &
@@ -533,7 +538,6 @@
 !
       CALL ESMF_GridCompGet (driver,                                    &
      &                       clock=Clock,                               &
-     &                       localPet=localPET,                         &
      &                       rc=rc)
       IF (ESMF_LogFoundError(rcToCheck=rc,                              &
      &                       msg=ESMF_LOGERR_PASSTHRU,                  &
@@ -596,8 +600,8 @@
 !
 !  Destroy free format object. All internal memory is deallocated.
 !
-      CALL NUOPC_FreeFormatDestroy(runSeqFF,                            &
-     &                             rc=rc)
+      CALL NUOPC_FreeFormatDestroy (runSeqFF,                           &
+     &                              rc=rc)
       IF (ESMF_LogFoundError(rcToCheck=rc,                              &
      &                       msg=ESMF_LOGERR_PASSTHRU,                  &
      &                       line=__LINE__,                             &

@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE def_info_mod
 !
-!svn $Id: def_info.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: def_info.F 1212 2024-01-26 20:59:21Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine defines information variables in requested NetCDF      !
@@ -138,17 +138,17 @@
 !
       real(r8) :: Aval(6)
 !
-      character (len=11 ) :: bryatt, clmatt, frcatt
-      character (len=50 ) :: tiling
-      character (len=80 ) :: type
-      character (len=120) :: Vinfo(Natt)
+      character (len=11 )    :: bryatt, clmatt, frcatt
+      character (len=50 )    :: tiling
+      character (len=80 )    :: type
 #ifdef FOUR_DVAR
-      character (len=512) :: state_vector
+      character (len=512)    :: state_vector
 #endif
 #ifdef BIOLOGY
-      character (len=512) :: bio_file
+      character (len=512)    :: bio_file
 #endif
-      character (len=4096) :: string
+      character (len=4096)   :: string
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_info_nf90"
@@ -193,7 +193,8 @@
 !  Set dimension for generic user parameters.
 !
       IF ((Nuser.gt.0).and.(ncid.ne.GST(ng)%ncid)) THEN
-        status=def_dim(ng, model, ncid, ncname, 'Nuser', 25, usrdim)
+        status=def_dim(ng, model, ncid, ncname, 'Nuser',                &
+     &                 Nuser, usrdim)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 !
@@ -1861,7 +1862,7 @@
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       Vinfo( 1)='Charnok_alpha'
-      Vinfo( 2)='Charnok factor for surface roughness'
+      Vinfo( 2)='Charnock factor for surface roughness'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &               1, (/0/), Aval, Vinfo, ncname,                     &
      &               SetParAccess = .FALSE.)
@@ -1887,7 +1888,16 @@
      &               1, (/0/), Aval, Vinfo, ncname,                     &
      &               SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
+#endif
+#ifdef WEC
+      Vinfo( 1)='wec_alpha'
+      Vinfo( 2)='WEC wave dissipation action scale'
+      Vinfo( 9)='all goes to breaking and none to roller'
+      Vinfo(10)='all goes to roller and none to breaking'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &               1, (/0/), Aval, Vinfo, ncname,                     &
+     &               SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 !
 !  Nudging inverse time scales used in various tasks.
@@ -2529,6 +2539,57 @@
      &               SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
+
+# ifdef STD_MODEL
+!
+!  Background error covariance standard deviation modeling parameters.
+!
+        Vinfo( 1)='Sigma_max'
+        Vinfo( 2)='background standard deviation, '//                   &
+     &            'maximum value'
+        Vinfo( 3)='state variable units'
+        status=def_var(ng, model, ncid, varid, NF_TYPE,                 &
+     &                 1, (/statedim/), Aval, Vinfo, ncname,            &
+     &                 SetParAccess = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        Vinfo( 1)='Sigma_ml'
+        Vinfo( 2)='background standard deviation, '//                   &
+     &            'maximum value at mixed layer'
+        Vinfo( 3)='state variable units'
+        status=def_var(ng, model, ncid, varid, NF_TYPE,                 &
+     &                 1, (/statedim/), Aval, Vinfo, ncname,            &
+     &                 SetParAccess = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        Vinfo( 1)='Sigma_do'
+        Vinfo( 2)='background standard deviation, '//                   &
+     &            'maximum value in deep ocean'
+        Vinfo( 3)='state variable units'
+        status=def_var(ng, model, ncid, varid, NF_TYPE,                 &
+     &                 1, (/statedim/), Aval, Vinfo, ncname,            &
+     &                 SetParAccess = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        Vinfo( 1)='Sigma_dz'
+        Vinfo( 2)='background standard deviation, '//                   &
+     &            'profile vertical displacement'
+        Vinfo( 3)='meter'
+        status=def_var(ng, model, ncid, varid, NF_TYPE,                 &
+     &                 1, (/statedim/), Aval, Vinfo, ncname,            &
+     &                 SetParAccess = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+#  ifndef COMPUTE_MLD
+      Vinfo( 1)='mld_uniform'
+      Vinfo( 2)='constast mixed-layer depth value'
+      Vinfo( 3)='meter'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &               1, (/0/), Aval, Vinfo, ncname,                     &
+     &               SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+# endif
 #endif
 
 #if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
@@ -2953,7 +3014,6 @@
       Vinfo( 2)='S-coordinate at RHO-points'
       Vinfo( 5)='valid_min'
       Vinfo( 6)='valid_max'
-      Vinfo(14)='s_rho, scalar'
       IF (Vtransform(ng).eq.1) THEN
         Vinfo(21)='ocean_s_coordinate_g1'
       ELSE IF (Vtransform(ng).eq.2) THEN
@@ -2978,7 +3038,6 @@
       Vinfo( 2)='S-coordinate at W-points'
       Vinfo( 5)='valid_min'
       Vinfo( 6)='valid_max'
-      Vinfo(14)='s_w, scalar'
       Vinfo(21)='ocean_s_coordinate'
       IF (Vtransform(ng).eq.1) THEN
         Vinfo(21)='ocean_s_coordinate_g1'
@@ -3004,7 +3063,6 @@
       Vinfo( 2)='S-coordinate stretching curves at RHO-points'
       Vinfo( 5)='valid_min'
       Vinfo( 6)='valid_max'
-      Vinfo(14)='Cs_r, scalar'
       Aval(2)=-1.0_r8
       Aval(3)=0.0_r8
       status=def_var(ng, model, ncid, varid, NF_TOUT,                   &
@@ -3018,7 +3076,6 @@
       Vinfo( 2)='S-coordinate stretching curves at W-points'
       Vinfo( 5)='valid_min'
       Vinfo( 6)='valid_max'
-      Vinfo(14)='Cs_w, scalar'
       Aval(2)=-1.0_r8
       Aval(3)=0.0_r8
       status=def_var(ng, model, ncid, varid, NF_TOUT,                   &
@@ -3032,9 +3089,8 @@
       IF (Nuser.gt.0) THEN
         Vinfo( 1)='user'
         Vinfo( 2)='user generic parameters'
-        Vinfo(14)='user, scalar'
         Vinfo(24)='_FillValue'
-        Aval(6)=0.0_r8
+        Aval(6)=spval
         status=def_var(ng, model, ncid, varid, NF_TYPE,                 &
      &                 1, (/usrdim/), Aval, Vinfo, ncname,              &
      &               SetParAccess = .FALSE.)
@@ -3069,12 +3125,13 @@
 !
 !  Bathymetry.
 !
-        Vinfo( 1)='h'
-        Vinfo( 2)='bathymetry at RHO-points'
-        Vinfo( 3)='meter'
-        Vinfo(14)='bath, scalar'
+        Vinfo( 1)=Vname(1,idtopo)
+        Vinfo( 2)=Vname(2,idtopo)
+        Vinfo( 3)=Vname(3,idtopo)
+        Vinfo(14)=Vname(4,idtopo)
+        Vinfo(21)=Vname(6,idtopo)
         Vinfo(22)='coordinates'
-        Aval(5)=REAL(r2dvar,r8)
+        Aval(5)=REAL(Iinfo(1,idtopo,ng),r8)
         IF (ncid.eq.STA(ng)%ncid) THEN
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   1, (/stadim/), Aval, Vinfo, ncname)
@@ -3089,12 +3146,13 @@
 !  Coriolis Parameter.
 !
         IF (ncid.ne.STA(ng)%ncid) THEN
-          Vinfo( 1)='f'
-          Vinfo( 2)='Coriolis parameter at RHO-points'
-          Vinfo( 3)='second-1'
-          Vinfo(14)='coriolis, scalar'
+          Vinfo( 1)=Vname(1,idfcor)
+          Vinfo( 2)=Vname(2,idfcor)
+          Vinfo( 3)=Vname(3,idfcor)
+          Vinfo(14)=Vname(4,idfcor)
+          Vinfo(21)=Vname(6,idfcor)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idfcor,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3103,22 +3161,24 @@
 !  Curvilinear coordinate metrics.
 !
         IF (ncid.ne.STA(ng)%ncid) THEN
-          Vinfo( 1)='pm'
-          Vinfo( 2)='curvilinear coordinate metric in XI'
-          Vinfo( 3)='meter-1'
-          Vinfo(14)='pm, scalar'
+          Vinfo( 1)=Vname(1,idpmdx)
+          Vinfo( 2)=Vname(2,idpmdx)
+          Vinfo( 3)=Vname(3,idpmdx)
+          Vinfo(14)=Vname(4,idpmdx)
+          Vinfo(21)=Vname(6,idpmdx)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idpmdx,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='pn'
-          Vinfo( 2)='curvilinear coordinate metric in ETA'
-          Vinfo( 3)='meter-1'
-          Vinfo(14)='pn, scalar'
+!
+          Vinfo( 1)=Vname(1,idpndy)
+          Vinfo( 2)=Vname(2,idpndy)
+          Vinfo( 3)=Vname(3,idpndy)
+          Vinfo(14)=Vname(4,idpndy)
+          Vinfo(21)=Vname(6,idpndy)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idpndy,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3127,11 +3187,11 @@
 !  Grid coordinates of RHO-points.
 !
         IF (spherical) THEN
-          Vinfo( 1)='lon_rho'
-          Vinfo( 2)='longitude of RHO-points'
-          Vinfo( 3)='degree_east'
-          Vinfo(14)='lon_rho, scalar'
-          Vinfo(21)='longitude'
+          Vinfo( 1)=Vname(1,idLonR)
+          Vinfo( 2)=Vname(2,idLonR)
+          Vinfo( 3)=Vname(3,idLonR)
+          Vinfo(14)=Vname(4,idLonR)
+          Vinfo(21)=Vname(6,idLonR)
           IF (ncid.eq.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     1, (/stadim/), Aval, Vinfo, ncname)
@@ -3141,12 +3201,12 @@
      &                     2, t2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='lat_rho'
-          Vinfo( 2)='latitude of RHO-points'
-          Vinfo( 3)='degree_north'
-          Vinfo(14)='lat_rho, scalar'
-          Vinfo(21)='latitude'
+!
+          Vinfo( 1)=Vname(1,idLatR)
+          Vinfo( 2)=Vname(2,idLatR)
+          Vinfo( 3)=Vname(3,idLatR)
+          Vinfo(14)=Vname(4,idLatR)
+          Vinfo(21)=Vname(6,idLatR)
           IF (ncid.eq.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     1, (/stadim/), Aval, Vinfo,  ncname)
@@ -3157,10 +3217,11 @@
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
-          Vinfo( 1)='x_rho'
-          Vinfo( 2)='x-locations of RHO-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='x_rho, scalar'
+          Vinfo( 1)=Vname(1,idXgrR)
+          Vinfo( 2)=Vname(2,idXgrR)
+          Vinfo( 3)=Vname(3,idXgrR)
+          Vinfo(14)=Vname(4,idXgrR)
+          Vinfo(21)=Vname(6,idXgrR)
           IF (ncid.eq.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     1, (/stadim/), Aval, Vinfo, ncname)
@@ -3170,11 +3231,12 @@
      &                     2, t2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='y_rho'
-          Vinfo( 2)='y-locations of RHO-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='y_rho, scalar'
+!
+          Vinfo( 1)=Vname(1,idYgrR)
+          Vinfo( 2)=Vname(2,idYgrR)
+          Vinfo( 3)=Vname(3,idYgrR)
+          Vinfo(14)=Vname(4,idYgrR)
+          Vinfo(21)=Vname(6,idYgrR)
           IF (ncid.eq.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     1, (/stadim/), Aval, Vinfo, ncname)
@@ -3189,42 +3251,44 @@
 !  Grid coordinates of U-points.
 !
         IF (spherical) THEN
-          Vinfo( 1)='lon_u'
-          Vinfo( 2)='longitude of U-points'
-          Vinfo( 3)='degree_east'
-          Vinfo(14)='lon_u, scalar'
-          Vinfo(21)='longitude'
+          Vinfo( 1)=Vname(1,idLonU)
+          Vinfo( 2)=Vname(2,idLonU)
+          Vinfo( 3)=Vname(3,idLonU)
+          Vinfo(14)=Vname(4,idLonU)
+          Vinfo(21)=Vname(6,idLonU)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, u2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='lat_u'
-          Vinfo( 2)='latitude of U-points'
-          Vinfo( 3)='degree_north'
-          Vinfo(14)='lat_u, scalar'
-          Vinfo(21)='latitude'
+!
+          Vinfo( 1)=Vname(1,idLatU)
+          Vinfo( 2)=Vname(2,idLatU)
+          Vinfo( 3)=Vname(3,idLatU)
+          Vinfo(14)=Vname(4,idLatU)
+          Vinfo(21)=Vname(6,idLatU)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, u2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
-          Vinfo( 1)='x_u'
-          Vinfo( 2)='x-locations of U-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='x_u, scalar'
+          Vinfo( 1)=Vname(1,idXgrU)
+          Vinfo( 2)=Vname(2,idXgrU)
+          Vinfo( 3)=Vname(3,idXgrU)
+          Vinfo(14)=Vname(4,idXgrU)
+          Vinfo(21)=Vname(6,idXgrU)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, u2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='y_u'
-          Vinfo( 2)='y-locations of U-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='y_u, scalar'
+!
+          Vinfo( 1)=Vname(1,idYgrU)
+          Vinfo( 2)=Vname(2,idYgrU)
+          Vinfo( 3)=Vname(3,idYgrU)
+          Vinfo(14)=Vname(4,idYgrU)
+          Vinfo(21)=Vname(6,idYgrU)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, u2dgrd, Aval, Vinfo, ncname)
@@ -3235,42 +3299,44 @@
 !  Grid coordinates of V-points.
 !
         IF (spherical) THEN
-          Vinfo( 1)='lon_v'
-          Vinfo( 2)='longitude of V-points'
-          Vinfo( 3)='degree_east'
-          Vinfo(14)='lon_v, scalar'
-          Vinfo(21)='longitude'
+          Vinfo( 1)=Vname(1,idLonV)
+          Vinfo( 2)=Vname(2,idLonV)
+          Vinfo( 3)=Vname(3,idLonV)
+          Vinfo(14)=Vname(4,idLonV)
+          Vinfo(21)=Vname(6,idLonV)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, v2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='lat_v'
-          Vinfo( 2)='latitude of V-points'
-          Vinfo( 3)='degree_north'
-          Vinfo(14)='lat_v, scalar'
-          Vinfo(21)='latitude'
+!
+          Vinfo( 1)=Vname(1,idLatV)
+          Vinfo( 2)=Vname(2,idLatV)
+          Vinfo( 3)=Vname(3,idLatV)
+          Vinfo(14)=Vname(4,idLatV)
+          Vinfo(21)=Vname(6,idLatV)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, v2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
-          Vinfo( 1)='x_v'
-          Vinfo( 2)='x-locations of V-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='x_v, scalar'
+          Vinfo( 1)=Vname(1,idXgrV)
+          Vinfo( 2)=Vname(2,idXgrV)
+          Vinfo( 3)=Vname(3,idXgrV)
+          Vinfo(14)=Vname(4,idXgrV)
+          Vinfo(21)=Vname(6,idXgrV)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, v2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='y_v'
-          Vinfo( 2)='y-locations of V-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='y_v, scalar'
+!
+          Vinfo( 1)=Vname(1,idYgrV)
+          Vinfo( 2)=Vname(2,idYgrV)
+          Vinfo( 3)=Vname(3,idYgrV)
+          Vinfo(14)=Vname(4,idYgrV)
+          Vinfo(21)=Vname(6,idYgrV)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, v2dgrd, Aval, Vinfo, ncname)
@@ -3281,58 +3347,62 @@
 !  Grid coordinates of PSI-points.
 !
         IF (spherical) THEN
-          Vinfo( 1)='lon_psi'
-          Vinfo( 2)='longitude of PSI-points'
-          Vinfo( 3)='degree_east'
-          Vinfo(14)='lon_psi, scalar'
-          Vinfo(21)='longitude'
+          Vinfo( 1)=Vname(1,idLonP)
+          Vinfo( 2)=Vname(2,idLonP)
+          Vinfo( 3)=Vname(3,idLonP)
+          Vinfo(14)=Vname(4,idLonP)
+          Vinfo(21)=Vname(6,idLonP)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, p2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='lat_psi'
-          Vinfo( 2)='latitude of PSI-points'
-          Vinfo( 3)='degree_north'
-          Vinfo(14)='lat_psi, scalar'
-          Vinfo(21)='latitude'
+!
+          Vinfo( 1)=Vname(1,idLatP)
+          Vinfo( 2)=Vname(2,idLatP)
+          Vinfo( 3)=Vname(3,idLatP)
+          Vinfo(14)=Vname(4,idLatP)
+          Vinfo(21)=Vname(6,idLatP)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, p2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
-          Vinfo( 1)='x_psi'
-          Vinfo( 2)='x-locations of PSI-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='x_psi, scalar'
+          Vinfo( 1)=Vname(1,idXgrP)
+          Vinfo( 2)=Vname(2,idXgrP)
+          Vinfo( 3)=Vname(3,idXgrP)
+          Vinfo(14)=Vname(4,idXgrP)
+          Vinfo(21)=Vname(6,idXgrP)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, p2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='y_psi'
-          Vinfo( 2)='y-locations of PSI-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='y_psi, scalar'
+!
+          Vinfo( 1)=Vname(1,idYgrP)
+          Vinfo( 2)=Vname(2,idYgrP)
+          Vinfo( 3)=Vname(3,idYgrP)
+          Vinfo(14)=Vname(4,idYgrP)
+          Vinfo(21)=Vname(6,idYgrP)
           IF (ncid.ne.STA(ng)%ncid) THEN
             status=def_var(ng, model, ncid, varid, NF_TYPE,             &
      &                     2, p2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END IF
+
 #ifdef CURVGRID
 !
 !  Angle between XI-axis and EAST at RHO-points.
 !
-        Vinfo( 1)='angle'
-        Vinfo( 2)='angle between XI-axis and EAST'
-        Vinfo( 3)='radians'
-        Vinfo(14)='angle, scalar'
+        Vinfo( 1)=Vname(1,idangR)
+        Vinfo( 2)=Vname(2,idangR)
+        Vinfo( 3)=Vname(3,idangR)
+        Vinfo(14)=Vname(4,idangR)
+        Vinfo(21)=Vname(6,idangR)
         Vinfo(22)='coordinates'
-        Aval(5)=REAL(r2dvar,r8)
+        Aval(5)=REAL(Iinfo(1,idangR,ng),r8)
         IF (ncid.eq.STA(ng)%ncid) THEN
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   1, (/stadim/), Aval, Vinfo,  ncname)
@@ -3348,42 +3418,46 @@
 !  Masking fields at RHO-, U-, V-points, and PSI-points.
 !
         IF (ncid.ne.STA(ng)%ncid) THEN
-          Vinfo( 1)='mask_rho'
-          Vinfo( 2)='mask on RHO-points'
+          Vinfo( 1)=Vname(1,idmskR)
+          Vinfo( 2)=Vname(2,idmskR)
           Vinfo( 9)='land'
           Vinfo(10)='water'
+          Vinfo(21)=Vname(6,idmskR)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idmskR,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='mask_u'
-          Vinfo( 2)='mask on U-points'
+!
+          Vinfo( 1)=Vname(1,idmskU)
+          Vinfo( 2)=Vname(2,idmskU)
           Vinfo( 9)='land'
           Vinfo(10)='water'
+          Vinfo(21)=Vname(6,idmskU)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(u2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idmskU,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, u2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='mask_v'
-          Vinfo( 2)='mask on V-points'
+!
+          Vinfo( 1)=Vname(1,idmskV)
+          Vinfo( 2)=Vname(2,idmskV)
           Vinfo( 9)='land'
           Vinfo(10)='water'
+          Vinfo(21)=Vname(6,idmskV)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(v2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idmskV,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, v2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='mask_psi'
-          Vinfo( 2)='mask on psi-points'
+!
+          Vinfo( 1)=Vname(1,idmskP)
+          Vinfo( 2)=Vname(2,idmskP)
           Vinfo( 9)='land'
           Vinfo(10)='water'
+          Vinfo(21)=Vname(6,idmskP)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(p2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idmskP,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, p2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3396,32 +3470,35 @@
 !  Adjoint sensitivity spatial scope mask at RHO-, U-, and V-points.
 !
         IF (ncid.ne.STA(ng)%ncid) THEN
-          Vinfo( 1)='scope_rho'
-          Vinfo( 2)='adjoint sensitivity spatial scope on RHO-points'
+          Vinfo( 1)=Vname(1,idscoR)
+          Vinfo( 2)=Vname(2,idscoR)
           Vinfo( 9)='inactive'
           Vinfo(10)='active'
+          Vinfo(21)=Vname(6,idscoR)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idscoR,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='scope_u'
-          Vinfo( 2)='adjoint sensitivity spatial scope on U-points'
+!
+          Vinfo( 1)=Vname(1,idscoU)
+          Vinfo( 2)=Vname(2,idscoU)
           Vinfo( 9)='inactive'
           Vinfo(10)='active'
+          Vinfo(21)=Vname(6,idscoU)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(u2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idscoU,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, u2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='scope_v'
-          Vinfo( 2)='adjoint sensitivity spatial scope on V-points'
+!
+          Vinfo( 1)=Vname(1,idscoV)
+          Vinfo( 2)=Vname(2,idscoV)
           Vinfo( 9)='inactive'
           Vinfo(10)='active'
+          Vinfo(21)=Vname(6,idscoV)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(v2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idscoV,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, v2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3432,13 +3509,14 @@
 !  Spatially varying bottom friction parameter.
 !
         IF (ncid.ne.STA(ng)%ncid) THEN
-# ifdef UV_LOGDRAG
+# if defined UV_LOGDRAG || defined BBL_MODEL
           Vinfo( 1)=Vname(1,idZoBL)
           Vinfo( 2)=Vname(2,idZoBL)
           Vinfo( 3)=Vname(3,idZoBL)
           Vinfo(14)=Vname(4,idZoBL)
+          Vinfo(21)=Vname(6,idZoBL)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idZoBL,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3448,8 +3526,9 @@
           Vinfo( 2)=Vname(2,idragL)
           Vinfo( 3)=Vname(3,idragL)
           Vinfo(14)=Vname(4,idragL)
+          Vinfo(21)=Vname(6,idragL)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idragL,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3459,8 +3538,9 @@
           Vinfo( 2)=Vname(2,idragQ)
           Vinfo( 3)=Vname(3,idragQ)
           Vinfo(14)=Vname(4,idragQ)
+          Vinfo(21)=Vname(6,idragQ)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idragQ,ng),r8)
           status=def_var(ng, model, ncid, varid, NF_TYPE,               &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3470,7 +3550,7 @@
       END IF
 !
   10  FORMAT (i3.3,'x',i3.3)
-  20  FORMAT (/,' DEF_INFO_NF90 - error while creating global'          &
+  20  FORMAT (/,' DEF_INFO_NF90 - error while creating global',         &
      &        ' attribute: ',a,/,17x,a)
   30  FORMAT (a,i2.2)
 !
@@ -3539,17 +3619,17 @@
 !
       real(r8) :: Aval(6)
 !
-      character (len=11 ) :: bryatt, clmatt, frcatt
-      character (len=50 ) :: tiling
-      character (len=80 ) :: type
-      character (len=120) :: Vinfo(Natt)
+      character (len=11 )    :: bryatt, clmatt, frcatt
+      character (len=50 )    :: tiling
+      character (len=80 )    :: type
 # ifdef FOUR_DVAR
-      character (len=512) :: state_vector
+      character (len=512)    :: state_vector
 # endif
 # ifdef BIOLOGY
-      character (len=512) :: bio_file
+      character (len=512)    :: bio_file
 # endif
-      character (len=4096) :: string
+      character (len=4096)   :: string
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_info_pio"
@@ -3600,7 +3680,8 @@
 !  Set dimension for generic user parameters.
 !
       IF ((Nuser.gt.0).and.(FileH.ne.ABS(GST(ng)%pioFile%fh))) THEN
-        status=def_dim(ng, model, pioFile, ncname, 'Nuser', 25, usrdim)
+        status=def_dim(ng, model, pioFile, ncname, 'Nuser',             &
+     &                 Nuser, usrdim)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 !
@@ -5255,7 +5336,7 @@
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       Vinfo( 1)='Charnok_alpha'
-      Vinfo( 2)='Charnok factor for surface roughness'
+      Vinfo( 2)='Charnock factor for surface roughness'
       status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,              &
      &               1, (/0/), Aval, Vinfo, ncname,                     &
      &               SetParAccess = .FALSE.)
@@ -5281,7 +5362,16 @@
      &               1, (/0/), Aval, Vinfo, ncname,                     &
      &               SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
+# endif
+# ifdef WEC
+      Vinfo( 1)='wec_alpha'
+      Vinfo( 2)='WEC wave dissipation action scale'
+      Vinfo( 9)='all goes to breaking and none to roller'
+      Vinfo(10)='all goes to roller and none to breaking'
+      status=def_var(ng, model, pioFile, pioVar, NF_TYPE,               &
+     &               1, (/0/), Aval, Vinfo, ncname,                     &
+     &               SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 !
 !  Nudging inverse time scales used in various tasks.
@@ -5923,6 +6013,57 @@
      &               SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
+
+#  ifdef STD_MODEL
+!
+!  Background error covariance standard deviation modeling parameters.
+!
+        Vinfo( 1)='Sigma_max'
+        Vinfo( 2)='background standard deviation, '//                   &
+     &            'maximum value'
+        Vinfo( 3)='state variable units'
+        status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,            &
+     &                 1, (/statedim/), Aval, Vinfo, ncname,            &
+     &                 SetParAccess = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        Vinfo( 1)='Sigma_ml'
+        Vinfo( 2)='background standard deviation, '//                   &
+     &            'maximum value at mixed layer'
+        Vinfo( 3)='state variable units'
+        status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,            &
+     &                 1, (/statedim/), Aval, Vinfo, ncname,            &
+     &                 SetParAccess = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        Vinfo( 1)='Sigma_do'
+        Vinfo( 2)='background standard deviation, '//                   &
+     &            'maximum value in deep ocean'
+        Vinfo( 3)='state variable units'
+        status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,            &
+     &                 1, (/statedim/), Aval, Vinfo, ncname,            &
+     &                 SetParAccess = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        Vinfo( 1)='Sigma_dz'
+        Vinfo( 2)='background standard deviation, '//                   &
+     &            'profile vertical displacement'
+        Vinfo( 3)='meter'
+        status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,            &
+     &                 1, (/statedim/), Aval, Vinfo, ncname,            &
+     &                 SetParAccess = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+#   ifndef COMPUTE_MLD
+      Vinfo( 1)='mld_uniform'
+      Vinfo( 2)='constast mixed-layer depth value'
+      Vinfo( 3)='meter'
+      status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,              &
+     &               1, (/0/), Aval, Vinfo, ncname,                     &
+     &               SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
+#  endif
 # endif
 
 # if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
@@ -6347,7 +6488,6 @@
       Vinfo( 2)='S-coordinate at RHO-points'
       Vinfo( 5)='valid_min'
       Vinfo( 6)='valid_max'
-      Vinfo(14)='s_rho, scalar'
       IF (Vtransform(ng).eq.1) THEN
         Vinfo(21)='ocean_s_coordinate_g1'
       ELSE IF (Vtransform(ng).eq.2) THEN
@@ -6372,7 +6512,6 @@
       Vinfo( 2)='S-coordinate at W-points'
       Vinfo( 5)='valid_min'
       Vinfo( 6)='valid_max'
-      Vinfo(14)='s_w, scalar'
       Vinfo(21)='ocean_s_coordinate'
       IF (Vtransform(ng).eq.1) THEN
         Vinfo(21)='ocean_s_coordinate_g1'
@@ -6398,7 +6537,6 @@
       Vinfo( 2)='S-coordinate stretching curves at RHO-points'
       Vinfo( 5)='valid_min'
       Vinfo( 6)='valid_max'
-      Vinfo(14)='Cs_r, scalar'
       Aval(2)=-1.0_r8
       Aval(3)=0.0_r8
       status=def_var(ng, model, pioFile, pioVar, PIO_TOUT,              &
@@ -6412,7 +6550,6 @@
       Vinfo( 2)='S-coordinate stretching curves at W-points'
       Vinfo( 5)='valid_min'
       Vinfo( 6)='valid_max'
-      Vinfo(14)='Cs_w, scalar'
       Aval(2)=-1.0_r8
       Aval(3)=0.0_r8
       status=def_var(ng, model, pioFile, pioVar, PIO_TOUT,              &
@@ -6426,9 +6563,8 @@
       IF (Nuser.gt.0) THEN
         Vinfo( 1)='user'
         Vinfo( 2)='user generic parameters'
-        Vinfo(14)='user, scalar'
         Vinfo(24)='_FillValue'
-        Aval(6)=0.0_r8
+        Aval(6)=spval
         status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,            &
      &                 1, (/usrdim/), Aval, Vinfo, ncname,              &
      &               SetParAccess = .FALSE.)
@@ -6463,12 +6599,13 @@
 !
 !  Bathymetry.
 !
-        Vinfo( 1)='h'
-        Vinfo( 2)='bathymetry at RHO-points'
-        Vinfo( 3)='meter'
-        Vinfo(14)='bath, scalar'
+        Vinfo( 1)=Vname(1,idtopo)
+        Vinfo( 2)=Vname(2,idtopo)
+        Vinfo( 3)=Vname(3,idtopo)
+        Vinfo(14)=Vname(4,idtopo)
+        Vinfo(21)=Vname(6,idtopo)
         Vinfo(22)='coordinates'
-        Aval(5)=REAL(r2dvar,r8)
+        Aval(5)=REAL(Iinfo(1,idtopo,ng),r8)
         IF (FileH.eq.ABS(STA(ng)%pioFile%fh)) THEN
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   1, (/stadim/), Aval, Vinfo, ncname)
@@ -6483,12 +6620,13 @@
 !  Coriolis Parameter.
 !
         IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
-          Vinfo( 1)='f'
-          Vinfo( 2)='Coriolis parameter at RHO-points'
-          Vinfo( 3)='second-1'
-          Vinfo(14)='coriolis, scalar'
+          Vinfo( 1)=Vname(1,idfcor)
+          Vinfo( 2)=Vname(2,idfcor)
+          Vinfo( 3)=Vname(3,idfcor)
+          Vinfo(14)=Vname(4,idfcor)
+          Vinfo(21)=Vname(6,idfcor)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idfcor,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -6497,22 +6635,24 @@
 !  Curvilinear coordinate metrics.
 !
         IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
-          Vinfo( 1)='pm'
-          Vinfo( 2)='curvilinear coordinate metric in XI'
-          Vinfo( 3)='meter-1'
-          Vinfo(14)='pm, scalar'
+          Vinfo( 1)=Vname(1,idpmdx)
+          Vinfo( 2)=Vname(2,idpmdx)
+          Vinfo( 3)=Vname(3,idpmdx)
+          Vinfo(14)=Vname(4,idpmdx)
+          Vinfo(21)=Vname(6,idpmdx)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idpmdx,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='pn'
-          Vinfo( 2)='curvilinear coordinate metric in ETA'
-          Vinfo( 3)='meter-1'
-          Vinfo(14)='pn, scalar'
+!
+          Vinfo( 1)=Vname(1,idpndy)
+          Vinfo( 2)=Vname(2,idpndy)
+          Vinfo( 3)=Vname(3,idpndy)
+          Vinfo(14)=Vname(4,idpndy)
+          Vinfo(21)=Vname(6,idpndy)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idpndy,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -6521,11 +6661,11 @@
 !  Grid coordinates of RHO-points.
 !
         IF (spherical) THEN
-          Vinfo( 1)='lon_rho'
-          Vinfo( 2)='longitude of RHO-points'
-          Vinfo( 3)='degree_east'
-          Vinfo(14)='lon_rho, scalar'
-          Vinfo(21)='longitude'
+          Vinfo( 1)=Vname(1,idLonR)
+          Vinfo( 2)=Vname(2,idLonR)
+          Vinfo( 3)=Vname(3,idLonR)
+          Vinfo(14)=Vname(4,idLonR)
+          Vinfo(21)=Vname(6,idLonR)
           IF (FileH.eq.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     1, (/stadim/), Aval, Vinfo, ncname)
@@ -6535,12 +6675,12 @@
      &                     2, t2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='lat_rho'
-          Vinfo( 2)='latitude of RHO-points'
-          Vinfo( 3)='degree_north'
-          Vinfo(14)='lat_rho, scalar'
-          Vinfo(21)='latitude'
+!
+          Vinfo( 1)=Vname(1,idLatR)
+          Vinfo( 2)=Vname(2,idLatR)
+          Vinfo( 3)=Vname(3,idLatR)
+          Vinfo(14)=Vname(4,idLatR)
+          Vinfo(21)=Vname(6,idLatR)
           IF (FileH.eq.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     1, (/stadim/), Aval, Vinfo,  ncname)
@@ -6551,10 +6691,11 @@
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
-          Vinfo( 1)='x_rho'
-          Vinfo( 2)='x-locations of RHO-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='x_rho, scalar'
+          Vinfo( 1)=Vname(1,idXgrR)
+          Vinfo( 2)=Vname(2,idXgrR)
+          Vinfo( 3)=Vname(3,idXgrR)
+          Vinfo(14)=Vname(4,idXgrR)
+          Vinfo(21)=Vname(6,idXgrR)
           IF (FileH.eq.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     1, (/stadim/), Aval, Vinfo, ncname)
@@ -6564,11 +6705,12 @@
      &                     2, t2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='y_rho'
-          Vinfo( 2)='y-locations of RHO-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='y_rho, scalar'
+!
+          Vinfo( 1)=Vname(1,idYgrR)
+          Vinfo( 2)=Vname(2,idYgrR)
+          Vinfo( 3)=Vname(3,idYgrR)
+          Vinfo(14)=Vname(4,idYgrR)
+          Vinfo(21)=Vname(6,idYgrR)
           IF (FileH.eq.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     1, (/stadim/), Aval, Vinfo, ncname)
@@ -6583,42 +6725,44 @@
 !  Grid coordinates of U-points.
 !
         IF (spherical) THEN
-          Vinfo( 1)='lon_u'
-          Vinfo( 2)='longitude of U-points'
-          Vinfo( 3)='degree_east'
-          Vinfo(14)='lon_u, scalar'
-          Vinfo(21)='longitude'
+          Vinfo( 1)=Vname(1,idLonU)
+          Vinfo( 2)=Vname(2,idLonU)
+          Vinfo( 3)=Vname(3,idLonU)
+          Vinfo(14)=Vname(4,idLonU)
+          Vinfo(21)=Vname(6,idLonU)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, u2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='lat_u'
-          Vinfo( 2)='latitude of U-points'
-          Vinfo( 3)='degree_north'
-          Vinfo(14)='lat_u, scalar'
-          Vinfo(21)='latitude'
+!
+          Vinfo( 1)=Vname(1,idLatU)
+          Vinfo( 2)=Vname(2,idLatU)
+          Vinfo( 3)=Vname(3,idLatU)
+          Vinfo(14)=Vname(4,idLatU)
+          Vinfo(21)=Vname(6,idLatU)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, u2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
-          Vinfo( 1)='x_u'
-          Vinfo( 2)='x-locations of U-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='x_u, scalar'
+          Vinfo( 1)=Vname(1,idXgrU)
+          Vinfo( 2)=Vname(2,idXgrU)
+          Vinfo( 3)=Vname(3,idXgrU)
+          Vinfo(14)=Vname(4,idXgrU)
+          Vinfo(21)=Vname(6,idXgrU)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, u2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='y_u'
-          Vinfo( 2)='y-locations of U-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='y_u, scalar'
+!
+          Vinfo( 1)=Vname(1,idYgrU)
+          Vinfo( 2)=Vname(2,idYgrU)
+          Vinfo( 3)=Vname(3,idYgrU)
+          Vinfo(14)=Vname(4,idYgrU)
+          Vinfo(21)=Vname(6,idYgrU)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, u2dgrd, Aval, Vinfo, ncname)
@@ -6629,42 +6773,44 @@
 !  Grid coordinates of V-points.
 !
         IF (spherical) THEN
-          Vinfo( 1)='lon_v'
-          Vinfo( 2)='longitude of V-points'
-          Vinfo( 3)='degree_east'
-          Vinfo(14)='lon_v, scalar'
-          Vinfo(21)='longitude'
+          Vinfo( 1)=Vname(1,idLonV)
+          Vinfo( 2)=Vname(2,idLonV)
+          Vinfo( 3)=Vname(3,idLonV)
+          Vinfo(14)=Vname(4,idLonV)
+          Vinfo(21)=Vname(6,idLonV)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, v2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='lat_v'
-          Vinfo( 2)='latitude of V-points'
-          Vinfo( 3)='degree_north'
-          Vinfo(14)='lat_v, scalar'
-          Vinfo(21)='latitude'
+!
+          Vinfo( 1)=Vname(1,idLatV)
+          Vinfo( 2)=Vname(2,idLatV)
+          Vinfo( 3)=Vname(3,idLatV)
+          Vinfo(14)=Vname(4,idLatV)
+          Vinfo(21)=Vname(6,idLatV)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, v2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
-          Vinfo( 1)='x_v'
-          Vinfo( 2)='x-locations of V-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='x_v, scalar'
+          Vinfo( 1)=Vname(1,idXgrV)
+          Vinfo( 2)=Vname(2,idXgrV)
+          Vinfo( 3)=Vname(3,idXgrV)
+          Vinfo(14)=Vname(4,idXgrV)
+          Vinfo(21)=Vname(6,idXgrV)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, v2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='y_v'
-          Vinfo( 2)='y-locations of V-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='y_v, scalar'
+!
+          Vinfo( 1)=Vname(1,idYgrV)
+          Vinfo( 2)=Vname(2,idYgrV)
+          Vinfo( 3)=Vname(3,idYgrV)
+          Vinfo(14)=Vname(4,idYgrV)
+          Vinfo(21)=Vname(6,idYgrV)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, v2dgrd, Aval, Vinfo, ncname)
@@ -6675,58 +6821,62 @@
 !  Grid coordinates of PSI-points.
 !
         IF (spherical) THEN
-          Vinfo( 1)='lon_psi'
-          Vinfo( 2)='longitude of PSI-points'
-          Vinfo( 3)='degree_east'
-          Vinfo(14)='lon_psi, scalar'
-          Vinfo(21)='longitude'
+          Vinfo( 1)=Vname(1,idLonP)
+          Vinfo( 2)=Vname(2,idLonP)
+          Vinfo( 3)=Vname(3,idLonP)
+          Vinfo(14)=Vname(4,idLonP)
+          Vinfo(21)=Vname(6,idLonP)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, p2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='lat_psi'
-          Vinfo( 2)='latitude of PSI-points'
-          Vinfo( 3)='degree_north'
-          Vinfo(14)='lat_psi, scalar'
-          Vinfo(21)='latitude'
+!
+          Vinfo( 1)=Vname(1,idLatP)
+          Vinfo( 2)=Vname(2,idLatP)
+          Vinfo( 3)=Vname(3,idLatP)
+          Vinfo(14)=Vname(4,idLatP)
+          Vinfo(21)=Vname(6,idLatP)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, p2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         ELSE
-          Vinfo( 1)='x_psi'
-          Vinfo( 2)='x-locations of PSI-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='x_psi, scalar'
+          Vinfo( 1)=Vname(1,idXgrP)
+          Vinfo( 2)=Vname(2,idXgrP)
+          Vinfo( 3)=Vname(3,idXgrP)
+          Vinfo(14)=Vname(4,idXgrP)
+          Vinfo(21)=Vname(6,idXgrP)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, p2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-
-          Vinfo( 1)='y_psi'
-          Vinfo( 2)='y-locations of PSI-points'
-          Vinfo( 3)='meter'
-          Vinfo(14)='y_psi, scalar'
+!
+          Vinfo( 1)=Vname(1,idYgrP)
+          Vinfo( 2)=Vname(2,idYgrP)
+          Vinfo( 3)=Vname(3,idYgrP)
+          Vinfo(14)=Vname(4,idYgrP)
+          Vinfo(21)=Vname(6,idYgrP)
           IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
             status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,        &
      &                     2, p2dgrd, Aval, Vinfo, ncname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END IF
+
 # ifdef CURVGRID
 !
 !  Angle between XI-axis and EAST at RHO-points.
 !
-        Vinfo( 1)='angle'
-        Vinfo( 2)='angle between XI-axis and EAST'
-        Vinfo( 3)='radians'
-        Vinfo(14)='angle, scalar'
+        Vinfo( 1)=Vname(1,idangR)
+        Vinfo( 2)=Vname(2,idangR)
+        Vinfo( 3)=Vname(3,idangR)
+        Vinfo(14)=Vname(4,idangR)
+        Vinfo(21)=Vname(6,idangR)
         Vinfo(22)='coordinates'
-        Aval(5)=REAL(r2dvar,r8)
+        Aval(5)=REAL(Iinfo(1,idangR,ng),r8)
         IF (FileH.eq.ABS(STA(ng)%pioFile%fh)) THEN
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   1, (/stadim/), Aval, Vinfo,  ncname)
@@ -6742,42 +6892,44 @@
 !  Masking fields at RHO-, U-, V-points, and PSI-points.
 !
         IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
-          Vinfo( 1)='mask_rho'
-          Vinfo( 2)='mask on RHO-points'
+          Vinfo( 1)=Vname(1,idmskR)
+          Vinfo( 2)=Vname(2,idmskR)
           Vinfo( 9)='land'
           Vinfo(10)='water'
+          Vinfo(21)=Vname(6,idmskR)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idmskR,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='mask_u'
-          Vinfo( 2)='mask on U-points'
+!
+          Vinfo( 1)=Vname(1,idmskU)
+          Vinfo( 2)=Vname(2,idmskU)
           Vinfo( 9)='land'
           Vinfo(10)='water'
+          Vinfo(21)=Vname(6,idmskU)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(u2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idmskU,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, u2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='mask_v'
-          Vinfo( 2)='mask on V-points'
+!
+          Vinfo( 1)=Vname(1,idmskV)
+          Vinfo( 2)=Vname(2,idmskV)
           Vinfo( 9)='land'
           Vinfo(10)='water'
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(v2dvar,r8)
+          Vinfo(21)=Vname(6,idmskV)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, v2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='mask_psi'
-          Vinfo( 2)='mask on psi-points'
+!
+          Vinfo( 1)=Vname(1,idmskP)
+          Vinfo( 2)=Vname(2,idmskP)
           Vinfo( 9)='land'
           Vinfo(10)='water'
+          Vinfo(21)=Vname(6,idmskP)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(p2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idmskP,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, p2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -6790,32 +6942,35 @@
 !  Adjoint sensitivity spatial scope mask at RHO-, U-, and V-points.
 !
         IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
-          Vinfo( 1)='scope_rho'
-          Vinfo( 2)='adjoint sensitivity spatial scope on RHO-points'
+          Vinfo( 1)=Vname(1,idscoR)
+          Vinfo( 2)=Vname(2,idscoR)
           Vinfo( 9)='inactive'
           Vinfo(10)='active'
+          Vinfo(21)=Vname(6,idscoR)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idscoR,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='scope_u'
-          Vinfo( 2)='adjoint sensitivity spatial scope on U-points'
+!
+          Vinfo( 1)=Vname(1,idscoU)
+          Vinfo( 2)=Vname(2,idscoU)
           Vinfo( 9)='inactive'
           Vinfo(10)='active'
+          Vinfo(21)=Vname(6,idscoU)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(u2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idscoU,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, u2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-          Vinfo( 1)='scope_v'
-          Vinfo( 2)='adjoint sensitivity spatial scope on V-points'
+!
+          Vinfo( 1)=Vname(1,idscoV)
+          Vinfo( 2)=Vname(2,idscoV)
           Vinfo( 9)='inactive'
           Vinfo(10)='active'
+          Vinfo(21)=Vname(6,idscoV)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(v2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idscoV,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, v2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -6826,13 +6981,14 @@
 !  Spatially varying bottom friction parameter.
 !
         IF (FileH.ne.ABS(STA(ng)%pioFile%fh)) THEN
-#  ifdef UV_LOGDRAG
+#  if defined UV_LOGDRAG || defined BBL_MODEL
           Vinfo( 1)=Vname(1,idZoBL)
           Vinfo( 2)=Vname(2,idZoBL)
           Vinfo( 3)=Vname(3,idZoBL)
           Vinfo(14)=Vname(4,idZoBL)
+          Vinfo(21)=Vname(6,idZoBL)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idZoBL,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -6842,8 +6998,9 @@
           Vinfo( 2)=Vname(2,idragL)
           Vinfo( 3)=Vname(3,idragL)
           Vinfo(14)=Vname(4,idragL)
+          Vinfo(21)=Vname(6,idragL)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idragL,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -6853,8 +7010,9 @@
           Vinfo( 2)=Vname(2,idragQ)
           Vinfo( 3)=Vname(3,idragQ)
           Vinfo(14)=Vname(4,idragQ)
+          Vinfo(21)=Vname(6,idragQ)
           Vinfo(22)='coordinates'
-          Aval(5)=REAL(r2dvar,r8)
+          Aval(5)=REAL(Iinfo(1,idragQ,ng),r8)
           status=def_var(ng, model, pioFile, pioVar, PIO_TYPE,          &
      &                   2, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -6864,7 +7022,7 @@
       END IF
 !
   10  FORMAT (i3.3,'x',i3.3)
-  20  FORMAT (/,' DEF_INFO_PIO - error while creating global'           &
+  20  FORMAT (/,' DEF_INFO_PIO - error while creating global',          &
      &        ' attribute: ',a,/,16x,a)
   30  FORMAT (a,i2.2)
 !

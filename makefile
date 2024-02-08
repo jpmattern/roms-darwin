@@ -1,8 +1,8 @@
-# svn $Id: makefile 1099 2022-01-06 21:01:01Z arango $
+# svn $Id: makefile 1211 2024-01-03 22:22:25Z arango $
 #::::::::::::::::::::::::::::::::::::::::::::::::::::: Hernan G. Arango :::
-# Copyright (c) 2002-2022 The ROMS/TOMS Group             Kate Hedstrom :::
+# Copyright (c) 2002-2024 The ROMS/TOMS Group             Kate Hedstrom :::
 #   Licensed under a MIT/X style license                                :::
-#   See License_ROMS.txt                                                :::
+#   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #                                                                       :::
 #  ROMS/TOMS Framework Master Makefile                                  :::
@@ -37,7 +37,23 @@ endif
 #  Initialize some things.
 #--------------------------------------------------------------------------
 
-  sources    :=
+sources :=
+
+#--------------------------------------------------------------------------
+#  Check that at least one of SHARED, STATIC, or EXEC are set. If none are
+#  set, then ROMS defaults to creating a statically linked executable.
+#  This is to safeguard against old build scripts and misconfigured
+#  new ones (e.g. EXEC defined but neither SHARED nor STATIC defined).
+#--------------------------------------------------------------------------
+
+ifndef SHARED
+ ifndef STATIC
+    STATIC := on
+  ifndef EXEC
+    EXEC   := on
+  endif
+ endif
+endif
 
 #==========================================================================
 #  Start of user-defined options. In some macro definitions below: "on" or
@@ -153,17 +169,29 @@ MY_CPP_FLAGS ?=
 #==========================================================================
 
 #--------------------------------------------------------------------------
-#  Set directory for temporary objects.
+#  Set ROMS Build directory for processing and compiling files.
 #--------------------------------------------------------------------------
 
-SCRATCH_DIR ?= Build_roms
- clean_list := core *.ipo $(SCRATCH_DIR)
+BUILD_DIR ?= Build_roms
 
-ifeq "$(strip $(SCRATCH_DIR))" "."
+#  Backward compatability with old build scripts and make configuration
+#  files (*.mk). The BUILD_DIR macro is preferred.
+
+ifdef SCRATCH_DIR
+  BUILD_DIR := $(SCRATCH_DIR)
+else
+  SCRATCH_DIR := $(BUILD_DIR)
+endif
+
+#  Define cleaning macros for compiling.
+
+clean_list := core *.ipo $(BUILD_DIR)
+
+ifeq "$(strip $(BUILD_DIR))" "."
   clean_list := core *.o *.oo *.mod *.f90 lib*.a *.bak
   clean_list += $(CURDIR)/*.ipo
 endif
-ifeq "$(strip $(SCRATCH_DIR))" "./"
+ifeq "$(strip $(BUILD_DIR))" "./"
   clean_list := core *.o *.oo *.ipo *.mod *.f90 lib*.a *.bak
   clean_list += $(CURDIR)/*.ipo
 endif
@@ -176,8 +204,7 @@ endif
 #  step (beginning and almost the end of ROMS library list).
 #--------------------------------------------------------------------------
 
-   libraries := $(SCRATCH_DIR)/libNLM.a $(SCRATCH_DIR)/libDRIVER.a \
-		$(SCRATCH_DIR)/libUTIL.a
+libraries :=
 
 #--------------------------------------------------------------------------
 #  Set Pattern rules.
@@ -186,7 +213,7 @@ endif
 %.o: %.F
 
 %.o: %.f90
-	cd $(SCRATCH_DIR); $(FC) -c $(FFLAGS) $(notdir $<)
+	cd $(BUILD_DIR); $(FC) -c $(FFLAGS) $(notdir $<)
 
 %.f90: %.F
 	$(CPP) $(CPPFLAGS) $(MY_CPP_FLAGS) $< > $*.f90
@@ -226,41 +253,49 @@ endif
 MAKE_MACROS := $(shell echo ${HOME} | sed 's| |\\ |g')/make_macros.mk
 
 ifneq ($(MAKECMDGOALS),clean)
-  MACROS := $(shell cpp -P $(ROMS_CPPFLAGS) Compilers/make_macros.h > \
-              $(MAKE_MACROS); $(CLEAN) $(MAKE_MACROS))
+  ifneq ($(MAKECMDGOALS),tarfile)
+    MACROS := $(shell cpp -P $(ROMS_CPPFLAGS) Compilers/make_macros.h > \
+                $(MAKE_MACROS); $(CLEAN) $(MAKE_MACROS))
 
-  GET_MACROS := $(wildcard $(SCRATCH_DIR)/make_macros.*)
+    GET_MACROS := $(wildcard $(BUILD_DIR)/make_macros.*)
 
-  ifdef GET_MACROS
-    include $(SCRATCH_DIR)/make_macros.mk
-  else
-    include $(MAKE_MACROS)
+    ifdef GET_MACROS
+      include $(BUILD_DIR)/make_macros.mk
+    else
+      include $(MAKE_MACROS)
+    endif
   endif
 endif
 
 clean_list += $(MAKE_MACROS)
 
 #--------------------------------------------------------------------------
-#  Make functions for putting the temporary files in $(SCRATCH_DIR)
+#  Make functions for putting the temporary files in $(BUILD_DIR)
 #  DO NOT modify this section; spaces and blank lines are needed.
 #--------------------------------------------------------------------------
 
 # $(call source-dir-to-binary-dir, directory-list)
-source-dir-to-binary-dir = $(addprefix $(SCRATCH_DIR)/, $(notdir $1))
+source-dir-to-binary-dir = $(addprefix $(BUILD_DIR)/, $(notdir $1))
 
 # $(call source-to-object, source-file-list)
 source-to-object = $(call source-dir-to-binary-dir,   \
                    $(subst .F,.o,$1))
 
-# $(call make-library, library-name, source-file-list)
-define make-library
-   libraries += $(SCRATCH_DIR)/$1
+# $(call make-static-library, library-name, source-file-list)
+define make-static-library
    sources   += $2
 
-   $(SCRATCH_DIR)/$1: $(call source-dir-to-binary-dir,    \
+   $(BUILD_DIR)/$1: $(call source-dir-to-binary-dir,    \
                       $(subst .F,.o,$2))
 	$(AR) $(ARFLAGS) $$@ $$^
 	$(RANLIB) $$@
+endef
+
+# $(call make-shared-library, library-name, source-file-list)
+define make-shared-library
+   $(BUILD_DIR)/$1: $(call source-dir-to-binary-dir,    \
+                      $(subst .F,.o,$2))
+	$(LD) $(FFLAGS) $(SH_LDFLAGS) -o $$@ $$^ $(LIBS)
 endef
 
 # $(call f90-source, source-file-list)
@@ -277,7 +312,7 @@ endef
 # $(call one-compile-rule, binary-file, f90-file, source-files)
 define one-compile-rule
   $1: $2 $3
-	cd $$(SCRATCH_DIR); $$(FC) -c $$(FFLAGS) $(notdir $2)
+	cd $$(BUILD_DIR); $$(FC) -c $$(FFLAGS) $(notdir $2)
 
   $2: $3
 	$$(CPP) $$(CPPFLAGS) $$(MY_CPP_FLAGS) $$< > $$@
@@ -289,18 +324,20 @@ endef
 #  Set ROMS/TOMS executable file name.
 #--------------------------------------------------------------------------
 
-ifdef USE_DEBUG
-  BIN ?= $(BINDIR)/romsG
-else
- ifdef USE_MPI
-   BIN ?= $(BINDIR)/romsM
- else
-  ifdef USE_OpenMP
-    BIN ?= $(BINDIR)/romsO
+ifdef EXEC
+  ifdef USE_DEBUG
+    BIN ?= $(BINDIR)/romsG
   else
-    BIN ?= $(BINDIR)/romsS
+   ifdef USE_MPI
+     BIN ?= $(BINDIR)/romsM
+   else
+    ifdef USE_OpenMP
+      BIN ?= $(BINDIR)/romsO
+    else
+      BIN ?= $(BINDIR)/romsS
+    endif
+   endif
   endif
- endif
 endif
 
 #--------------------------------------------------------------------------
@@ -335,14 +372,24 @@ ifndef FORT
 endif
 
 ifneq ($(MAKECMDGOALS),clean)
-  MKFILE := $(COMPILERS)/$(OS)-$(strip $(FORT)).mk
-  include $(MKFILE)
+  ifneq ($(MAKECMDGOALS),tarfile)
+    MKFILE := $(COMPILERS)/$(OS)-$(strip $(FORT)).mk
+    include $(MKFILE)
+  endif
 endif
 
 ifdef USE_MPI
  ifdef USE_OpenMP
   $(error You cannot activate USE_MPI and USE_OpenMP at the same time!)
  endif
+endif
+
+ifdef STATIC
+  libraries += $(BUILD_DIR)/$(ST_LIB_NAME)
+endif
+
+ifdef SHARED
+  libraries += $(BUILD_DIR)/$(SH_LIB_NAME)
 endif
 
 #--------------------------------------------------------------------------
@@ -382,7 +429,7 @@ CPPFLAGS += -D'SVN_REV="$(SVNREV)"'
 
 .PHONY: all
 
-all: $(SCRATCH_DIR) $(SCRATCH_DIR)/MakeDepend $(BIN) rm_macros
+all: $(BUILD_DIR) $(BUILD_DIR)/MakeDepend $(libraries) $(BIN) rm_macros $(CYG_DLL_CP)
 
  modules  :=
 ifdef USE_ADJOINT
@@ -401,6 +448,7 @@ ifdef USE_TANGENT
 		ROMS/Tangent/Biology
 endif
  modules  +=	ROMS/Nonlinear \
+		ROMS/Nonlinear/BBL \
 		ROMS/Nonlinear/Biology \
 		ROMS/Nonlinear/Sediment \
 		ROMS/Functionals \
@@ -428,6 +476,7 @@ ifdef USE_TANGENT
 		ROMS/Tangent/Biology
 endif
  includes +=	ROMS/Nonlinear \
+		ROMS/Nonlinear/BBL \
 		ROMS/Nonlinear/Biology \
 		ROMS/Nonlinear/Sediment \
 		ROMS/Utility \
@@ -453,17 +502,17 @@ ifdef USE_WRF
  endif
 endif
 
- modules  +=	Master
- includes +=	Master Compilers
+modules  +=	Master
+includes +=	Master Compilers
 
 vpath %.F $(modules)
 vpath %.h $(includes)
-vpath %.f90 $(SCRATCH_DIR)
-vpath %.o $(SCRATCH_DIR)
+vpath %.f90 $(BUILD_DIR)
+vpath %.o $(BUILD_DIR)
 
 include $(addsuffix /Module.mk,$(modules))
 
-MDEPFLAGS += $(patsubst %,-I %,$(includes)) --silent --moddir $(SCRATCH_DIR)
+MDEPFLAGS += $(patsubst %,-I %,$(includes)) --silent --moddir $(BUILD_DIR)
 
 CPPFLAGS  += $(patsubst %,-I%,$(includes))
 
@@ -473,20 +522,28 @@ else
   CPPFLAGS += -D'HEADER_DIR="$(ROOTDIR)/ROMS/Include"'
 endif
 
-$(SCRATCH_DIR):
-	$(shell $(TEST) -d $(SCRATCH_DIR) || $(MKDIR) $(SCRATCH_DIR) )
+$(BUILD_DIR):
+	$(shell $(TEST) -d $(BUILD_DIR) || $(MKDIR) $(BUILD_DIR) )
 
 #--------------------------------------------------------------------------
 #  Special CPP macros for mod_strings.F
 #--------------------------------------------------------------------------
 
-$(SCRATCH_DIR)/mod_strings.f90: CPPFLAGS += -DMY_OS='"$(OS)"' \
+$(BUILD_DIR)/mod_strings.f90: CPPFLAGS += -DMY_OS='"$(OS)"' \
               -DMY_CPU='"$(CPU)"' -DMY_FORT='"$(FORT)"' \
               -DMY_FC='"$(FC)"' -DMY_FFLAGS='"$(FFLAGS)"'
 
 #--------------------------------------------------------------------------
 #  ROMS/TOMS libraries.
 #--------------------------------------------------------------------------
+
+ifdef SHARED
+  $(eval $(call make-shared-library,$(SH_LIB_NAME),$(sources)))
+endif
+
+ifdef STATIC
+  $(eval $(call make-static-library,$(ST_LIB_NAME),$(sources)))
+endif
 
 MYLIB := libroms.a
 
@@ -498,28 +555,30 @@ libraries: $(libraries)
 #  Target to create ROMS/TOMS dependecies.
 #--------------------------------------------------------------------------
 
-$(SCRATCH_DIR)/$(NETCDF_MODFILE): | $(SCRATCH_DIR)
-	cp -f $(NETCDF_INCDIR)/$(NETCDF_MODFILE) $(SCRATCH_DIR)
+ifneq ($(MAKECMDGOALS),tarfile)
+$(BUILD_DIR)/$(NETCDF_MODFILE): | $(BUILD_DIR)
+	cp -f $(NETCDF_INCDIR)/$(NETCDF_MODFILE) $(BUILD_DIR)
 
-$(SCRATCH_DIR)/$(TYPESIZES_MODFILE): | $(SCRATCH_DIR)
-	cp -f $(NETCDF_INCDIR)/$(TYPESIZES_MODFILE) $(SCRATCH_DIR)
+$(BUILD_DIR)/$(TYPESIZES_MODFILE): | $(BUILD_DIR)
+	cp -f $(NETCDF_INCDIR)/$(TYPESIZES_MODFILE) $(BUILD_DIR)
 
-$(SCRATCH_DIR)/MakeDepend: makefile \
-                           $(SCRATCH_DIR)/$(NETCDF_MODFILE) \
-                           $(SCRATCH_DIR)/$(TYPESIZES_MODFILE) \
-                           | $(SCRATCH_DIR)
-	@ $(SFMAKEDEPEND) $(MDEPFLAGS) $(sources) > $(SCRATCH_DIR)/MakeDepend
-	cp -p $(MAKE_MACROS) $(SCRATCH_DIR)
+$(BUILD_DIR)/MakeDepend: makefile \
+                           $(BUILD_DIR)/$(NETCDF_MODFILE) \
+                           $(BUILD_DIR)/$(TYPESIZES_MODFILE) \
+                           | $(BUILD_DIR)
+	@ $(SFMAKEDEPEND) $(MDEPFLAGS) $(sources) > $(BUILD_DIR)/MakeDepend
+	cp -p $(MAKE_MACROS) $(BUILD_DIR)
 
 .PHONY: depend
 
 SFMAKEDEPEND := ./ROMS/Bin/sfmakedepend
 
-depend: $(SCRATCH_DIR)
-	$(SFMAKEDEPEND) $(MDEPFLAGS) $(sources) > $(SCRATCH_DIR)/MakeDepend
+depend: $(BUILD_DIR)
+	$(SFMAKEDEPEND) $(MDEPFLAGS) $(sources) > $(BUILD_DIR)/MakeDepend
+endif
 
 ifneq ($(MAKECMDGOALS),clean)
-  -include $(SCRATCH_DIR)/MakeDepend
+  -include $(BUILD_DIR)/MakeDepend
 endif
 
 #--------------------------------------------------------------------------

@@ -1,16 +1,16 @@
-# svn $Id: CMakeLists.txt 1099 2022-01-06 21:01:01Z arango $
+# svn $Id: CMakeLists.txt 1214 2024-01-30 17:35:25Z arango $
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2022 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
 #   Licensed under a MIT/X style license                                :::
-#   See License_ROMS.txt                                                :::
+#   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 # Source code list for sub-directory "ROMS/Utility"
 
 list( APPEND _files
-      ROMS/Utility/abort.F
       ROMS/Utility/ADfromTL.F
       ROMS/Utility/array_modes.F
+      ROMS/Utility/background_std.F
       ROMS/Utility/back_cost.F
       ROMS/Utility/cgradient.F
       ROMS/Utility/checkadj.F
@@ -43,6 +43,7 @@ list( APPEND _files
       ROMS/Utility/def_rst.F
       ROMS/Utility/def_state.F
       ROMS/Utility/def_station.F
+      ROMS/Utility/def_std.F
       ROMS/Utility/def_tides.F
       ROMS/Utility/def_var.F
       ROMS/Utility/destroy.F
@@ -61,9 +62,11 @@ list( APPEND _files
       ROMS/Utility/get_3dfldr.F
       ROMS/Utility/get_bounds.F
       ROMS/Utility/get_cycle.F
+      ROMS/Utility/get_env.F
       ROMS/Utility/get_grid.F
       ROMS/Utility/get_gst.F
       ROMS/Utility/get_hash.F
+      ROMS/Utility/get_metadata.F
       ROMS/Utility/get_ngfld.F
       ROMS/Utility/get_ngfldr.F
       ROMS/Utility/get_nudgcoef.F
@@ -80,6 +83,7 @@ list( APPEND _files
       ROMS/Utility/inquiry.F
       ROMS/Utility/interpolate.F
       ROMS/Utility/lanc_resid.F
+      ROMS/Utility/lapack_mod.F
       ROMS/Utility/lbc.F
       ROMS/Utility/lubksb.F
       ROMS/Utility/ludcmp.F
@@ -179,7 +183,9 @@ list( APPEND _files
       ROMS/Utility/wrt_rst.F
       ROMS/Utility/wrt_state.F
       ROMS/Utility/wrt_station.F
+      ROMS/Utility/wrt_std.F
       ROMS/Utility/wrt_tides.F
+      ROMS/Utility/yaml_parser.F
       ROMS/Utility/zeta_balance.F
 )
 

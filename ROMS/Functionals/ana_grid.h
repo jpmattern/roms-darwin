@@ -1,11 +1,11 @@
-!!
+!
       SUBROUTINE ana_grid (ng, tile, model)
 !
-!! svn $Id: ana_grid.h 1099 2022-01-06 21:01:01Z arango $
+!! svn $Id: ana_grid.h 1210 2024-01-03 22:03:03Z arango $
 !!======================================================================
-!! Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
-!!   See License_ROMS.txt                                              !
+!!   See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine sets model grid using an analytical expressions.       !
@@ -297,7 +297,8 @@
       beta=0.0_r8
 #elif defined GRAV_ADJ
       Xsize=64.0E+03_r8
-      Esize=2.0E+03_r8
+!!    Esize=2.0E+03_r8
+      Esize=Mm(ng)*Xsize/Lm(ng)
       depth=20.0_r8
       f0=0.0_r8
       beta=0.0_r8
@@ -346,7 +347,8 @@
       Xsize=320.0E+03_r8
       Esize=320.0E+03_r8
       depth=5000.0_r8
-      f0=1.0E-04_r8
+!!    f0=1.0E-04_r8
+      f0=0.0_r8
       beta=0.0_r8
 #elif defined SOLITON
 !!    Xsize=0.5_r8*REAL(Lm(ng),r8)
@@ -417,7 +419,8 @@
       IF (first) THEN
         first=.FALSE.
         DO i=1,SIZE(Stats,1)
-          Stats(i) % count=0.0_r8
+          Stats(i) % checksum=0_i8b
+          Stats(i) % count=0
           Stats(i) % min=Large
           Stats(i) % max=-Large
           Stats(i) % avg=0.0_r8
@@ -880,12 +883,20 @@
         END DO
       END DO
 #else
-      val1=0.5_r8*Esize
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
-          f(i,j)=f0+beta*(yr(i,j)-val1)
+      IF (beta.eq.0.0_r8) THEN
+        DO j=JstrT,JendT
+          DO i=IstrT,IendT
+            f(i,j)=f0
+          END DO
         END DO
-      END DO
+      ELSE
+        val1=0.5_r8*Esize
+        DO j=JstrT,JendT
+          DO i=IstrT,IendT
+            f(i,j)=f0+beta*(yr(i,j)-val1)
+          END DO
+        END DO
+      END IF
 #endif
 !
 !  Report Statistics.

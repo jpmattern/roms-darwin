@@ -2,11 +2,11 @@
       MODULE rp_set_vbc_mod
 #ifdef TL_IOMS
 !
-!svn $Id: rp_set_vbc.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: rp_set_vbc.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module sets vertical boundary conditions for representers      !
@@ -1109,10 +1109,10 @@
 #   elif defined UV_QDRAG
       real(r8), intent(in) :: rdrag2(LBi:UBi,LBj:UBj)
 #   endif
-      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: tl_ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: tl_vbar(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: tl_ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: tl_vbar(LBi:UBi,LBj:UBj,:)
       real(r8), intent(inout) :: bustr(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: bvstr(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: tl_bustr(LBi:UBi,LBj:UBj)

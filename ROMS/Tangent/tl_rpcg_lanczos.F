@@ -7,11 +7,11 @@
       SUBROUTINE tl_rpcg_lanczos (ng, model, outLoop, innLoop,          &
      &                            NinnLoop, Lcgini)
 !
-!svn $Id: tl_rpcg_lanczos.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: tl_rpcg_lanczos.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Selime Gurol      !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Selime Gurol      !
 !    Licensed under a MIT/X style license            Andrew M. Moore   !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  Weak Constraint 4-Dimensional Variational (4DVar) Restricted        !

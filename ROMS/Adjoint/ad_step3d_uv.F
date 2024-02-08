@@ -3,11 +3,11 @@
 
 #if defined ADJOINT && defined SOLVE3D
 !
-!svn $Id: ad_step3d_uv.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: ad_step3d_uv.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This subroutine time-steps  the  adjoint  horizontal  momentum      !
@@ -1419,7 +1419,7 @@
                 ad_z_w(i  ,j,k  )=ad_z_w(i  ,j,k  )+adfac
                 ad_cff1=0.0_r8
               END DO
-            ELSE
+            ELSE IF (INT(SOURCES(ng)%Dsrc(is)).eq.1) THEN
               DO k=1,N(ng)
                 cff1=1.0_r8/(om_v(i,j)*                                 &
      &                       0.5_r8*(z_w(i,j-1,k)-z_w(i,j-1,k-1)+       &

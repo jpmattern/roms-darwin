@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE mod_arrays
 !
-!svn $Id: mod_arrays.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: mod_arrays.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module is used to allocate, initialize, and deallocate ROMS    !
@@ -51,6 +51,11 @@
       USE mod_grid,     ONLY : allocate_grid,                           &
      &                         deallocate_grid,                         &
      &                         initialize_grid
+#ifdef ICE_MODEL
+      USE mod_ice,      ONLY : allocate_ice,                            &
+     &                         deallocate_ice,                          &
+     &                         initialize_ice
+#endif
       USE mod_iounits,  ONLY : deallocate_iounits
       USE mod_mixing,   ONLY : allocate_mixing,                         &
      &                         deallocate_mixing,                       &
@@ -174,6 +179,9 @@
 #endif
           CALL allocate_forces (ng, LBi, UBi, LBj, UBj)
           CALL allocate_grid (ng, LBi, UBi, LBj, UBj, LBij, UBij)
+#ifdef ICE_MODEL
+          CALL allocate_ice (ng, LBi, UBi, LBj, UBj, .TRUE.)
+#endif
           CALL allocate_mixing (ng, LBi, UBi, LBj, UBj)
           CALL allocate_ocean (ng, LBi, UBi, LBj, UBj)
 #if defined SEDIMENT || defined BBL_MODEL
@@ -277,6 +285,9 @@
 #endif
         CALL deallocate_forces (ng)
         CALL deallocate_grid (ng)
+#ifdef ICE_MODEL
+        CALL deallocate_ice (ng)
+#endif
         CALL deallocate_mixing (ng)
         CALL deallocate_ocean (ng)
 #if defined SEDIMENT || defined BBL_MODEL
@@ -385,6 +396,9 @@
 #endif
           CALL initialize_forces (ng, tile, model)
           CALL initialize_grid (ng, tile, model)
+#ifdef ICE_MODEL
+          CALL initialize_ice (ng, tile, model)
+#endif
           CALL initialize_mixing (ng, tile, model)
           CALL initialize_ocean (ng, tile, model)
 #if defined SEDIMENT || defined BBL_MODEL

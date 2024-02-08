@@ -1,9 +1,9 @@
 /*
-** svn $Id: test_head.h 1099 2022-01-06 21:01:01Z arango $
+** svn $Id: test_head.h 1210 2024-01-03 22:03:03Z arango $
 *******************************************************************************
-** Copyright (c) 2002-2022 The ROMS/TOMS Group                               **
+** Copyright (c) 2002-2024 The ROMS/TOMS Group                               **
 **   Licensed under a MIT/X style license                                    **
-**   See License_ROMS.txt                                                    **
+**   See License_ROMS.md                                                     **
 *******************************************************************************
 **
 ** Options for Sediment Test Headland Case.
@@ -16,7 +16,7 @@
 
 #undef  CURVGRID
 #define WET_DRY
-#define NEARSHORE_MELLOR08
+#define WEC_VF
 #define SWAN_COUPLING
 #define MASKING
 #define OUT_DOUBLE
@@ -56,7 +56,7 @@
 # define SSW_CALC_ZNOT
 # undef  SSW_LOGINT
 #endif
-#if defined MB_BBL || defined SG_BBL || defined SSW_BBL || defined NEARSHORE_MELLOR
+#if defined MB_BBL || defined SG_BBL || defined SSW_BBL || defined WEC_VF
 # undef ANA_WWAVE
 # ifndef ANA_WWAVE
 # endif

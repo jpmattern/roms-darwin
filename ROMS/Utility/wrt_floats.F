@@ -2,11 +2,11 @@
       MODULE wrt_floats_mod
 #ifdef FLOATS
 !
-!svn $Id: wrt_floats.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: wrt_floats.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module writes simulated drifter trajectories into output       !
@@ -61,13 +61,13 @@
           CALL wrt_floats_pio (ng)
 # endif
         CASE DEFAULT
-          IF (Master) THEN
-            WRITE (stdout,10) FLT(ng)%IOtype
-  10        FORMAT (' WRT_FLOATS - Illegal output type, io_type = ',i0)
-          END IF
+          IF (Master) WRITE (stdout,10) FLT(ng)%IOtype
           exit_flag=3
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+  10  FORMAT (' WRT_FLOATS - Illegal output file type, io_type = ',i0,  &
+     &        /,14x,'Check KeyWord ''OUT_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE wrt_floats
@@ -577,7 +577,7 @@
      &                          (/1,FLT(ng)%Rindex/),                   &
      &                          (/Nfloats(ng),1/),                      &
      &                          pioFile = FLT(ng)%pioFile,              &
-     &                          pioVar = FLT(ng)%pioVar(idwbio))
+     &                          pioVar = FLT(ng)%pioVar(idwbio)%vd)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Write out biological float size (length).

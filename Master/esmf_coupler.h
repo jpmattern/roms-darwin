@@ -1,13 +1,13 @@
 #include "cppdefs.h"
       MODULE esmf_coupler_mod
 
-#if defined MODEL_COUPLING && defined ESMF_LIB
+#if defined MODEL_COUPLING && defined ESMF_LIB && !defined CMEPS
 !
-!svn $Id: esmf_coupler.h 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: esmf_coupler.h 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license         Hernan G. Arango     !
-!    See License_ROMS.txt                         Ufuk Utku Turuncoglu !
+!    See License_ROMS.md                          Ufuk Utku Turuncoglu !
 !=======================================================================
 !                                                                      !
 !  This module includes the coupler routines for the computation,      !
@@ -1002,8 +1002,10 @@
                       RETURN
                     END IF
                   CASE DEFAULT
+                    LandValue(1)=MODELS(iSrc)%LandValue
                     CALL ESMF_FieldRegridStore (srcField=srcField,      &
      &                                          dstField=dstField,      &
+     &                                 srcMaskValues=LandValue,         &
      &                                 unmappedaction=unmap,            &
      &                                 routeHandle=routeHandle,         &
      &                                 regridmethod=regridMethod,       &

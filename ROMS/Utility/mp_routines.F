@@ -1,10 +1,10 @@
 #include "cppdefs.h"
 !
-!svn $Id: mp_routines.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: mp_routines.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This package contains multi-processing routines used during         !
@@ -54,6 +54,9 @@
 !-----------------------------------------------------------------------
 !
       USE mod_kinds
+# if defined NAGFOR
+      USE f90_unix_env
+# endif
 !
       implicit none
 !
@@ -83,10 +86,16 @@
 !-----------------------------------------------------------------------
 !
       USE mod_kinds
+#if defined NAGFOR
+      USE f90_unix_env
+#endif
 !
       implicit none
 !
-      integer :: getpid, my_getpid
+#ifndef NAGFOR
+      integer :: getpid
+#endif
+      integer :: my_getpid
 !
 !  Get ID of the calling process.
 !

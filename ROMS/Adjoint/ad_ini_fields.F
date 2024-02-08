@@ -2,11 +2,11 @@
       MODULE ad_ini_fields_mod
 #ifdef ADJOINT
 !
-!svn $Id: ad_ini_fields.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: ad_ini_fields.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine initializes other time levels for 2D adjoint fields.   !
@@ -185,14 +185,14 @@
       real(r8), intent(in) :: u(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),2)
 #  endif
-      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
 #  ifdef SOLVE3D
 #   if defined SEDIMENT_NOT_YET && defined SED_MORPH_NOT_YET
       real(r8), intent(inout) :: ad_bed(LBi:UBi,LBj:UBj,Nbed,MBEDP)
       real(r8), intent(inout) :: ad_bed_thick0(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: ad_bed_thick(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(inout) :: ad_bed_thick(LBi:UBi,LBj:UBj,3)
 #   endif
       real(r8), intent(inout) :: ad_Hz(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(inout) :: ad_Zt_avg1(LBi:UBi,LBj:UBj)
@@ -206,9 +206,9 @@
       real(r8), intent(inout) :: ad_ubar_sol(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: ad_vbar_sol(LBi:UBi,LBj:UBj)
 
-      real(r8), intent(inout) :: ad_ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(inout) :: ad_vbar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: ad_ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(inout) :: ad_vbar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,:)
 # endif
 !
 !  Local variable declarations.
@@ -264,12 +264,13 @@
      &                       NghostPoints,                              &
      &                       EWperiodic(ng), NSperiodic(ng),            &
      &                       ad_t(:,:,:,nstp,:))
-#  endif
 !
+#  endif
+
       ic=0
       DO itrc=1,NT(ng)
         IF (LtracerCLM(itrc,ng).and.LnudgeTCLM(itrc,ng)) THEN
-          ic=ic+1
+          ic=ic+1                        ! OBC nudging coefficient index
         END IF
         IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
 !!        CALL exchange_r3d_tile (ng, tile,                             &
@@ -328,7 +329,7 @@
 !^
               ad_cff1=ad_cff1*rmask(i,j)
 #  endif
-!^            cff1=t(i,j,k,nstp,itrc)
+!^            tl_cff1=tl_t(i,j,k,nstp,itrc)
 !^
               ad_t(i,j,k,nstp,itrc)=ad_t(i,j,k,nstp,itrc)+ad_cff1
               ad_cff1=0.0_r8
@@ -348,6 +349,19 @@
 !  Apply boundary conditions.
 !
 #  ifdef DISTRIBUTE
+#   if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+!^    CALL mp_exchange2d (ng, tile, model, 2,                           &
+!^   &                    LBi, UBi, LBj, UBj,                           &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    tl_ubar(:,:,kstp), tl_vbar(:,:,kstp))
+!^
+      CALL ad_mp_exchange2d (ng, tile, model, 2,                        &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       NghostPoints,                              &
+     &                       EWperiodic(ng), NSperiodic(ng),            &
+     &                       ad_ubar(:,:,kstp), ad_vbar(:,:,kstp))
+#   else
 !^    CALL mp_exchange2d (ng, tile, model, 4,                           &
 !^   &                    LBi, UBi, LBj, UBj,                           &
 !^   &                    NghostPoints,                                 &
@@ -361,10 +375,12 @@
      &                       EWperiodic(ng), NSperiodic(ng),            &
      &                       ad_ubar(:,:,kstp), ad_vbar(:,:,kstp),      &
      &                       ad_ubar(:,:,knew), ad_vbar(:,:,knew))
+#   endif
 !
 #  endif
 
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+#  if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
 !^      CALL exchange_v2d_tile (ng, tile,                               &
 !^   &                          LBi, UBi, LBj, UBj,                     &
 !^   &                          tl_vbar(:,:,knew))
@@ -379,7 +395,7 @@
         CALL ad_exchange_u2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_ubar(:,:,knew))
-
+#  endif
 !^      CALL exchange_v2d_tile (ng, tile,                               &
 !^   &                          LBi, UBi, LBj, UBj,                     &
 !^   &                          tl_vbar(:,:,kstp))
@@ -400,6 +416,7 @@
      &          ANY(ad_LBC(:,isVbar,ng)%radiation).or.                  &
      &          ANY(ad_LBC(:,isUbar,ng)%Flather).or.                    &
      &          ANY(ad_LBC(:,isVbar,ng)%Flather))) THEN
+#  if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
 !^      CALL tl_v2dbc_tile (ng, tile,                                   &
 !^   &                      LBi, UBi, LBj, UBj,                         &
 !^   &                      IminS, ImaxS, JminS, JmaxS,                 &
@@ -426,7 +443,7 @@
      &                      krhs, kstp, knew,                           &
      &                      ubar, vbar, zeta,                           &
      &                      ad_ubar, ad_vbar, ad_zeta)
-
+#  endif
 !^      CALL tl_v2dbc_tile (ng, tile,                                   &
 !^   &                      LBi, UBi, LBj, UBj,                         &
 !^   &                      IminS, ImaxS, JminS, JmaxS,                 &
@@ -459,11 +476,19 @@
 !
       DO j=JstrT,JendT
         DO i=IstrP,IendT
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+          ad_ubar_sol(i,j)=ad_ubar(i,j,kstp)
+#  else
           ad_ubar_sol(i,j)=ad_ubar(i,j,kstp)+ad_ubar(i,j,knew)
+#  endif
         END DO
         IF (j.ge.JstrP) THEN
           DO i=IstrT,IendT
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+            ad_vbar_sol(i,j)=ad_vbar(i,j,kstp)
+#  else
             ad_vbar_sol(i,j)=ad_vbar(i,j,kstp)+ad_vbar(i,j,knew)
+#  endif
           END DO
         END IF
       END DO
@@ -488,6 +513,12 @@
           END DO
           DO i=IstrB,IendB
             cff1=1.0_r8/DC(i,0)
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+!^          tl_vbar(i,j,kstp)=tl_cff2
+!^
+            ad_cff2=ad_cff2+ad_vbar(i,j,kstp)
+            ad_vbar(i,j,kstp)=0.0_r8
+#  else
 !^          tl_vbar(i,j,kstp)=tl_cff2
 !^          tl_vbar(i,j,knew)=tl_cff2
 !^
@@ -495,6 +526,7 @@
      &                      ad_vbar(i,j,kstp)
             ad_vbar(i,j,knew)=0.0_r8
             ad_vbar(i,j,kstp)=0.0_r8
+#  endif
 #  ifdef MASKING
 !^          tl_cff2=tl_cff2*vmask(i,j)
 !^
@@ -551,6 +583,12 @@
         END DO
         DO i=IstrM,IendB
           cff1=1.0_r8/DC(i,0)
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+!^        tl_ubar(i,j,kstp)=tl_cff2
+!^
+          ad_cff2=ad_cff2+ad_ubar(i,j,kstp)
+          ad_ubar(i,j,kstp)=0.0_r8
+#  else
 !^        tl_ubar(i,j,kstp)=tl_cff2
 !^        tl_ubar(i,j,knew)=tl_cff2
 !^
@@ -558,6 +596,7 @@
      &                    ad_ubar(i,j,kstp)
           ad_ubar(i,j,knew)=0.0_r8
           ad_ubar(i,j,kstp)=0.0_r8
+#  endif
 #  ifdef MASKING
 !^        tl_cff2=tl_cff2*umask(i,j)
 !^
@@ -721,11 +760,19 @@
 !
       DO j=JstrT,JendT
         DO i=IstrP,IendT
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+          ad_ubar_sol(i,j)=ad_ubar(i,j,kstp)
+#  else
           ad_ubar_sol(i,j)=ad_ubar(i,j,kstp)+ad_ubar(i,j,krhs)
+#  endif
         END DO
         IF (j.ge.JstrP) THEN
           DO i=IstrT,IendT
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+            ad_vbar_sol(i,j)=ad_vbar(i,j,kstp)
+#  else
             ad_vbar_sol(i,j)=ad_vbar(i,j,kstp)+ad_vbar(i,j,krhs)
+#  endif
           END DO
         END IF
       END DO
@@ -735,12 +782,15 @@
       DO j=JstrB,JendB
         IF (j.ge.JstrM) THEN
           DO i=IstrB,IendB
-!^          tl_vbar(i,j,kstp)=tl_cff2
+#  if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
 !^          tl_vbar(i,j,krhs)=tl_cff2
 !^
-            ad_cff2=ad_cff2+ad_vbar(i,j,krhs)+                          &
-     &                      ad_vbar(i,j,kstp)
+            ad_cff2=ad_cff2+ad_vbar(i,j,krhs)
             ad_vbar(i,j,krhs)=0.0_r8
+#  endif
+!^          tl_vbar(i,j,kstp)=tl_cff2
+!^
+            ad_cff2=ad_cff2+ad_vbar(i,j,kstp)
             ad_vbar(i,j,kstp)=0.0_r8
 #  ifdef MASKING
 !^          tl_cff2=tl_cff2*vmask(i,j)
@@ -754,12 +804,15 @@
           END DO
         END IF
         DO i=IstrM,IendB
-!^        tl_ubar(i,j,kstp)=tl_cff1
+#  if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
 !^        tl_ubar(i,j,krhs)=tl_cff1
 !^
-          ad_cff1=ad_cff1+ad_ubar(i,j,krhs)+                            &
-     &                    ad_ubar(i,j,kstp)
+          ad_cff1=ad_cff1+ad_ubar(i,j,krhs)
           ad_ubar(i,j,krhs)=0.0_r8
+#  endif
+!^        tl_ubar(i,j,kstp)=tl_cff1
+!^
+          ad_cff1=ad_cff1+ad_ubar(i,j,kstp)
           ad_ubar(i,j,kstp)=0.0_r8
 #  ifdef MASKING
 !^        tl_cff1=tl_cff1*umask(i,j)
@@ -1032,17 +1085,17 @@
 #  ifdef WET_DRY_NOT_YET
       real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
 #  endif
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
 #  ifdef SOLVE3D
 #   if defined SOLVE3D && defined SEDIMENT && defined SED_MORPH
       real(r8), intent(inout) :: ad_bed(LBi:UBi,LBj:UBj,Nbed,MBEDP)
       real(r8), intent(inout) :: ad_bed_thick0(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: ad_bed_thick(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(inout) :: ad_bed_thick(LBi:UBi,LBj:UBj,3)
 #   endif
       real(r8), intent(inout) :: ad_Zt_avg1(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(inout) :: ad_zeta_sol(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,:)
 # endif
 !
 !  Local variable declarations.
@@ -1177,7 +1230,20 @@
 !  Apply boundary conditions.
 !
 # ifdef DISTRIBUTE
-#  ifdef SOLVE3D
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+!^    CALL mp_exchange2d (ng, tile, model, 1,                           &
+!^   &                    LBi, UBi, LBj, UBj,                           &
+!^   &                    NghostPoints,                                 &
+!^   &                    EWperiodic(ng), NSperiodic(ng),               &
+!^   &                    tl_zeta(:,:,kstp))
+!^
+      CALL ad_mp_exchange2d (ng, tile, model, 1,                        &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       NghostPoints,                              &
+     &                       EWperiodic(ng), NSperiodic(ng),            &
+     &                       ad_zeta(:,:,kstp))
+#  else
+#   ifdef SOLVE3D
 !^    CALL mp_exchange2d (ng, tile, model, 2,                           &
 !^   &                    LBi, UBi, LBj, UBj,                           &
 !^   &                    NghostPoints,                                 &
@@ -1191,7 +1257,7 @@
      &                       EWperiodic(ng), NSperiodic(ng),            &
      &                       ad_zeta(:,:,kstp),                         &
      &                       ad_zeta(:,:,knew))
-#  else
+#   else
 !^    CALL mp_exchange2d (ng, tile, model, 2,                           &
 !^   &                    LBi, UBi, LBj, UBj, 1, 1,                     &
 !^   &                    NghostPoints,                                 &
@@ -1205,12 +1271,14 @@
      &                       EWperiodic(ng), NSperiodic(ng),            &
      &                       ad_zeta(:,:,kstp),                         &
      &                       ad_zeta(:,:,krhs))
+#   endif
 #  endif
 !
 # endif
 
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-# ifdef SOLVE3D
+# if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
+#  ifdef SOLVE3D
 !^      CALL exchange_r2d_tile (ng, tile,                               &
 !^   &                          LBi, UBi, LBj, UBj,                     &
 !^   &                          tl_zeta(:,:,knew))
@@ -1218,7 +1286,7 @@
         CALL ad_exchange_r2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_zeta(:,:,knew))
-# else
+#  else
 !^      CALL exchange_r2d_tile (ng, tile,                               &
 !^   &                          LBi, UBi, LBj, UBj,                     &
 !^   &                          tl_zeta(:,:,krhs))
@@ -1226,6 +1294,7 @@
         CALL ad_exchange_r2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_zeta(:,:,krhs))
+#  endif
 # endif
 !^      CALL exchange_r2d_tile (ng, tile,                               &
 !^   &                          LBi, UBi, LBj, UBj,                     &
@@ -1242,7 +1311,8 @@
       IF (.not.(ANY(ad_LBC(:,isFsur,ng)%radiation).or.                  &
      &          ANY(ad_LBC(:,isFsur,ng)%Chapman_explicit).or.           &
      &          ANY(ad_LBC(:,isFsur,ng)%Chapman_implicit))) THEN
-#  ifdef SOLVE3D
+#  if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
+#   ifdef SOLVE3D
 !^      CALL tl_zetabc_tile (ng, tile,                                  &
 !^   &                       LBi, UBi, LBj, UBj,                        &
 !^   &                       IminS, ImaxS, JminS, JmaxS,                &
@@ -1256,7 +1326,7 @@
      &                       krhs, kstp, knew,                          &
      &                       zeta,                                      &
      &                       ad_zeta)
-#  else
+#   else
 !^      CALL tl_zetabc_tile (ng, tile,                                  &
 !^   &                       LBi, UBi, LBj, UBj,                        &
 !^   &                       IminS, ImaxS, JminS, JmaxS,                &
@@ -1270,6 +1340,7 @@
      &                       krhs, kstp, krhs,                          &
      &                       zeta,                                      &
      &                       ad_zeta)
+#   endif
 #  endif
 !^      CALL tl_zetabc_tile (ng, tile,                                  &
 !^   &                       LBi, UBi, LBj, UBj,                        &
@@ -1304,20 +1375,27 @@
       END IF
       DO j=Jmin,Jmax
         DO i=Imin,Imax
-# ifdef SOLVE3D
+# if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+!^        tl_zeta(i,j,kstp)=tl_cff1              ! HGA: kstp or knew?
+!^
+          ad_cff1=ad_cff1+ad_zeta(i,j,kstp)
+          ad_zeta(i,j,kstp)=0.0_r8
+# else
+#  ifdef SOLVE3D
 !^        tl_zeta(i,j,kstp)=tl_cff1
 !^        tl_zeta(i,j,knew)=tl_cff1
 !^
           ad_cff1=ad_cff1+ad_zeta(i,j,knew)+ad_zeta(i,j,kstp)
           ad_zeta(i,j,knew)=0.0_r8
           ad_zeta(i,j,kstp)=0.0_r8
-# else
+#  else
 !^        tl_zeta(i,j,kstp)=tl_cff1
 !^        tl_zeta(i,j,krhs)=tl_cff1
 !^
           ad_cff1=ad_cff1+ad_zeta(i,j,krhs)+ad_zeta(i,j,kstp)
           ad_zeta(i,j,krhs)=0.0_r8
           ad_zeta(i,j,kstp)=0.0_r8
+#  endif
 # endif
 # ifdef MASKING
 !^        tl_cff1=tl_cff1*rmask(i,j)
@@ -1488,16 +1566,16 @@
       real(r8), intent(in) :: umask(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: vmask(LBi:UBi,LBj:UBj)
 #  endif
-      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
 
       real(r8), intent(inout) :: ad_ubar_sol(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: ad_vbar_sol(LBi:UBi,LBj:UBj)
 
-      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(inout) :: ad_ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(inout) :: ad_vbar(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(inout) :: ad_ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(inout) :: ad_vbar(LBi:UBi,LBj:UBj,:)
 #  ifdef SOLVE3D
       real(r8), intent(inout) :: ad_t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
       real(r8), intent(inout) :: ad_u(LBi:UBi,LBj:UBj,N(ng),2)
@@ -1524,15 +1602,31 @@
 !
 # ifdef SOLVE3D
 #  ifdef DISTRIBUTE
+#   if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+      CALL ad_mp_exchange2d (ng, tile, model, 2,                        &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       NghostPoints,                              &
+     &                       EWperiodic(ng), NSperiodic(ng),            &
+     &                       ad_ubar(:,:,knew), ad_vbar(:,:,knew))
+#   else
       CALL ad_mp_exchange2d (ng, tile, model, 4,                        &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       NghostPoints,                              &
      &                       EWperiodic(ng), NSperiodic(ng),            &
      &                       ad_ubar(:,:,kstp), ad_vbar(:,:,kstp),      &
      &                       ad_ubar(:,:,kout), ad_vbar(:,:,kout))
+#   endif
 #  endif
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+        CALL ad_exchange_v2d_tile (ng, tile,                            &
+     &                             LBi, UBi, LBj, UBj,                  &
+     &                             ad_vbar(:,:,knew))
+        CALL ad_exchange_u2d_tile (ng, tile,                            &
+     &                             LBi, UBi, LBj, UBj,                  &
+     &                             ad_ubar(:,:,knew))
+#  else
         CALL ad_exchange_v2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_vbar(:,:,kout))
@@ -1546,6 +1640,7 @@
         CALL ad_exchange_u2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_ubar(:,:,kstp))
+#  endif
       END IF
 !
       IF (.not.(ANY(ad_LBC(:,isUbar,ng)%radiation).or.                  &
@@ -1564,6 +1659,7 @@
      &                      krhs, kstp, knew,                           &
      &                      ubar, vbar, zeta,                           &
      &                      ad_ubar, ad_vbar, ad_zeta)
+#  if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
         CALL ad_v2dbc_tile (ng, tile,                                   &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      IminS, ImaxS, JminS, JmaxS,                 &
@@ -1576,31 +1672,56 @@
      &                      krhs, kstp, kstp,                           &
      &                      ubar, vbar, zeta,                           &
      &                      ad_ubar, ad_vbar, ad_zeta)
+#  endif
       END IF
 !
 !  Load 2D adjoint momentum solution into IO arrays.
 !
       DO j=JstrT,JendT
         DO i=IstrP,IendT
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+          ad_ubar_sol(i,j)=ad_ubar(i,j,knew)
+#  else
           ad_ubar_sol(i,j)=ad_ubar(i,j,kstp)+ad_ubar(i,j,kout)
+#  endif
         END DO
         IF (j.ge.JstrP) THEN
           DO i=IstrT,IendT
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+            ad_vbar_sol(i,j)=ad_vbar(i,j,knew)
+#  else
             ad_vbar_sol(i,j)=ad_vbar(i,j,kstp)+ad_vbar(i,j,kout)
+#  endif
           END DO
         END IF
       END DO
 # else
 #  ifdef DISTRIBUTE
+#   if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+      CALL ad_mp_exchange2d (ng, tile, model, 2,                        &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       NghostPoints,                              &
+     &                       EWperiodic(ng), NSperiodic(ng),            &
+     &                       ad_ubar(:,:,knew), ad_vbar(:,:,knew))
+#   else
       CALL ad_mp_exchange2d (ng, tile, model, 4,                        &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       NghostPoints,                              &
      &                       EWperiodic(ng), NSperiodic(ng),            &
      &                       ad_ubar(:,:,kstp), ad_vbar(:,:,kstp),      &
      &                       ad_ubar(:,:,kout), ad_vbar(:,:,kout))
+#   endif
 #  endif
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+        CALL ad_exchange_v2d_tile (ng, tile,                            &
+     &                             LBi, UBi, LBj, UBj,                  &
+     &                             ad_vbar(:,:,knew))
+        CALL ad_exchange_u2d_tile (ng, tile,                            &
+     &                             LBi, UBi, LBj, UBj,                  &
+     &                             ad_ubar(:,:,knew))
+#  else
         CALL ad_exchange_v2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_vbar(:,:,kout))
@@ -1614,12 +1735,27 @@
         CALL ad_exchange_u2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_ubar(:,:,kstp))
+#  endif
       END IF
 !
       IF (.not.(ANY(ad_LBC(:,isUbar,ng)%radiation).or.                  &
      &          ANY(ad_LBC(:,isVbar,ng)%radiation).or.                  &
      &          ANY(ad_LBC(:,isUbar,ng)%Flather).or.                    &
      &          ANY(ad_LBC(:,isVbar,ng)%Flather))) THEN
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+        CALL ad_v2dbc_tile (ng, tile,                                   &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      IminS, ImaxS, JminS, JmaxS,                 &
+     &                      krhs, kstp, knew,                           &
+     &                      ubar, vbar, zeta,                           &
+     &                      ad_ubar, ad_vbar, ad_zeta)
+        CALL ad_u2dbc_tile (ng, tile,                                   &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      IminS, ImaxS, JminS, JmaxS,                 &
+     &                      krhs, kstp, knew,                           &
+     &                      ubar, vbar, zeta,                           &
+     &                      ad_ubar, ad_vbar, ad_zeta)
+#  else
         CALL ad_v2dbc_tile (ng, tile,                                   &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      IminS, ImaxS, JminS, JmaxS,                 &
@@ -1645,17 +1781,26 @@
      &                      krhs, kstp, kstp,                           &
      &                      ubar, vbar, zeta,                           &
      &                      ad_ubar, ad_vbar, ad_zeta)
+#  endif
       END IF
 !
 !  Load 2D adjoint momentum solution into IO arrays.
 !
       DO j=JstrT,JendT
         DO i=IstrP,IendT
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+          ad_ubar_sol(i,j)=ad_ubar(i,j,knew)
+#  else
           ad_ubar_sol(i,j)=ad_ubar(i,j,kstp)+ad_ubar(i,j,kout)
+#  endif
         END DO
         IF (j.ge.JstrP) THEN
           DO i=IstrT,IendT
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+            ad_vbar_sol(i,j)=ad_vbar(i,j,knew)
+#  else
             ad_vbar_sol(i,j)=ad_vbar(i,j,kstp)+ad_vbar(i,j,kout)
+#  endif
           END DO
         END IF
       END DO
@@ -1684,27 +1829,27 @@
         CALL ad_exchange_u3d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj, 1, N(ng),        &
      &                             ad_u(:,:,:,nnew))
-      CALL ad_v3dbc_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj, N(ng),                    &
-     &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    nstp, nnew,                                   &
-     &                    ad_v)
-      CALL ad_v3dbc_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj, N(ng),                    &
-     &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    nstp, nstp,                                   &
-     &                    ad_v)
-      CALL ad_u3dbc_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj, N(ng),                    &
-     &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    nstp, nnew,                                   &
-     &                    ad_u)
-      CALL ad_u3dbc_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj, N(ng),                    &
-     &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    nstp, nstp,                                   &
-     &                    ad_u)
       END IF
+      CALL ad_v3dbc_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj, N(ng),                    &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    nstp, nnew,                                   &
+     &                    ad_v)
+      CALL ad_v3dbc_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj, N(ng),                    &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    nstp, nstp,                                   &
+     &                    ad_v)
+      CALL ad_u3dbc_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj, N(ng),                    &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    nstp, nnew,                                   &
+     &                    ad_u)
+      CALL ad_u3dbc_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj, N(ng),                    &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    nstp, nstp,                                   &
+     &                    ad_u)
 !
 !  Add second piece of the 3D adjoint momentum solution into IO arrays.
 !  The first is loaded in "ad_step3d_uv".
@@ -1735,7 +1880,7 @@
       ic=0
       DO itrc=1,NT(ng)
         IF (LtracerCLM(itrc,ng).and.LnudgeTCLM(itrc,ng)) THEN
-          ic=ic+1
+          ic=ic+1                        ! OBC nudging coefficient index
         END IF
         IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
           CALL ad_exchange_r3d_tile (ng, tile,                          &
@@ -1892,17 +2037,17 @@
 #  ifdef WET_DRY_NOT_YET
       real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
 #  endif
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
 #  ifdef SOLVE3D
 #   if defined SOLVE3D && defined SEDIMENT && defined SED_MORPH
       real(r8), intent(inout) :: ad_bed(LBi:UBi,LBj:UBj,Nbed,MBEDP)
       real(r8), intent(inout) :: ad_bed_thick0(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: ad_bed_thick(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(inout) :: ad_bed_thick(LBi:UBi,LBj:UBj,3)
 #   endif
       real(r8), intent(inout) :: ad_Zt_avg1(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(inout) :: ad_zeta_sol(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,:)
 # endif
 !
 !  Local variable declarations.
@@ -1941,42 +2086,64 @@
 # endif
 !
 # ifdef DISTRIBUTE
-#  ifdef SOLVE3D
+#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
       CALL ad_mp_exchange2d (ng, tile, model, 2,                        &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       NghostPoints,                              &
      &                       EWperiodic(ng), NSperiodic(ng),            &
-     &                       ad_zeta(:,:,kstp),                         &
-     &                       ad_zeta(:,:,kout))
+     &                       ad_zeta(:,:,knew))
 #  else
+#   ifdef SOLVE3D
       CALL ad_mp_exchange2d (ng, tile, model, 2,                        &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       NghostPoints,                              &
      &                       EWperiodic(ng), NSperiodic(ng),            &
      &                       ad_zeta(:,:,kstp),                         &
      &                       ad_zeta(:,:,kout))
+#   else
+      CALL ad_mp_exchange2d (ng, tile, model, 2,                        &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       NghostPoints,                              &
+     &                       EWperiodic(ng), NSperiodic(ng),            &
+     &                       ad_zeta(:,:,kstp),                         &
+     &                       ad_zeta(:,:,kout))
+#   endif
 #  endif
 !
 # endif
 
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-# ifdef SOLVE3D
+# if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
         CALL ad_exchange_r2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
-     &                             ad_zeta(:,:,kout))
+     &                             ad_zeta(:,:,knew))
 # else
+#  ifdef SOLVE3D
         CALL ad_exchange_r2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_zeta(:,:,kout))
-# endif
+#  else
+        CALL ad_exchange_r2d_tile (ng, tile,                            &
+     &                             LBi, UBi, LBj, UBj,                  &
+     &                             ad_zeta(:,:,kout))
+#  endif
         CALL ad_exchange_r2d_tile (ng, tile,                            &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             ad_zeta(:,:,kstp))
+# endif
       END IF
 !
       IF (.not.(ANY(ad_LBC(:,isFsur,ng)%radiation).or.                  &
      &          ANY(ad_LBC(:,isFsur,ng)%Chapman_explicit).or.           &
      &          ANY(ad_LBC(:,isFsur,ng)%Chapman_implicit))) THEN
+# if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+        CALL ad_zetabc_tile (ng, tile,                                  &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       IminS, ImaxS, JminS, JmaxS,                &
+     &                       krhs, kstp, knew,                          &
+     &                       zeta,                                      &
+     &                       ad_zeta)
+# else
         CALL ad_zetabc_tile (ng, tile,                                  &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       IminS, ImaxS, JminS, JmaxS,                &
@@ -1989,15 +2156,20 @@
      &                       krhs, kstp, kstp,                          &
      &                       zeta,                                      &
      &                       ad_zeta)
+# endif
       END IF
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
-# ifdef SOLVE3D
+# if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
+          ad_zeta_sol(i,j)=ad_zeta(i,j,knew)
+# else
+#  ifdef SOLVE3D
           ad_zeta_sol(i,j)=ad_zeta(i,j,kout)+ad_zeta(i,j,kstp)+         &
      &                     ad_Zt_avg1(i,j)
-# else
+#  else
           ad_zeta_sol(i,j)=ad_zeta(i,j,kout)+ad_zeta(i,j,kstp)
+#  endif
 # endif
         END DO
       END DO

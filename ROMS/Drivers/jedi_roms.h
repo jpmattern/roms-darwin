@@ -1,10 +1,10 @@
       MODULE roms_kernel_mod
 !
-!svn $Id: jedi_roms.h 1103 2022-01-13 03:38:35Z arango $
+!svn $Id: jedi_roms.h 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  ROMSJEDI Interface: Joint Effort for Data-assimilation Integration  !
@@ -505,7 +505,7 @@
 !
       PHASE1 : IF (Phase.eq.1) THEN
 !
-        IF (Master.and.ANY(SetGridConfig)) THEN
+        IF (Master) THEN
           WRITE (stdout,10) 'NLM_INITIAL: Phase 1 Initialization: ',    &
      &                      'Configuring ROMS nonlinear kernel ...'
         END IF
@@ -641,7 +641,7 @@
 #ifdef SOLVE3D
 !
 !-----------------------------------------------------------------------
-!  Compute time independent (Zt_avg1=0) anf initial time dependent
+!  Compute time independent (Zt_avg1=0) and initial time dependent
 !  depths and level thicknesses.
 !-----------------------------------------------------------------------
 !
@@ -928,7 +928,7 @@
 !
       PHASE1 : IF (Phase.eq.1) THEN
 !
-        IF (Master.and.ANY(SetGridConfig)) THEN
+        IF (Master) THEN
           WRITE (stdout,10) 'TLM_INITIAL: Phase 1 Initialization: ',    &
      &                      'Configuring ROMS tangent linear kernel ...'
         END IF
@@ -1299,7 +1299,7 @@
 !
       PHASE1 : IF (Phase.eq.1) THEN
 !
-        IF (Master.and.ANY(SetGridConfig)) THEN
+        IF (Master) THEN
           WRITE (stdout,10) 'ADM_INITIAL: Phase 1 Initialization: ',    &
      &                      'Configuring ROMS nonlinear kernel ...'
         END IF

@@ -2,11 +2,11 @@
 
 #if defined WRF_COUPLING && defined ESMF_LIB
 !
-!svn $Id: esmf_atm_wrf.h 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: esmf_atm_wrf.h 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license         Hernan G. Arango     !
-!    See License_ROMS.txt                         Ufuk Utku Turuncoglu !
+!    See License_ROMS.md                          Ufuk Utku Turuncoglu !
 !=======================================================================
 !                                                                      !
 !  This module sets WRF as the atmospheric model gridded component     !
@@ -108,6 +108,11 @@
       PRIVATE :: WRF_Import
       PRIVATE :: WRF_ProcessImport
       PRIVATE :: WRF_Export
+!
+      INTERFACE WRF_ProcessImport
+        MODULE PROCEDURE WRF_ProcessImport_scalar    ! scalar field
+        MODULE PROCEDURE WRF_ProcessImport_vector    ! vector components
+      END INTERFACE WRF_ProcessImport
 !
       CONTAINS
 !
@@ -1758,10 +1763,10 @@
               UBj=UBOUND(ptrX,2)
               DO j=LBj,UBj
                 DO i=LBi,UBi
-                  ptrX(i,j)=grid%xlong(i,j)
-                  ptrY(i,j)=grid%xlat(i,j)
+                  ptrX(i,j)=REAL(grid%xlong(i,j),dp)
+                  ptrY(i,j)=REAL(grid%xlat(i,j),dp)
                   ptrM(i,j)=INT(grid%landmask(i,j))
-                  ptrA(i,j)=grid%dx*grid%dy
+                  ptrA(i,j)=REAL(grid%dx*grid%dy,dp)
                 END DO
               END DO
           END SELECT
@@ -2604,7 +2609,7 @@
 !
 !  Local variable declarations.
 !
-      logical :: got_sst(2)
+      logical :: got_sst(2), got_vec(2,2)
 !
       integer :: id, ifld, i, is, j, ng
       integer :: year, month, day, hour, minutes, seconds, sN, SD
@@ -2615,24 +2620,25 @@
       integer :: ids, ide, jds, jde, kds, kde
       integer :: ims, ime, jms, jme, kms, kme
       integer :: ips, ipe, jps, jpe, kps, kpe
-      integer :: ifield(2)
+      integer :: sst_index(2), vec_index(2,2)
 !
       real (dp) :: Fseconds, TimeInDays, Time_Current
-
       real (dp) :: MyFmax(2), MyFmin(2), Fmin(2), Fmax(2), Fval
       real (dp) :: scale, add_offset
 !
-      real (dp), pointer     :: ptr2d(:,:)
+      real (dp), pointer :: ptr2d(:,:)
 !
-      real (dp), allocatable :: dat_sst(:,:), ocn_sst(:,:)
+      real (dp), allocatable :: dat_sst(:,:),   ocn_sst(:,:)
+      real (dp), allocatable :: dat_vec(:,:,:), ocn_vec(:,:,:)
 !
       character (len=22 )     :: Time_CurrentString
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", WRF_Import"
 !
-      character (ESMF_MAXSTR) :: FieldName, fld_name(2)
+      character (ESMF_MAXSTR) :: FieldName
       character (ESMF_MAXSTR) :: cname, ofile
+      character (ESMF_MAXSTR) :: sst_name(2), vec_name(2,2)
       character (ESMF_MAXSTR), allocatable :: ImportNameList(:)
 !
       TYPE (ESMF_Clock) :: clock
@@ -2789,10 +2795,10 @@
 !  Get import fields.
 !-----------------------------------------------------------------------
 !
-      got_sst(1)=.FALSE.               ! SST from OCN  component
-      got_sst(2)=.FALSE.               ! SST from DATA component
-      ifield(1)=0                      ! SST from OCN  index
-      ifield(2)=0                      ! SST from DATA index
+      got_sst=.FALSE.                ! SST from OCN/DATA components
+      got_vec=.FALSE.                ! Currents from OCN/DATA components
+      sst_index=0                    ! SST OCN/DATA indices
+      vec_index=0                    ! Currents OCN/DATA indices
 !
       FLD_LOOP : DO ifld=1,ImportCount
         id=field_index(MODELS(Iatmos)%ImportField, ImportNameList(ifld))
@@ -2856,8 +2862,8 @@
                 dat_sst=MISSING_dp
               END IF
               got_sst(1)=.TRUE.
-              ifield(1)=ifld
-              fld_name(1)=TRIM(FieldName)
+              sst_index(1)=ifld
+              sst_name(1)=TRIM(FieldName)
               DO j=JminP,JmaxP
                 DO i=IminP,ImaxP
                   IF (ABS(ptr2d(i,j)).lt.TOL_dp) THEN
@@ -2870,6 +2876,52 @@
                   END IF
                 END DO
               END DO
+!
+!  Surface Eastward and Northward current components (m/s) from OCN.
+!
+            CASE ('Usur', 'Vsur')
+              IF (.not.allocated(ocn_vec)) THEN
+                allocate ( ocn_vec(LBi:UBi,LBj:UBj,2) )
+                ocn_vec=MISSING_dp
+              END IF
+              IF (.not.allocated(dat_vec)) THEN
+                allocate ( dat_vec(LBi:UBi,LBj:UBj,2) )
+                dat_vec=MISSING_dp
+              END IF
+!
+              IF (TRIM(FieldName).eq.'Usur') THEN
+                got_vec(1,1)=.TRUE.
+                vec_index(1,1)=ifld
+                vec_name(1,1)=TRIM(FieldName)
+                DO j=JminP,JmaxP
+                  DO i=IminP,ImaxP
+                    IF (ABS(ptr2d(i,j)).lt.TOL_dp) THEN
+                      MyFmin(1)=MIN(MyFmin(1),ptr2d(i,j))
+                      MyFmax(1)=MAX(MyFmax(1),ptr2d(i,j))
+                      Fval=scale*ptr2d(i,j)+add_offset
+                      MyFmin(2)=MIN(MyFmin(2),Fval)
+                      MyFmax(2)=MAX(MyFmax(2),Fval)
+                      ocn_vec(i,j,1)=Fval
+                    END IF
+                  END DO
+                END DO
+              ELSE
+                got_vec(2,1)=.TRUE.
+                vec_index(2,1)=ifld
+                vec_name(2,1)=TRIM(FieldName)
+                DO j=JminP,JmaxP
+                  DO i=IminP,ImaxP
+                    IF (ABS(ptr2d(i,j)).lt.TOL_dp) THEN
+                      MyFmin(1)=MIN(MyFmin(1),ptr2d(i,j))
+                      MyFmax(1)=MAX(MyFmax(1),ptr2d(i,j))
+                      Fval=scale*ptr2d(i,j)+add_offset
+                      MyFmin(2)=MIN(MyFmin(2),Fval)
+                      MyFmax(2)=MAX(MyFmax(2),Fval)
+                      ocn_vec(i,j,2)=Fval
+                    END IF
+                  END DO
+                END DO
+              END IF
 !
 !  Sea surface temperature from DATA component (C).  It is used to
 !  fill values in cells not covered by the OCN component.
@@ -2884,8 +2936,8 @@
                 dat_sst=MISSING_dp
               END IF
               got_sst(2)=.TRUE.
-              ifield(2)=ifld
-              fld_name(2)=TRIM(FieldName)
+              sst_index(2)=ifld
+              sst_name(2)=TRIM(FieldName)
               DO j=JminP,JmaxP
                 DO i=IminP,ImaxP
                   IF (ABS(ptr2d(i,j)).lt.TOL_dp) THEN
@@ -2898,6 +2950,52 @@
                   END IF
                 END DO
               END DO
+!
+!  Surface Eastward and Northward current components (m/s) from DATA.
+!
+            CASE ('dUsur', 'dVsur')
+              IF (.not.allocated(ocn_vec)) THEN
+                allocate ( ocn_vec(LBi:UBi,LBj:UBj,2) )
+                ocn_vec=MISSING_dp
+              END IF
+              IF (.not.allocated(dat_vec)) THEN
+                allocate ( dat_vec(LBi:UBi,LBj:UBj,2) )
+                dat_vec=MISSING_dp
+              END IF
+!
+              IF (TRIM(FieldName).eq.'dUsur') THEN
+                got_vec(1,2)=.TRUE.
+                vec_index(1,2)=ifld
+                vec_name(1,2)=TRIM(FieldName)
+                DO j=JminP,JmaxP
+                  DO i=IminP,ImaxP
+                    IF (ABS(ptr2d(i,j)).lt.TOL_dp) THEN
+                      MyFmin(1)=MIN(MyFmin(1),ptr2d(i,j))
+                      MyFmax(1)=MAX(MyFmax(1),ptr2d(i,j))
+                      Fval=scale*ptr2d(i,j)+add_offset
+                      MyFmin(2)=MIN(MyFmin(2),Fval)
+                      MyFmax(2)=MAX(MyFmax(2),Fval)
+                      dat_vec(i,j,1)=Fval
+                    END IF
+                  END DO
+                END DO
+              ELSE
+                got_vec(2,2)=.TRUE.
+                vec_index(2,2)=ifld
+                vec_name(2,2)=TRIM(FieldName)
+                DO j=JminP,JmaxP
+                  DO i=IminP,ImaxP
+                    IF (ABS(ptr2d(i,j)).lt.TOL_dp) THEN
+                      MyFmin(1)=MIN(MyFmin(1),ptr2d(i,j))
+                      MyFmax(1)=MAX(MyFmax(1),ptr2d(i,j))
+                      Fval=scale*ptr2d(i,j)+add_offset
+                      MyFmin(2)=MIN(MyFmin(2),Fval)
+                      MyFmax(2)=MAX(MyFmax(2),Fval)
+                      dat_vec(i,j,2)=Fval
+                    END IF
+                  END DO
+                END DO
+              END IF
 !
 !  Import field not found.
 !
@@ -2983,12 +3081,11 @@
         END IF
       END DO FLD_LOOP
 !
-!  Load or merge sea surface temperature into WRF structure variable:
-!  adom(ng)%tsea
+!  Load or merge imported fields into WRF structure variable(s).
 !
       IF (ANY(got_sst)) THEN
         CALL WRF_ProcessImport (grid, model,                            &
-     &                          got_sst, ifield, fld_name,              &
+     &                          got_sst, sst_index, sst_name,           &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          ocn_sst, dat_sst,                       &
      &                          rc)
@@ -2998,6 +3095,22 @@
      &                         file=MyFile)) THEN
           RETURN
         END IF
+        got_sst=.FALSE.
+        sst_index=0
+      ELSE IF (ANY(got_vec)) THEN
+        CALL WRF_ProcessImport (grid, model,                            &
+     &                          got_vec, vec_index, vec_name,           &
+     &                          LBi, UBi, LBj, UBj, 2,                  &
+     &                          ocn_vec, dat_vec,                       &
+     &                          rc)
+        IF (ESMF_LogFoundError(rcToCheck=rc,                            &
+     &                         msg=ESMF_LOGERR_PASSTHRU,                &
+     &                         line=__LINE__,                           &
+     &                         file=MyFile)) THEN
+          RETURN
+        END IF
+        got_vec=.FALSE.
+        vec_index=0
       END IF
 !
 !  Deallocate local arrays.
@@ -3033,39 +3146,41 @@
       RETURN
       END SUBROUTINE WRF_Import
 !
-      SUBROUTINE WRF_ProcessImport (grid, model,                        &
-     &                              got, ifield, FieldName,             &
-     &                              LBi, UBi, LBj, UBj, Focn, Fdat,     &
-     &                              rc)
+      SUBROUTINE WRF_ProcessImport_scalar (grid, model,                 &
+     &                                     got, ifield, FieldName,      &
+     &                                     LBi, UBi, LBj, UBj,          &
+     &                                     Focn, Fdat,                  &
+     &                                     rc)
 !
 !=======================================================================
 !                                                                      !
 !  If both import fields Focn and Fdat are avaliable, it merges        !
 !  its values. Otherwise, it loads available data into ouput field,    !
-!  Fout. Only sea-water or sea-ice points are processed. It is         !
-!  used when atmosphere and ocean grids are incongruent. The DATA      !
-!  component provides values on those grid points not covered by       !
-!  the OCEAN component.                                                !
+!  Fout. Only sea-water or sea-ice points are processed.               !
+!                                                                      !
+!  The mergin is needed when the atmosphere and ocean grids are        !
+!  incongruent. The DATA model provides values on those grid points    !
+!  not covered by the OCEAN model.                                     !
 !                                                                      !
 !  On Input:                                                           !
 !                                                                      !
 !     grid       WRF grid state structure (TYPE domain)                !
 !     model      Gridded component object (TYPE ESMF_GridComp)         !
 !     got        Switches indicating source and availability of        !
-!                import data (logical vector):                         !
-!                    got(1)      OCEAN component switch (T/F)          !
-!                    got(2)      DATA  component switch (T/F)          !
-!     ifield     Import field index (integer vector)                   !
-!                    ifield(1)   OCEAN component field index           !
-!                    ifield(2)   DATA  component field index           !
-!     FieldName  Field short name (string array)                       !
-!     ifld       Import field index (integer)                          !
+!                imported data (logical vector):                       !
+!                    got(1)      OCEAN model switch (T/F)              !
+!                    got(2)      DATA  model switch (T/F)              !
+!     ifield     Imported field index (integer vector)                 !
+!                    ifield(1)   OCEAN model field index               !
+!                    ifield(2)   DATA  model field index               !
+!     FieldName  Field shortname (string array)                        !
+!     ifield     Imported field index (integer)                        !
 !     LBi        I-dimension lower bound  (integer)                    !
 !     UBi        I-dimension upper bound  (integer)                    !
 !     LBj        J-dimension lower bound  (integer)                    !
 !     UBj        J-dimension upper bound  (integer)                    !
-!     Focn       Import field from ocean component (2D real array)     !
-!     Fdat       Import field from data  component (2D real array)     !
+!     Focn       Imported field from OCEAN model (2D real array)       !
+!     Fdat       Imported field from DATA  model (2D real array)       !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !
@@ -3094,6 +3209,7 @@
 !
 !  Local variable declarations.
 !
+      logical :: got_dat, got_ocn
       logical :: DebugWrite(2) = (/ .FALSE., .FALSE. /)
 !
       integer :: i, ic, is, j, ng
@@ -3113,7 +3229,7 @@
       character (len=22 )     :: Time_CurrentString
 
       character (len=*), parameter :: MyFile =                          &
-     &  __FILE__//", WRF_ProcessImport"
+     &  __FILE__//", WRF_ProcessImport_scalar"
 !
       character (ESMF_MAXSTR) :: cname, fld_string, ofile
 !
@@ -3129,7 +3245,7 @@
 !-----------------------------------------------------------------------
 !
       IF (ESM_track) THEN
-        WRITE (trac,'(a,a,i0)') '==> Entering WRF_ProcessImport',       &
+        WRITE (trac,'(a,a,i0)') '==> Entering WRF_ProcessImport_scalar',&
      &                          ', PET', PETrank
         CALL my_flush (trac)
       END IF
@@ -3213,7 +3329,7 @@
       IF (is.gt.0) Time_CurrentString(is:is)=' '   ! ISO 8601 format
 !
 !-----------------------------------------------------------------------
-!  Create merged field.
+!  Create merged field array.
 !-----------------------------------------------------------------------
 !
 !  Set a 2D floating-point array descriptor.
@@ -3231,13 +3347,16 @@
 !
 !  Create 2D merge field from the Grid and arraySpec.
 !
-      IF (.not.got(2).and.got(1)) THEN
+      got_ocn=got(1)
+      got_dat=got(2)
+!
+      IF (.not.got_dat.and.got_ocn) THEN
         DebugWrite(1)=MODELS(Iatmos)%ImportField(ifield(1))%debug_write
         fld_string=TRIM(FieldName(1))
-      ELSE IF (.not.got(1).and.got(2)) THEN
+      ELSE IF (.not.got_ocn.and.got_dat) THEN
         DebugWrite(2)=MODELS(Iatmos)%ImportField(ifield(2))%debug_write
         fld_string=TRIM(FieldName(2))
-      ELSE IF (got(1).and.got(2)) THEN
+      ELSE IF (got_ocn.and.got_dat) THEN
         DebugWrite(1)=MODELS(Iatmos)%ImportField(ifield(1))%debug_write
         DebugWrite(2)=MODELS(Iatmos)%ImportField(ifield(2))%debug_write
         fld_string=TRIM(FieldName(1))//'-'//TRIM(FieldName(2))
@@ -3256,7 +3375,7 @@
         RETURN
       END IF
 !
-!  Get merge field pointer.
+!  Get pointer for merge array.
 !
       CALL ESMF_FieldGet (Fmerge,                                       &
      &                    farrayPtr=ptr2d,                              &
@@ -3270,7 +3389,9 @@
       ptr2d=MISSING_dp
 !
 !-----------------------------------------------------------------------
-!  Create pointer to WRF export field target.
+!  Create pointer to WRF export field target. This logic is awkward but
+!  needed since WRF could have different floating-point representations.
+!  Passing WRF variables as arguments to this routine doesn't work.
 !-----------------------------------------------------------------------
 !
       SELECT CASE (lowercase(TRIM(fld_string)))
@@ -3319,7 +3440,7 @@
 !  WRF variable. It can be single or double precision.
 !-----------------------------------------------------------------------
 !
-      IF (.not.got(2).and.got(1)) THEN
+      IF (.not.got_dat.and.got_ocn) THEN
         MyFmin= MISSING_dp
         MyFmax=-MISSING_dp
         DO j=JminP,JmaxP
@@ -3333,7 +3454,7 @@
             MyFmax(1)=MAX(MyFmax(1),Fout(i,j))
           END DO
         END DO
-      ELSE IF (.not.got(1).and.got(2)) THEN
+      ELSE IF (.not.got_ocn.and.got_dat) THEN
         MyFmin= MISSING_dp
         MyFmax=-MISSING_dp
         DO j=JminP,JmaxP
@@ -3353,7 +3474,7 @@
 !  Otherwise, merge imported fields.
 !-----------------------------------------------------------------------
 !
-      IF (got(1).and.got(2)) THEN
+      IF (got_ocn.and.got_dat) THEN
 !
 !  Merge Focn and Fdat at sea-water and sea-ice points.  Notice that
 !  the ESMF regridding will not fill unbounded interpolation points.
@@ -3388,9 +3509,9 @@
         END DO
       END IF
 !
-!  Get merged fields minimun and maximum values.
+!  Get merged field minimun and maximum values.
 !
-      IF (got(1).and.got(2)) THEN
+      IF (got_ocn.and.got_dat) THEN
         ic=3
       ELSE
         ic=1
@@ -3421,9 +3542,9 @@
         RETURN
       END IF
 !
-!  Report merged import field information.
+!  Report merged field information.
 !
-      IF (got(1).and.got(2)) THEN
+      IF (got_ocn.and.got_dat) THEN
         IF ((DebugLevel.ge.0).and.(localPET.eq.0)) THEN
           WRITE (cplout,20) TRIM(fld_string),                           &
      &                      TRIM(Time_CurrentString), ng,               &
@@ -3437,7 +3558,7 @@
         END IF
       END IF
 !
-!  Debugging: write out export field into a NetCDF file.
+!  Debugging: write out merged field into a NetCDF file.
 !
       IF ((DebugLevel.ge.3).and.ANY(DebugWrite)) THEN
         WRITE (ofile,40) ng, TRIM(fld_string),                          &
@@ -3454,13 +3575,13 @@
         END IF
       END IF
 !
-!  Nullify pointer to make sure that it does not point on a random
+!  Nullify the pointers to ensure that it does not point to a random
 !  part in the memory.
 !
       IF (associated(ptr2d)) nullify (ptr2d)
       IF (associated(Fout )) nullify (Fout)
 !
-!  Destroy merged field.
+!  Destroy merged field array.
 !
       CALL ESMF_FieldDestroy (Fmerge,                                   &
      &                        noGarbage=.FALSE.,                        &
@@ -3473,7 +3594,7 @@
       END IF
 !
       IF (ESM_track) THEN
-        WRITE (trac,'(a,a,i0)') '<== Exiting  WRF_ProcessImport',       &
+        WRITE (trac,'(a,a,i0)') '<== Exiting  WRF_ProcessImport_scalar',&
      &                          ', PET', PETrank
         CALL my_flush (trac)
       END IF
@@ -3496,7 +3617,624 @@
      &         i2.2,2('.',i2.2),'.nc')
 !
       RETURN
-      END SUBROUTINE WRF_ProcessImport
+      END SUBROUTINE WRF_ProcessImport_scalar
+!
+      SUBROUTINE WRF_ProcessImport_vector (grid, model,                 &
+     &                                     got, ifield, FieldName,      &
+     &                                     LBi, UBi, LBj, UBj, UBk,     &
+     &                                     Focn, Fdat,                  &
+     &                                     rc)
+!
+!=======================================================================
+!                                                                      !
+!  If both import vector components Focn and Fdat are avaliable, it    !
+!  merges its values. Otherwise, it loads available data into ouput    !
+!  component, Uout and Vout. Only sea-water or sea-ice points are      !
+!  processed.                                                          !
+!                                                                      !
+!  The merging is needed when the atmosphere and ocean grids are       !
+!  incongruent. The DATA model provides values on those grid points    !
+!  not covered by the OCEAN model.                                     !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     grid       WRF grid state structure (TYPE domain)                !
+!     model      Gridded component object (TYPE ESMF_GridComp)         !
+!     got        Switches indicating source and availability of        !
+!                imported data (logical array):                        !
+!                    got(1,1)    OCEAN U-component switch (T/F)        !
+!                    got(1,2)    OCEAN V-component switch (T/F)        !
+!                    got(2,1)    DATA  U-component switch (T/F)        !
+!                    got(2,2)    DATA  V-component switch (T/F)        !
+!     ifield     Imported vector component indeces (integer array)     !
+!                    ifield(1,1) OCEAN U-component field index         !
+!                    ifield(1,2) OCEAN V-component field index         !
+!                    ifield(2,1) DATA  U-component field index         !
+!                    ifield(2,2) DATA  V-component field index         !
+!     FieldName  Vector components shortname (string array)            !
+!     ifield     Imported vector component indices (integer array)     !
+!     LBi        I-dimension lower bound  (integer)                    !
+!     UBi        I-dimension upper bound  (integer)                    !
+!     LBj        J-dimension lower bound  (integer)                    !
+!     UBj        J-dimension upper bound  (integer)                    !
+!     UBk        K-dimension storing vector component (integer; UBk=2) !
+!     Focn       Imported vector from OCEAN model (3D real array)      !
+!     Fdat       Imported vector from DATA  model (3D real array)      !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     rc         Return code (integer)                                 !
+!                                                                      !
+!=======================================================================
+!
+      USE module_domain, ONLY : domain
+      USE strings_mod,   ONLY : lowercase
+!
+!  Imported variable declarations.
+!
+      integer, intent(in)  :: LBi, UBi, LBj, UBj, UBk
+      integer, intent(in)  :: ifield(2,UBk)
+      integer, intent(out) :: rc
+!
+      logical, intent(in)  :: got(2,UBk)
+!
+      real (dp), intent(in) :: Focn(LBi:UBi,LBj:UBj,UBk)
+      real (dp), intent(in) :: Fdat(LBi:UBi,LBj:UBj,UBk)
+!
+      character (len=*), intent(in) :: FieldName(2,UBk)
+!
+      TYPE (domain), pointer :: grid
+      TYPE (ESMF_GridComp)   :: model
+!
+!  Local variable declarations.
+!
+      logical :: got_dat, got_ocn
+      logical :: DebugWrtU(2) = (/ .FALSE., .FALSE. /)
+      logical :: DebugWrtv(2) = (/ .FALSE., .FALSE. /)
+!
+      integer :: i, ic, is, j, ng
+      integer :: year, month, day, hour, minutes, seconds, sN, SD
+      integer :: LakeValue, LandValue
+      integer :: localDE, localDEcount, localPET, PETcount
+      integer :: IminP, ImaxP, JminP, JmaxP
+!
+      real (dp) :: Fseconds, TimeInDays, Time_Current
+
+      real (dp) :: MyUmax(3), MyUmin(3), Umin(3), Umax(3), Uval
+      real (dp) :: MyVmax(3), MyVmin(3), Vmin(3), Vmax(3), Vval
+!
+      real (dp), pointer :: ptrU2d(:,:) => NULL()
+      real (dp), pointer :: ptrV2d(:,:) => NULL()
+!
+      real (KIND(grid%sst)), pointer :: Uout(:,:) => NULL()
+      real (KIND(grid%sst)), pointer :: Vout(:,:) => NULL()
+!
+      character (len=22 ) :: Time_CurrentString
+
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", WRF_ProcessImport_vector"
+!
+      character (ESMF_MAXSTR) :: cname, ofile, U_string, V_string
+!
+      TYPE (ESMF_ArraySpec)  :: arraySpec2d
+      TYPE (ESMF_Clock)      :: clock
+      TYPE (ESMF_Field)      :: Umerge, Vmerge
+      TYPE (ESMF_StaggerLoc) :: staggerLoc
+      TYPE (ESMF_Time)       :: CurrentTime
+      TYPE (ESMF_VM)         :: vm
+!
+!-----------------------------------------------------------------------
+!  Initialize return code flag to success state (no error).
+!-----------------------------------------------------------------------
+!
+      IF (ESM_track) THEN
+        WRITE (trac,'(a,a,i0)') '==> Entering WRF_ProcessImport_vector',&
+     &                          ', PET', PETrank
+        CALL my_flush (trac)
+      END IF
+      rc=ESMF_SUCCESS
+!
+!-----------------------------------------------------------------------
+!  Get information about the gridded component.
+!-----------------------------------------------------------------------
+!
+      CALL ESMF_GridCompGet (model,                                     &
+     &                       clock=clock,                               &
+     &                       localPet=localPET,                         &
+     &                       petCount=PETcount,                         &
+     &                       vm=vm,                                     &
+     &                       name=cname,                                &
+     &                       rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+      ng=grid%grid_id
+!
+!  Get number of local decomposition elements (DEs). Usually, a single
+!  DE is associated with each Persistent Execution Thread (PETs). Thus,
+!  localDEcount=1.
+!
+      CALL ESMF_GridGet (MODELS(Iatmos)%grid(ng),                       &
+     &                   localDECount=localDEcount,                     &
+     &                   rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+!  Get current time.
+!
+      CALL ESMF_ClockGet (clock,                                        &
+     &                    currTime=CurrentTime,                         &
+     &                    rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+      CALL ESMF_TimeGet (CurrentTime,                                   &
+     &                   yy=year,                                       &
+     &                   mm=month,                                      &
+     &                   dd=day,                                        &
+     &                   h =hour,                                       &
+     &                   m =minutes,                                    &
+     &                   s =seconds,                                    &
+     &                   sN=sN,                                         &
+     &                   sD=sD,                                         &
+     &                   rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+      CALL ESMF_TimeGet (CurrentTime,                                   &
+     &                   s_r8=Time_Current,                             &
+     &                   timeString=Time_CurrentString,                 &
+     &                   rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+      Fseconds=REAL(seconds,dp)+REAL(sN,dp)/REAL(sD,dp)
+      TimeInDays=Time_Current/86400.0_dp
+      is=INDEX(Time_CurrentString, 'T')            ! remove 'T' in
+      IF (is.gt.0) Time_CurrentString(is:is)=' '   ! ISO 8601 format
+!
+!-----------------------------------------------------------------------
+!  Create merged vector components arrays.
+!-----------------------------------------------------------------------
+!
+!  Set a 2D floating-point array descriptor.
+!
+      CALL ESMF_ArraySpecSet (arraySpec2d,                              &
+     &                        typekind=ESMF_TYPEKIND_R8,                &
+     &                        rank=2,                                   &
+     &                        rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+!  Create 2D merge vector components from the Grid and arraySpec.
+!
+      got_ocn=got(1,1).and.got(1,2)
+      got_dat=got(2,1).and.got(2,2)
+!
+      IF (.not.got_dat.and.got_ocn) THEN
+        DebugWrtU(1)=MODELS(Iatmos)%ImportField(ifield(1,1))%debug_write
+        DebugWrtV(1)=MODELS(Iatmos)%ImportField(ifield(1,2))%debug_write
+        U_string=TRIM(FieldName(1,1))
+        V_string=TRIM(FieldName(1,2))
+      ELSE IF (.not.got_ocn.and.got_dat) THEN
+        DebugWrtU(2)=MODELS(Iatmos)%ImportField(ifield(2,1))%debug_write
+        DebugWrtV(2)=MODELS(Iatmos)%ImportField(ifield(2,2))%debug_write
+        U_string=TRIM(FieldName(2,1))
+        V_string=TRIM(FieldName(2,2))
+      ELSE IF (got_ocn.and.got_dat) THEN
+        DebugWrtU(1)=MODELS(Iatmos)%ImportField(ifield(1,1))%debug_write
+        DebugWrtV(1)=MODELS(Iatmos)%ImportField(ifield(1,2))%debug_write
+        DebugWrtU(2)=MODELS(Iatmos)%ImportField(ifield(2,1))%debug_write
+        DebugWrtV(2)=MODELS(Iatmos)%ImportField(ifield(2,2))%debug_write
+        U_string=TRIM(FieldName(1,1))//'-'//TRIM(FieldName(1,2))
+        V_string=TRIM(FieldName(2,1))//'-'//TRIM(FieldName(2,2))
+      END IF
+      staggerLoc=ESMF_STAGGERLOC_CENTER
+!
+      Umerge=ESMF_FieldCreate(MODELS(Iatmos)%grid(ng),                  &
+     &                        arraySpec2d,                              &
+     &                        staggerloc=staggerLoc,                    &
+     &                        name=TRIM(U_string),                      &
+     &                        rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+      Vmerge=ESMF_FieldCreate(MODELS(Iatmos)%grid(ng),                  &
+     &                        arraySpec2d,                              &
+     &                        staggerloc=staggerLoc,                    &
+     &                        name=TRIM(U_string),                      &
+     &                        rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+!  Get pointers for merge arrays.
+!
+      CALL ESMF_FieldGet (Umerge,                                       &
+     &                    farrayPtr=ptrU2d,                             &
+     &                    rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+      ptrU2d=MISSING_dp
+!
+      CALL ESMF_FieldGet (Vmerge,                                       &
+     &                    farrayPtr=ptrV2d,                             &
+     &                    rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+      ptrV2d=MISSING_dp
+!
+!-----------------------------------------------------------------------
+!  Create pointers to WRF vector component targets. This logic is
+!  awkward but needed since WRF could have different floating-point
+!  representations. Passing WRF variables as arguments to this routine
+!  doesn't work.
+!-----------------------------------------------------------------------
+!
+      SELECT CASE (lowercase(TRIM(U_string)))
+        CASE ('usur', 'dusur', 'usur-dusur', 'dusur-usur')
+          Uout => grid%sst                    ! HGA: need WRF variable
+        CASE DEFAULT
+          IF (localPET.eq.0) THEN
+            WRITE (cplout,10) TRIM(U_string), TRIM(CinpName)
+          END IF
+          rc=ESMF_RC_NOT_FOUND
+          IF (ESMF_LogFoundError(rcToCheck=rc,                          &
+     &                           msg=ESMF_LOGERR_PASSTHRU,              &
+     &                           line=__LINE__,                         &
+     &                           file=MyFile)) THEN
+            RETURN
+          END IF
+      END SELECT
+!
+      SELECT CASE (lowercase(TRIM(V_string)))
+        CASE ('vsur', 'dvsur', 'vsur-dvsur', 'dvsur-vsur')
+          Vout => grid%sst                    ! HGA: need WRF variable
+        CASE DEFAULT
+          IF (localPET.eq.0) THEN
+            WRITE (cplout,10) TRIM(V_string), TRIM(CinpName)
+          END IF
+          rc=ESMF_RC_NOT_FOUND
+          IF (ESMF_LogFoundError(rcToCheck=rc,                          &
+     &                           msg=ESMF_LOGERR_PASSTHRU,              &
+     &                           line=__LINE__,                         &
+     &                           file=MyFile)) THEN
+            RETURN
+          END IF
+      END SELECT
+!
+!  Set patch indices range.
+!
+      IminP=grid%sp31
+      ImaxP=grid%ep31
+      JminP=grid%sp33
+      JmaxP=grid%ep33
+      IF (grid%ed31.eq.ImaxP) THEN
+        ImaxP=ImaxP-1
+      END IF
+      IF (grid%ed33.eq.JmaxP) THEN
+        JmaxP=JmaxP-1
+      END IF
+!
+!-----------------------------------------------------------------------
+!  Set WRF mask values:
+!
+!  lakemask >   0: elsewhere (land, ocean)     1: lake
+!  landmask >   0: elsewhere (ocean, lakes)    1: land
+!
+!-----------------------------------------------------------------------
+!
+      LakeValue=1
+      LandValue=1
+!
+!-----------------------------------------------------------------------
+!  If only one vector source is available, load field into output array
+!  at seawater points. Notice that Uout and Vout has the same precision
+!  as the WRF variable. It can be single or double precision.
+!-----------------------------------------------------------------------
+!
+      IF (.not.got_dat.and.got_ocn) THEN
+        MyUmin= MISSING_dp
+        MyUmax=-MISSING_dp
+        MyVmin= MISSING_dp
+        MyVmax=-MISSING_dp
+        DO j=JminP,JmaxP
+          DO i=IminP,ImaxP
+            IF ((INT(grid%landmask(i,j)).ne.LandValue).and.             &
+     &          (INT(grid%lakemask(i,j)).ne.LakeValue)) THEN
+              Uout(i,j)=REAL(Focn(i,j,1), KIND(grid%sst))
+              Vout(i,j)=REAL(Focn(i,j,2), KIND(grid%sst))
+            END IF
+            ptrU2d(i,j)=REAL(Uout(i,j), dp)
+            ptrV2d(i,j)=REAL(Vout(i,j), dp)
+            MyUmin(1)=MIN(MyUmin(1),Uout(i,j))
+            MyUmax(1)=MAX(MyUmax(1),Uout(i,j))
+            MyVmin(1)=MIN(MyVmin(1),Vout(i,j))
+            MyVmax(1)=MAX(MyVmax(1),Vout(i,j))
+          END DO
+        END DO
+      ELSE IF (.not.got_ocn.and.got_dat) THEN
+        MyUmin= MISSING_dp
+        MyUmax=-MISSING_dp
+        MyVmin= MISSING_dp
+        MyVmax=-MISSING_dp
+        DO j=JminP,JmaxP
+          DO i=IminP,ImaxP
+            IF ((INT(grid%landmask(i,j)).ne.LandValue).and.             &
+     &          (INT(grid%lakemask(i,j)).ne.LakeValue)) THEN
+              Uout(i,j)=REAL(Fdat(i,j,1), KIND(grid%sst))
+              Vout(i,j)=REAL(Fdat(i,j,2), KIND(grid%sst))
+            END IF
+            ptrU2d(i,j)=REAL(Uout(i,j), dp)
+            ptrV2d(i,j)=REAL(Vout(i,j), dp)
+            MyUmin(1)=MIN(MyUmin(1),Uout(i,j))
+            MyUmax(1)=MAX(MyUmax(1),Uout(i,j))
+            MyVmin(1)=MIN(MyVmin(1),Vout(i,j))
+            MyVmax(1)=MAX(MyVmax(1),Vout(i,j))
+          END DO
+        END DO
+      END IF
+!
+!-----------------------------------------------------------------------
+!  Otherwise, merge imported vector components.
+!-----------------------------------------------------------------------
+!
+      IF (got_ocn.and.got_dat) THEN
+!
+!  Merge Focn and Fdat at sea-water and sea-ice points.  Notice that
+!  the ESMF regridding will not fill unbounded interpolation points.
+!  Such grid cells still have the pointer initialized value MISSING_dp.
+!  The TOL_dp is used to identify such values. The user has full
+!  control of how the merging is done from the weights coefficients
+!  provided from input NetCDF file specified in "WeightsFile(atmos)".
+!
+        MyUmin= MISSING_dp
+        MyUmax=-MISSING_dp
+        MyVmin= MISSING_dp
+        MyVmax=-MISSING_dp
+        DO j=JminP,JmaxP
+          DO i=IminP,ImaxP
+            IF ((INT(grid%landmask(i,j)).ne.LandValue).and.             &
+     &          (INT(grid%lakemask(i,j)).ne.LakeValue)) THEN
+              IF ((ABS(Fdat(i,j,1)).lt.TOL_dp).and.                     &
+     &            (ABS(Fdat(i,j,2)).lt.TOL_dp)) THEN
+                MyUmin(2)=MIN(MyUmin(2),Fdat(i,j,1))
+                MyUmax(2)=MAX(MyUmax(2),Fdat(i,j,1))
+                MyVmin(2)=MIN(MyVmin(2),Fdat(i,j,2))
+                MyVmax(2)=MAX(MyVmax(2),Fdat(i,j,2))
+                Uval=Fdat(i,j,1)                 ! initialize with DATA
+                Vval=Fdat(i,j,2)
+                IF ((ABS(Focn(i,j,1)).lt.TOL_dp).and.                   &
+     &              (ABS(Focn(i,j,1)).lt.TOL_dp)) THEN
+                  MyUmin(1)=MIN(MyUmin(1),Focn(i,j,1))
+                  MyUmax(1)=MAX(MyUmax(1),Focn(i,j,1))
+                  MyVmin(1)=MIN(MyVmin(1),Focn(i,j,2))
+                  MyVmax(1)=MAX(MyVmax(1),Focn(i,j,2))
+                  Uval=WEIGHTS(Iatmos)%Cdat(i,j)*Uval+                  &
+     &                 WEIGHTS(Iatmos)%Cesm(i,j)*Focn(i,j,1)
+                  Vval=WEIGHTS(Iatmos)%Cdat(i,j)*Vval+                  &
+     &                 WEIGHTS(Iatmos)%Cesm(i,j)*Focn(i,j,2)
+                END IF
+                Uout(i,j)=REAL(Uval, KIND(grid%sst))
+                Vout(i,j)=REAL(Vval, KIND(grid%sst))
+                ptrU2d(i,j)=REAL(Uval, dp)
+                ptrV2d(i,j)=REAL(Vval, dp)
+                MyUmin(3)=MIN(MyUmin(3),Uval)
+                MyUmax(3)=MAX(MyUmax(3),Uval)
+                MyVmin(3)=MIN(MyVmin(3),Vval)
+                MyVmax(3)=MAX(MyVmax(3),Vval)
+              END IF
+            END IF
+          END DO
+        END DO
+      END IF
+!
+!  Get merged vector components minimun and maximum values.
+!
+      IF (got_ocn.and.got_dat) THEN
+        ic=3
+      ELSE
+        ic=1
+      END IF
+!
+      CALL ESMF_VMAllReduce (vm,                                        &
+     &                       sendData=MyUmin,                           &
+     &                       recvData=Umin,                             &
+     &                       count=ic,                                  &
+     &                       reduceflag=ESMF_REDUCE_MIN,                &
+     &                       rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+      CALL ESMF_VMAllReduce (vm,                                        &
+     &                       sendData=MyUmax,                           &
+     &                       recvData=Umax,                             &
+     &                       count=ic,                                  &
+     &                       reduceflag=ESMF_REDUCE_MAX,                &
+     &                       rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+      CALL ESMF_VMAllReduce (vm,                                        &
+     &                       sendData=MyVmin,                           &
+     &                       recvData=Vmin,                             &
+     &                       count=ic,                                  &
+     &                       reduceflag=ESMF_REDUCE_MIN,                &
+     &                       rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+      CALL ESMF_VMAllReduce (vm,                                        &
+     &                       sendData=MyVmax,                           &
+     &                       recvData=Vmax,                             &
+     &                       count=ic,                                  &
+     &                       reduceflag=ESMF_REDUCE_MAX,                &
+     &                       rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+!  Report merged vector components information.
+!
+      IF (got_ocn.and.got_dat) THEN
+        IF ((DebugLevel.ge.0).and.(localPET.eq.0)) THEN
+          WRITE (cplout,20) TRIM(U_string),                             &
+     &                      TRIM(Time_CurrentString), ng,               &
+     &                      Umin(1), Umax(1),                           &
+     &                      Umin(2), Umax(2),                           &
+     &                      Umin(3), Umax(3)
+          WRITE (cplout,20) TRIM(V_string),                             &
+     &                      TRIM(Time_CurrentString), ng,               &
+     &                      Vmin(1), Vmax(1),                           &
+     &                      Vmin(2), Vmax(2),                           &
+     &                      Vmin(3), Vmax(3)
+        END IF
+      ELSE
+        IF ((DebugLevel.ge.0).and.(localPET.eq.0)) THEN
+          WRITE (cplout,30) Umin(1), Umax(1)
+          WRITE (cplout,30) Vmin(1), Vmax(1)
+        END IF
+      END IF
+!
+!  Debugging: write out merged vector components into a NetCDF file.
+!
+      IF ((DebugLevel.ge.3).and.ANY(DebugWrtU)) THEN
+        WRITE (ofile,40) ng, TRIM(U_string),                            &
+     &                   year, month, day, hour, minutes, seconds
+        CALL ESMF_FieldWrite (Umerge,                                   &
+     &                        TRIM(ofile),                              &
+     &                        overwrite=.TRUE.,                         &
+     &                        rc=rc)
+        IF (ESMF_LogFoundError(rcToCheck=rc,                            &
+     &                         msg=ESMF_LOGERR_PASSTHRU,                &
+     &                         line=__LINE__,                           &
+     &                         file=MyFile)) THEN
+          RETURN
+        END IF
+      END IF
+!
+      IF ((DebugLevel.ge.3).and.ANY(DebugWrtV)) THEN
+        WRITE (ofile,40) ng, TRIM(V_string),                            &
+     &                   year, month, day, hour, minutes, seconds
+        CALL ESMF_FieldWrite (Vmerge,                                   &
+     &                        TRIM(ofile),                              &
+     &                        overwrite=.TRUE.,                         &
+     &                        rc=rc)
+        IF (ESMF_LogFoundError(rcToCheck=rc,                            &
+     &                         msg=ESMF_LOGERR_PASSTHRU,                &
+     &                         line=__LINE__,                           &
+     &                         file=MyFile)) THEN
+          RETURN
+        END IF
+      END IF
+!
+!  Nullify the pointers to ensure that it does not point to a random
+!  part in the memory.
+!
+      IF (associated(ptrU2d)) nullify (ptrU2d)
+      IF (associated(ptrV2d)) nullify (ptrV2d)
+      IF (associated(Uout ))  nullify (Uout)
+      IF (associated(Vout ))  nullify (Vout)
+!
+!  Destroy merged vector arrays.
+!
+      CALL ESMF_FieldDestroy (Umerge,                                   &
+     &                        noGarbage=.FALSE.,                        &
+     &                        rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+      CALL ESMF_FieldDestroy (Vmerge,                                   &
+     &                        noGarbage=.FALSE.,                        &
+     &                        rc=rc)
+      IF (ESMF_LogFoundError(rcToCheck=rc,                              &
+     &                       msg=ESMF_LOGERR_PASSTHRU,                  &
+     &                       line=__LINE__,                             &
+     &                       file=MyFile)) THEN
+        RETURN
+      END IF
+!
+      IF (ESM_track) THEN
+        WRITE (trac,'(a,a,i0)') '<== Exiting  WRF_ProcessImport_vector',&
+     &                          ', PET', PETrank
+        CALL my_flush (trac)
+      END IF
+      IF (DebugLevel.gt.0) CALL my_flush (cplout)
+!
+  10  FORMAT (/,5x,'WRF_ProcessImport - ',                              &
+     &         'unable to find option to import: ',a,                   &
+     &        /,25x,'check ''Import(atmos)'' in input script: ',a)
+  20  FORMAT (1x,' WRF_ProcessImport - ESMF: merging field ''',a,'''',  &
+     &        t72,a,2x,'Grid ',i2.2,                                    &
+     &        /,19x,'(OcnMin = ', 1p,e15.8,0p,                          &
+     &              ' OcnMax = ', 1p,e15.8,0p,')',                      &
+     &        /,19x,'(DatMin = ', 1p,e15.8,0p,                          &
+     &              ' DatMax = ', 1p,e15.8,0p,')',                      &
+     &        /,19x,'(OutMin = ', 1p,e15.8,0p,                          &
+     &              ' OutMax = ', 1p,e15.8,0p,')')
+  30  FORMAT (19x,  '(OutMin = ', 1p,e15.8,0p,                          &
+     &              ' OutMax = ', 1p,e15.8,0p,') WRF_ProcessImport')
+  40  FORMAT ('wrf_',i2.2,'_merged_',a,'_',i4.4,2('-',i2.2),'_',        &
+     &         i2.2,2('.',i2.2),'.nc')
+!
+      RETURN
+      END SUBROUTINE WRF_ProcessImport_vector
 !
       SUBROUTINE WRF_Export (grid, model, rc)
 !
@@ -3523,6 +4261,7 @@
       integer :: ifld, i, is, j, ng
       integer :: Istr, Iend, Jstr, Jend
       integer :: year, month, day, hour, minutes, seconds, sN, SD
+      integer :: LakeValue, LandValue
       integer :: ExportCount
       integer :: localDE, localDEcount, localPET, PETcount
 # ifdef WRF_TIMEAVG
@@ -3534,7 +4273,7 @@
       real (dp), parameter :: z1 = 3.0_dp             ! layer thickness
 !
       real (dp) :: Fseconds, TimeInDays, Time_Current
-      real (dp) :: cff1, cff2, cff3, f1
+      real (dp) :: cff1, cff2, cff3, f1, scale
       real (dp) :: MyFmax(1), MyFmin(1), Fmin(1), Fmax(1), Fval
 !
       real (dp), pointer :: ptr2d(:,:) => NULL()
@@ -3599,6 +4338,14 @@
      &                       file=MyFile)) THEN
         RETURN
       END IF
+!
+!  Set WRF mask values:
+!
+!    lakemask >   0: elsewhere (land, ocean)     1: lake
+!    landmask >   0: elsewhere (ocean, lakes)    1: land
+!
+      LakeValue=1
+      LandValue=1
 !
 !-----------------------------------------------------------------------
 !  Get current time.
@@ -3814,15 +4561,15 @@
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  Fval=grid%psfc_mean(i,j)*                             &
-     &                 EXP((9.81_dp*grid%ht(i,j))/                      &
-     &                     (287.0_dp*grid%t2_mean(i,j)*                 &
-     &                     (1.0_dp+0.61_dp*grid%q2_mean(i,j))))
+                  Fval=REAL(grid%psfc_mean(i,j),dp)*                    &
+     &                 EXP((9.81_dp*REAL(grid%ht(i,j),dp))/             &
+     &                     (287.0_dp*REAL(grid%t2_mean(i,j),dp)*        &
+     &                     (1.0_dp+0.61_dp*REAL(grid%q2_mean(i,j),dp))))
 # else
-                  Fval=grid%psfc(i,j)*                                  &
-     &                 EXP((9.81_dp*grid%ht(i,j))/                      &
-     &                     (287.0_dp*grid%t2(i,j)*                      &
-     &                     (1.0_dp+0.61_dp*grid%q2(i,j))))
+                  Fval=REAL(grid%psfc(i,j),dp)*                         &
+     &                 EXP((9.81_dp*REAL(grid%ht(i,j),dp))/             &
+     &                     (287.0_dp*REAL(grid%t2(i,j),dp)*             &
+     &                     (1.0_dp+0.61_dp*REAL(grid%q2(i,j),dp))))
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
@@ -3838,9 +4585,9 @@
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  Fval=grid%t2_mean(i,j)
+                  Fval=REAL(grid%t2_mean(i,j),dp)
 # else
-                  Fval=grid%t2(i,j)
+                  Fval=REAL(grid%t2(i,j),dp)
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
@@ -3860,17 +4607,19 @@
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  cff1=grid%psfc_mean(i,j)/                             &
+                  cff1=REAL(grid%psfc_mean(i,j),dp)/                    &
      &                 (EXP((9.81_dp*2.0_dp)/                           &
-     &                      (287.0_dp*grid%t2_mean(i,j))))
-                  Fval=grid%q2_mean(i,j)*cff1/                          &
-     &                 (grid%q2_mean(i,j)*(1.0_dp-0.622_dp)+0.622_dp)
+     &                      (287.0_dp*REAL(grid%t2_mean(i,j),dp))))
+                  Fval=REAL(grid%q2_mean(i,j),dp)*cff1/                 &
+     &                 (REAL(grid%q2_mean(i,j),dp)*                     &
+     &                  (1.0_dp-0.622_dp)+0.622_dp)
 # else
-                  cff1=grid%psfc(i,j)/                                  &
+                  cff1=REAL(grid%psfc(i,j),dp)/                         &
      &                 (EXP((9.81_dp*2.0_dp)/                           &
-     &                      (287.0_dp*grid%t2(i,j))))
-                  Fval=grid%q2(i,j)*cff1/                               &
-     &                 (grid%q2(i,j)*(1.0_dp-0.622_dp)+0.622_dp)
+     &                      (287.0_dp*REAL(grid%t2(i,j),dp))))
+                  Fval=REAL(grid%q2(i,j),dp)*cff1/                      &
+     &                 (REAL(grid%q2(i,j),dp)*                          &
+     &                  (1.0_dp-0.622_dp)+0.622_dp)
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
@@ -3889,23 +4638,29 @@
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  cff1=grid%psfc_mean(i,j)/                             &
+                  cff1=REAL(grid%psfc_mean(i,j),dp)/                    &
      &                 (EXP((9.81_dp*2.0_dp)/                           &
-     &                      (287.0_dp*grid%t2_mean(i,j))))
-                  cff2=grid%q2_mean(i,j)*cff1/                          &
-     &                 (grid%q2_mean(i,j)*(1.0_dp-0.622_dp)+0.622_dp)
+     &                      (287.0_dp*REAL(grid%t2_mean(i,j),dp))))
+                  cff2=REAL(grid%q2_mean(i,j),dp)*cff1/                 &
+     &                 (REAL(grid%q2_mean(i,j),dp)*                     &
+     &                  (1.0_dp-0.622_dp)+0.622_dp)
                   cff3=6.112_dp*                                        &
-     &                 EXP((17.67_dp*(grid%t2_mean(i,j)-273.15_dp))/    &
-     &                     ((grid%t2_mean(i,j)-273.15_dp)+243.5_dp))
+     &                 EXP((17.67_dp*(REAL(grid%t2_mean(i,j),dp)-       &
+     &                                273.15_dp))/                      &
+     &                     ((REAL(grid%t2_mean(i,j),dp)-273.15_dp)+     &
+     &                      243.5_dp))
 # else
-                  cff1=grid%psfc(i,j)/                                  &
+                  cff1=REAL(grid%psfc(i,j),dp)/                         &
      &                 (EXP((9.81_dp*2.0_dp)/                           &
-     &                      (287.0_dp*grid%t2(i,j))))
-                  cff2=grid%q2(i,j)*cff1/                               &
-     &                 (grid%q2(i,j)*(1.0_dp-0.622_dp)+0.622_dp)
+     &                      (287.0_dp*REAL(grid%t2(i,j),dp))))
+                  cff2=REAL(grid%q2(i,j),dp)*cff1/                      &
+     &                 (REAL(grid%q2(i,j),dp)*                          &
+     &                  (1.0_dp-0.622_dp)+0.622_dp)
                   cff3=6.112_dp*                                        &
-     &                 EXP((17.67_dp*(grid%t2(i,j)-273.15_dp))/         &
-     &                     ((grid%t2(i,j)-273.15_dp)+243.5_dp))
+     &                 EXP((17.67_dp*(REAL(grid%t2(i,j),dp)-            &
+     &                                273.15_dp))/                      &
+     &                     ((REAL(grid%t2(i,j),dp)-273.15_dp)+          &
+     &                      243.5_dp))
 # endif
                   Fval=cff2/cff3
                   MyFmin(1)=MIN(MyFmin(1),Fval)
@@ -3914,43 +4669,84 @@
                 END DO
               END DO
 !
-!  Net heat flux (W m-2) at the surface. Use shortwave, longwave,
-!  latent, sensible fluxes to compute net heat flux.  Remove outgoing
-!  IR from ocean sea surface temperature (K) using infrared emissivity
-!  (unitless) and Stefan-Boltzmann constant (W m-2 K-4).  As in WRF
-!  routine 'sst_skin_update', the f1 represents the shortwave flux
-!  mean absorption in the cool-skin layer (an approximation kludge).
-!  A formal approach is presented in Zeng and Beljaars (2005; GRL).
-!  Also, ROMS 'bulk_flux' routine shows a formal cool skin correction.
+!  Net heat flux (W/m2) at the surface. Use net shortwave (downward
+!  minus upward), net longwave (downward minus upward), latent, and
+!  sensible fluxes to compute the surface net heat flux for the
+!  ocean.
+!
+!  The documentation of the heat flux components is very confusing in
+!  WRF. We need a consistent an unambiguous metadata model in WRF.
+!
+!  In WRF routine 'sst_skin_update', there is an f1=0.6352 to represent
+!  the shortwave flux mean absorption in the cool-skin layer (a kludge),
+!  but this value is king of high.  A formal approach is presented in
+!  Zeng and Beljaars (2005; GRL).  Also, ROMS 'bulk_flux' routine
+!  shows a formal cool skin correction.
+!
+!  In WRF, we have downwelling shortwave flux (swdnb, downward) and
+!  upwelling shortwave flux (swupb, upward) at the atmosphere bottom.
+!  Both are positive. The net shortwave flux (gsw = swdnb - swupb) is
+!  positive and downward since 'swupb' is around 8 percent the magnitude
+!  of 'swdnb'. Notice that swdown = swdnb, what a mess. Here, we use
+!  the 'swdnb' and 'swupd' variables since they are available in the
+!  RAMS time-averaged diagnotics.
+!
+!  Similarly, in WRF we have downwelling longwave flux (lwdnb, downward)
+!  and upwelling longwave flux (lwupb, upward). The 'lwupb' variable is
+!  almost identical to StefBo * emiss * sst^4. The 'sst' the is botton
+!  land/ocean temperature (in Kelvin). Also, glw = lwdnb. Therefore,
+!  'glw' is used here because it time-average RAMS diagonostic variable
+!  is 'glw_mean' (downward, positive, W/m2). The metadata nomenclature
+!  in WRF is such a mess and confusing.
+!
+!  In WRF, 'hfx' is the sensible heat flux (W/m2) and 'lh' is the
+!  latent heat flux (W/m2). Both fluxes are positive if upward
+!  from the surface. The same applies for the time-averaged values,
+!  'hfx_mean' and 'lh_mean'. Therefore, we need to flip the sign and
+!  use MINUS when adding such components to the ocean net heat flux
+!  below. WARNING: The documentation for the direction of these fluxes
+!  is very confusing in WRF (like negative upward).
 !
             CASE ('nflx', 'shflux')
               MyFmin(1)= MISSING_dp
               MyFmax(1)=-MISSING_dp
-              f1=1.0_dp-0.27_dp*EXP(-2.80_dp*z1)-                       &
-     &                  0.45_dp*EXP(-0.07_dp*z1)
+!!            f1=1.0_dp-0.27_dp*EXP(-2.80_dp*z1)-                       &
+!!   &                  0.45_dp*EXP(-0.07_dp*z1)
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  cff1=grid%sst(i,j)*grid%sst(i,j)*                     &
-     &                 grid%sst(i,j)*grid%sst(i,j)
-                  cff2=grid%emiss(i,j)*StBolt*cff1
 # ifdef WRF_TIMEAVG
-                  Fval=grid%gsw(i,j)*f1+                                &
-     &                 grid%glw_mean(i,j)-cff2+                         &
-     &                 grid%lh_mean (i,j)+                              &
-     &                 grid%hfx_mean(i,j)
+                  Fval=(REAL(grid%swdnb_mean(i,j),dp)-                  &
+                        REAL(grid%swupb_mean(i,j),dp))+                 &
+     &                 (REAL(grid%glw_mean(i,j),dp)-                    &
+     &                  REAL(grid%lwupb_mean(i,j),dp))-                 &
+     &                 REAL(grid%lh_mean (i,j),dp)-                     &
+     &                 REAL(grid%hfx_mean(i,j),dp)
 # else
-                  Fval=grid%gsw(i,j)*f1+                                &
-     &                 grid%glw(i,j)-cff2+                              &
-     &                 grid%lh (i,j)+                                   &
-     &                 grid%hfx(i,j)
+                  Fval=(REAL(grid%swdnb(i,j),dp)-                       &
+     &                  REAL(grid%swupb(i,j),dp))+                      &
+     &                 (REAL(grid%glw(i,j),dp)-                         &
+     &                  REAL(grid%lwupb(i,j),dp))-                      &
+     &                 REAL(grid%lh (i,j),dp)-                          &
+     &                 REAL(grid%hfx(i,j),dp)
 # endif
+# ifdef ONLY_OCEAN_FLUXES
+                  IF ((INT(grid%landmask(i,j)).ne.LandValue)) THEN
+                    MyFmin(1)=MIN(MyFmin(1),Fval)
+                    MyFmax(1)=MAX(MyFmax(1),Fval)
+                    ptr2d(i,j)=Fval
+                  ELSE
+                    ptr2d(i,j)=MISSING_dp
+                  END IF
+# else
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
+# endif
                 END DO
               END DO
 !
-!  Longwave radiation (W m-2) at the surface.
+!  Net longwave radiation (W m-2) at the surface: downweling minus
+!  upwelling fluxes at the bottom of the atmosphere.
 !
             CASE ('lwrd', 'LWrad')
               MyFmin(1)= MISSING_dp
@@ -3958,9 +4754,11 @@
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  Fval=grid%glw_mean(i,j)
+                  Fval=REAL(grid%glw_mean(i,j),dp)-                     &
+     &                 REAL(grid%lwupb_mean(i,j),dp)
 # else
-                  Fval=grid%glw(i,j)
+                  Fval=REAL(grid%glw(i,j),dp)-                          &
+     &                 REAL(grid%lwupb(i,j),dp)
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
@@ -3976,9 +4774,9 @@
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  Fval=grid%glw_mean(i,j)
+                  Fval=REAL(grid%glw_mean(i,j),dp)
 # else
-                  Fval=grid%glw(i,j)
+                  Fval=REAL(grid%glw(i,j),dp)
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
@@ -3986,14 +4784,21 @@
                 END DO
               END DO
 !
-!  Shortwave radiation flux (W m-2) at the surface.
+!  Net shortwave radiation flux (W m-2) at the surface: downweling
+!  minus  upwelling fluxes at the bottom of the atmosphere.
 !
             CASE ('swrd', 'SWrad')
               MyFmin(1)= MISSING_dp
               MyFmax(1)=-MISSING_dp
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  Fval=grid%gsw(i,j)
+# ifdef WRF_TIMEAVG
+                  Fval=REAL(grid%swdnb_mean(i,j),dp)-                   &
+     &                 REAL(grid%swupb_mean(i,j),dp)
+# else
+                  Fval=REAL(grid%swdnb(i,j),dp)-                        &
+     &                 REAL(grid%swupb(i,j),dp)
+# endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
@@ -4007,7 +4812,11 @@
               MyFmax(1)=-MISSING_dp
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  Fval=grid%swdown(i,j)
+# ifdef WRF_TIMEAVG
+                  Fval=REAL(grid%swdnb_mean(i,j),dp)
+# else
+                  Fval=REAL(grid%swdnb(i,j),dp)
+# endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
@@ -4019,12 +4828,17 @@
             CASE ('lhfx', 'LHfx')
               MyFmin(1)= MISSING_dp
               MyFmax(1)=-MISSING_dp
+# ifndef BULK_FLUXES
+              scale=-1.0_dp           ! upward positive flux, flip sign
+# else
+              scale=1.0_dp
+# endif
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  Fval=grid%lh_mean(i,j)
+                  Fval=scale*REAL(grid%lh_mean(i,j),dp)
 # else
-                  Fval=grid%lh(i,j)
+                  Fval=scale*REAL(grid%lh(i,j),dp)
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
@@ -4037,12 +4851,17 @@
             CASE ('shfx', 'SHfx')
               MyFmin(1)= MISSING_dp
               MyFmax(1)=-MISSING_dp
+# ifndef BULK_FLUXES
+              scale=-1.0_dp           ! upward positive flux, flip sign
+# else
+              scale=1.0_dp
+# endif
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  Fval=grid%hfx_mean(i,j)
+                  Fval=scale*REAL(grid%hfx_mean(i,j),dp)
 # else
-                  Fval=grid%hfx(i,j)
+                  Fval=scale*REAL(grid%hfx(i,j),dp)
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
@@ -4057,8 +4876,9 @@
               MyFmax(1)=-MISSING_dp
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  Fval=grid%qfx(i,j)-                                   &
-     &                 (grid%raincv(i,j)+grid%rainncv(i,j))/grid%dt
+                  Fval=REAL(grid%qfx(i,j),dp)-                          &
+     &                 (REAL(grid%raincv(i,j),dp)+                      &
+     &                  REAL(grid%rainncv(i,j),dp))/REAL(grid%dt,dp)
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
@@ -4072,7 +4892,8 @@
               MyFmax(1)=-MISSING_dp
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  Fval=(grid%raincv(i,j)+grid%rainncv(i,j))/grid%dt
+                  Fval=(REAL(grid%raincv(i,j),dp)+                      &
+     &                  REAL(grid%rainncv(i,j),dp))/REAL(grid%dt,dp)
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
@@ -4087,7 +4908,7 @@
               MyFmax(1)=-MISSING_dp
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  Fval=grid%qfx(i,j)
+                  Fval=REAL(grid%qfx(i,j),dp)
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
@@ -4101,7 +4922,7 @@
               MyFmax(1)=-MISSING_dp
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  Fval=grid%cldfra(i,1,j)
+                  Fval=REAL(grid%cldfra(i,1,j),dp)
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
@@ -4119,21 +4940,35 @@
               MyFmax(1)=-MISSING_dp
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  cff1=1.0_dp/(grid%alt(i,1,j)+eps)
-                  cff2=2.0_dp/                                          &
-     &                 (SQRT((grid%u_2(i  ,1,j  )+                      &
-     &                        grid%u_2(i+1,1,j  ))**2+                  &
-     &                       (grid%v_2(i  ,1,j  )+                      &
-     &                        grid%v_2(i  ,1,j+1))**2)+                 &
+                  cff1=1.0_dp/(REAL(grid%alt(i,1,j),dp)+eps)
+                  cff2=1.0_dp/                                          &
+     &                 (SQRT((0.5_dp*                                   &
+     &                        (REAL(grid%u_2(i  ,1,j  ),dp)+            &
+     &                         REAL(grid%u_2(i+1,1,j  ),dp)))**2+       &
+     &                       (0.5_dp*                                   &
+     &                        (REAL(grid%v_2(i  ,1,j  ),dp)+            &
+     &                         REAL(grid%v_2(i  ,1,j+1),dp)))**2)+      &
      &                  eps)
-                  cff3=0.5_dp*((grid%u_2(i  ,1,j  )+                    &
-     &                          grid%u_2(i+1,1,j  ))*grid%cosa(i,j)-    &
-     &                         (grid%v_2(i  ,1,j  )+                    &
-     &                          grid%v_2(i  ,1,j+1))*grid%sina(i,j))
-                  Fval=cff1*cff2*(grid%ust(i,j)**2)*cff3
+                  cff3=0.5_dp*((REAL(grid%u_2(i  ,1,j  ),dp)+           &
+     &                          REAL(grid%u_2(i+1,1,j  ),dp))*          &
+     &                         REAL(grid%cosa(i,j),dp)-                 &
+     &                         (REAL(grid%v_2(i  ,1,j  ),dp)+           &
+     &                          REAL(grid%v_2(i  ,1,j+1),dp))*          &
+     &                         REAL(grid%sina(i,j),dp))
+                  Fval=cff1*cff2*(REAL(grid%ust(i,j),dp)**2)*cff3
+# ifdef ONLY_OCEAN_FLUXES
+                  IF ((INT(grid%landmask(i,j)).ne.LandValue)) THEN
+                    MyFmin(1)=MIN(MyFmin(1),Fval)
+                    MyFmax(1)=MAX(MyFmax(1),Fval)
+                    ptr2d(i,j)=Fval
+                  ELSE
+                    ptr2d(i,j)=MISSING_dp
+                  END IF
+# else
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
+# endif
                 END DO
               END DO
 !
@@ -4144,18 +4979,86 @@
               MyFmax(1)=-MISSING_dp
               DO j=Jstr,Jend
                 DO i=Istr,Iend
-                  cff1=1.0_dp/(grid%alt(i,1,j)+eps)
-                  cff2=2.0_dp/                                          &
-     &                 (SQRT((grid%u_2(i  ,1,j)+                        &
-     &                        grid%u_2(i+1,1,j))**2+                    &
-     &                       (grid%v_2(i,1,j  )+                        &
-     &                        grid%v_2(i,1,j+1))**2)+                   &
+                  cff1=1.0_dp/(REAL(grid%alt(i,1,j),dp)+eps)
+                  cff2=1.0_dp/                                          &
+     &                 (SQRT((0.5_dp*                                   &
+     &                        (REAL(grid%u_2(i  ,1,j),dp)+              &
+     &                         REAL(grid%u_2(i+1,1,j),dp)))**2+         &
+     &                       (0.5_dp*                                   &
+     &                        (REAL(grid%v_2(i,1,j  ),dp)+              &
+     &                         REAL(grid%v_2(i,1,j+1),dp)))**2)+        &
      &                  eps)
-                  cff3=0.5_dp*((grid%v_2(i,1,j  )+                      &
-     &                          grid%v_2(i,1,j+1))*grid%cosa(i,j)+      &
-     &                         (grid%u_2(i  ,1,j)+                      &
-     &                          grid%u_2(i+1,1,j))*grid%sina(i,j))
-                  Fval=cff1*cff2*(grid%ust(i,j)**2)*cff3
+                  cff3=0.5_dp*((REAL(grid%v_2(i,1,j  ),dp)+             &
+     &                          REAL(grid%v_2(i,1,j+1),dp))*            &
+     &                         REAL(grid%cosa(i,j),dp)+                 &
+     &                         (REAL(grid%u_2(i  ,1,j),dp)+             &
+     &                          REAL(grid%u_2(i+1,1,j),dp))*            &
+     &                         REAL(grid%sina(i,j),dp))
+                  Fval=cff1*cff2*(REAL(grid%ust(i,j),dp)**2)*cff3
+# ifdef ONLY_OCEAN_FLUXES
+                  IF ((INT(grid%landmask(i,j)).ne.LandValue)) THEN
+                    MyFmin(1)=MIN(MyFmin(1),Fval)
+                    MyFmax(1)=MAX(MyFmax(1),Fval)
+                    ptr2d(i,j)=Fval
+                  ELSE
+                    ptr2d(i,j)=MISSING_dp
+                  END IF
+# else
+                  MyFmin(1)=MIN(MyFmin(1),Fval)
+                  MyFmax(1)=MAX(MyFmax(1),Fval)
+                  ptr2d(i,j)=Fval
+# endif
+                END DO
+              END DO
+!
+!  Surface air density (km m-3) at grid center.
+!
+            CASE ('RhoAir')
+              MyFmin(1)= MISSING_dp
+              MyFmax(1)=-MISSING_dp
+              DO j=Jstr,Jend
+                DO i=Istr,Iend
+                  Fval=1.0_dp/(REAL(grid%alt(i,1,j),dp)+eps)
+                  MyFmin(1)=MIN(MyFmin(1),Fval)
+                  MyFmax(1)=MAX(MyFmax(1),Fval)
+                  ptr2d(i,j)=Fval
+                END DO
+              END DO
+!
+!  Eastward wind component (m s-1) at surface boundary layer (model
+!  level 2) rotated to geographical EAST at grid center (RHO-center).
+!
+            CASE ('Uwind_sbl', 'u_2')
+              MyFmin(1)= MISSING_dp
+              MyFmax(1)=-MISSING_dp
+              DO j=Jstr,Jend
+                DO i=Istr,Iend
+                  Fval=0.5_dp*((REAL(grid%u_2(i  ,1,j  ),dp)+           &
+     &                          REAL(grid%u_2(i+1,1,j  ),dp))*          &
+     &                         REAL(grid%cosa(i,j),dp)-                 &
+     &                         (REAL(grid%v_2(i  ,1,j  ),dp)+           &
+     &                          REAL(grid%v_2(i  ,1,j+1),dp))*          &
+     &                         REAL(grid%sina(i,j),dp))
+                  MyFmin(1)=MIN(MyFmin(1),Fval)
+                  MyFmax(1)=MAX(MyFmax(1),Fval)
+                  ptr2d(i,j)=Fval
+                END DO
+              END DO
+!
+!  Northward wind component (m s-1) at surface boundary layer (model
+!  level 2) rotated to geographical EAST at grid center (RHO-center).
+!
+            CASE ('Vwind_sbl', 'v_2')
+              MyFmin(1)= MISSING_dp
+              MyFmax(1)=-MISSING_dp
+              DO j=Jstr,Jend
+                DO i=Istr,Iend
+                  Fval=0.5_dp*((REAL(grid%v_2(i,1,j  ),dp)+             &
+     &                          REAL(grid%v_2(i,1,j+1),dp))*            &
+     &                         REAL(grid%cosa(i,j),dp)+                 &
+     &                         (REAL(grid%u_2(i  ,1,j),dp)+             &
+     &                          REAL(grid%u_2(i+1,1,j),dp))*            &
+     &                         REAL(grid%sina(i,j),dp))
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
@@ -4163,7 +5066,7 @@
               END DO
 !
 !  Surface (10m) eastward wind component (m s-1) rotated to
-!  geographical EAST and NORTH component.
+!  geographical EAST.
 !
             CASE ('Uwind', 'u10', 'wndu')
               MyFmin(1)= MISSING_dp
@@ -4171,11 +5074,15 @@
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  Fval=grid%u10_mean(i,j)*grid%cosa(i,j)-               &
-     &                 grid%v10_mean(i,j)*grid%sina(i,j)
+                  Fval=REAL(grid%u10_mean(i,j),dp)*                     &
+     &                 REAL(grid%cosa(i,j),dp)-                         &
+     &                 REAL(grid%v10_mean(i,j),dp)*                     &
+     &                 REAL(grid%sina(i,j),dp)
 # else
-                  Fval=grid%u10(i,j)*grid%cosa(i,j)-                    &
-     &                 grid%v10(i,j)*grid%sina(i,j)
+                  Fval=REAL(grid%u10(i,j),dp)*                          &
+     &                 REAL(grid%cosa(i,j),dp)-                         &
+     &                 REAL(grid%v10(i,j),dp)*                          &
+     &                 REAL(grid%sina(i,j),dp)
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
@@ -4184,7 +5091,7 @@
               END DO
 !
 !  Surface (10m) northward wind component (m s-1) rotated to
-!  geographical EAST and NORTH component.
+!  geographical NORTH.
 !
             CASE ('Vwind', 'v10', 'wndv')
               MyFmin(1)= MISSING_dp
@@ -4192,15 +5099,44 @@
               DO j=Jstr,Jend
                 DO i=Istr,Iend
 # ifdef WRF_TIMEAVG
-                  Fval=grid%v10_mean(i,j)*grid%cosa(i,j)+               &
-     &                 grid%u10_mean(i,j)*grid%sina(i,j)
+                  Fval=REAL(grid%v10_mean(i,j),dp)*                     &
+     &                 REAL(grid%cosa(i,j),dp)+                         &
+     &                 REAL(grid%u10_mean(i,j),dp)*                     &
+     &                 REAL(grid%sina(i,j),dp)
 # else
-                  Fval=grid%v10(i,j)*grid%cosa(i,j)+                    &
-     &                 grid%u10(i,j)*grid%sina(i,j)
+                  Fval=REAL(grid%v10(i,j),dp)*                          &
+     &                 REAL(grid%cosa(i,j),dp)+                         &
+     &                 REAL(grid%u10(i,j),dp)*                          &
+     &                 REAL(grid%sina(i,j),dp)
 # endif
                   MyFmin(1)=MIN(MyFmin(1),Fval)
                   MyFmax(1)=MAX(MyFmax(1),Fval)
                   ptr2d(i,j)=Fval
+                END DO
+              END DO
+!
+!  Surface frictional wind magnitude (m s-1) from similarity theory
+!  at grid center.
+!
+            CASE ('Wstar')
+              MyFmin(1)= MISSING_dp
+              MyFmax(1)=-MISSING_dp
+              DO j=Jstr,Jend
+                DO i=Istr,Iend
+                  Fval=REAL(grid%ust(i,j),dp)
+# ifdef ONLY_OCEAN_FLUXES
+                  IF ((INT(grid%landmask(i,j)).ne.LandValue)) THEN
+                    MyFmin(1)=MIN(MyFmin(1),Fval)
+                    MyFmax(1)=MAX(MyFmax(1),Fval)
+                    ptr2d(i,j)=Fval
+                  ELSE
+                    ptr2d(i,j)=MISSING_dp
+                  END IF
+# else
+                  MyFmin(1)=MIN(MyFmin(1),Fval)
+                  MyFmax(1)=MAX(MyFmax(1),Fval)
+                  ptr2d(i,j)=Fval
+# endif
                 END DO
               END DO
 !

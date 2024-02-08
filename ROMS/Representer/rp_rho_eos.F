@@ -2,11 +2,11 @@
       MODULE rp_rho_eos_mod
 #if defined TL_IOMS && defined SOLVE3D
 !
-!svn $Id: rp_rho_eos.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: rp_rho_eos.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine computes  "in situ" density and other associated       !
@@ -75,7 +75,7 @@
 # ifdef MASKING
      &                      GRID(ng) % rmask,                           &
 # endif
-# ifdef VAR_RHO_2D
+# ifdef VAR_RHO_2D_NOT_YET
      &                     GRID(ng) % Hz,                               &
      &                     GRID(ng) % tl_Hz,                            &
 # endif
@@ -85,7 +85,7 @@
      &                     GRID(ng) % tl_z_w,                           &
      &                     OCEAN(ng) % t,                               &
      &                     OCEAN(ng) % tl_t,                            &
-# ifdef VAR_RHO_2D
+# ifdef VAR_RHO_2D_NOT_YET
      &                     COUPLING(ng) % rhoA,                         &
      &                     COUPLING(ng) % tl_rhoA,                      &
      &                     COUPLING(ng) % rhoS,                         &
@@ -126,13 +126,13 @@
 #  ifdef MASKING
      &                            rmask,                                &
 #  endif
-#  ifdef VAR_RHO_2D
+#  ifdef VAR_RHO_2D_NOT_YET
      &                            Hz, tl_Hz,                            &
 #  endif
      &                            z_r, tl_z_r,                          &
      &                            z_w, tl_z_w,                          &
      &                            t, tl_t,                              &
-#  ifdef VAR_RHO_2D
+#  ifdef VAR_RHO_2D_NOT_YET
      &                            rhoA, tl_rhoA,                        &
      &                            rhoS, tl_rhoS,                        &
 #  endif
@@ -177,13 +177,13 @@
 #   ifdef MASKING
       real(r8), intent(in) :: rmask(LBi:,LBj:)
 #   endif
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
 #   endif
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(in) :: tl_Hz(LBi:,LBj:,:)
 #   endif
       real(r8), intent(in) :: tl_z_r(LBi:,LBj:,:)
@@ -194,7 +194,7 @@
       real(r8), intent(inout) :: alpha(LBi:,LBj:)
       real(r8), intent(inout) :: beta(LBi:,LBj:)
 #   endif
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(out) :: rhoA(LBi:,LBj:)
       real(r8), intent(out) :: rhoS(LBi:,LBj:)
       real(r8), intent(out) :: tl_rhoA(LBi:,LBj:)
@@ -220,13 +220,13 @@
 #   ifdef MASKING
       real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
 #   endif
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
 #   endif
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(in) :: tl_Hz(LBi:UBi,LBj:UBj,N(ng))
 #   endif
       real(r8), intent(in) :: tl_z_r(LBi:UBi,LBj:UBj,N(ng))
@@ -237,7 +237,7 @@
       real(r8), intent(inout) :: alpha(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: beta(LBi:UBi,LBj:UBj)
 #   endif
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(out) :: rhoA(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: rhoS(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: tl_rhoA(LBi:UBi,LBj:UBj)
@@ -647,7 +647,7 @@
           END DO
         END DO
 
-#  ifdef VAR_RHO_2D
+#  ifdef VAR_RHO_2D_NOT_YET
 !
 !-----------------------------------------------------------------------
 !  Compute vertical averaged density (rhoA) and density perturbation
@@ -974,7 +974,7 @@
      &                          tl_beta)
 #  endif
 
-#  ifdef VAR_RHO_2D
+#  ifdef VAR_RHO_2D_NOT_YET
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          rhoA)
@@ -1054,7 +1054,7 @@
      &                    tl_alpha, tl_beta)
 #   endif
 
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
@@ -1096,13 +1096,13 @@
 #  ifdef MASKING
      &                            rmask,                                &
 #  endif
-#  ifdef VAR_RHO_2D
+#  ifdef VAR_RHO_2D_NOT_YET
      &                            Hz, tl_Hz,                            &
 #  endif
      &                            z_r, tl_z_r,                          &
      &                            z_w, tl_z_w,                          &
      &                            t, tl_t,                              &
-#  ifdef VAR_RHO_2D
+#  ifdef VAR_RHO_2D_NOT_YET
      &                            rhoA, tl_rhoA,                        &
      &                            rhoS, tl_rhoS,                        &
 #  endif
@@ -1146,13 +1146,13 @@
 #   ifdef MASKING
       real(r8), intent(in) :: rmask(LBi:,LBj:)
 #   endif
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
 #   endif
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(in) :: tl_Hz(LBi:,LBj:,:)
 #   endif
       real(r8), intent(in) :: tl_z_r(LBi:,LBj:,:)
@@ -1163,7 +1163,7 @@
       real(r8), intent(inout) :: alpha(LBi:,LBj:)
       real(r8), intent(inout) :: beta(LBi:,LBj:)
 #   endif
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(out) :: rhoA(LBi:,LBj:)
       real(r8), intent(out) :: rhoS(LBi:,LBj:)
       real(r8), intent(out) :: tl_rhoA(LBi:,LBj:)
@@ -1189,13 +1189,13 @@
 #   ifdef MASKING
       real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
 #   endif
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
 #   endif
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(in) :: tl_Hz(LBi:UBi,LBj:UBj,N(ng))
 #   endif
       real(r8), intent(in) :: tl_z_r(LBi:UBi,LBj:UBj,N(ng))
@@ -1206,7 +1206,7 @@
       real(r8), intent(inout) :: alpha(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: beta(LBi:UBi,LBj:UBj)
 #   endif
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       real(r8), intent(out) :: rhoA(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: rhoS(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: tl_rhoA(LBi:UBi,LBj:UBj)
@@ -1303,7 +1303,7 @@
           END DO
         END DO
 
-#  ifdef VAR_RHO_2D
+#  ifdef VAR_RHO_2D_NOT_YET
 !
 !-----------------------------------------------------------------------
 !  Compute vertical averaged density (rhoA) and density perturbation
@@ -1499,7 +1499,7 @@
      &                          tl_beta)
 #  endif
 
-#  ifdef VAR_RHO_2D
+#  ifdef VAR_RHO_2D_NOT_YET
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          rhoA)
@@ -1579,7 +1579,7 @@
      &                    tl_alpha, tl_beta)
 #   endif
 
-#   ifdef VAR_RHO_2D
+#   ifdef VAR_RHO_2D_NOT_YET
       CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &

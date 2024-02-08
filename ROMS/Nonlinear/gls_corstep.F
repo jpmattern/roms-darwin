@@ -2,11 +2,11 @@
       MODULE gls_corstep_mod
 #if defined NONLINEAR && defined GLS_MIXING && defined SOLVE3D
 !
-!svn $Id: gls_corstep.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: gls_corstep.F 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license           Hernan G. Arango   !
-!    See License_ROMS.txt                   Alexander F. Shchepetkin   !
+!    See License_ROMS.md                    Alexander F. Shchepetkin   !
 !==================================================== John C. Warner ===
 !                                                                      !
 !  This routine perfoms the corrector step for turbulent kinetic       !
@@ -15,8 +15,14 @@
 !                                                                      !
 !  References:                                                         !
 !                                                                      !
-!  Umlauf, L. and H. Burchard, 2001:  A generic length-scale           !
-!    Equation for geophysical turbulence models.                       !
+!  Umlauf, L. and H. Burchard, 2003:  A generic length-scale           !
+!    Equation for geophysical turbulence models, J. Marine Res.,       !
+!    61, 235-265.                                                      !
+!                                                                      !
+!  Warner, J. C., C. R. Sherwood, H. G. Arango and R. P. Signell,      !
+!    2005:  Performance of four turbulence closure models              !
+!    implemented using a generic length scale method, Ocean            !
+!    Modelling, 8, 81-113.                                             !
 !                                                                      !
 !=======================================================================
 !
@@ -71,6 +77,9 @@
      &                       OCEAN(ng) % u,                             &
      &                       OCEAN(ng) % v,                             &
      &                       OCEAN(ng) % W,                             &
+# ifdef WEC_VF
+     &                       OCEAN(ng) % W_stokes,                      &
+# endif
      &                       FORCES(ng) % bustr,                        &
      &                       FORCES(ng) % bvstr,                        &
      &                       FORCES(ng) % sustr,                        &
@@ -79,7 +88,8 @@
      &                       FORCES(ng) % Hwave,                        &
 # endif
 # ifdef TKE_WAVEDISS
-     &                       FORCES(ng) % Wave_dissip,                  &
+     &                       FORCES(ng) % Dissip_break,                 &
+     &                       FORCES(ng) % Dissip_wcap,                  &
 # endif
      &                       MIXING(ng) % Akt,                          &
      &                       MIXING(ng) % Akv,                          &
@@ -107,12 +117,15 @@
      &                             Huon, Hvom, Hz, pm, pn, z_r, z_w,    &
      &                             ZoBot,                               &
      &                             u, v, W,                             &
+# ifdef WEC_VF
+     &                             W_stokes,                            &
+# endif
      &                             bustr, bvstr, sustr, svstr,          &
 # ifdef ZOS_HSIG
      &                             Hwave,                               &
 # endif
 # ifdef TKE_WAVEDISS
-     &                             Wave_dissip,                         &
+     &                             Dissip_break, Dissip_wcap,           &
 # endif
      &                             Akt, Akv, bvf,                       &
      &                             Akk, Akp, Lscale, gls, tke)
@@ -151,6 +164,9 @@
       real(r8), intent(in) :: u(LBi:,LBj:,:,:)
       real(r8), intent(in) :: v(LBi:,LBj:,:,:)
       real(r8), intent(in) :: W(LBi:,LBj:,0:)
+# ifdef WEC_VF
+      real(r8), intent(in) :: W_stokes(LBi:,LBj:,0:)
+# endif
       real(r8), intent(in) :: bustr(LBi:,LBj:)
       real(r8), intent(in) :: bvstr(LBi:,LBj:)
       real(r8), intent(in) :: sustr(LBi:,LBj:)
@@ -159,7 +175,8 @@
       real(r8), intent(in) :: Hwave(LBi:,LBj:)
 #  endif
 #  ifdef TKE_WAVEDISS
-      real(r8), intent(in) :: Wave_dissip(LBi:,LBj:)
+      real(r8), intent(in) :: Dissip_break(LBi:,LBj:)
+      real(r8), intent(in) :: Dissip_wcap(LBi:,LBj:)
 #  endif
       real(r8), intent(in) :: bvf(LBi:,LBj:,0:)
 
@@ -186,6 +203,9 @@
       real(r8), intent(in) :: u(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: W(LBi:UBi,LBj:UBj,0:N(ng))
+# ifdef WEC_VF
+      real(r8), intent(in) :: W_stokes(LBi:UBi,LBj:UBj,0:N(ng))
+# endif
       real(r8), intent(in) :: bustr(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: bvstr(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: sustr(LBi:UBi,LBj:UBj)
@@ -194,7 +214,8 @@
       real(r8), intent(in) :: Hwave(LBi:UBi,LBj:UBj)
 #  endif
 #  ifdef TKE_WAVEDISS
-      real(r8), intent(in) :: Wave_dissip(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: Dissip_break(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: Dissip_wcap(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(in) :: bvf(LBi:UBi,LBj:UBj,0:N(ng))
 
@@ -627,6 +648,9 @@
         DO k=1,N(ng)
           DO i=Istr,Iend
             cff=0.25_r8*(W(i,j,k)+W(i,j,k-1))
+#  ifdef WEC_VF
+            cff=cff+0.25_r8*(W_stokes(i,j,k)+W_stokes(i,j,k-1))
+#  endif
             FCK(i,k)=cff*(tke(i,j,k,3)+tke(i,j,k-1,3))
             FCP(i,k)=cff*(gls(i,j,k,3)+gls(i,j,k-1,3))
           END DO
@@ -637,6 +661,9 @@
         DO k=2,N(ng)-1
           DO i=Istr,Iend
             cff=0.5*(W(i,j,k)+W(i,j,k-1))
+#  ifdef WEC_VF
+            cff=cff+0.5_r8*(W_stokes(i,j,k)+W_stokes(i,j,k-1))
+#  endif
             FCK(i,k)=cff*(cff1*(tke(i,j,k-1,3)+                         &
      &                          tke(i,j,k  ,3))-                        &
      &                    cff2*(tke(i,j,k-2,3)+                         &
@@ -652,6 +679,9 @@
         cff3=1.0_r8/6.0_r8
          DO i=Istr,Iend
           cff=0.5_r8*(W(i,j,0)+W(i,j,1))
+#  ifdef WEC_VF
+          cff=cff+0.5_r8*(W_stokes(i,j,0)+W_stokes(i,j,1))
+#  endif
           FCK(i,1)=cff*(cff1*tke(i,j,0,3)+                              &
      &                  cff2*tke(i,j,1,3)-                              &
      &                  cff3*tke(i,j,2,3))
@@ -659,6 +689,9 @@
      &                  cff2*gls(i,j,1,3)-                              &
      &                  cff3*gls(i,j,2,3))
           cff=0.5_r8*(W(i,j,N(ng))+W(i,j,N(ng)-1))
+#  ifdef WEC_VF
+          cff=cff+0.5_r8*(W_stokes(i,j,N(ng))+W_stokes(i,j,N(ng)-1))
+#  endif
           FCK(i,N(ng))=cff*(cff1*tke(i,j,N(ng)  ,3)+                    &
      &                      cff2*tke(i,j,N(ng)-1,3)-                    &
      &                      cff3*tke(i,j,N(ng)-2,3))
@@ -807,7 +840,7 @@
 !-----------------------------------------------------------------------
 !
 !  Set Dirichlet surface and bottom boundary conditions. Compute
-!  surface roughness from wind stress (Charnok) and set Craig and
+!  surface roughness from wind stress (Charnock) and set Craig and
 !  Banner wave breaking surface flux, if appropriate.
 !
         DO i=Istr,Iend
@@ -819,7 +852,8 @@
      &                            gls_Kmin(ng))
 # elif defined TKE_WAVEDISS
           tke(i,j,N(ng),nnew)=MAX(cmu_fac4*(sz_alpha(ng)*               &
-     &                            Wave_dissip(i,j))**                   &
+     &                            (Dissip_break(i,j)+                   &
+     &                             Dissip_wcap (i,j)))**                &
      &                            (2.0_r8/3.0_r8), gls_Kmin(ng))
 # else
           tke(i,j,N(ng),nnew)=MAX(cmu_fac3*0.5_r8*                      &
@@ -859,7 +893,8 @@
      &                  SQRT((sustr(i,j)+sustr(i+1,j))**2+              &
      &                       (svstr(i,j)+svstr(i,j+1))**2))**1.5_r8
 # elif defined TKE_WAVEDISS
-          tke_fluxt(i)=dt(ng)*sz_alpha(ng)*Wave_dissip(i,j)
+          tke_fluxt(i)=dt(ng)*sz_alpha(ng)*(Dissip_break(i,j)+          &
+     &                                      Dissip_wcap(i,j))
 # else
           tke_fluxt(i)=0.0_r8
 # endif
@@ -910,7 +945,7 @@
      &                 ((Zos_eff(i)+0.5_r8*Hz(i,j,N(ng)))*L_sft)**      &
      &                 gls_n(ng)*                                       &
      &                 gls_sigk(ng)*ogls_sigp*sz_alpha(ng)*             &
-     &                 Wave_dissip(i,j)
+     &                 (Dissip_break(i,j)+Dissip_wcap(i,j))
 # endif
           cff=0.5_r8*(tke(i,j,0,nnew)+tke(i,j,1,nnew))
           gls_fluxb(i)=dt(ng)*gls_fac2*(cff**gls_m(ng))*                &
@@ -1114,9 +1149,9 @@
         IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
           DO j=Jstr,Jend
             DO itrc=1,NAT
-              Akt(Iend-1,j,k,itrc)=Akt(Iend,j,k,itrc)
+              Akt(Iend+1,j,k,itrc)=Akt(Iend,j,k,itrc)
             END DO
-            Akv(Iend-1,j,k)=Akv(Iend,j,k)
+            Akv(Iend+1,j,k)=Akv(Iend,j,k)
           END DO
 
         END IF

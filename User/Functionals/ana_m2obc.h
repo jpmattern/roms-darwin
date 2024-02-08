@@ -1,10 +1,10 @@
       SUBROUTINE ana_m2obc (ng, tile, model)
 !
-!! svn $Id: ana_m2obc.h 1099 2022-01-06 21:01:01Z arango $
+!! svn $Id: ana_m2obc.h 1210 2024-01-03 22:03:03Z arango $
 !!======================================================================
-!! Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
-!!   See License_ROMS.txt                                              !
+!!   See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine sets 2D momentum open boundary conditions using        !
@@ -100,7 +100,7 @@
 # ifdef MASKING
       real(r8), intent(in) :: umask(LBi:UBi,LBj:UBj)
 # endif
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
 #endif
 !
 !  Local variable declarations.

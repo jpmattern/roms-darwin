@@ -2,11 +2,11 @@
       MODULE def_floats_mod
 #ifdef FLOATS
 !
-!svn $Id: def_floats.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: def_floats.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module creates output FLOAT data file using either the         !
@@ -76,13 +76,13 @@
           CALL def_floats_pio (ng, ldef)
 # endif
         CASE DEFAULT
-          IF (Master) THEN
-            WRITE (stdout,10) FLT(ng)%IOtype
-  10        FORMAT (' DEF_FLOATS - Illegal output type, io_type = ',i0)
-          END IF
+          IF (Master) WRITE (stdout,10) FLT(ng)%IOtype
           exit_flag=3
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+  10  FORMAT (' DEF_FLOATS - Illegal output file type, io_type = ',i0,  &
+     &        /,14x,'Check KeyWord ''OUT_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE def_floats
@@ -113,8 +113,8 @@
 !
       real(r8) :: Aval(6), Tinp(Nfloats(ng))
 !
-      character (len=120) :: Vinfo(Natt)
-      character (len=256) :: ncname
+      character (len=256)    :: ncname
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_floats_nf90"
@@ -847,8 +847,8 @@
 !
       real(r8) :: Aval(6), Tinp(Nfloats(ng))
 !
-      character (len=120) :: Vinfo(Natt)
-      character (len=256) :: ncname
+      character (len=256)    :: ncname
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_floats_pio"

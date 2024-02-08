@@ -1,10 +1,10 @@
       MODULE roms_kernel_mod
 !
-!svn $Id: i4dvar_roms.h 1103 2022-01-13 03:38:35Z arango $
+!svn $Id: i4dvar_roms.h 1212 2024-01-26 20:59:21Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  ROMS Strong Constraint 4-Dimensional Variational Data Assimilation  !
@@ -55,10 +55,10 @@
       USE inp_par_mod,       ONLY : inp_par
 #ifdef MCT_LIB
 # ifdef ATM_COUPLING
-      USE ocean_coupler_mod, ONLY : initialize_ocn2atm_coupling
+      USE mct_coupler_mod,   ONLY : initialize_ocn2atm_coupling
 # endif
 # ifdef WAV_COUPLING
-      USE ocean_coupler_mod, ONLY : initialize_ocn2wav_coupling
+      USE mct_coupler_mod,   ONLY : initialize_ocn2wav_coupling
 # endif
 #endif
       USE stats_modobs_mod,  ONLY : stats_modobs
@@ -214,6 +214,12 @@
       LgetNRM=.TRUE.
 
       DO ng=1,Ngrids
+#ifdef STD_MODEL
+        LdefSTD(ng)=.TRUE.
+        LwrtSTD(ng)=.TRUE.
+#else
+        LreadSTD(ng)=.TRUE.
+#endif
         CALL prior_error (ng)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         SetGridConfig(ng)=.FALSE.

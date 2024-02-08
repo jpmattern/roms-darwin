@@ -1,11 +1,11 @@
 /*
 ** Include file "globaldef.h"
 **
-** svn $Id: globaldefs.h 1099 2022-01-06 21:01:01Z arango $
+** svn $Id: globaldefs.h 1210 2024-01-03 22:03:03Z arango $
 ********************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2022 The ROMS/TOMS Group     Alexander F. Shchepetkin  **
+** Copyright (c) 2002-2024 The ROMS/TOMS Group     Alexander F. Shchepetkin  **
 **   Licensed under a MIT/X style license                                    **
-**   See License_ROMS.txt                                                    **
+**   See License_ROMS.md                                                     **
 *******************************************************************************
 **                                                                           **
 ** WARNING: This  file  contains  a set of  predetermined macro definitions  **
@@ -167,6 +167,7 @@
 
 #ifdef SOLVE3D
 # define FIRST_2D_STEP iif(ng).eq.1
+# define FIRST_TIME_STEP iic(ng).eq.ntfirst(ng)
 #else
 # define FIRST_2D_STEP iic(ng).eq.ntfirst(ng)
 #endif
@@ -204,8 +205,7 @@
 #endif
 
 /*
-** Choice of double/single precision for real type variables and
-** associated intrinsic functions.
+** Choice of double/single precision for real type variables.
 */
 
 #if (defined CRAY || defined CRAYT3E) && !defined CRAYX1
@@ -214,38 +214,34 @@
 # endif
 #endif
 
+/*
+** Choice of double/single precision for ARPACK/PARPACK library.
+*/
+
 #ifdef DOUBLE_PRECISION
 # ifdef DISTRIBUTE
 #  define PDNAUPD pdnaupd
 #  define PDNEUPD pdneupd
 #  define PDSAUPD pdsaupd
 #  define PDSEUPD pdseupd
-#  define PDNORM2 pdnorm2
 # else
 #  define DNAUPD dnaupd
 #  define DNEUPD dneupd
 #  define DSAUPD dsaupd
 #  define DSEUPD dseupd
-#  define DNRM2 dnrm2
 # endif
-# define DAXPY daxpy
-# define DSTEQR dsteqr
 #else
 # ifdef DISTRIBUTE
 #  define PDNAUPD psnaupd
 #  define PDNEUPD psneupd
 #  define PDSAUPD pssaupd
 #  define PDSEUPD psseupd
-#  define PDNORM2 psnorm2
 # else
 #  define DNAUPD snaupd
 #  define DNEUPD sneupd
 #  define DSAUPD ssaupd
 #  define DSEUPD sseupd
-#  define DNRM2 snrm2
 # endif
-#  define DAXPY saxpy
-#  define DSTEQR ssteqr
 #endif
 
 /*
@@ -476,7 +472,6 @@
 
 #ifdef ADJOINT
 # if !defined AD_OUTPUT_STATE && \
-      defined JEDI            || \
      (defined STOCHASTIC_OPT  && !defined STOCH_OPT_WHITE)
 #  define AD_OUTPUT_STATE
 # endif
@@ -486,13 +481,12 @@
 ** Activate bacroclinic pressure gradient response due to the
 ** perturbation of free-surface in the presence of stratification
 ** and bathymetry. This option does not pass the sanity check
-** in adjoint and tangent linear applications.
+** in adjoint and tangent linear applications, so we use NOT_YET
+** in TLM, RPM, and ADM kernels.
 */
 
 #ifdef SOLVE3D
-# if !(defined ADJOINT || defined TANGENT)
-#   define VAR_RHO_2D
-# endif
+# define VAR_RHO_2D
 #endif
 
 /*
@@ -507,6 +501,11 @@
 # else
 #  define KOUT kstp(ng)
 #  define NOUT nrhs(ng)
+# endif
+# ifdef ICE_MODEL
+#  define IOUT linew(ng)
+#  define IUOUT liunw(ng)
+#  define IEOUT lienw(ng)
 # endif
 #else
 # if defined TANGENT || defined TL_IOMS
@@ -774,13 +773,20 @@
 #endif
 
 /*
-** Activate internal switch for imposing REFDIF as a
-** monochromatic wave driver.
+** Activate internal option for seaice model.
 */
 
-#if defined REFDIF_COUPLING && \
-    defined SVENDSEN_ROLLER
-# define MONO_ROLLER
+#if defined ICE_MODEL
+# define SEAICE
+# if defined ICE_ADVECT
+#  define ICE_SMOLAR
+# endif
+# if defined ICE_MOMENTUM
+#  define ICE_EVP
+# endif
+# if defined ICE_THERMO
+#  define ICE_MK
+# endif
 #endif
 
 /*
@@ -833,6 +839,7 @@
 #endif
 
 #if defined ATM_COUPLING  || \
+    defined CMEPS         || \
     defined DATA_COUPLING || \
     defined ICE_COUPLING  || \
     defined WAV_COUPLING
@@ -840,32 +847,46 @@
 #endif
 
 #if defined MODEL_COUPLING && \
-    defined ESMF_LIB
+    defined ESMF_LIB       && \
+   !defined CMEPS
 # define REGRESS_STARTCLOCK
 # define ESM_SETRUNCLOCK
 #endif
 
 /*
-** Define internal option for radiation stress forcing.
+** Define internal option for Waves Effect on Currents.
 */
 
-#if defined NEARSHORE_MELLOR05 || \
-    defined NEARSHORE_MELLOR08
-# define NEARSHORE_MELLOR
+#if defined WEC_VF
+# define WEC
 #endif
 
-#if defined NEARSHORE_MELLOR
-# define NEARSHORE
+#if defined SSW_LOGINT && defined WEC
+# define SSW_LOGINT_STOKES
+#endif
+
+#if defined WEC
+# if defined SWAN_COUPLING
+#   define SPECTRUM_STOKES
+# else
+#   define BULK_STOKES
+# endif
 #endif
 
 /*
 ** Define internal option to process wave data.
 */
 
+#if (defined ROLLER_SVENDSEN || defined ROLLER_MONO || \
+     defined ROLLER_RENIERS) && defined WEC
+# define WEC_ROLLER
+#endif
+
 #if defined BBL_MODEL    || \
-    defined NEARSHORE    || \
-    defined WAV_COUPLING
+    defined WAV_COUPLING || \
+    defined WEC
 # define WAVES_DIR
+# define WAVES_DIRP
 #endif
 
 #if  defined BBL_MODEL   && \
@@ -878,30 +899,33 @@
 #if (defined BBL_MODEL           && \
     !defined WAVES_UB)           || \
     defined BEDLOAD_SOULSBY      || \
+    defined BEDLOAD_VANDERA      || \
     defined COARE_TAYLOR_YELLAND || \
-    defined NEARSHORE            || \
+    defined DRENNAN              || \
     defined WAV_COUPLING         || \
+    defined WEC                  || \
     defined ZOS_HSIG
 # define WAVES_HEIGHT
 #endif
 
 #if defined BEDLOAD_SOULSBY || \
-    defined NEARSHORE       || \
-    defined WAV_COUPLING
+    defined BEDLOAD_VANDERA || \
+    defined WAV_COUPLING    || \
+    defined WEC
 # define WAVES_LENGTH
 #endif
 
 #if (!defined DEEPWATER_WAVES      && \
      (defined COARE_TAYLOR_YELLAND || \
-      defined COARE_OOST))         || \
-    defined BEDLOAD_SOULSBY        || \
-    defined NEARSHORE_MELLOR       || \
-    defined WAV_COUPLING
-# define WAVES_LENGTH
+      defined COARE_OOST           || \
+      defined DRENNAN))
+# define WAVES_LENGTHP
 #endif
 
 #if defined COARE_TAYLOR_YELLAND   || \
     defined COARE_OOST             || \
+    defined DRENNAN                || \
+    defined WEC_VF                 || \
     defined WAV_COUPLING
 # define WAVES_TOP_PERIOD
 #endif
@@ -911,18 +935,39 @@
 # define WAVES_BOT_PERIOD
 #endif
 
+#if (defined TKE_WAVEDISS || defined WEC_VF) && \
+    (!defined WDISS_THORGUZA                 && \
+     !defined WDISS_CHURTHOR                 && \
+     !defined WDISS_WAVEMOD                  && \
+     !defined WDISS_INWAVE)
+# define WAVES_DISS
+#endif
+
+#if defined WAVES_BOT_PERIOD  || \
+    defined WAVES_DIR         || \
+    defined WAVES_DIRP        || \
+    defined WAVES_DSPR        || \
+    defined WAVES_LENGTH      || \
+    defined WAVES_LENGTHP     || \
+    defined WAVES_HEIGHT      || \
+    defined WAVES_TOP_PERIOD
+# define WAVES_OUTPUT
+#endif
+
 #if !defined WAV_COUPLING          && \
    ((defined BULK_FLUXES           && \
      defined COARE_TAYLOR_YELLAND) || \
     (defined BULK_FLUXES           && \
      defined COARE_OOST)           || \
-    defined SVENDSEN_ROLLER        || \
     defined TKE_WAVEDISS           || \
+    defined WAVE_DISS              || \
     defined WAVES_DIR              || \
     defined WAVES_BOT_PERIOD       || \
     defined WAVES_HEIGHT           || \
     defined WAVES_LENGTH           || \
-    defined WAVES_TOP_PERIOD)
+    defined WAVES_LENGTHP          || \
+    defined WAVES_TOP_PERIOD       || \
+    defined WEC_ROLLER)
 # define WAVE_DATA
 #endif
 
@@ -931,7 +976,8 @@
 */
 
 #if defined BEDLOAD_MPM     || \
-    defined BEDLOAD_SOULSBY
+    defined BEDLOAD_SOULSBY || \
+    defined BEDLOAD_VANDERA
 # define BEDLOAD
 #endif
 

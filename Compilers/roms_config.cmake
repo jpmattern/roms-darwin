@@ -1,15 +1,14 @@
-# svn $Id: roms_config.cmake 1099 2022-01-06 21:01:01Z arango $
+# svn $Id: roms_config.cmake 1210 2024-01-03 22:03:03Z arango $
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2022 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
 #   Licensed under a MIT/X style license                                :::
-#   See License_ROMS.txt                                                :::
+#   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 # CMake configuration for any ROMS application.
 
-string( TOLOWER "${APP}.h" HEADER )
-string( TOLOWER "${APP}" application )
-add_definitions( -DROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}" -D${APP} -DHEADER="${HEADER}" )
+string( TOLOWER "${ROMS_APP}.h" ROMS_APP_HEADER )
+add_compile_definitions( ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}" ${ROMS_APP} HEADER="${ROMS_APP_HEADER}" )
 
 # Do you want a shared or static library?
 
@@ -57,13 +56,12 @@ set( HEADER_DIR  ${MY_HEADER_DIR} )
 
 # Any custom analytical files?
 
-if( NOT DEFINED MY_ANALYTICAL_DIR )
+if( NOT DEFINED ENV{MY_ANALYTICAL_DIR} )
   set( ANALYTICAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ROMS/Functionals" )
-  add_definitions( -DANALYTICAL_DIR="${ANALYTICAL_DIR}" )
+  add_compile_definitions( ANALYTICAL_DIR="${ANALYTICAL_DIR}" )
   # no need for "include_directories" since it is already included
 else()
-  add_definitions( -DANALYTICAL_DIR="${MY_ANALYTICAL_DIR}" )
-  include_directories( ${MY_ANALYTICAL_DIR} )
+  include_directories( $ENV{MY_ANALYTICAL_DIR} )
 endif()
 
 # Location(s) of ARPACK/PARPACK libraries. If both libarpack.a and libparpack.a
@@ -95,7 +93,7 @@ if( DEFINED PIO_LIBDIR AND DEFINED PIO_INCDIR )
   set( PIO_LIBDIR "${PIO_LIBDIR}" )
   set( PIO_INCDIR "${PIO_INCDIR}" )
   Message( STATUS "    PIO_LIBDIR = ${PIO_LIBDIR}" )
-  Message( STATUS "   PIO_INCDIR  = ${PIO_INCDIR}" )
+  Message( STATUS "    PIO_INCDIR = ${PIO_INCDIR}" )
 
   if( DEFINED PNETCDF_LIBDIR AND DEFINED PNETCDF_INCDIR )
     set( PNETCDF_LIBDIR "${PNETCDF_LIBDIR}" )
@@ -111,38 +109,27 @@ else()
   set( PIO_INCDIR "" )
 endif()
 
+set( ROMS_HEADER ${HEADER_DIR}/${ROMS_APP_HEADER} )
 
-
-# Set ROMS SVN repository information.
-
-set( SVN_URL "${MY_SVN_URL}" )
-set( SVN_REV "${MY_SVN_REV}" )
-
-set( ROMS_HEADER ${HEADER_DIR}/${HEADER} )
-
-add_definitions(
-  -DROMS_HEADER="${ROMS_HEADER}"
-  -DSVN_URL="${SVN_URL}"
-  -DSVN_REV="${SVN_REV}"
-)
+add_compile_definitions( ROMS_HEADER="${ROMS_HEADER}" )
 
 # Set ROMS Executable Name.
 
 if( ${CMAKE_BUILD_TYPE} MATCHES "Debug" )
   set( BIN "romsG" )
   if( MPI )
-    add_definitions( -DMPI )
+    add_compile_definitions( MPI )
   endif()
 elseif( MPI )
   set( BIN "romsM" )
-  add_definitions( -DMPI )
+  add_compile_definitions( MPI )
 else()
   set( BIN "romsS" )
 endif()
 
 if( MY_CPP_FLAGS )
   foreach( flag ${MY_CPP_FLAGS} )
-    add_definitions( -D${flag} )
+    add_compile_definitions( ${flag} )
   endforeach()
   get_options( ${ROMS_HEADER} ${MY_CPP_FLAGS} )
 else()
@@ -159,17 +146,17 @@ endif()
 
 if( "${defs}" MATCHES "ADJOINT" )
   option( ADJOINT "Turn on/off Adjoint Model" ON )
-  Message( STATUS "Adjoint Model ENABLED" )
+  Message( STATUS "ROMS Adjoint Model ENABLED" )
 endif()
 
 if( "${defs}" MATCHES "REPRESENTER" )
   option( REPRESENTER "Turn on/off Representer Model" ON )
-  Message( STATUS "Representer Model ENABLED" )
+  Message( STATUS "ROMS Representer Model ENABLED" )
 endif()
 
 if( "${defs}" MATCHES "TANGENT" )
   option( TANGENT "Turn on/off Tangent Linear Model" ON )
-  message( STATUS "Tangent Linear Model ENABLED" )
+  message( STATUS "ROMS Tangent Linear Model ENABLED" )
 endif()
 
 if( "${defs}" MATCHES "ARPACK" )

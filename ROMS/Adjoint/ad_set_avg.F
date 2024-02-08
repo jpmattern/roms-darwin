@@ -2,11 +2,11 @@
       MODULE ad_set_avg_mod
 #if defined AD_AVERAGES && defined ADJOINT
 !
-!svn $Id: ad_set_avg.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: ad_set_avg.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This subroutine accumulates and computes output time-averaged       !
@@ -225,7 +225,7 @@
           DO k=0,N(ng)
             DO j=JstrR,JendR
               DO i=IstrR,IendR
-                AVERAGE(ng)%avgw3d(i,j,k)=OCEAN(ng)%ad_W(i,j,k)*        &
+                AVERAGE(ng)%avgw3d(i,j,k)=OCEAN(ng)%ad_W_sol(i,j,k)*    &
      &                                    GRID(ng)%pm(i,j)*             &
      &                                    GRID(ng)%pn(i,j)
 #  ifdef WET_DRY
@@ -402,7 +402,8 @@
           END DO
         END IF
 #  endif
-#  ifdef BULK_FLUXES
+
+#  if defined BULK_FLUXES || defined FRC_COUPLING
         IF (Aout(idLhea,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -414,6 +415,7 @@
             END DO
           END DO
         END IF
+
         IF (Aout(idLrad,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -425,6 +427,7 @@
             END DO
           END DO
         END IF
+
         IF (Aout(idShea,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -436,19 +439,20 @@
             END DO
           END DO
         END IF
-#   ifdef EMINUSP
+#  endif
+
+#  if defined BULK_FLUXES && defined EMINUSP
         IF (Aout(idevap,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgevap(i,j)=FORCES(ng)%ad_evap(i,j)
-#    ifdef WET_DRY
+#   ifdef WET_DRY
               AVERAGE(ng)%avgevap(i,j)=AVERAGE(ng)%avgevap(i,j)*        &
      &                                 GRID(ng)%rmask_full(i,j)
-#    endif
+#   endif
             END DO
           END DO
         END IF
-#   endif
 #  endif
 # endif
 !
@@ -716,7 +720,7 @@
 #  ifdef WET_DRY
      &                                    GRID(ng)%rmask_full(i,j)*     &
 #  endif
-     &                                    OCEAN(ng)%ad_W(i,j,k)*        &
+     &                                    OCEAN(ng)%ad_W_sol(i,j,k)*    &
      &                                    GRID(ng)%pm(i,j)*             &
      &                                    GRID(ng)%pn(i,j)
               END DO
@@ -889,7 +893,8 @@
           END DO
         END IF
 #  endif
-#  ifdef BULK_FLUXES
+
+#  if defined BULK_FLUXES || defined FRC_COUPLING
         IF (Aout(idLhea,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -901,6 +906,7 @@
             END DO
           END DO
         END IF
+
         IF (Aout(idLrad,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -912,6 +918,7 @@
             END DO
           END DO
         END IF
+
         IF (Aout(idShea,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -923,19 +930,20 @@
             END DO
           END DO
         END IF
-#   ifdef EMINUSP
+#  endif
+
+#  if defined BULK_FLUXES && defined EMINUSP
         IF (Aout(idevap,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgevap(i,j)=AVERAGE(ng)%avgevap(i,j)+        &
-#    ifdef WET_DRY
+#   ifdef WET_DRY
      &                                 GRID(ng)%rmask_full(i,j)*        &
-#    endif
+#   endif
      &                                 FORCES(ng)%ad_evap(i,j)
             END DO
           END DO
         END IF
-#   endif
 #  endif
 # endif
 !
@@ -1321,7 +1329,8 @@
           END DO
         END IF
 #  endif
-#  ifdef BULK_FLUXES
+
+#  if defined BULK_FLUXES || defined FRC_COUPLING
         IF (Aout(idLhea,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -1330,6 +1339,7 @@
             END DO
           END DO
         END IF
+
         IF (Aout(idShea,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -1338,6 +1348,7 @@
             END DO
           END DO
         END IF
+
         IF (Aout(idLrad,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -1346,7 +1357,9 @@
             END DO
           END DO
         END IF
-#   ifdef EMINUSP
+#  endif
+
+#  if defined BULK_FLUXES && defined EMINUSP
         IF (Aout(idevap,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -1355,7 +1368,6 @@
             END DO
           END DO
         END IF
-#   endif
 #  endif
 # endif
 !

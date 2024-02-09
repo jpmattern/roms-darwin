@@ -1,8 +1,8 @@
-# svn $Id: compiler_flags_GNU_Fortran.cmake 1099 2022-01-06 21:01:01Z arango $
+# svn $Id: compiler_flags_GNU_Fortran.cmake 1210 2024-01-03 22:03:03Z arango $
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2022 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
 #   Licensed under a MIT/X style license                                :::
-#   See License_ROMS.txt                                                :::
+#   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 # CMake Flags for the GNU Fortran Compiler.
@@ -21,7 +21,7 @@ endif()
 # FLAGS COMMON TO ALL BUILD TYPES
 ###########################################################################
 
-set( CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -frepack-arrays")
+set( CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -frepack-arrays -fallow-argument-mismatch" )
 
 ###########################################################################
 # RELEASE FLAGS
@@ -30,10 +30,16 @@ set( CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -frepack-arrays")
 set( CMAKE_Fortran_FLAGS_RELEASE "-O3 -ffast-math" )
 
 ###########################################################################
+# RELEASE WITH DEBUG INFORMATION FLAGS
+###########################################################################
+
+set( CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-O3 -g -ffast-math -fbounds-check -fbacktrace -fcheck=all" )
+
+###########################################################################
 # DEBUG FLAGS
 ###########################################################################
 
-set( CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g -fbounds-check -fbacktrace -fcheck=all -fsanitize=address -fsanitize=undefined -finit-real=nan -ffpe-trap=invalid,zero,overflow" )
+set( CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g -fbounds-check -fbacktrace -fcheck=all -finit-real=nan -ffpe-trap=invalid,zero,overflow" )
 
 ###########################################################################
 # BIT REPRODUCIBLE FLAGS
@@ -68,12 +74,6 @@ set( ROMS_NOBOUNDSFLAG "-fno-bounds-check" )
 
 set( my_fort   "gfortran" )
 set( my_fc     "${CMAKE_Fortran_COMPILER}" )
-
-if( ${CMAKE_BUILD_TYPE} MATCHES "Debug" )
-  set( my_fflags "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_DEBUG}" )
-else()
-  set( my_fflags "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_RELEASE}" )
-endif()
 
 # Flags for the C-preprocessor
 

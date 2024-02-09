@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE mod_netcdf
 !
-!svn $Id: mod_netcdf.F 1103 2022-01-13 03:38:35Z arango $
+!svn $Id: mod_netcdf.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This MODULE contains all NetCDF variables definitions. It also      !
@@ -8547,7 +8547,7 @@
 !  with the "bio_file" attribute.
 !
         IF (.not.PRESENT(Lupdate)) THEN
-          my_Lupdate=.TRUE.
+          my_Lupdate=.FALSE.
         ELSE
           my_Lupdate=Lupdate
         END IF

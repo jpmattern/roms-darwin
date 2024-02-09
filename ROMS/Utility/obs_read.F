@@ -2,11 +2,11 @@
       MODULE obs_read_mod
 #if (defined FOUR_DVAR || defined VERIFICATION) && defined OBSERVATIONS
 !
-!svn $Id: obs_read.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: obs_read.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module reads in observations data when appropriate from the    !
@@ -65,13 +65,13 @@
           CALL obs_read_pio (ng, model, backward)
 # endif
         CASE DEFAULT
-          IF (Master) THEN
-            WRITE (stdout,10) OBS(ng)%IOtype
-  10        FORMAT (' OBS_READ - Illegal output type, io_type = ',i0)
-          END IF
-          exit_flag=3
+          IF (Master) WRITE (stdout,10) OBS(ng)%IOtype
+          exit_flag=2
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END SELECT
+!
+  10  FORMAT (' OBS_READ - Illegal input file type, io_type = ',i0,     &
+     &        /,12x,'Check KeyWord ''INP_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE obs_read

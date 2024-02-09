@@ -1,13 +1,13 @@
 #!/bin/csh -ef
 #
-# svn $Id: cbuild_roms.csh 1099 2022-01-06 21:01:01Z arango $
+# svn $Id: cbuild_roms.csh 1210 2024-01-03 22:03:03Z arango $
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Copyright (c) 2002-2022 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
 #   Licensed under a MIT/X style license                                :::
-#   See License_ROMS.txt                                                :::
+#   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::: Hernan G. Arango :::
 #                                                                       :::
-# ROMS ecbuild (CMake) Compiling CSH Script                             :::
+# ROMS CMake Compiling CSH Script                                       :::
 #                                                                       :::
 # Script to compile an user application where the application-specific  :::
 # files are kept separate from the ROMS source code.                    :::
@@ -29,14 +29,25 @@
 #                                                                       :::
 # Options:                                                              :::
 #                                                                       :::
-#    -j [N]      Compile in parallel using N CPUs                       :::
-#                  omit argument for all available CPUs                 :::
+#    -j [N]         Compile in parallel using N CPUs                    :::
+#                     omit argument for all available CPUs              :::
 #                                                                       :::
-#    -p macro    Prints any Makefile macro value. For example,          :::
+#    -b             Compile a specific ROMS GitHub branch               :::
 #                                                                       :::
-#                  cbuild_roms.csh -p MY_CPP_FLAGS                      :::
+#                     cbuild_roms.csh -j 5 -b feature/kernel            :::
 #                                                                       :::
-#    -noclean    Do not clean already compiled objects                  :::
+#    -p macro       Prints any Makefile macro value. For example,       :::
+#                                                                       :::
+#                     cbuild_roms.csh -p MY_CPP_FLAGS                   :::
+#                                                                       :::
+#    -noclean       Do not clean already compiled objects               :::
+#                                                                       :::
+#    -v             Compile in verbose mode (VERBOSE=1)                 :::
+#                                                                       :::
+# The branch option -b is only possible for ROMS source code from       :::
+# https://github.com/myroms. Such versions are under development        :::
+# and targeted to advanced users, superusers, and beta testers.         :::
+# Regular and novice users must use the default 'develop' branch.       :::
 #                                                                       :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -45,24 +56,17 @@ setenv which_MPI openmpi                      #  default, overwritten below
 set parallel = 0
 set clean = 1
 set dprint = 0
+set Verbose = 0
+set branch = 0
+
+set command = "cbuild_roms.csh $argv[*]"
+
+set separator = `perl -e "print '<>' x 50;"`
 
 setenv MY_CPP_FLAGS ''
 
 while ( ($#argv) > 0 )
   switch ($1)
-    case "-noclean"
-      shift
-      set clean = 0
-    breaksw
-
-    case "-p"
-      shift
-      set clean = 0
-      set dprint = 1
-      set debug = "$1"
-      shift
-    breaksw
-
     case "-j"
       shift
       set parallel = 1
@@ -74,19 +78,55 @@ while ( ($#argv) > 0 )
       endif
     breaksw
 
+    case "-p"
+      shift
+      set clean = 0
+      set dprint = 1
+      set debug = "$1"
+      shift
+    breaksw
+
+    case "-v"
+      shift
+      set Verbose = 1
+    breaksw
+
+    case "-noclean"
+      shift
+      set clean = 0
+    breaksw
+
+    case "-b"
+      shift
+      set branch = 1
+      set branch_name = `echo $1 | grep -v '^-'`
+      if ( "$branch_name" == "" ) then
+        echo "Please enter a branch name."
+        exit 1
+      endif
+      shift
+    breaksw
+
     case "-*":
       echo ""
+      echo "${separator}"
       echo "$0 : Unknown option [ $1 ]"
       echo ""
       echo "Available Options:"
       echo ""
-      echo "-j [N]      Compile in parallel using N CPUs"
-      echo "              omit argument for all avaliable CPUs"
+      echo "-j [N]          Compile in parallel using N CPUs"
+      echo "                  omit argument for all avaliable CPUs"
       echo ""
-      echo "-p macro    Prints any Makefile macro value"
-      echo "              For example:  cbuild_roms.csh -p FFLAGS"
+      echo "-b branch_name  Compile specific ROMS GitHub branch name"
+      echo "                  For example:  cbuild_roms.csh -b feature/kernel"
       echo ""
-      echo "-noclean    Do not clean already compiled objects"
+      echo "-p macro        Prints any Makefile macro value"
+      echo "                  For example:  cbuild_roms.csh -p FFLAGS"
+      echo ""
+      echo "-noclean        Do not clean already compiled objects"
+      echo ""
+      echo "-v              Compile in verbose mode"
+      echo "${separator}"
       echo ""
       exit 1
     breaksw
@@ -101,16 +141,38 @@ end
  setenv ROMS_APPLICATION     UPWELLING
 
 # Set a local environmental variable to define the path to the directories
-# where all this project's files are kept.
+# where the ROMS source code is located (MY_ROOT_DIR), and this project's
+# configuration and files are kept (MY_PROJECT_DIR). Notice that if the
+# User sets the ROMS_ROOT_DIR environment variable in their computer logging
+# script describing the location from where the ROMS source code was cloned
+# or downloaded, it uses that value.
 
- setenv MY_ROOT_DIR          ${HOME}/ocean/repository
- setenv MY_PROJECT_DIR       ${PWD}
+if ( $?ROMS_ROOT_DIR ) then
+  if ( "${ROMS_ROOT_DIR}" != "" ) then
+    setenv MY_ROOT_DIR       ${ROMS_ROOT_DIR}
+  else
+    setenv MY_ROOT_DIR       ${HOME}/ocean/repository/git
+  endif
+else
+  setenv MY_ROOT_DIR         ${HOME}/ocean/repository/git
+endif
+
+setenv MY_PROJECT_DIR        ${PWD}
 
 # The path to the user's local current ROMS source code.
+#
+# If downloading ROMS locally, this would be the user's Working Copy Path.
+# One advantage of maintaining your source code copy is that when working
+# simultaneously on multiple machines (e.g., a local workstation, a local
+# cluster, and a remote supercomputer), you can update with the latest ROMS
+# release and always get an up-to-date customized source on each machine.
+# This script allows for differing paths to the code and inputs on other
+# computers.
 
- setenv MY_ROMS_SRC          ${MY_ROOT_DIR}/trunk
+ setenv MY_ROMS_SRC          ${MY_ROOT_DIR}/roms
 
 # Which type(s) of libraries would you like?
+#
 # NOTE: If you choose both and also choose to build the ROMS executable,
 #       it will be linked to the static version of the library.
 #
@@ -119,12 +181,14 @@ end
  setenv LIBTYPE              STATIC
 
 # Do you want to build the ROMS executable?
+#
 # Valid values are: ON (build the executable) and OFF (do NOT build the
 # executable). If you comment this out the executable WILL be built.
 
  setenv ROMS_EXECUTABLE      ON
 
-# Set path of the directory containing my_build_paths.csh
+# Set path of the directory containing "my_build_paths.csh".
+#
 # The user has the option to specify a customized version of this file
 # in a different directory than the one distributed with the source code,
 # ${MY_ROMS_SRC}/Compilers. If this is the case, you need to keep this
@@ -146,15 +210,13 @@ end
 #
 #    setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -DAVERAGES"
 #    setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -DDEBUGGING"
+#
+# can be used to write time-averaged fields. Notice that you can have as
+# many definitions as you want by appending values.
 
 #--------------------------------------------------------------------------
 # Compilation options.
 #--------------------------------------------------------------------------
-
-# Set this option to "on" if you wish to use the "ecbuild" CMake wrapper.
-# Setting this to "off" or commenting it out will use cmake directly.
-
-#setenv USE_ECBUILD          on              # use "ecbuild" wrapper
 
  setenv USE_MPI              on              # distributed-memory
  setenv USE_MPIF90           on              # compile with mpif90 script
@@ -187,6 +249,13 @@ end
 #setenv USE_HDF5             on              # compile with HDF5 library
 
 #--------------------------------------------------------------------------
+# If coupling Earth Systems Models (ESM), set the location of the ESM
+# component libraries and modules.
+#--------------------------------------------------------------------------
+
+source ${MY_ROMS_SRC}/ESM/esm_libs.csh ${MY_ROMS_SRC}/ESM/esm_libs.csh
+
+#--------------------------------------------------------------------------
 # If applicable, use my specified library paths.
 #--------------------------------------------------------------------------
 
@@ -207,44 +276,101 @@ endif
 
  setenv MY_ANALYTICAL_DIR    ${MY_PROJECT_DIR}
 
+ echo ""
+ echo "${separator}"
+
 # Put the CMake files in a project specific Build directory to avoid conflict
 # with other projects.
 
 if ( $?USE_DEBUG ) then
-  if ( "${USE_DEBUG}" = "on" ) then
-    setenv SCRATCH_DIR       ${MY_PROJECT_DIR}/CBuild_romsG
+  if ( "${USE_DEBUG}" == "on" ) then
+    setenv BUILD_DIR         ${MY_PROJECT_DIR}/CBuild_romsG
+  else if ( $?USE_MPI ) then
+    if ( "${USE_MPI}" == "on" ) then
+      setenv BUILD_DIR       ${MY_PROJECT_DIR}/CBuild_romsM
+    else
+      setenv BUILD_DIR       ${MY_PROJECT_DIR}/CBuild_roms
+    endif
   else
-    setenv SCRATCH_DIR       ${MY_PROJECT_DIR}/CBuild_roms
+    setenv BUILD_DIR         ${MY_PROJECT_DIR}/CBuild_roms
+  endif
+else if ($?USE_MPI) then
+  if ( "${USE_MPI}" == "on" ) then
+    setenv BUILD_DIR         ${MY_PROJECT_DIR}/CBuild_romsM
+  else
+    setenv BUILD_DIR         ${MY_PROJECT_DIR}/CBuild_roms
   endif
 else
-  setenv SCRATCH_DIR         ${MY_PROJECT_DIR}/CBuild_roms
+  setenv BUILD_DIR           ${MY_PROJECT_DIR}/CBuild_roms
 endif
 
-# Create the build directory specified above and change into it.
+# For backward compatibility, set deprecated SCRATCH_DIR to compile
+# older released versions of ROMS.
 
-if ( -d ${SCRATCH_DIR} ) then
-  if ( $clean == 1 ) then
-    rm -rf ${SCRATCH_DIR}
-    mkdir ${SCRATCH_DIR}
-    cd ${SCRATCH_DIR}
+setenv SCRATCH_DIR ${BUILD_DIR}
+
+# If necessary, create ROMS build directory.
+
+if ( $dprint == 0 ) then
+  if ( -d ${BUILD_DIR} ) then
+    if ( $clean == 1 ) then
+      echo ""
+      echo "Removing ROMS build directory: ${BUILD_DIR}"
+      echo ""
+      rm -rf ${BUILD_DIR}
+      echo ""
+      echo "Creating ROMS build directory: ${BUILD_DIR}"
+      echo ""
+      mkdir ${BUILD_DIR}
+    endif
   else
-    cd ${SCRATCH_DIR}
+    if ( $clean == 1 ) then
+      mkdir ${BUILD_DIR}
+      cd ${BUILD_DIR}
+    else
+      echo ""
+      echo "Option -noclean activated when the ROMS build directory didn't exist"
+      echo "Creating ROMS build directory and disabling -noclean"
+      echo ""
+      set clean = 1
+      mkdir ${BUILD_DIR}
+      cd ${BUILD_DIR}
+    endif
   endif
-else
-  if ( $clean == 1 ) then
-    mkdir ${SCRATCH_DIR}
-    cd ${SCRATCH_DIR}
+
+  # If requested, check out requested branch from ROMS GitHub
+
+  if ( $branch == 1 ) then
+    if ( ! -d ${MY_PROJECT_DIR}/src ) then
+      echo ""
+      echo "Downloading ROMS source code from GitHub: https://www.github.com/myroms"
+      echo ""
+      git clone https://www.github.com/myroms/roms.git src
+    endif
+    echo ""
+    echo "Checking out ROMS GitHub branch: $branch_name"
+    echo ""
+    cd src
+    git checkout $branch_name
+
+    # If we are using the COMPILERS from the ROMS source code
+    # overide the value set above
+
+    if ( ${COMPILERS} =~ ${MY_ROMS_SRC}* ) then
+      setenv COMPILERS ${MY_PROJECT_DIR}/src/Compilers
+    endif
+    setenv MY_ROMS_SRC ${MY_PROJECT_DIR}/src
+
   else
-    echo "-noclean option activated when the build directory didn't exist"
-    echo "creating the directory and disabling -noclean"
-    set clean = 1
-    mkdir ${SCRATCH_DIR}
-    cd ${SCRATCH_DIR}
+    echo ""
+    echo "Using ROMS source code from: ${MY_ROMS_SRC}"
+    echo ""
+    cd ${MY_ROMS_SRC}
   endif
 endif
 
 #--------------------------------------------------------------------------
-# Add enviromental variables constructed in 'makefile' to MY_CPP_FLAGS
+# Add environmental variables constructed in 'makefile' to MY_CPP_FLAGS
 # so can be passed to ROMS.
 #--------------------------------------------------------------------------
 
@@ -253,44 +379,34 @@ set HEADER = `echo ${ROMS_APPLICATION} | tr '[:upper:]' '[:lower:]'`.h
 set HEADER_DIR = "HEADER_DIR='${MY_HEADER_DIR}'"
 set ROOT_DIR = "ROOT_DIR='${MY_ROMS_SRC}'"
 
+set mycppflags = "${MY_CPP_FLAGS}"
+
 setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -D${ANALYTICAL_DIR}"
 setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -D${HEADER_DIR}"
 setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -D${ROOT_DIR}"
 
-if ( -d ${MY_ROMS_SRC}/.git ) then
-  cd ${MY_ROMS_SRC}
-  set GITURL  = "`git config --get remote.origin.url`"
-  set GITREV  = "`git rev-parse --verify HEAD`"
-  set GIT_URL = "GIT_URL='${GITURL}'"
-  set GIT_REV = "GIT_REV='${GITREV}'"
-  set SVN_URL = "SVN_URL='https://www.myroms.org/svn/src'"
-
-  setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -D${GIT_URL}"
-  setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -D${GIT_REV}"
-  setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -D${SVN_URL}"
-  cd ${SCRATCH_DIR}
-else
-  cd ${MY_ROMS_SRC}
-  set SVNURL  = "`svn info | grep '^URL:' | sed 's/URL: //'`"
-  set SVNREV  = "`svn info | grep '^Revision:' | sed 's/Revision: //'`"
-  set SVN_URL = "SVN_URL='${SVNURL}'"
-  set SVN_REV = "SVN_REV='${SVNREV}'"
-
-  setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -D${SVN_URL}"
-  setenv MY_CPP_FLAGS "${MY_CPP_FLAGS} -D${SVN_REV}"
-  cd ${SCRATCH_DIR}
-endif
+cd ${BUILD_DIR}
 
 #--------------------------------------------------------------------------
 # Configure.
 #--------------------------------------------------------------------------
 
-# Construct the cmake/ecbuild command.
+# Construct the cmake command.
 
 if ( $?LIBTYPE ) then
   set ltype="-DLIBTYPE=${LIBTYPE}"
 else
   set ltype=""
+endif
+
+if ( $?FORT ) then
+  if ( "${FORT}" == "ifort" ) then
+    set compiler="-DCMAKE_Fortran_COMPILER=ifort"
+  else if ( "${FORT}" == "gfortran" ) then
+    set compiler="-DCMAKE_Fortran_COMPILER=gfortran"
+  else
+    set compiler=""
+  endif
 endif
 
 if ( $?MY_CPP_FLAGS ) then
@@ -379,53 +495,26 @@ endif
 set my_hdir="-DMY_HEADER_DIR=${MY_HEADER_DIR}"
 
 if ( $dprint == 0 ) then
-  if ( $?USE_ECBUILD ) then
-    if ( "${USE_ECBUILD}" == "on" ) then
-      set conf_com = "ecbuild"
-    else if ( "${USE_ECBUILD}" == "off" ) then
-      set conf_com = "cmake"
-    else
-      set conf_com = "Unknown"
-    endif
-  else
-    set conf_com = "cmake"
-  endif
-
-  if ( "${conf_com}" == "cmake" ) then
-    cmake -DAPP=${ROMS_APPLICATION} \
-                ${my_hdir} \
-                ${ltype} \
-                ${extra_flags} \
-                ${parpack_ldir} \
-                ${arpack_ldir} \
-                ${pio_ldir} \
-                ${pio_idir} \
-                ${pnetcdf_ldir} \
-                ${pnetcdf_idir} \
-                ${mpi} \
-                ${comm} \
-                ${roms_exec} \
-                ${dbg} \
-                ${MY_ROMS_SRC}
-  else if ( "${conf_com}" == "ecbuild" ) then
-    ecbuild -DAPP=${ROMS_APPLICATION} \
-                  ${my_hdir} \
-                  ${ltype} \
-                  ${extra_flags} \
-                  ${parpack_ldir} \
-                  ${arpack_ldir} \
-                  ${pio_ldir} \
-                  ${pio_idir} \
-                  ${pnetcdf_ldir} \
-                  ${pnetcdf_idir} \
-                  ${mpi} \
-                  ${comm} \
-                  ${roms_exec} \
-                  ${dbg} \
-                  ${MY_ROMS_SRC}
-  else
-    echo "Unrecognized value, '${USE_ECBUILD}' set for USE_ECBUILD"
-    exit 1
+  if ( $clean == 1 ) then
+    echo ""
+    echo "Configuring CMake for ROMS application:"
+    echo ""
+    cmake -DROMS_APP=${ROMS_APPLICATION} \
+                     ${my_hdir} \
+                     ${ltype} \
+                     ${compiler} \
+                     ${extra_flags} \
+                     ${parpack_ldir} \
+                     ${arpack_ldir} \
+                     ${pio_ldir} \
+                     ${pio_idir} \
+                     ${pnetcdf_ldir} \
+                     ${pnetcdf_idir} \
+                     ${mpi} \
+                     ${comm} \
+                     ${roms_exec} \
+                     ${dbg} \
+                     ${MY_ROMS_SRC}
   endif
 endif
 
@@ -437,32 +526,105 @@ if ( $dprint == 1 ) then
   set val = `eval echo \$${debug}`
   echo "${debug}:$val"
 else
+
+  echo ""
+  echo "Compiling ROMS source code:"
+  echo ""
+
   if ( $parallel == 1 ) then
-    make $NCPUS
+    if ( $Verbose == 1 ) then
+      make VERBOSE=1 $NCPUS
+    else
+      make $NCPUS
+    endif
   else
-    make
+    if ( $Verbose == 1 ) then
+      make VERBOSE=1
+    else
+      make
+    endif
   endif
   make install
+
+  echo ""
+  echo "${separator}"
+  echo "CMake Build script command:    ${command}"
+  echo "ROMS source directory:         ${MY_ROMS_SRC}"
+  echo "ROMS build  directory:         ${BUILD_DIR}"
+  if ( $branch == 1 ) then
+    echo "ROMS downloaded from:          https://github.com/myroms/roms.git"
+    echo "ROMS compiled branch:          $branch_name"
+  endif
+  echo "ROMS Application:              ${ROMS_APPLICATION}"
+  set FFLAGS = `cat fortran_flags`
+  echo "Fortran compiler:              ${FORT}"
+  echo "Fortran flags:                 ${FFLAGS}"
+  if ($?mycppflags) then
+    echo "Added CPP Options:            ${mycppflags}"
+  endif
+  echo "${separator}"
+  echo ""
 endif
 
 cd ${MY_PROJECT_DIR}
 
-# Create symlink to executable. This should work even if ROMS was
-# linked to the shared library (libROMS.{so|dylib}) because
-# CMAKE_BUILD_WITH_INSTALL_RPATH is set to FALSE so that
+# If ROMS_EXECUTABLE is set to OFF remove the symlink from
+# previous build if present.
+
+if ( $?ROMS_EXECUTABLE ) then
+  if ( "${ROMS_EXECUTABLE}" == "OFF" ) then
+    if ( $?USE_DEBUG ) then
+      if ( "${USE_DEBUG}" == "on" ) then
+        if { test -L romsG } then
+          rm -f romsG
+        endif
+      endif
+    else if ( $?USE_MPI ) then
+      if ( "${USE_MPI}" == "on" ) then
+        if { test  -L romsM } then
+          rm -f romsM
+        endif
+      endif
+    else
+      if { test -L romsS } then
+        rm -f romsS
+      endif
+    endif
+  endif
+endif
+
+# Copy executable to project directory. This should work even
+# if ROMS was linked to the shared library (libROMS.{so|dylib})
+# because CMAKE_BUILD_WITH_INSTALL_RPATH is set to FALSE so that
 # RPATH/RUNPATH are set correctly for both the build tree and
 # installed locations of the ROMS executable.
 
 if ( $dprint == 0 ) then
-  if ( $?USE_DEBUG ) then
-    if ( "${USE_DEBUG}" == "on" ) then
-      ln -sfv ${SCRATCH_DIR}/romsG
-    endif
-  else if ( $?USE_MPI ) then
-    if ( "${USE_MPI}" == "on" ) then
-      ln -sfv ${SCRATCH_DIR}/romsM
+  if ( ! $?ROMS_EXECUTABLE ) then
+    if ( $?USE_DEBUG ) then
+      if ( "${USE_DEBUG}" == "on" ) then
+        cp -pfv ${BUILD_DIR}/romsG .
+      endif
+    else if ( $?USE_MPI ) then
+      if ( "${USE_MPI}" == "on" ) then
+        cp -pfv ${BUILD_DIR}/romsM .
+      endif
+    else
+      cp -pfv ${BUILD_DIR}/romsS .
     endif
   else
-    ln -sfv ${SCRATCH_DIR}/romsS
+    if ( "${ROMS_EXECUTABLE}" == "ON" ) then
+      if ( $?USE_DEBUG ) then
+        if ( "${USE_DEBUG}" == "on" ) then
+          cp -pfv ${BUILD_DIR}/romsG .
+        endif
+      else if ( $?USE_MPI ) then
+        if ( "${USE_MPI}" == "on" ) then
+          cp -pfv ${BUILD_DIR}/romsM .
+        endif
+      else
+        cp -pfv ${BUILD_DIR}/romsS .
+      endif
+    endif
   endif
 endif

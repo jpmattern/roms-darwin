@@ -2,11 +2,11 @@
       MODULE def_mod_mod
 #if defined FOUR_DVAR || defined VERIFICATION
 !
-!svn $Id: def_mod.F 1103 2022-01-13 03:38:35Z arango $
+!svn $Id: def_mod.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine create model/observation output file using either the  !
@@ -70,13 +70,13 @@
           CALL def_mod_pio (ng)
 # endif
         CASE DEFAULT
-          IF (Master) THEN
-            WRITE (stdout,10) DAV(ng)%IOtype
-  10        FORMAT (' DEF_MOD - Illegal output type, io_type = ',i0)
-          END IF
+          IF (Master) WRITE (stdout,10) DAV(ng)%IOtype
           exit_flag=3
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+  10  FORMAT (' DEF_MOD - Illegal output file type, io_type = ',i0,     &
+     &        /,11x,'Check KeyWord ''OUT_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE def_mod
@@ -122,12 +122,12 @@
       real(dp) :: Tstart, Tfinal
       real(r8) :: Aval(6)
 !
-      character (len=22 )  :: str_date, end_date
-      character (len=40 )  :: Aname, AttName(2)
-      character (len=80 )  :: string
-      character (len=120)  :: Vinfo(Natt)
-      character (len=256)  :: ncname
-      character (len=2048) :: AttValue(2)
+      character (len=22 )    :: str_date, end_date
+      character (len=40 )    :: Aname, AttName(2)
+      character (len=80 )    :: string
+      character (len=256)    :: ncname
+      character (len=2048)   :: AttValue(2)
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_mod_nf90"
@@ -2453,12 +2453,12 @@
       real(dp) :: Tstart, Tfinal
       real(r8) :: Aval(6)
 !
-      character (len=22 )  :: str_date, end_date
-      character (len=40 )  :: Aname, AttName(2)
-      character (len=80 )  :: string
-      character (len=120)  :: Vinfo(Natt)
-      character (len=256)  :: ncname
-      character (len=2048) :: AttValue(2)
+      character (len=22 )    :: str_date, end_date
+      character (len=40 )    :: Aname, AttName(2)
+      character (len=80 )    :: string
+      character (len=256)    :: ncname
+      character (len=2048)   :: AttValue(2)
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_mod_pio"

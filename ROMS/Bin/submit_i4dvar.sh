@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# svn $Id: submit_i4dvar.sh 1099 2022-01-06 21:01:01Z arango $
+# svn $Id: submit_i4dvar.sh 1210 2024-01-03 22:03:03Z arango $
 #######################################################################
-# Copyright (c) 2002-2022 The ROMS/TOMS Group                         #
+# Copyright (c) 2002-2024 The ROMS/TOMS Group                         #
 #   Licensed under a MIT/X style license                              #
-#   See License_ROMS.txt                                              #
+#   See License_ROMS.md                                               #
 ################################################## Hernan G. Arango ###
 #                                                                     #
 #  Shallow Water Acustics 2006 Experiment:                            #
@@ -116,7 +116,7 @@ DA_STDINP=da_roms_${PREFIX}.in
 
 #  Set ROMS Metatada variables file.
 
-VARINFO=${MYROOT}/Data/varinfo.dat
+VARINFO=${MYROOT}/Data/varinfo.yaml
 
 #  Set 4DVar input script.
 
@@ -245,7 +245,7 @@ while [ $DAY -le $END_DAY ]; do
   cp $DA_TEMPLATE $DA_STDINP
 
   $SUBSTITUTE $DA_STDINP MyTITLE $TITLE
-  $SUBSTITUTE $DA_STDINP varinfo.dat $VARINFO
+  $SUBSTITUTE $DA_STDINP varinfo.yaml $VARINFO
   $SUBSTITUTE $DA_STDINP MyNtileI $NtileI
   $SUBSTITUTE $DA_STDINP MyNtileJ $NtileJ
   $SUBSTITUTE $DA_STDINP MyNouter $Nouter
@@ -300,7 +300,7 @@ while [ $DAY -le $END_DAY ]; do
   RSTname=${PREFIX}_rst_${DAY}.nc
 
   $SUBSTITUTE $NL_STDINP MyTITLE $TITLE
-  $SUBSTITUTE $NL_STDINP varinfo.dat $VARINFO
+  $SUBSTITUTE $NL_STDINP varinfo.yaml $VARINFO
   $SUBSTITUTE $NL_STDINP MyNtileI $NtileI
   $SUBSTITUTE $NL_STDINP MyNtileJ $NtileJ
   $SUBSTITUTE $NL_STDINP MyNRST $NRST

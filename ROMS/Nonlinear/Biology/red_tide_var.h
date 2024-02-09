@@ -1,15 +1,15 @@
 /*
-** svn $Id: red_tide_var.h 1099 2022-01-06 21:01:01Z arango $
+** svn $Id: red_tide_var.h 1210 2024-01-03 22:03:03Z arango $
 *************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2022 The ROMS/TOMS Group                        **
+** Copyright (c) 2002-2024 The ROMS/TOMS Group                        **
 **   Licensed under a MIT/X style license                             **
-**   See License_ROMS.txt                                             **
+**   See License_ROMS.md                                              **
 ************************************************************************
 **                                                                    **
 **  Assigns metadata indices for red tide (Stock et al., 2005;        **
 **  He et al., 2008) biological model variables that are used         **
 **  in input and output NetCDF files. The metadata information        **
-**  is read from "varinfo.dat".                                       **
+**  is read from "varinfo.yaml".                                      **
 **                                                                    **
 **  This file is included in file "mod_ncparam.F", routine            **
 **  "initialize_ncparm".                                              **
@@ -21,14 +21,14 @@
 **  Model state biological tracers.
 */
 
-            CASE ('idAsrf')
-              idAsrf=varid
-            CASE ('idCyst')
-              idCyst=varid
-            CASE ('idODIN')
-              idODIN=varid
-            CASE ('idTvar(iDino)')
-              idTvar(iDino)=varid
+          CASE ('idAsrf')
+            idAsrf=varid
+          CASE ('idCyst')
+            idCyst=varid
+          CASE ('idODIN')
+            idODIN=varid
+          CASE ('idTvar(iDino)')
+            idTvar(iDino)=varid
 
 #if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
@@ -38,26 +38,26 @@
 **  Adjoint sensitivity state biological tracers.
 */
 
-            CASE ('idTads(iDino)')
-              idTads(iDino)=varid
+          CASE ('idTads(iDino)')
+            idTads(iDino)=varid
 #endif
 
 /*
 **  Biological tracers open boundary conditions.
 */
 
-            CASE ('idTbry(iwest,iDino)')
-              idTbry(iwest,iDino)=varid
-            CASE ('idTbry(ieast,iDino)')
-              idTbry(ieast,iDino)=varid
-            CASE ('idTbry(isouth,iDino)')
-              idTbry(isouth,iDino)=varid
-            CASE ('idTbry(inorth,iDino)')
-              idTbry(inorth,iDino)=varid
+          CASE ('idTbry(iwest,iDino)')
+            idTbry(iwest,iDino)=varid
+          CASE ('idTbry(ieast,iDino)')
+            idTbry(ieast,iDino)=varid
+          CASE ('idTbry(isouth,iDino)')
+            idTbry(isouth,iDino)=varid
+          CASE ('idTbry(inorth,iDino)')
+            idTbry(inorth,iDino)=varid
 
 /*
 **  Biological tracers point Source/Sinks (river runoff).
 */
 
-            CASE ('idRtrc(iDino)')
-              idRtrc(iDino)=varid
+          CASE ('idRtrc(iDino)')
+            idRtrc(iDino)=varid

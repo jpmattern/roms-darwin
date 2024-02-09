@@ -2,11 +2,11 @@
       MODULE ad_wrt_his_mod
 #ifdef ADJOINT
 !
-!svn $Id: ad_wrt_his.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: ad_wrt_his.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine writes requested adjoint model fields into adjoint     !
@@ -47,6 +47,7 @@
 #  ifdef ADJUST_BOUNDARY
       USE nf_fwrite3d_bry_mod, ONLY : nf_fwrite3d_bry
 #  endif
+      USE omega_mod,           ONLY : scale_omega
 # endif
       USE strings_mod,         ONLY : FoundError
 !
@@ -113,7 +114,8 @@
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-  10  FORMAT (' AD_WRT_HIS - Illegal output type, io_type = ',i0)
+  10  FORMAT (' AD_WRT_HIS - Illegal output type, io_type = ',i0,       &
+     &        /,14x,'Check KeyWord ''OUT_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE ad_wrt_his
@@ -149,6 +151,10 @@
 !
       real(dp) :: scale
       real(r8) :: Tval(1)
+#ifdef SOLVE3D
+!
+      real(r8), allocatable :: Wr3d(:,:,:)
+#endif
 !
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", ad_wrt_his_nf90"
@@ -203,6 +209,22 @@
       Fcount=ADM(ng)%load
       ADM(ng)%Nrec(Fcount)=ADM(ng)%Nrec(Fcount)+1
 !
+!  Report.
+!
+# ifdef SOLVE3D
+#  ifdef NESTING
+      IF (Master) WRITE (stdout,10) kout, nout, ADM(ng)%Rindex, ng
+#  else
+      IF (Master) WRITE (stdout,10) kout, nout, ADM(ng)%Rindex
+#  endif
+# else
+#  ifdef NESTING
+      IF (Master) WRITE (stdout,10) kout, ADM(ng)%Rindex, ng
+#  else
+      IF (Master) WRITE (stdout,10) kout, ADM(ng)%Rindex
+#  endif
+# endif
+!
 !  If requested, set time index to recycle time records in the adjoint
 !  file.
 !
@@ -238,7 +260,8 @@
 !
       scale=1.0_dp                          ! m2/s2
       gtype=gfactor*u3dvar
-      status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idUsms),   &
+      status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idUsms,                &
+     &                   ADM(ng)%Vid(idUsms),                           &
      &                   ADM(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
 #  ifdef MASKING
@@ -247,7 +270,7 @@
      &                   FORCES(ng) % ad_ustr(:,:,:,Lfout(ng)))
       IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idUsms)), Lfout(ng)
+          WRITE (stdout,20) TRIM(Vname(1,idUsms)), Lfout(ng)
         END IF
         exit_flag=3
         ioerror=status
@@ -258,7 +281,8 @@
 !
       scale=1.0_dp                          ! m2/s2
       gtype=gfactor*v3dvar
-      status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idVsms),   &
+      status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVsms,                &
+     &                   ADM(ng)%Vid(idVsms),                           &
      &                   ADM(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
 #  ifdef MASKING
@@ -267,7 +291,7 @@
      &                   FORCES(ng) % ad_vstr(:,:,:,Lfout(ng)))
       IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idVsms)), Lfout(ng)
+          WRITE (stdout,20) TRIM(Vname(1,idVsms)), Lfout(ng)
         END IF
         exit_flag=3
         ioerror=status
@@ -284,7 +308,7 @@
         IF (Lstflux(itrc,ng)) THEN
           scale=1.0_dp                      ! kinematic flux units
           gtype=gfactor*r3dvar
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                    &
+          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTsur(itrc),      &
      &                       ADM(ng)%Vid(idTsur(itrc)),                 &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,   &
@@ -294,7 +318,7 @@
      &                       FORCES(ng)% ad_tflux(:,:,:,Lfout(ng),itrc))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idTsur(itrc))), Lfout(ng)
+              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))), Lfout(ng)
             END IF
             exit_flag=3
             ioerror=status
@@ -309,7 +333,8 @@
       IF (Hout(idbath,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*r2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idbath), &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idbath,              &
+     &                     ADM(ng)%Vid(idbath),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
 # ifdef MASKING
@@ -319,7 +344,7 @@
      &                     SetFillVal = .FALSE.)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idbath)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idbath)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -334,7 +359,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*r2dvar
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                    &
+          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idFsur,            &
      &                       ADM(ng)%Vid(idFsur),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -344,7 +369,7 @@
      &                       OCEAN(ng)% f_zetaG(:,:,kfout))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idFsur)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idFsur)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -355,7 +380,7 @@
           scale=1.0_dp
           gtype=gfactor*r2dvar
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idFsur,          &
      &                         ADM(ng)%Vid(idFsur),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -369,7 +394,7 @@
      &                         OCEAN(ng)% ad_zeta(:,:,kout))
 # endif
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idFsur,          &
      &                         ADM(ng)%Vid(idFsur),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -385,7 +410,7 @@
           ENDIF
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idFsur)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idFsur)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -411,7 +436,7 @@
      &                                                    Lbout(ng)))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isFsur))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isFsur))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -428,7 +453,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*u2dvar
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                    &
+          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUbar,            &
      &                       ADM(ng)%Vid(idUbar),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -438,7 +463,7 @@
      &                       OCEAN(ng) % f_ubarG(:,:,kfout))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idUbar)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idUbar)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -449,7 +474,7 @@
           scale=1.0_dp
           gtype=gfactor*u2dvar
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUbar,          &
      &                         ADM(ng)%Vid(idUbar),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -458,7 +483,7 @@
 # endif
      &                         OCEAN(ng) % ad_ubar(:,:,kout))
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUbar,          &
      &                         ADM(ng)%Vid(idUbar),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -469,7 +494,7 @@
           END IF
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idUbar)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idUbar)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -495,7 +520,7 @@
      &                                                    Lbout(ng)))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUbar))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUbar))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -512,7 +537,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*v2dvar
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                    &
+          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVbar,            &
      &                       ADM(ng)%Vid(idVbar),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -522,7 +547,7 @@
      &                       OCEAN(ng) % f_vbarG(:,:,kfout))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idVbar)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idVbar)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -533,7 +558,7 @@
           scale=1.0_dp
           gtype=gfactor*v2dvar
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVbar,          &
      &                         ADM(ng)%Vid(idVbar),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -542,7 +567,7 @@
 # endif
      &                         OCEAN(ng) % ad_vbar(:,:,kout))
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVbar,          &
      &                         ADM(ng)%Vid(idVbar),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -553,7 +578,7 @@
           END IF
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idVbar)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idVbar)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -579,7 +604,7 @@
      &                                                    Lbout(ng)))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVbar))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVbar))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -598,7 +623,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*u3dvar
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                    &
+          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idUvel,            &
      &                       ADM(ng)%Vid(idUvel),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -608,7 +633,7 @@
      &                       OCEAN(ng) % f_uG(:,:,:,kfout))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idUvel)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idUvel)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -621,7 +646,7 @@
 #  ifdef AD_OUTPUT_STATE
           IF (LwrtState3d(ng)) THEN
 #  endif
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idUvel,          &
      &                         ADM(ng)%Vid(idUvel),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -631,7 +656,7 @@
      &                         OCEAN(ng) % ad_u(:,:,:,nout))
 #  ifdef AD_OUTPUT_STATE
           ELSE
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idUvel,          &
      &                         ADM(ng)%Vid(idUvel),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -643,7 +668,7 @@
 #  endif
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idUvel)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idUvel)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -669,7 +694,7 @@
      &                                                 Lbout(ng)))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUvel))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUvel))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -686,7 +711,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*v3dvar
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                    &
+          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVvel,            &
      &                       ADM(ng)%Vid(idVvel),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -696,7 +721,7 @@
      &                       OCEAN(ng) % f_vG(:,:,:,kfout))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idVvel)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idVvel)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -709,7 +734,7 @@
 #  ifdef AD_OUTPUT_STATE
           IF (LwrtState3d(ng)) THEN
 #  endif
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVvel,          &
      &                         ADM(ng)%Vid(idVvel),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -719,7 +744,7 @@
      &                         OCEAN(ng) % ad_v(:,:,:,nout))
 #  ifdef AD_OUTPUT_STATE
           ELSE
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVvel,          &
      &                         ADM(ng)%Vid(idVvel),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -731,7 +756,7 @@
 #  endif
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idVvel)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idVvel)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -757,7 +782,7 @@
      &                                                 Lbout(ng)))
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVvel))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVvel))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -767,6 +792,39 @@
       END IF
 #  endif
 !
+!  Write out S-coordinate omega vertical velocity (m/s).
+!
+      IF (Hout(idOvel,ng)) THEN
+        IF (.not.allocated(Wr3d)) THEN
+          allocate (Wr3d(LBi:UBi,LBj:UBj,0:N(ng)))
+          Wr3d(LBi:UBi,LBj:UBj,0:N(ng))=0.0_r8
+        END IF
+        scale=1.0_dp
+        gtype=gfactor*w3dvar
+        CALL scale_omega (ng, tile, LBi, UBi, LBj, UBj, 0, N(ng),       &
+     &                    GRID(ng) % pm,                                &
+     &                    GRID(ng) % pn,                                &
+     &                    OCEAN(ng) % ad_W_sol,                         &
+     &                    Wr3d)
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idOvel,              &
+     &                     ADM(ng)%Vid(idOvel),                         &
+     &                     ADM(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
+# ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+# endif
+     &                     Wr3d)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idOvel)), ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+        deallocate (Wr3d)
+      END IF
+!
 !  Write out tracer type variables.
 !
       DO itrc=1,NT(ng)
@@ -775,7 +833,7 @@
           IF (WRTforce(ng)) THEN
             scale=1.0_dp
             gtype=gfactor*r3dvar
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                  &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTvar(itrc),    &
      &                         ADM(ng)%Tid(itrc),                       &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -785,7 +843,7 @@
      &                         OCEAN(ng) % f_tG(:,:,:,kfout,itrc))
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) THEN
-                WRITE (stdout,10) TRIM(Vname(1,idTvar(itrc))),          &
+                WRITE (stdout,20) TRIM(Vname(1,idTvar(itrc))),          &
      &                            ADM(ng)%Rindex
               END IF
               exit_flag=3
@@ -799,7 +857,7 @@
 #  ifdef AD_OUTPUT_STATE
             IF (LwrtState3d(ng)) THEN
 #  endif
-              status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                &
+              status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTvar(itrc),  &
      &                           ADM(ng)%Tid(itrc),                     &
      &                           ADM(ng)%Rindex, gtype,                 &
      &                           LBi, UBi, LBj, UBj, 1, N(ng), scale,   &
@@ -809,7 +867,7 @@
      &                           OCEAN(ng) % ad_t(:,:,:,nout,itrc))
 #  ifdef AD_OUTPUT_STATE
             ELSE
-              status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid,                &
+              status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTvar(itrc),  &
      &                           ADM(ng)%Tid(itrc),                     &
      &                           ADM(ng)%Rindex, gtype,                 &
      &                           LBi, UBi, LBj, UBj, 1, N(ng), scale,   &
@@ -821,7 +879,7 @@
 #  endif
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) THEN
-                WRITE (stdout,10) TRIM(Vname(1,idTvar(itrc))),          &
+                WRITE (stdout,20) TRIM(Vname(1,idTvar(itrc))),          &
      &                            ADM(ng)%Rindex
               END IF
               exit_flag=3
@@ -851,7 +909,7 @@
      &                                                 Lbout(ng),itrc))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
+              WRITE (stdout,20) TRIM(Vname(1,idSbry(isTvar(itrc)))),    &
      &                          ADM(ng)%Rindex
             END IF
             exit_flag=3
@@ -867,7 +925,8 @@
       IF (Hout(idDano,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*r3dvar
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idDano), &
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idDano,              &
+     &                     ADM(ng)%Vid(idDano),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
 #  ifdef MASKING
@@ -876,7 +935,7 @@
      &                     OCEAN(ng) % ad_rho)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idDano)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idDano)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -889,7 +948,8 @@
       IF (Hout(idVvis,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*w3dvar
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idVvis), &
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVvis,              &
+     &                     ADM(ng)%Vid(idVvis),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
 #  ifdef MASKING
@@ -899,7 +959,7 @@
      &                     SetFillVal = .FALSE.)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idVvis)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idVvis)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -912,7 +972,8 @@
       IF (Hout(idTdif,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*w3dvar
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idTdif), &
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTdif,              &
+     &                     ADM(ng)%Vid(idTdif),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
 #  ifdef MASKING
@@ -922,7 +983,7 @@
      &                     SetFillVal = .FALSE.)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idTdif)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idTdif)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -936,7 +997,8 @@
       IF (Hout(idSdif,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*w3dvar
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idSdif), &
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idSdif,              &
+     &                     ADM(ng)%Vid(idSdif),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
 #   ifdef MASKING
@@ -946,7 +1008,7 @@
      &                     SetFillVal = .FALSE.)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSdif)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idSdif)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -972,7 +1034,7 @@
           scale=1.0_dp
 #   endif
           gtype=gfactor*r2dvar
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid,                    &
+          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idTsur(itrc),      &
      &                       ADM(ng)%Vid(idTsur(itrc)),                 &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -982,7 +1044,7 @@
      &                       FORCES(ng) % ad_stflx(:,:,itrc))
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idTsur(itrc))),            &
+              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))),            &
      &                          ADM(ng)%Rindex
             END IF
             exit_flag=3
@@ -1006,7 +1068,8 @@
         scale=1.0_dp
 #  endif
         gtype=gfactor*u2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idUsms), &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUsms,              &
+     &                     ADM(ng)%Vid(idUsms),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
 #  ifdef MASKING
@@ -1015,7 +1078,7 @@
      &                     FORCES(ng) % ad_sustr)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idUsms)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idUsms)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -1034,7 +1097,8 @@
         scale=1.0_dp
 #  endif
         gtype=gfactor*v2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idVsms), &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVsms,              &
+     &                     ADM(ng)%Vid(idVsms),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
 #  ifdef MASKING
@@ -1043,7 +1107,7 @@
      &                     FORCES(ng) % ad_svstr)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idVsms)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idVsms)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -1058,7 +1122,8 @@
 !!      scale=-rho0
         scale=1.0_dp
         gtype=gfactor*u2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idUbms), &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUbms,              &
+     &                     ADM(ng)%Vid(idUbms),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
 # ifdef MASKING
@@ -1067,7 +1132,7 @@
      &                     FORCES(ng) % ad_bustr_sol)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idUbms)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idUbms)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -1081,7 +1146,8 @@
 !!      scale=-rho0
         scale=1.0_dp
         gtype=gfactor*v2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, ADM(ng)%Vid(idVbms), &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVbms,              &
+     &                     ADM(ng)%Vid(idVbms),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
 # ifdef MASKING
@@ -1090,7 +1156,7 @@
      &                     FORCES(ng) % ad_bvstr_sol)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idVbms)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idVbms)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -1106,23 +1172,7 @@
       CALL netcdf_sync (ng, iADM, ADM(ng)%name, ADM(ng)%ncid)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-# ifdef SOLVE3D
-#  ifdef NESTING
-      IF (Master) WRITE (stdout,20) kout, nout, ADM(ng)%Rindex, ng
-#  else
-      IF (Master) WRITE (stdout,20) kout, nout, ADM(ng)%Rindex
-#  endif
-# else
-#  ifdef NESTING
-      IF (Master) WRITE (stdout,20) kout, ADM(ng)%Rindex, ng
-#  else
-      IF (Master) WRITE (stdout,20) kout, ADM(ng)%Rindex
-#  endif
-# endif
-!
-  10  FORMAT (/,' AD_WRT_HIS_NF90 - error while writing variable: ',a,  &
-     &        /,19x,'into adjoint NetCDF file for time record: ',i0)
-  20  FORMAT (2x,'AD_WRT_HIS_NF90  - wrote adjoint', t40,               &
+  10  FORMAT (2x,'AD_WRT_HIS_NF90  - writing adjoint', t42,             &
 # ifdef SOLVE3D
 #  ifdef NESTING
      &        'fields (Index=',i1,',',i1,') in record = ',i0,t92,i2.2)
@@ -1136,6 +1186,8 @@
      &        'fields (Index=',i1,')   in record = ',i0)
 #  endif
 # endif
+  20  FORMAT (/,' AD_WRT_HIS_NF90 - error while writing variable: ',a,  &
+     &        /,19x,'into adjoint NetCDF file for time record: ',i0)
 !
       RETURN
       END SUBROUTINE ad_wrt_his_nf90
@@ -1173,6 +1225,10 @@
 !
       real(dp) :: scale
       real(r8) :: Tval(1)
+#ifdef SOLVE3D
+!
+      real(r8), allocatable :: Wr3d(:,:,:)
+#endif
 !
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", ad_wrt_his_pio"
@@ -1220,6 +1276,22 @@
       Fcount=ADM(ng)%load
       ADM(ng)%Nrec(Fcount)=ADM(ng)%Nrec(Fcount)+1
 !
+!  Report.
+!
+#  ifdef SOLVE3D
+#   ifdef NESTING
+      IF (Master) WRITE (stdout,10) kout, nout, ADM(ng)%Rindex, ng
+#   else
+      IF (Master) WRITE (stdout,10) kout, nout, ADM(ng)%Rindex
+#   endif
+#  else
+#   ifdef NESTING
+      IF (Master) WRITE (stdout,10) kout, ADM(ng)%Rindex, ng
+#   else
+      IF (Master) WRITE (stdout,10) kout, ADM(ng)%Rindex
+#   endif
+#  endif
+!
 !  If requested, set time index to recycle time records in the adjoint
 !  file.
 !
@@ -1260,7 +1332,7 @@
         ioDesc => ioDesc_sp_u2dfrc(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idUsms,             &
      &                   ADM(ng)%pioVar(idUsms),                        &
      &                   ADM(ng)%Rindex, ioDesc,                        &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -1270,7 +1342,7 @@
      &                   FORCES(ng) % ad_ustr(:,:,:,Lfout(ng)))
       IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idUsms)), Lfout(ng)
+          WRITE (stdout,20) TRIM(Vname(1,idUsms)), Lfout(ng)
         END IF
         exit_flag=3
         ioerror=status
@@ -1286,7 +1358,7 @@
         ioDesc => ioDesc_sp_v2dfrc(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                     &
+      status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVsms,             &
      &                   ADM(ng)%pioVar(idVsms),                        &
      &                   ADM(ng)%Rindex, ioDesc,                        &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -1296,7 +1368,7 @@
      &                   FORCES(ng) % ad_vstr(:,:,:,Lfout(ng)))
       IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,10) TRIM(Vname(1,idVsms)), Lfout(ng)
+          WRITE (stdout,20) TRIM(Vname(1,idVsms)), Lfout(ng)
         END IF
         exit_flag=3
         ioerror=status
@@ -1318,7 +1390,7 @@
             ioDesc => ioDesc_sp_r2dfrc(ng)
           END IF
 !
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                 &
+          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idTsur(itrc),   &
      &                       ADM(ng)%pioVar(idTsur(itrc)),              &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,   &
@@ -1328,7 +1400,7 @@
      &                       FORCES(ng)% ad_tflux(:,:,:,Lfout(ng),itrc))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idTsur(itrc))), Lfout(ng)
+              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))), Lfout(ng)
             END IF
             exit_flag=3
             ioerror=status
@@ -1348,7 +1420,7 @@
           ioDesc => ioDesc_sp_r2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idbath,           &
      &                     ADM(ng)%pioVar(idbath),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -1359,7 +1431,7 @@
      &                     SetFillVal = .FALSE.)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idbath)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idbath)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -1379,7 +1451,7 @@
       IF (Hout(idFsur,ng)) THEN
 #  ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                 &
+          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idFsur,         &
      &                       ADM(ng)%pioVar(idFsur),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -1389,7 +1461,7 @@
      &                       OCEAN(ng)% f_zetaG(:,:,kfout))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idFsur)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idFsur)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1398,7 +1470,7 @@
         ELSE
 #  endif
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idFsur,       &
      &                         ADM(ng)%pioVar(idFsur),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1412,7 +1484,7 @@
      &                         OCEAN(ng)% ad_zeta(:,:,kout))
 #  endif
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idFsur,       &
      &                         ADM(ng)%pioVar(idFsur),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1428,7 +1500,7 @@
           ENDIF
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idFsur)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idFsur)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1461,7 +1533,7 @@
      &                                                    Lbout(ng)))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isFsur))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isFsur))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -1483,7 +1555,7 @@
       IF (Hout(idUbar,ng)) THEN
 #  ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                 &
+          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUbar,         &
      &                       ADM(ng)%pioVar(idUbar),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -1493,7 +1565,7 @@
      &                       OCEAN(ng) % f_ubarG(:,:,kfout))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idUbar)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idUbar)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1502,7 +1574,7 @@
         ELSE
 #  endif
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUbar,       &
      &                         ADM(ng)%pioVar(idUbar),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1511,7 +1583,7 @@
 #  endif
      &                         OCEAN(ng) % ad_ubar(:,:,kout))
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUbar,       &
      &                         ADM(ng)%pioVar(idUbar),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1522,7 +1594,7 @@
           END IF
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idUbar)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idUbar)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1555,7 +1627,7 @@
      &                                                    Lbout(ng)))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUbar))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUbar))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -1578,7 +1650,7 @@
 
 #  ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                 &
+          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVbar,         &
      &                       ADM(ng)%pioVar(idVbar),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -1588,7 +1660,7 @@
      &                       OCEAN(ng) % f_vbarG(:,:,kfout))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idVbar)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idVbar)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1597,7 +1669,7 @@
         ELSE
 #  endif
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVbar,       &
      &                         ADM(ng)%pioVar(idVbar),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1606,7 +1678,7 @@
 #  endif
      &                         OCEAN(ng) % ad_vbar(:,:,kout))
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVbar,       &
      &                         ADM(ng)%pioVar(idVbar),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1617,7 +1689,7 @@
           END IF
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idVbar)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idVbar)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1650,7 +1722,7 @@
      &                                                    Lbout(ng)))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVbar))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVbar))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -1674,7 +1746,7 @@
       IF (Hout(idUvel,ng)) THEN
 #   ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                 &
+          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idUvel,         &
      &                       ADM(ng)%pioVar(idUvel),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -1684,7 +1756,7 @@
      &                       OCEAN(ng) % f_uG(:,:,:,kfout))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idUvel)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idUvel)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1695,7 +1767,7 @@
 #   ifdef AD_OUTPUT_STATE
           IF (LwrtState3d(ng)) THEN
 #   endif
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idUvel,       &
      &                         ADM(ng)%pioVar(idUvel),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1705,7 +1777,7 @@
      &                         OCEAN(ng) % ad_u(:,:,:,nout))
 #   ifdef AD_OUTPUT_STATE
           ELSE
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idUvel,       &
      &                         ADM(ng)%pioVar(idUvel),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1717,7 +1789,7 @@
 #   endif
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idUvel)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idUvel)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1750,7 +1822,7 @@
      &                                                 Lbout(ng)))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isUvel))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isUvel))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -1772,7 +1844,7 @@
       IF (Hout(idVvel,ng)) THEN
 #   ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                 &
+          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVvel,         &
      &                       ADM(ng)%pioVar(idVvel),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -1782,7 +1854,7 @@
      &                       OCEAN(ng) % f_vG(:,:,:,kfout))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idVvel)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idVvel)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1793,7 +1865,7 @@
 #   ifdef AD_OUTPUT_STATE
           IF (LwrtState3d(ng)) THEN
 #   endif
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVvel,       &
      &                         ADM(ng)%pioVar(idVvel),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1803,7 +1875,7 @@
      &                         OCEAN(ng) % ad_v(:,:,:,nout))
 #   ifdef AD_OUTPUT_STATE
           ELSE
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVvel,       &
      &                         ADM(ng)%pioVar(idVvel),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1815,7 +1887,7 @@
 #   endif
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idVvel)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,idVvel)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1848,7 +1920,7 @@
      &                                                 Lbout(ng)))
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSbry(isVvel))),            &
+            WRITE (stdout,20) TRIM(Vname(1,idSbry(isVvel))),            &
      &                        ADM(ng)%Rindex
           END IF
           exit_flag=3
@@ -1857,6 +1929,44 @@
         END IF
       END IF
 #   endif
+!
+!  Write out S-coordinate omega vertical velocity (m/s).
+!
+      IF (Hout(idOvel,ng)) THEN
+        IF (.not.allocated(Wr3d)) THEN
+          allocate (Wr3d(LBi:UBi,LBj:UBj,0:N(ng)))
+          Wr3d(LBi:UBi,LBj:UBj,0:N(ng))=0.0_r8
+        END IF
+        scale=1.0_dp
+        CALL scale_omega (ng, tile, LBi, UBi, LBj, UBj, 0, N(ng),       &
+     &                    GRID(ng) % pm,                                &
+     &                    GRID(ng) % pn,                                &
+     &                    OCEAN(ng) % ad_W_sol,                         &
+     &                    Wr3d)
+!
+        IF (ADM(ng)%pioVar(idOvel)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_w3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_w3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idOvel,           &
+     &                     ADM(ng)%pioVar(idOvel),                      &
+     &                     ADM(ng)%Rindex, ioDesc,                      &
+     &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     Wr3d)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idOvel)), ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+        deallocate (Wr3d)
+      END IF
 !
 !  Write out tracer type variables.
 !
@@ -1872,7 +1982,7 @@
 
 #   ifdef WEAK_CONSTRAINT
           IF (WRTforce(ng)) THEN
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,               &
+            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idTvar(itrc), &
      &                         ADM(ng)%pioTrc(itrc),                    &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1882,7 +1992,7 @@
      &                         OCEAN(ng) % f_tG(:,:,:,kfout,itrc))
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
               IF (Master) THEN
-                WRITE (stdout,10) TRIM(Vname(1,idTvar(itrc))),          &
+                WRITE (stdout,20) TRIM(Vname(1,idTvar(itrc))),          &
      &                            ADM(ng)%Rindex
               END IF
               exit_flag=3
@@ -1895,7 +2005,7 @@
             IF (LwrtState3d(ng)) THEN
 #   endif
               status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,             &
-     &                           ADM(ng)%pioTrc(itrc),                  &
+     &                           idTvar(itrc), ADM(ng)%pioTrc(itrc),    &
      &                           ADM(ng)%Rindex, ioDesc,                &
      &                           LBi, UBi, LBj, UBj, 1, N(ng), scale,   &
 #    ifdef MASKING
@@ -1905,7 +2015,7 @@
 #   ifdef AD_OUTPUT_STATE
             ELSE
               status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,             &
-     &                           ADM(ng)%pioTrc(itrc),                  &
+     &                           idTvar(itrc), ADM(ng)%pioTrc(itrc),    &
      &                           ADM(ng)%Rindex, ioDesc,                &
      &                           LBi, UBi, LBj, UBj, 1, N(ng), scale,   &
 #    ifdef MASKING
@@ -1916,7 +2026,7 @@
 #   endif
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
               IF (Master) THEN
-                WRITE (stdout,10) TRIM(Vname(1,idTvar(itrc))),          &
+                WRITE (stdout,20) TRIM(Vname(1,idTvar(itrc))),          &
      &                            ADM(ng)%Rindex
               END IF
               exit_flag=3
@@ -1954,7 +2064,7 @@
      &                                                 Lbout(ng),itrc))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,ifield)), ADM(ng)%Rindex
+              WRITE (stdout,20) TRIM(Vname(1,ifield)), ADM(ng)%Rindex
             END IF
             exit_flag=3
             ioerror=status
@@ -1974,7 +2084,7 @@
           ioDesc => ioDesc_sp_r3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idDano,           &
      &                     ADM(ng)%pioVar(idDano),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
@@ -1984,7 +2094,7 @@
      &                     OCEAN(ng) % ad_rho)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idDano)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idDano)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -2002,7 +2112,7 @@
           ioDesc => ioDesc_sp_w3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVvis,           &
      &                     ADM(ng)%pioVar(idVvis),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -2013,7 +2123,7 @@
      &                     SetFillVal = .FALSE.)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idVvis)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idVvis)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -2031,7 +2141,7 @@
           ioDesc => ioDesc_sp_w3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idTdif,           &
      &                     ADM(ng)%pioVar(idTdif),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -2042,7 +2152,7 @@
      &                     SetFillVal = .FALSE.)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idTdif)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idTdif)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -2062,7 +2172,7 @@
           ioDesc => ioDesc_sp_w3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idSdif,           &
      &                     ADM(ng)%pioVar(idSdif),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -2073,7 +2183,7 @@
      &                     SetFillVal = .FALSE.)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idSdif)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idSdif)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -2104,7 +2214,7 @@
             ioDesc => ioDesc_sp_r2dvar(ng)
           END IF
 !
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                 &
+          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idTsur(itrc),   &
      &                       ADM(ng)%pioVar(idTsur(itrc)),              &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -2114,7 +2224,7 @@
      &                       FORCES(ng) % ad_stflx(:,:,itrc))
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) THEN
-              WRITE (stdout,10) TRIM(Vname(1,idTsur(itrc))),            &
+              WRITE (stdout,20) TRIM(Vname(1,idTsur(itrc))),            &
      &                          ADM(ng)%Rindex
             END IF
             exit_flag=3
@@ -2143,7 +2253,7 @@
           ioDesc => ioDesc_sp_u2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUsms,           &
      &                     ADM(ng)%pioVar(idUsms),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -2153,7 +2263,7 @@
      &                     FORCES(ng) % ad_sustr)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idUsms)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idUsms)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -2177,7 +2287,7 @@
           ioDesc => ioDesc_sp_v2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVsms,           &
      &                     ADM(ng)%pioVar(idVsms),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -2187,7 +2297,7 @@
      &                     FORCES(ng) % ad_svstr)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idVsms)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idVsms)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -2207,7 +2317,7 @@
           ioDesc => ioDesc_sp_u2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUbms,           &
      &                     ADM(ng)%pioVar(idUbms),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -2217,7 +2327,7 @@
      &                     FORCES(ng) % ad_bustr_sol)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idUbms)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idUbms)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -2236,7 +2346,7 @@
           ioDesc => ioDesc_sp_v2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile,                   &
+        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVbms,           &
      &                     ADM(ng)%pioVar(idVbms),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -2246,7 +2356,7 @@
      &                     FORCES(ng) % ad_bvstr_sol)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
-            WRITE (stdout,10) TRIM(Vname(1,idVbms)), ADM(ng)%Rindex
+            WRITE (stdout,20) TRIM(Vname(1,idVbms)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -2262,37 +2372,22 @@
       CALL pio_netcdf_sync (ng, iADM, ADM(ng)%name, ADM(ng)%pioFile)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
+  10  FORMAT (2x,'AD_WRT_HIS_PIO   - writing adjoint', t42,             &
 #  ifdef SOLVE3D
-#   ifdef NESTING
-      IF (Master) WRITE (stdout,20) kout, nout, ADM(ng)%Rindex, ng
-#   else
-      IF (Master) WRITE (stdout,20) kout, nout, ADM(ng)%Rindex
-#   endif
-#  else
-#   ifdef NESTING
-      IF (Master) WRITE (stdout,20) kout, ADM(ng)%Rindex, ng
-#   else
-      IF (Master) WRITE (stdout,20) kout, ADM(ng)%Rindex
-#   endif
-#  endif
-!
-  10  FORMAT (/,' AD_WRT_HIS_PIO - error while writing variable: ',a,   &
-     &        /,18x,'into adjoint NetCDF file for time record: ',i0)
-#  ifdef SOLVE3D
-  20  FORMAT (2x,'AD_WRT_HIS_PIO   - wrote adjoint', t40,               &
 #   ifdef NESTING
      &        'fields (Index=',i1,',',i1,') in record = ',i0,t92,i2.2)
 #   else
      &        'fields (Index=',i1,',',i1,') in record = ',i0)
 #   endif
 #  else
-  20  FORMAT (2x,'AD_WRT_HIS_PIO   - wrote adjoint', t40,               &
 #   ifdef NESTING
      &        'fields (Index=',i1,')   in record = ',i0,t92,i2.2)
 #   else
      &        'fields (Index=',i1,')   in record = ',i0)
 #   endif
 #  endif
+  20  FORMAT (/,' AD_WRT_HIS_PIO - error while writing variable: ',a,   &
+     &        /,18x,'into adjoint NetCDF file for time record: ',i0)
 !
       RETURN
       END SUBROUTINE ad_wrt_his_pio

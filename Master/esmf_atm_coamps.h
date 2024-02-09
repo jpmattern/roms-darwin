@@ -2,11 +2,11 @@
 
 #if defined COAMPS_COUPLING && defined ESMF_LIB
 !
-!svn $Id: esmf_atm_coamps.h 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: esmf_atm_coamps.h 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license         Hernan G. Arango     !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module sets COAMPS as the atmospheric model gridded component  !
@@ -3935,7 +3935,7 @@
                 END DO
               END DO
 !
-!  Surface longwave radiation flux (W m-2; positive upward).
+!  Surface net longwave radiation flux (W m-2; positive upward).
 !
             CASE ('lwrd', 'LWrad')
               MyFmin(1)= MISSING_dp
@@ -3963,7 +3963,7 @@
                 END DO
               END DO
 !
-!  Surface shortwave radiation (W m-2; positive into ocean).
+!  Surface net shortwave radiation (W m-2; positive into ocean).
 !
             CASE ('swrd', 'SWrad')
               MyFmin(1)= MISSING_dp

@@ -1,11 +1,11 @@
 !!
       SUBROUTINE ana_drag (ng, tile, model)
 !
-!! svn $Id: ana_drag.h 1099 2022-01-06 21:01:01Z arango $
+!! svn $Id: ana_drag.h 1210 2024-01-03 22:03:03Z arango $
 !!======================================================================
-!! Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !!   Licensed under a MIT/X style license                              !
-!!   See License_ROMS.txt                                              !
+!!   See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine sets analytical, spatially varying bottom roughness    !
@@ -151,7 +151,8 @@
 !
       IF (first) THEN
         first=.FALSE.
-        Stats % count=0.0_r8
+        Stats % checksum=0_i8b
+        Stats % count=0
         Stats % min=Large
         Stats % max=-Large
         Stats % avg=0.0_r8

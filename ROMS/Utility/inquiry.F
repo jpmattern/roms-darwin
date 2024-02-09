@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE inquiry_mod
 !
-!svn $Id: inquiry.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: inquiry.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine inquires about the contents of input data from NetCDF  !
@@ -299,7 +299,7 @@
           END IF
 !
 !  If the associated time variable is different to that specified in
-!  "varinfo.dat" (Nrec still zero), reset associated time-variable name
+!  "varinfo.yaml" (Nrec still zero), reset associated time-variable name
 !  to that specified in the "time" attribute.  If founded, also check
 !  for a C-language null termination character in the time variable
 !  string, which is possible in NetCDF files generated from C-programs.
@@ -886,7 +886,7 @@
           END IF
 !
 !  If the associated time variable is different to that specified in
-!  "varinfo.dat" (Nrec still zero), reset associated time-variable name
+!  "varinfo.yaml" (Nrec still zero), reset associated time-variable name
 !  to that specified in the "time" attribute.  If founded, also check
 !  for a C-language null termination character in the time variable
 !  string, which is possible in NetCDF files generated from C-programs.

@@ -2,11 +2,11 @@
       MODULE rp_set_depth_mod
 #ifdef TL_IOMS
 !
-!svn $Id: rp_set_depth.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: rp_set_depth.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine computes the time evolving depths of the model grid    !
@@ -44,9 +44,6 @@
       USE mod_coupling
       USE mod_grid
       USE mod_ocean
-#  if defined SEDIMENT && defined SED_MORPH
-      USE mod_sedbed
-#  endif
       USE mod_stepping
 !
 !  Imported variable declarations.
@@ -72,9 +69,6 @@
 #  ifdef ICESHELF
      &                        GRID(ng) % zice,                          &
 #  endif
-#  if defined SEDIMENT_NOT_YET && defined SED_MORPH_NOT_YET
-     &                        SEDBED(ng) % tl_bed_thick,                &
-#  endif
      &                        COUPLING(ng) % Zt_avg1,                   &
      &                        COUPLING(ng) % tl_Zt_avg1,                &
      &                        GRID(ng) % tl_Hz,                         &
@@ -95,9 +89,6 @@
      &                              h, tl_h,                            &
 #  ifdef ICESHELF
      &                              zice,                               &
-#  endif
-#  if defined SEDIMENT_NOT_YET && defined SED_MORPH_NOT_YET
-     &                              tl_bed_thick,                       &
 #  endif
      &                              Zt_avg1, tl_Zt_avg1,                &
      &                              tl_Hz, tl_z_r, tl_z_w)
@@ -124,9 +115,6 @@
 #   ifdef ICESHELF
       real(r8), intent(in) :: zice(LBi:,LBj:)
 #   endif
-#   if defined SEDIMENT_NOT_YET && defined SED_MORPH_NOT_YET
-      real(r8), intent(in):: tl_bed_thick(LBi:,LBj:,:)
-#   endif
       real(r8), intent(in) :: Zt_avg1(LBi:,LBj:)
       real(r8), intent(in) :: tl_Zt_avg1(LBi:,LBj:)
       real(r8), intent(inout) :: tl_h(LBi:,LBj:)
@@ -137,9 +125,6 @@
       real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
 #   ifdef ICESHELF
       real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
-#   endif
-#   if defined SEDIMENT_NOT_YET && defined SED_MORPH_NOT_YET
-      real(r8), intent(in):: tl_bed_thick(LBi:UBi,LBj:UBi,2)
 #   endif
       real(r8), intent(in) :: Zt_avg1(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: tl_Zt_avg1(LBi:UBi,LBj:UBj)
@@ -178,12 +163,6 @@
       IF (Vtransform(ng).eq.1) THEN
         DO j=JstrT,JendT
           DO i=IstrT,IendT
-#  if defined SEDIMENT && defined SED_MORPH
-!^          h(i,j)=h(i,j)-bed_thick(i,j,nstp)+bed_thick(i,j,nnew)
-!^
-            tl_h(i,j)=tl_h(i,j)-                                        &
-     &                tl_bed_thick(i,j,nstp)+tl_bed_thick(i,j,nnew)
-#  endif
 !^          z_w(i,j,0)=-h(i,j)
 !^
             tl_z_w(i,j,0)=-tl_h(i,j)
@@ -277,12 +256,6 @@
       ELSE IF (Vtransform(ng).eq.2) THEN
         DO j=JstrT,JendT
           DO i=IstrT,IendT
-#  if defined SEDIMENT && defined SED_MORPH
-!^          h(i,j)=h(i,j)-bed_thick(i,j,nstp)+bed_thick(i,j,nnew)
-!^
-            tl_h(i,j)=tl_h(i,j)-                                        &
-     &                tl_bed_thick(i,j,nstp)+tl_bed_thick(i,j,nnew)
-#  endif
 !^          z_w(i,j,0)=-h(i,j)
 !^
             tl_z_w(i,j,0)=-tl_h(i,j)

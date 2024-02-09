@@ -2,11 +2,11 @@
       MODULE wrt_impulse_mod
 #if defined ADJOINT && defined IMPULSE
 !
-!svn $Id: wrt_impulse.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: wrt_impulse.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  These subroutine read in requested adjoint solution from input      !
@@ -91,13 +91,13 @@
      &                          LBi, UBi, LBj, UBj)
 # endif
         CASE DEFAULT
-          IF (Master) THEN
-            WRITE (stdout,10) LZE(ng)%IOtype
-  10        FORMAT (' WRT_IMPULSE - Illegal output type, io_type = ',i0)
-          END IF
+          IF (Master) WRITE (stdout,10) LZE(ng)%IOtype
           exit_flag=3
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+  10  FORMAT (' WRT_IMPULSE - Illegal output file type, io_type = ',i0, &
+     &        /,15x,'Check KeyWord ''OUT_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE wrt_impulse
@@ -259,7 +259,7 @@
           END IF
 !
           MyType=gtype
-          status=nf_fwrite2d(ng, model, TLF(ng)%ncid,                   &
+          status=nf_fwrite2d(ng, model, TLF(ng)%ncid, idZtlf,           &
      &                       TLF(ng)%Vid(idZtlf),                       &
      &                       Iout, MyType,                              &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -324,7 +324,7 @@
           END IF
 !
           MyType=gtype
-          status=nf_fwrite2d(ng, model, TLF(ng)%ncid,                   &
+          status=nf_fwrite2d(ng, model, TLF(ng)%ncid, idUbtf,           &
      &                       TLF(ng)%Vid(idUbtf),                       &
      &                       Iout, MyType,                              &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -387,7 +387,7 @@
           END IF
 !
           MyType=gtype
-          status=nf_fwrite2d(ng, model, TLF(ng)%ncid,                   &
+          status=nf_fwrite2d(ng, model, TLF(ng)%ncid, idVbtf,           &
      &                       TLF(ng)%Vid(idVbtf),                       &
      &                       Iout, MyType,                              &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -451,7 +451,7 @@
             END IF
           END IF
 !
-          status=nf_fwrite3d(ng, model, TLF(ng)%ncid,                   &
+          status=nf_fwrite3d(ng, model, TLF(ng)%ncid, idUtlf,           &
      &                       TLF(ng)%Vid(idUtlf),                       &
      &                       Iout, MyType,                              &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -513,7 +513,7 @@
             END IF
           END IF
 !
-          status=nf_fwrite3d(ng, model, TLF(ng)%ncid,                   &
+          status=nf_fwrite3d(ng, model, TLF(ng)%ncid, idVtlf,           &
      &                       TLF(ng)%Vid(idVtlf),                       &
      &                       Iout, MyType,                              &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -577,7 +577,8 @@
               END IF
             END IF
 !
-            status=nf_fwrite3d(ng, model, TLF(ng)%ncid, TLF(ng)%Tid(i), &
+            status=nf_fwrite3d(ng, model, TLF(ng)%ncid, idTtlf(i),      &
+     &                         TLF(ng)%Tid(i),                          &
      &                         Iout, MyType,                            &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
 #  ifdef MASKING
@@ -823,7 +824,7 @@
             ioDesc => ioDesc_sp_r2dvar(ng)
           END IF
 
-          status=nf_fwrite2d(ng, model, TLF(ng)%pioFile,                &
+          status=nf_fwrite2d(ng, model, TLF(ng)%pioFile, idZtlf,        &
      &                       TLF(ng)%pioVar(idZtlf), Iout,              &
      &                       ioDesc,                                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -902,7 +903,7 @@
             ioDesc => ioDesc_sp_u2dvar(ng)
           END IF
 
-          status=nf_fwrite2d(ng, model, TLF(ng)%pioFile,                &
+          status=nf_fwrite2d(ng, model, TLF(ng)%pioFile, idUbtf,        &
      &                       TLF(ng)%pioVar(idUbtf), Iout,              &
      &                       ioDesc,                                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -979,7 +980,7 @@
             ioDesc => ioDesc_sp_v2dvar(ng)
           END IF
 
-          status=nf_fwrite2d(ng, model, TLF(ng)%pioFile,                &
+          status=nf_fwrite2d(ng, model, TLF(ng)%pioFile, idVbtf,        &
      &                       TLF(ng)%pioVar(idVbtf), Iout,              &
      &                       ioDesc,                                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -1058,7 +1059,7 @@
             ioDesc => ioDesc_sp_u3dvar(ng)
           END IF
 
-          status=nf_fwrite3d(ng, model, TLF(ng)%pioFile,                &
+          status=nf_fwrite3d(ng, model, TLF(ng)%pioFile, idUtlf,        &
      &                       TLF(ng)%pioVar(idUtlf), Iout,              &
      &                       ioDesc,                                    &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -1135,7 +1136,7 @@
             ioDesc => ioDesc_sp_v3dvar(ng)
           END IF
 
-          status=nf_fwrite3d(ng, model, TLF(ng)%pioFile,                &
+          status=nf_fwrite3d(ng, model, TLF(ng)%pioFile, idVtlf,        &
      &                       TLF(ng)%pioVar(idVtlf), Iout,              &
      &                       ioDesc,                                    &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -1214,7 +1215,7 @@
               ioDesc => ioDesc_sp_r3dvar(ng)
             END IF
 
-            status=nf_fwrite3d(ng, model, TLF(ng)%pioFile,              &
+            status=nf_fwrite3d(ng, model, TLF(ng)%pioFile, idTtlf(i),   &
      &                         TLF(ng)%pioTrc(i), Iout,                 &
      &                         ioDesc,                                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &

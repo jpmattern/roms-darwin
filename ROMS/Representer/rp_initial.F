@@ -2,11 +2,11 @@
 #ifdef TL_IOMS
       SUBROUTINE rp_initial (ng)
 !
-!svn $Id: rp_initial.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: rp_initial.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine initializes representers tangent linear model.         !
@@ -50,6 +50,9 @@
       USE ini_adjust_mod,      ONLY : tl_ini_perturb
 # endif
       USE ini_hmixcoef_mod,    ONLY : ini_hmixcoef
+# if defined WAV_COUPLING_NOT_YET && defined MCT_LIB
+      USE mct_coupler_mod,     ONLY : ocn2wav_coupling
+# endif
 # if !(defined SEDIMENT_NOT_YET && defined SED_MORPH_NOT_YET)
       USE rp_set_depth_mod,    ONLY : rp_bath
 # endif
@@ -74,9 +77,6 @@
 # endif
       USE stiffness_mod,       ONLY : stiffness
       USE strings_mod,         ONLY : FoundError
-# if defined WAV_COUPLING_NOT_YET && defined MCT_LIB
-      USE ocean_coupler_mod,   ONLY : ocn2wav_coupling
-# endif
 # ifdef WET_DRY
       USE wetdry_mod,          ONLY : wetdry
 # endif
@@ -129,6 +129,7 @@
 !
       iif(ng)=1
       indx1(ng)=1
+      next_kstp(ng)=1
       kstp(ng)=1
       krhs(ng)=1
       knew(ng)=1

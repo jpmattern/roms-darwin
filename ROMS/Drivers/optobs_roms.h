@@ -1,10 +1,10 @@
       MODULE roms_kernel_mod
 !
-!svn $Id: optobs_roms.h 1103 2022-01-13 03:38:35Z arango $
+!svn $Id: optobs_roms.h 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group           W. G. Zhang   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group           W. G. Zhang   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  ROMS/TOMS Optimal Observation Driver:                               !
@@ -52,15 +52,15 @@
       USE def_norm_mod,      ONLY : def_norm
       USE inp_par_mod,       ONLY : inp_par
       USE get_state_mod,     ONLY : get_state
-      USE normalization_mod, ONLY : normalization
 #ifdef MCT_LIB
 # ifdef ATM_COUPLING
-      USE ocean_coupler_mod, ONLY : initialize_ocn2atm_coupling
+      USE mct_coupler_mod,   ONLY : initialize_ocn2atm_coupling
 # endif
 # ifdef WAV_COUPLING
-      USE ocean_coupler_mod, ONLY : initialize_ocn2wav_coupling
+      USE mct_coupler_mod,   ONLY : initialize_ocn2wav_coupling
 # endif
 #endif
+      USE normalization_mod, ONLY : normalization
       USE strings_mod,       ONLY : FoundError
       USE tl_def_ini_mod,    ONLY : tl_def_ini
       USE wrt_rst_mod,       ONLY : wrt_rst

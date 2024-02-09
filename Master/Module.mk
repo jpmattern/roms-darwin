@@ -1,25 +1,32 @@
-# svn $Id: Module.mk 1099 2022-01-06 21:01:01Z arango $
+# svn $Id: Module.mk 1210 2024-01-03 22:03:03Z arango $
 #::::::::::::::::::::::::::::::::::::::::::::::::::::: Hernan G. Arango :::
-# Copyright (c) 2002-2022 The ROMS/TOMS Group             Kate Hedstrom :::
+# Copyright (c) 2002-2024 The ROMS/TOMS Group             Kate Hedstrom :::
 #   Licensed under a MIT/X style license                                :::
-#   See License_ROMS.txt                                                :::
+#   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 local_sub  := Master
 
-local_src  := $(wildcard $(local_sub)/*.F)
-#local_objs := $(call source-to-object,$(local_src))
-local_objs := $(subst .F,.o,$(local_src))
-local_objs := $(addprefix $(SCRATCH_DIR)/, $(notdir $(local_objs)))
+ifdef EXEC
+  local_src  := $(wildcard $(local_sub)/*.F)
+  local_objs := $(subst .F,.o,$(local_src))
+  local_objs := $(addprefix $(BUILD_DIR)/, $(notdir $(local_objs)))
 
-sources    += $(local_src)
+  sources    += $(local_src)
 
-ifdef LD_WINDOWS
-$(BIN):	$(libraries) $(local_objs)
-	$(LD) $(FFLAGS) $(local_objs) -o $@ $(libraries) $(LIBS_WIN32) $(LDFLAGS)
+  ifdef LD_WINDOWS
+  $(BIN):	$(libraries) $(local_objs)
+		$(LD) $(FFLAGS) $(local_objs) -o $@ $(ROMS_LIB) $(LIBS_WIN32) $(LDFLAGS)
+  else
+  $(BIN):	$(libraries) $(local_objs)
+		$(LD) $(FFLAGS) $(LDFLAGS) $(local_objs) -o $@ $(ROMS_LIB) $(LIBS)
+  endif
 else
-$(BIN):	$(libraries) $(local_objs)
-	$(LD) $(FFLAGS) $(LDFLAGS) $(local_objs) -o $@ $(libraries) $(LIBS)
+  local_src  := $(local_sub)/roms_kernel.F
+  local_objs := $(subst .F,.o,$(local_src))
+  local_objs := $(addprefix $(BUILD_DIR)/, $(notdir $(local_objs)))
+
+  sources    += $(local_src)
 endif
 
 $(eval $(compile-rules))

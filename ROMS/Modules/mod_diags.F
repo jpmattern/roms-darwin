@@ -9,12 +9,14 @@
 #  endif
 # endif
 !
-!svn $Id: mod_diags.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: mod_diags.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
+!                                                                      !
+!  avgzeta   Time-averaged free surface                                !
 !                                                                      !
 !  Diagnostics fields for output.                                      !
 !                                                                      !
@@ -60,6 +62,8 @@
 !-----------------------------------------------------------------------
 !
         TYPE T_DIAGS
+
+          real(r8), pointer :: avgzeta(:,:)
 
 # if defined DIAGNOSTICS_BIO
 #  if defined BIO_FENNEL
@@ -141,6 +145,9 @@
 !
 !  Diagnostic arrays.
 !
+      allocate ( DIAGS(ng) % avgzeta(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
 # ifdef DIAGNOSTICS_BIO
 #  if defined BIO_FENNEL
       IF (NDbio2d.gt.0) THEN
@@ -275,6 +282,9 @@
 !
 !  Diagnostic arrays.
 !
+      IF (.not.destroy(ng, DIAGS(ng)%avgzeta, MyFile,                   &
+     &                 __LINE__, 'DIAGS(ng)%DiaBio2d')) RETURN
+
 #  ifdef DIAGNOSTICS_BIO
 #   if defined BIO_FENNEL
       IF (NDbio2d.gt.0) THEN
@@ -449,6 +459,10 @@
 !-----------------------------------------------------------------------
 !
       DO j=Jmin,Jmax
+        DO i=Imin,Imax
+          DIAGS(ng) % avgzeta(i,j) = IniVal
+        END DO
+
 # ifdef DIAGNOSTICS_BIO
 #  if defined BIO_FENNEL
         IF (NDbio2d.gt.0) THEN

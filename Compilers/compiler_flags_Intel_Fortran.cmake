@@ -1,8 +1,8 @@
-# svn $Id: compiler_flags_Intel_Fortran.cmake 1099 2022-01-06 21:01:01Z arango $
+# svn $Id: compiler_flags_Intel_Fortran.cmake 1210 2024-01-03 22:03:03Z arango $
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2022 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
 #   Licensed under a MIT/X style license                                :::
-#   See License_ROMS.txt                                                :::
+#   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 # CMake Flags for the Intel Fortran Compiler.
@@ -32,6 +32,12 @@ set( CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fp-model precise" )
 ###########################################################################
 
 set( CMAKE_Fortran_FLAGS_RELEASE "-ip -O3 -traceback -check uninit" )
+
+###########################################################################
+# RELEASE WITH DEBUG INFORMATION FLAGS
+###########################################################################
+
+set( CMAKE_Fortran_FLAGS_RELWITHDEBINFO "-ip -O3 -g -traceback -check all -check bounds" )
 
 ###########################################################################
 # DEBUG FLAGS
@@ -72,12 +78,6 @@ set( ROMS_NOBOUNDSFLAG "" )
 
 set( my_fort   "ifort" )
 set( my_fc     "${CMAKE_Fortran_COMPILER}" )
-
-if( ${CMAKE_BUILD_TYPE} MATCHES "Debug" )
-  set( my_fflags "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_DEBUG}" )
-else()
-  set( my_fflags "${CMAKE_Fortran_FLAGS} ${CMAKE_Fortran_FLAGS_RELEASE}" )
-endif()
 
 # Flags for the C-preprocessor
 

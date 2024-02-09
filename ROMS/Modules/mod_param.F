@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE mod_param
 !
-!svn $Id: mod_param.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: mod_param.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  Grid parameters:                                                    !
@@ -354,6 +354,7 @@
         logical :: closed
         logical :: Flather
         logical :: gradient
+        logical :: mixed
         logical :: nested
         logical :: nudging
         logical :: periodic
@@ -408,7 +409,9 @@
 !-----------------------------------------------------------------------
 !
       TYPE T_STATS
-        real(r8) :: count         ! processed values count
+        integer(i8b) :: checksum  ! bit sum hash
+        integer      :: count     ! processed values count
+
         real(r8) :: min           ! minimum value
         real(r8) :: max           ! maximum value
         real(r8) :: avg           ! arithmetic mean
@@ -511,7 +514,7 @@
 #ifdef FLOATS
 !
 !-----------------------------------------------------------------------
-!  Floats tracjectories parameters.
+!  Floats trajectories parameters.
 !-----------------------------------------------------------------------
 !
 !  Number of trajectory time-stepping levels, [0:NFT].
@@ -691,6 +694,29 @@
 !  periodic, nested, and distributed-memory applications.
 !
       integer :: NghostPoints
+!
+!-----------------------------------------------------------------------
+!  Staggered C-grid location identifiers.
+!-----------------------------------------------------------------------
+!
+      integer, parameter :: p2dvar = 1         ! 2D PSI-variable
+      integer, parameter :: r2dvar = 2         ! 2D RHO-variable
+      integer, parameter :: u2dvar = 3         ! 2D U-variable
+      integer, parameter :: v2dvar = 4         ! 2D V-variable
+      integer, parameter :: p3dvar = 5         ! 3D PSI-variable
+      integer, parameter :: r3dvar = 6         ! 3D RHO-variable
+      integer, parameter :: u3dvar = 7         ! 3D U-variable
+      integer, parameter :: v3dvar = 8         ! 3D V-variable
+      integer, parameter :: w3dvar = 9         ! 3D W-variable
+      integer, parameter :: b3dvar = 10        ! 3D BED-sediment
+      integer, parameter :: l3dvar = 11        ! 3D spectral light
+      integer, parameter :: l4dvar = 12        ! 4D spectral light
+      integer, parameter :: r2dobc = 13        ! 2D OBC RHO-variable
+      integer, parameter :: u2dobc = 14        ! 2D OBC U-variable
+      integer, parameter :: v2dobc = 15        ! 2D OBC V-variable
+      integer, parameter :: r3dobc = 16        ! 3D OBC RHO-variable
+      integer, parameter :: u3dobc = 17        ! 3D OBC U-variable
+      integer, parameter :: v3dobc = 18        ! 3D OBC V-variable
 !
       CONTAINS
 !
@@ -1141,10 +1167,6 @@
       IF (allocated(tl_Vadvection)) deallocate ( tl_Vadvection )
 # endif
 #endif
-
-
-
-
 !
 !-----------------------------------------------------------------------
 !  Deallocate dimension parameters.
@@ -1375,8 +1397,21 @@
 #   ifdef UV_ADV
       NDM2d=NDM2d+3  ! Horizontal total-, X-, and Y-advection
 #   endif
-#   ifdef NEARSHORE_MELLOR
-      NDM2d=NDM2d+1  ! Horizontal radiation stresses
+#   ifdef WEC_VF
+#    ifdef UV_COR
+      NDM2d=NDM2d+1  ! Coriolis
+#    endif
+#    ifdef BOTTOM_STREAMING
+      NDM2d=NDM2d+1  ! Bottom streaming
+#    endif
+#    ifdef SURFACE_STREAMING
+      NDM2d=NDM2d+1  ! Surface streaming
+#    endif
+      NDM2d=NDM2d+8  ! zeta, zetaw, zqsp, zbeh (all 4 = prsgrd),
+                     ! K- and Horiz- VF, roller, break
+#   endif
+#   if defined VEGETATION && defined VEG_DRAG
+      NDM2d=NDM2d+1  ! Resistance imposed on the flow by vegetation
 #   endif
 #   ifdef UV_COR
       NDM2d=NDM2d+1  ! Coriolis
@@ -1394,9 +1429,21 @@
       NDM3d=NDM3d+4  ! Horizontal (total, X, Y) and vertical advection
       NDrhs=NDrhs+4
 #   endif
-#   ifdef NEARSHORE_MELLOR
-      NDM3d=NDM3d+2  ! Horizontal and vertical radiation stresses
-      NDrhs=NDrhs+2
+#   ifdef WEC_VF
+#    ifdef UV_COR
+      NDM3d=NDM3d+1  ! Coriolis
+      NDrhs=NDrhs+1
+#    endif
+#    ifdef BOTTOM_STREAMING
+      NDM3d=NDM3d+1  ! Bottom streaming
+      NDrhs=NDrhs+1
+#    endif
+#    ifdef SURFACE_STREAMING
+      NDM3d=NDM3d+1  ! Surface streaming
+      NDrhs=NDrhs+1
+#    endif
+      NDM3d=NDM3d+5  ! wave break, roller, K- Horiz and Jvert- VF
+      NDrhs=NDrhs+5
 #   endif
 #   ifdef UV_COR
       NDM3d=NDM3d+1  ! Coriolis
@@ -1426,6 +1473,9 @@
         Jm(ng)=Mm(ng)+J_padd
         NT(ng)=NAT+NBT+NST+NPT
 #ifdef FLOATS
+!
+!  Number of floats variables.
+!
 # ifdef FLOAT_OYSTER
 #  ifdef FLOAT_VWALK
         NFV(ng)=NT(ng)+18
@@ -1440,30 +1490,71 @@
 #  endif
 # endif
 #endif
-        NSV(ng)=NT(ng)+5
-#ifdef ADJUST_WSTRESS
-        NSV(ng)=NSV(ng)+2
+!
+!  Number of state variables. The order is irrelevant for determining
+!  the "NSV" dimension.
+!
+#ifdef SOLVE3D
+        NSV(ng)=5+NT(ng)         ! zeta, ubar, vbar, u, v, Tvar(1:MT)
+# ifdef ADJUST_STFLUX
+        NSV(ng)=NSV(ng)+NT(ng)   ! Tsur(1:MT)
+# endif
+#else
+        NSV(ng)=3                ! zeta, ubar, vbar
 #endif
-#ifdef ADJUST_STFLUX
-        NSV(ng)=NSV(ng)+NT(ng)
+#ifdef ADJUST_WSTRESS
+        NSV(ng)=NSV(ng)+2        ! Ustr, Vstr
+#endif
+#ifdef WEC
+        NSV(ng)=NSV(ng)+2        ! ubar_stokes, vbar_stokes
+# if defined SOLVE3D
+        NSV(ng)=NSV(ng)+2        ! u_stokes, v_stokes
+# endif
+#endif
+#ifdef SOLVE3D
+# if defined GLS_MIXING || defined MY25_MIXING
+        NSV(ng)=NSV(ng)+1        ! TKE
+# endif
+        NSV(ng)=NSV(ng)+1        ! W
 #endif
       END DO
 !
-!  Set the maximum number of tracer between all nested grids.
+!  Set the maximum number of tracers between all nested grids. It cannot
+!  be zero. Usually, NAT=2 (temperature and salinity), but some Test
+!  Cases do not include salinity.
 !
-      MT=MAX(NAT,MAXVAL(NT))
+      MT=MAX(1,MAX(NAT,MAXVAL(NT)))
 !
 !-----------------------------------------------------------------------
 !  Allocate Lateral Boundary Conditions switches structure.
 !-----------------------------------------------------------------------
 !
+!  Here, "nLBCvar" is larger than needed because it includes unused
+!  state variables that need to be included because of their indices
+!  are in a particular order due to data assimilation variables
+!  associated with the state vector.
+!
 #ifdef SOLVE3D
-      nLBCvar=5+MT
-# if defined GLS_MIXING || defined MY25_MIXING
-      nLBCvar=nLBCvar+1
+      nLBCvar=5+MT                 ! zeta, ubar, vbar, u, v, Tvar(1:MT)
+# ifdef ADJUST_STFLUX
+      nLBCvar=nLBCvar+MT           ! Tsur(1:MT); unused
 # endif
 #else
-      nLBCvar=3
+      nLBCvar=3                    ! zeta, ubar, vbar
+#endif
+#ifdef ADJUST_WSTRESS
+      nLBCvar=nLBCvar+2            ! Ustr, Vstr; unused
+#endif
+#ifdef WEC
+      nLBCvar=nLBCvar+2            ! ubar_stokes, vbar_stokes
+# ifdef SOLVE3D
+      nLBCvar=nLBCvar+2            ! u_stokes, v_stokes
+# endif
+#endif
+#ifdef SOLVE3D
+# if defined GLS_MIXING || defined MY25_MIXING
+      nLBCvar=nLBCvar+1            ! TKE
+# endif
 #endif
 !
       IF (.not.allocated(LBC)) THEN
@@ -1478,6 +1569,7 @@
               LBC(ibry,ivar,ng)%closed = .FALSE.
               LBC(ibry,ivar,ng)%Flather = .FALSE.
               LBC(ibry,ivar,ng)%gradient = .FALSE.
+              LBC(ibry,ivar,ng)%mixed = .FALSE.
               LBC(ibry,ivar,ng)%nested = .FALSE.
               LBC(ibry,ivar,ng)%nudging = .FALSE.
               LBC(ibry,ivar,ng)%periodic = .FALSE.
@@ -1501,6 +1593,7 @@
               ad_LBC(ibry,ivar,ng)%closed = .FALSE.
               ad_LBC(ibry,ivar,ng)%Flather = .FALSE.
               ad_LBC(ibry,ivar,ng)%gradient = .FALSE.
+              ad_LBC(ibry,ivar,ng)%mixed = .FALSE.
               ad_LBC(ibry,ivar,ng)%nested = .FALSE.
               ad_LBC(ibry,ivar,ng)%nudging = .FALSE.
               ad_LBC(ibry,ivar,ng)%periodic = .FALSE.
@@ -1525,6 +1618,7 @@
               tl_LBC(ibry,ivar,ng)%closed = .FALSE.
               tl_LBC(ibry,ivar,ng)%Flather = .FALSE.
               tl_LBC(ibry,ivar,ng)%gradient = .FALSE.
+              tl_LBC(ibry,ivar,ng)%mixed = .FALSE.
               tl_LBC(ibry,ivar,ng)%nested = .FALSE.
               tl_LBC(ibry,ivar,ng)%nudging = .FALSE.
               tl_LBC(ibry,ivar,ng)%periodic =.FALSE.

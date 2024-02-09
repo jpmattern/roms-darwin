@@ -2,11 +2,11 @@
       MODULE zeta_balance_mod
 
 #if defined BALANCE_OPERATOR  && defined ZETA_ELLIPTIC
-!svn $Id: zeta_balance.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: zeta_balance.F 1210 2024-01-03 22:03:03Z arango $
 !=================================================== Andrew M. Moore ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group      Hernan G. Arango   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group      Hernan G. Arango   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module contains routines to solve the elliptic equation for    !
@@ -205,7 +205,7 @@
       real(r8), intent(in) :: rho(LBi:UBi,LBj:UBj,N(ng))
 #  endif
       real(r8), intent(inout) :: rhs_r2d(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
 # endif
 !
 !  Local variable declarations.
@@ -511,7 +511,7 @@
       real(r8), intent(in) :: pnom_v(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
       real(r8), intent(inout) :: bc_ak(Nbico(ng))
       real(r8), intent(inout) :: bc_bk(Nbico(ng))
       real(r8), intent(inout) :: zdf1(Nbico(ng))

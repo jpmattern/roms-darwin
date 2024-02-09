@@ -1,11 +1,11 @@
 #undef NEUMANN
       MODULE prsgrd_mod
 !
-!svn $Id: prsgrd42.h 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: prsgrd42.h 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                           Hernan G. Arango   !
+!    See License_ROMS.md                            Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
 !                                                                      !
 !  This subroutine evaluates the baroclinic,  hydrostatic pressure     !
@@ -84,6 +84,9 @@
 #ifdef TIDE_GENERATING_FORCES
      &                    OCEAN(ng) % eq_tide,                          &
 #endif
+#ifdef WEC_VF
+     &                    OCEAN(ng) % zetat,                            &
+#endif
 #ifdef ATM_PRESS
      &                    FORCES(ng) % Pair,                            &
 #endif
@@ -115,6 +118,9 @@
      &                          rho,                                    &
 #ifdef TIDE_GENERATING_FORCES
      &                          eq_tide,                                &
+#endif
+#ifdef WEC_VF
+     &                          zetat,                                  &
 #endif
 #ifdef ATM_PRESS
      &                          Pair,                                   &
@@ -152,6 +158,9 @@
 # ifdef TIDE_GENERATING_FORCES
       real(r8), intent(in) :: eq_tide(LBi:,LBj:)
 # endif
+# ifdef WEC_VF
+      real(r8), intent(in) :: zetat(LBi:,LBj:)
+# endif
 # ifdef ATM_PRESS
       real(r8), intent(in) :: Pair(LBi:,LBj:)
 # endif
@@ -177,6 +186,9 @@
       real(r8), intent(in) :: rho(LBi:UBi,LBj:UBj,N(ng))
 # ifdef TIDE_GENERATING_FORCES
       real(r8), intent(in) :: eq_tide(LBi:UBi,LBj:UBj)
+# endif
+# ifdef WEC_VF
+      real(r8), intent(in) :: zetat(LBi:UBi,LBj:UBj)
 # endif
 # ifdef ATM_PRESS
       real(r8), intent(in) :: Pair(LBi:UBi,LBj:UBj)
@@ -294,6 +306,9 @@
 !
         DO i=IstrU-2,Iend+1
           P(i,j,N(ng))=0.0_r8
+#ifdef WEC_VF
+          P(i,j,N(ng))=P(i,j,N(ng))+zetat(i,j)
+#endif
 #ifdef ATM_PRESS
           P(i,j,N(ng))=P(i,j,N(ng))+fac*(Pair(i,j)-OneAtm)
 #endif

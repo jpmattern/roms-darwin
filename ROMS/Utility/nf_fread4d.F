@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE nf_fread4d_mod
 !
-!svn $Id: nf_fread4d.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: nf_fread4d.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This function reads in a generic floating point 4D array from an    !
@@ -606,7 +606,7 @@
 
       real(r8), dimension(3) :: AttValue
 !
-      real(r8), pointer :: Cwrk(:)               ! used for checksum
+      real(r8), allocatable :: Cwrk(:)           ! used for checksum
 
 # if defined INLINE_2DIO && defined DISTRIBUTE
       real(r8), dimension(2+(Lm(ng)+2)*(Mm(ng)+2)) :: wrk
@@ -932,16 +932,16 @@
       IF (Lchecksum) THEN
 # ifdef DISTRIBUTE
         Npts=(Imax-Imin+1)*(Jmax-Jmin+1)*(UBk-LBk+1)*(UBt-LBt+1)
-        IF (.not.associated(Cwrk)) allocate ( Cwrk(Npts) )
+        IF (.not.allocated(Cwrk)) allocate ( Cwrk(Npts) )
         Cwrk=PACK(Adat(Imin:Imax, Jmin:Jmax, LBk:UBk, LBt:UBt), .TRUE.)
         CALL get_hash (Cwrk, Npts, checksum, .TRUE.)
 # else
         Npts=(Ie-Is+1)*(Je-Js+1)*(UBk-LBk+1)*(UBt-LBt+1)
-        IF (.not.associated(Cwrk)) allocate ( Cwrk(Npts) )
+        IF (.not.allocated(Cwrk)) allocate ( Cwrk(Npts) )
         Cwrk=PACK(Adat(Is:Ie, Js:Je, LBk:UBk, LBt:UBt), .TRUE.)
         CALL get_hash (Cwrk, Npts, checksum)
 # endif
-        IF (associated(Cwrk)) deallocate (Cwrk)
+        IF (allocated(Cwrk)) deallocate (Cwrk)
       END IF
 
 !
@@ -1018,7 +1018,7 @@
 !
       real(r4), pointer :: Awrk4(:,:,:,:)        ! single precision
       real(r8), pointer :: Awrk8(:,:,:,:)        ! double precision
-      real(r8), pointer :: Cwrk(:)               ! used for checksum
+      real(r8), allocatable :: Cwrk(:)           ! used for checksum
 !
       character (len=12), dimension(3) :: AttName
       character (len= 3), dimension(2) :: op_handle
@@ -1224,10 +1224,10 @@
 !
       IF (Lchecksum) THEN
         Npts=(Imax-Imin+1)*(Jmax-Jmin+1)*(UBk-LBk+1)*(UBt-LBt+1)
-        IF (.not.associated(Cwrk)) allocate ( Cwrk(Npts) )
+        IF (.not.allocated(Cwrk)) allocate ( Cwrk(Npts) )
         Cwrk=PACK(Adat(Imin:Imax, Jmin:Jmax, LBk:UBk, LBt:UBt), .TRUE.)
         CALL get_hash (Cwrk, Npts, checksum, .TRUE.)
-        IF (associated(Cwrk)) deallocate (Cwrk)
+        IF (allocated(Cwrk)) deallocate (Cwrk)
       END IF
 !
 !  Compute global minimum and maximum values.

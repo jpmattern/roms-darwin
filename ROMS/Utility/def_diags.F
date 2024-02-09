@@ -2,11 +2,11 @@
       MODULE def_diags_mod
 #ifdef DIAGNOSTICS
 !
-!svn $Id: def_diags.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: def_diags.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module creates output TIME-AVERAGED DIAGNOSTIC file using      !
@@ -74,13 +74,13 @@
           CALL def_diags_pio (ng, ldef)
 # endif
         CASE DEFAULT
-          IF (Master) THEN
-            WRITE (stdout,10) DIA(ng)%IOtype
-  10        FORMAT (' DEF_DIAGS - Illegal output type, io_type = ',i0)
-          END IF
+          IF (Master) WRITE (stdout,10) DIA(ng)%IOtype
           exit_flag=3
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+  10  FORMAT (' DEF_DIAGS - Illegal output file type, io_type = ',i0,   &
+     &        /,13x,'Check KeyWord ''OUT_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE def_diags
@@ -127,9 +127,9 @@
 !
       real(r8) :: Aval(6)
 !
-      character (len= 13) :: Prefix
-      character (len=120) :: Vinfo(Natt)
-      character (len=256) :: ncname
+      character (len= 13)    :: Prefix
+      character (len=256)    :: ncname
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_diags_nf90"
@@ -478,7 +478,8 @@
 !
 !  Set long name prefix string.
 !
-        Prefix='time-averaged'
+!!      Prefix='time-averaged'
+        Prefix=CHAR(32)                                   ! blank space
 !
 !-----------------------------------------------------------------------
 !  Define time-recordless information variables.
@@ -498,9 +499,28 @@
         WRITE (Vinfo( 3),'(a,a)') 'seconds since ', TRIM(Rclock%string)
         Vinfo( 4)=TRIM(Rclock%calendar)
         Vinfo(14)=Vname(4,idtime)
+        Vinfo(21)=Vname(6,idtime)
         status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(idtime),     &
      &                 NF_TOUT, 1, (/recdim/), Aval, Vinfo, ncname,     &
      &                 SetParAccess = .TRUE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define time-averaged free-surface. It is needed for CF compliance for
+!  vertical coordinates formula.
+!
+        Vinfo( 1)=Vname(1,idFsur)
+        WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idFsur))
+        Vinfo( 3)=Vname(3,idFsur)
+        Vinfo(14)=Vname(4,idFsur)
+        Vinfo(16)=Vname(1,idtime)
+# if !defined WET_DRY && (defined WRITE_WATER && defined MASKING)
+        Vinfo(20)='mask_rho'
+# endif
+        Vinfo(21)=Vname(6,idFsur)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idFsur,ng),r8)
+        status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(idFsur),     &
+     &                 NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef DIAGNOSTICS_UV
@@ -518,6 +538,7 @@
 #  if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_u'
 #  endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(u2dvar,r8)
             status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
@@ -534,6 +555,7 @@
 #  if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_v'
 #  endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(v2dvar,r8)
             status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
@@ -557,6 +579,7 @@
 #   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_u'
 #   endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(u3dvar,r8)
             status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
@@ -573,6 +596,7 @@
 #   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_v'
 #   endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(v3dvar,r8)
             status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
@@ -598,6 +622,7 @@
 #  if defined WRITE_WATER && defined MASKING
               Vinfo(20)='mask_rho'
 #  endif
+              Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
               Aval(5)=REAL(r3dvar,r8)
               status=def_var(ng, iNLM, DIA(ng)%ncid,                    &
@@ -668,6 +693,7 @@
 #   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
 #   endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(r2dvar,r8)
             status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
@@ -690,6 +716,7 @@
 #   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
 #   endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(r3dvar,r8)
             status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
@@ -712,6 +739,7 @@
 #   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
 #   endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
             status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
@@ -733,6 +761,7 @@
 #   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
 #   endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
             status=def_var(ng, iNLM, DIA(ng)%ncid, DIA(ng)%Vid(ifield), &
@@ -1084,9 +1113,9 @@
 !
       real(r8) :: Aval(6)
 !
-      character (len= 13) :: Prefix
-      character (len=120) :: Vinfo(Natt)
-      character (len=256) :: ncname
+      character (len= 13)    :: Prefix
+      character (len=256)    :: ncname
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_diags_pio"
@@ -1415,7 +1444,8 @@
 !
 !  Set long name prefix string.
 !
-        Prefix='time-averaged'
+!!      Prefix='time-averaged'
+        Prefix=CHAR(32)                                   ! blank space
 !
 !-----------------------------------------------------------------------
 !  Define time-recordless information variables.
@@ -1435,6 +1465,7 @@
         WRITE (Vinfo( 3),'(a,a)') 'seconds since ', TRIM(Rclock%string)
         Vinfo( 4)=TRIM(Rclock%calendar)
         Vinfo(14)=Vname(4,idtime)
+        Vinfo(21)=Vname(6,idtime)
         DIA(ng)%pioVar(idtime)%dkind=PIO_TOUT
         DIA(ng)%pioVar(idtime)%gtype=0
 !
@@ -1442,6 +1473,28 @@
      &                 DIA(ng)%pioVar(idtime)%vd,                       &
      &                 PIO_TOUT, 1, (/recdim/), Aval, Vinfo, ncname,    &
      &                 SetParAccess = .TRUE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define time-averaged free-surface. It is needed for CF compliance for
+!  vertical coordinates formula.
+!
+        Vinfo( 1)=Vname(1,idFsur)
+        WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idFsur))
+        Vinfo( 3)=Vname(3,idFsur)
+        Vinfo(14)=Vname(4,idFsur)
+        Vinfo(16)=Vname(1,idtime)
+#  if !defined WET_DRY && (defined WRITE_WATER && defined MASKING)
+        Vinfo(20)='mask_rho'
+#  endif
+        Vinfo(21)=Vname(6,idFsur)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idFsur,ng),r8)
+        AVG(ng)%pioVar(idFsur)%dkind=PIO_FOUT
+        AVG(ng)%pioVar(idFsur)%gtype=r2dvar
+!
+        status=def_var(ng, iNLM, DIA(ng)%pioFile,                       &
+     &                 DIA(ng)%pioVar(idFsur)%vd,                       &
+     &                 PIO_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #  ifdef DIAGNOSTICS_UV
@@ -1459,6 +1512,7 @@
 #   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_u'
 #   endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(u2dvar,r8)
             DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT
@@ -1480,6 +1534,7 @@
 #   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_v'
 #   endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(v2dvar,r8)
             DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT
@@ -1507,6 +1562,7 @@
 #    if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_u'
 #    endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(u3dvar,r8)
             DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT
@@ -1528,6 +1584,7 @@
 #    if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_v'
 #    endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(v3dvar,r8)
             DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT
@@ -1557,6 +1614,7 @@
 #   if defined WRITE_WATER && defined MASKING
               Vinfo(20)='mask_rho'
 #   endif
+              Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
               Aval(5)=REAL(r3dvar,r8)
               DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT
@@ -1589,6 +1647,7 @@
 #    if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
 #    endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(r2dvar,r8)
             DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT
@@ -1616,6 +1675,7 @@
 #    if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
 #    endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(r3dvar,r8)
             DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT
@@ -1643,6 +1703,7 @@
 #    if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
 #    endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
             DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT
@@ -1668,6 +1729,7 @@
 #    if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
 #    endif
+            Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
             DIA(ng)%pioVar(ifield)%dkind=PIO_FOUT

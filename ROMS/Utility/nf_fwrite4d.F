@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE nf_fwrite4d_mod
 !
-!svn $Id: nf_fwrite4d.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: nf_fwrite4d.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This function writes out a generic floating point 4D array into an  !
@@ -16,6 +16,7 @@
 !     ng           Nested grid number                                  !
 !     model        Calling model identifier                            !
 !     ncid         NetCDF file ID                                      !
+!     ifield       Field metadata index (integer)                      !
 #if defined PIO_LIB && defined DISTRIBUTE
 !or   pioFile      PIO file descriptor structure, TYPE(file_desc_t)    !
 !                    pioFile%fh         file handler                   !
@@ -40,7 +41,7 @@
 !     LBk          K-dimension Lower bound                             !
 !     UBk          K-dimension Upper bound                             !
 !     LBt          Time-dimension Lower bound                          !
-!     UBt          Time-dimension Upoer bound                          !
+!     UBt          Time-dimension Upper bound                          !
 !     Amask        land/Sea mask, if any (real)                        !
 !     Ascl         Factor to scale field before writing (real)         !
 !     Adat         Field to write out (real)                           !
@@ -82,7 +83,8 @@
 #if defined PARALLEL_IO && defined DISTRIBUTE
 !
 !***********************************************************************
-      FUNCTION nf90_fwrite4d (ng, model, ncid, ncvarid, tindex, gtype,  &
+      FUNCTION nf90_fwrite4d (ng, model, ncid, ifield,                  &
+     &                        ncvarid, tindex, gtype,                   &
      &                        LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt,   &
      &                        Ascl,                                     &
 # ifdef MASKING
@@ -104,6 +106,7 @@
       logical, intent(in), optional :: SetFillVal
 !
       integer, intent(in) :: ng, model, ncid, ncvarid, tindex, gtype
+      integer, intent(in) :: ifield
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt
 !
       real(dp), intent(in) :: Ascl
@@ -421,7 +424,8 @@
 
 !
 !***********************************************************************
-      FUNCTION nf90_fwrite4d (ng, model, ncid, ncvarid, tindex, gtype,  &
+      FUNCTION nf90_fwrite4d (ng, model, ncid, ifield,                  &
+     &                        ncvarid, tindex, gtype,                   &
      &                        LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt,   &
      &                        Ascl,                                     &
 # ifdef MASKING
@@ -442,12 +446,16 @@
       USE distribute_mod, ONLY : mp_gather3d
 #  endif
 # endif
+# ifdef OUTPUT_STATS
+      USE stats_mod,      ONLY : stats_4dfld
+# endif
 !
 !  Imported variable declarations.
 !
       logical, intent(in), optional :: SetFillVal
 !
       integer, intent(in) :: ng, model, ncid, ncvarid, tindex, gtype
+      integer, intent(in) :: ifield
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt
 !
       real(dp), intent(in) :: Ascl
@@ -472,7 +480,7 @@
       logical :: LandFill
 !
 # endif
-      integer :: i, j, k, ic, fourth, Npts
+      integer :: i, j, k, ic, fourth, Npts, tile
       integer :: Imin, Imax, Jmin, Jmax, Kmin, Kmax, Koff, Loff
       integer :: Ilen, Jlen, Klen, IJlen, MyType
       integer :: status
@@ -483,6 +491,10 @@
       real(r8), dimension((Lm(ng)+2)*(Mm(ng)+2)) :: Awrk
 # else
       real(r8), dimension((Lm(ng)+2)*(Mm(ng)+2)*(UBk-LBk+1)) :: Awrk
+# endif
+# ifdef OUTPUT_STATS
+!
+      TYPE (T_STATS) :: Stats
 # endif
 !
 !-----------------------------------------------------------------------
@@ -564,6 +576,17 @@
 !
       Awrk=0.0_r8
 
+# ifdef OUTPUT_STATS
+!
+!  Initialize output variable statistics structure.
+!
+      Stats % checksum=0_i8b
+      Stats % count=0
+      Stats % min=spval
+      Stats % max=-spval
+      Stats % avg=0.0_r8
+      Stats % rms=0.0_r8
+# endif
 # ifdef DISTRIBUTE
 !
 !-----------------------------------------------------------------------
@@ -760,6 +783,31 @@
         END IF
       END DO
 # endif
+# ifdef OUTPUT_STATS
+!
+!-----------------------------------------------------------------------
+!  Compute and report output field statistics.
+!-----------------------------------------------------------------------
+!
+#  ifdef DISTRIBUTE
+      tile=MyRank
+#  else
+      tile=-1
+#  endif
+      CALL stats_4dfld (ng, tile, model, gtype, Stats,                  &
+     &                  LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt,         &
+     &                  Adat,                                           &
+#  ifdef MASKING
+     &                  Fmask = Amask,                                  &
+#  endif
+     &                  debug = .FALSE.)
+      IF (OutThread) THEN
+        WRITE (stdout,10) TRIM(Vname(1,ifield)), Stats%min, Stats%max,  &
+     &                    Stats%checksum
+  10    FORMAT (4x,'- ',a,':',t35,'Min = ',1p,e15.8,',  Max = ',        &
+     &          1p,e15.8,',  CheckSum = ',i0)
+      END IF
+# endif
 # ifdef DISTRIBUTE
 !
 !-----------------------------------------------------------------------
@@ -776,8 +824,8 @@
 #if defined PIO_LIB && defined DISTRIBUTE
 !
 !***********************************************************************
-      FUNCTION pio_fwrite4d (ng, model, pioFile, pioVar, tindex,        &
-     &                       pioDesc,                                   &
+      FUNCTION pio_fwrite4d (ng, model, pioFile, ifield,                &
+     &                       pioVar, tindex, pioDesc,                   &
      &                       LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt,    &
      &                       Ascl,                                      &
 # ifdef MASKING
@@ -790,12 +838,16 @@
       USE mod_pio_netcdf
 !
       USE distribute_mod, ONLY : mp_reduce
+# ifdef OUTPUT_STATS
+      USE stats_mod,      ONLY : stats_4dfld
+# endif
 !
 !  Imported variable declarations.
 !
       logical, intent(in), optional :: SetFillVal
 !
       integer, intent(in) :: ng, model, tindex
+      integer, intent(in) :: ifield
       integer, intent(in) :: LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt
 !
       real(dp), intent(in) :: Ascl
@@ -824,7 +876,7 @@
 
       logical, pointer :: Lwater(:,:,:,:)
 !
-      integer :: i, j, k, l
+      integer :: i, j, k, l, tile
       integer :: Imin, Imax, Jmin, Jmax
       integer :: Cgrid, dkind, ghost, gtype
       integer :: status
@@ -835,6 +887,11 @@
 
       real(r4), pointer :: Awrk4(:,:,:,:)
       real(r8), pointer :: Awrk8(:,:,:,:)
+
+# ifdef OUTPUT_STATS
+!
+      TYPE (T_STATS) :: Stats
+# endif
 !
       character (len= 3), dimension(2) :: op_handle
 !
@@ -890,6 +947,17 @@
       ELSE
         LandFill=tindex.gt.0
       END IF
+# endif
+# ifdef OUTPUT_STATS
+!
+!  Initialize output variable statistics structure.
+!
+      Stats % checksum=0_i8b
+      Stats % count=0
+      Stats % min=spval
+      Stats % max=-spval
+      Stats % avg=0.0_r8
+      Stats % rms=0.0_r8
 # endif
 !
 !-----------------------------------------------------------------------
@@ -975,6 +1043,32 @@
      &                               LBk:UBk,LBt:UBt),                  &
      &                         status)
       END IF
+
+# ifdef OUTPUT_STATS
+!
+!-----------------------------------------------------------------------
+!  Compute and report output field statistics.
+!-----------------------------------------------------------------------
+!
+#  ifdef DISTRIBUTE
+      tile=MyRank
+#  else
+      tile=-1
+#  endif
+      CALL stats_4dfld (ng, tile, model, gtype, Stats,                  &
+     &                  LBi, UBi, LBj, UBj, LBk, UBk, LBt, UBt,         &
+     &                  Adat,                                           &
+#  ifdef MASKING
+     &                  Fmask = Amask,                                  &
+#  endif
+     &                  debug = .FALSE.)
+      IF (OutThread) THEN
+        WRITE (stdout,10) TRIM(Vname(1,ifield)), Stats%min, Stats%max,  &
+     &                    Stats%checksum
+  10    FORMAT (4x,'- ',a,':',t35,'Min = ',1p,e15.8,',  Max = ',        &
+     &          1p,e15.8,',  CheckSum = ',i0)
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  If applicable, compute global minimum and maximum values.

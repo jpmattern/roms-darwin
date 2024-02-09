@@ -2,11 +2,11 @@
 #ifdef ADJOINT
       SUBROUTINE ad_output (ng)
 !
-!svn $Id: ad_output.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: ad_output.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine manages adjoint model output. It creates output NetCDF !
@@ -44,7 +44,7 @@
 !
 !  Local variable declarations.
 !
-      logical :: Ldefine, NewFile, wrtHIS
+      logical :: Ldefine, Lupdate, NewFile, wrtHIS
 
       integer :: Fcount, ifile, status
 !
@@ -71,6 +71,15 @@
       IF (Lanafile) THEN
         Lanafile=.FALSE.
       END IF
+!
+!  If appropriate, set switch for updating biology header file global
+!  attribute in output NetCDF files.
+!
+#ifdef BIOLOGY
+      Lupdate=.TRUE.
+#else
+      Lupdate=.FALSE.
+#endif
 !
 !  Create output adjoint NetCDF file or prepare existing file to
 !  append new data to it.  Also,  notice that it is possible to
@@ -128,7 +137,7 @@
             CALL mp_bcasts (ng, iADM, ADM(ng)%name)
 # endif
             ADM(ng)%files(Fcount)=TRIM(ADM(ng)%name)
-            CALL close_file (ng, iADM, ADM(ng), ADM(ng)%name)
+            CALL close_file (ng, iADM, ADM(ng), ADM(ng)%name, Lupdate)
             CALL ad_def_his (ng, NewFile)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
@@ -257,7 +266,7 @@
             CALL mp_bcasts (ng, iADM, AVG(ng)%name)
 #  endif
             AVG(ng)%files(Fcount)=TRIM(AVG(ng)%name)
-            CALL close_file (ng, iADM, ADM(ng), ADM(ng)%name)
+            CALL close_file (ng, iADM, ADM(ng), ADM(ng)%name, Lupdate)
             CALL def_avg (ng, Newfile)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
             LwrtAVG(ng)=.TRUE.

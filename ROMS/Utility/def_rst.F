@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE def_rst_mod
 !
-!svn $Id: def_rst.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: def_rst.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module creates ouput restart file using either the standard    !
@@ -34,11 +34,17 @@
       USE mod_sediment
 #endif
 !
-      USE def_dim_mod,  ONLY : def_dim
-      USE def_info_mod, ONLY : def_info
-      USE def_var_mod,  ONLY : def_var
-      USE strings_mod,  ONLY : FoundError
-      USE wrt_info_mod, ONLY : wrt_info
+      USE def_dim_mod,    ONLY : def_dim
+      USE def_info_mod,   ONLY : def_info
+      USE def_var_mod,    ONLY : def_var
+#ifdef ICE_MODEL
+      USE ice_output_mod, ONLY : ice_def_nf90
+# if defined PIO_LIB && defined DISTRIBUTE
+      USE ice_output_mod, ONLY : ice_def_pio
+# endif
+#endif
+      USE strings_mod,    ONLY : FoundError
+      USE wrt_info_mod,   ONLY : wrt_info
 !
       implicit none
 !
@@ -69,33 +75,33 @@
 !
       SELECT CASE (RST(ng)%IOtype)
         CASE (io_nf90)
-          CALL def_rst_nf90 (ng)
+          CALL def_rst_nf90 (ng, iNLM)
 
 #if defined PIO_LIB && defined DISTRIBUTE
         CASE (io_pio)
-          CALL def_rst_pio (ng)
+          CALL def_rst_pio (ng, iNLM)
 #endif
         CASE DEFAULT
-          IF (Master) THEN
-            WRITE (stdout,10) RST(ng)%IOtype
-  10        FORMAT (' DEF_RST - Illegal output type, io_type = ',i0)
-          END IF
+          IF (Master) WRITE (stdout,10) RST(ng)%IOtype
           exit_flag=3
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+  10  FORMAT (' DEF_RST - Illegal output file type, io_type = ',i0,     &
+     &        /,11x,'Check KeyWord ''OUT_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE def_rst
 !
 !***********************************************************************
-      SUBROUTINE def_rst_nf90 (ng)
+      SUBROUTINE def_rst_nf90 (ng, model)
 !***********************************************************************
 !
       USE mod_netcdf
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng
+      integer, intent(in) :: ng, model
 !
 !  Local variable declarations.
 !
@@ -126,8 +132,8 @@
 !
       real(r8) :: Aval(6)
 !
-      character (len=120) :: Vinfo(Natt)
-      character (len=256) :: ncname
+      character (len=256)    :: ncname
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_rst_nf90"
@@ -164,7 +170,7 @@
 !=======================================================================
 !
       DEFINE : IF (Ldefine) THEN
-        CALL netcdf_create (ng, iNLM, TRIM(ncname), RST(ng)%ncid)
+        CALL netcdf_create (ng, model, TRIM(ncname), RST(ng)%ncid)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) THEN
           IF (Master) WRITE (stdout,30) TRIM(ncname)
           RETURN
@@ -176,49 +182,49 @@
 !
         DimIDs=0
 !
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xi_rho',        &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xi_rho',       &
      &                 IOBOUNDS(ng)%xi_rho, DimIDs( 1))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xi_u',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xi_u',         &
      &                 IOBOUNDS(ng)%xi_u, DimIDs( 2))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xi_v',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xi_v',         &
      &                 IOBOUNDS(ng)%xi_v, DimIDs( 3))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xi_psi',        &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xi_psi',       &
      &                 IOBOUNDS(ng)%xi_psi, DimIDs( 4))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'eta_rho',       &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'eta_rho',      &
      &                 IOBOUNDS(ng)%eta_rho, DimIDs( 5))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'eta_u',         &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'eta_u',        &
      &                 IOBOUNDS(ng)%eta_u, DimIDs( 6))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'eta_v',         &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'eta_v',        &
      &                 IOBOUNDS(ng)%eta_v, DimIDs( 7))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'eta_psi',       &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'eta_psi',      &
      &                 IOBOUNDS(ng)%eta_psi, DimIDs( 8))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #if !defined PERFECT_RESTART && \
     (defined WRITE_WATER && defined MASKING)
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xy_rho',        &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xy_rho',       &
      &                 IOBOUNDS(ng)%xy_rho, DimIDs(17))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xy_u',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xy_u',         &
      &                 IOBOUNDS(ng)%xy_u, DimIDs(18))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xy_v',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xy_v',         &
      &                 IOBOUNDS(ng)%xy_v, DimIDs(19))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
@@ -226,74 +232,74 @@
 #ifdef SOLVE3D
 # if !defined PERFECT_RESTART && \
      (defined WRITE_WATER && defined MASKING)
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xyz_rho',       &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xyz_rho',      &
      &                 IOBOUNDS(ng)%xy_rho*N(ng), DimIDs(20))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xyz_u',         &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xyz_u',        &
      &                 IOBOUNDS(ng)%xy_u*N(ng), DimIDs(21))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xyz_v',         &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xyz_v',        &
      &                 IOBOUNDS(ng)%xy_v*N(ng), DimIDs(22))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xyz_w',         &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xyz_w',        &
      &                 IOBOUNDS(ng)%xy_rho*(N(ng)+1), DimIDs(23))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'N',             &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'N',            &
      &                 N(ng), DimIDs( 9))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 's_rho',         &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 's_rho',        &
      &                 N(ng), DimIDs( 9))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 's_w',           &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 's_w',          &
      &                 N(ng)+1, DimIDs(10))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'tracer',        &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'tracer',       &
      &                 NT(ng), DimIDs(11))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef SEDIMENT
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'NST',           &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'NST',          &
      &                 NST, DimIDs(32))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Nbed',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'Nbed',         &
      &                 Nbed, DimIDs(16))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #  if !defined PERFECT_RESTART && \
       (defined WRITE_WATER && defined MASKING)
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'xybed',         &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'xybed',        &
      &                 IOBOUNDS(ng)%xy_rho*Nbed, DimIDs(24))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 # endif
 
 # ifdef ECOSIM
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Nbands',        &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'Nbands',       &
      &                 NBands, DimIDs(33))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Nphy',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'Nphy',         &
      &                 Nphy, DimIDs(25))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Nbac',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'Nbac',         &
      &                 Nbac, DimIDs(26))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Ndom',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'Ndom',         &
      &                 Ndom, DimIDs(27))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Nfec',          &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'Nfec',         &
      &                 Nfec, DimIDs(28))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # elif defined DARWIN
@@ -319,27 +325,27 @@
 # endif
 #endif
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'boundary',      &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'boundary',     &
      &                 4, DimIDs(14))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 #ifdef FOUR_DVAR
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'Nstate',        &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'Nstate',       &
      &                 NstateVar(ng), DimIDs(29))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 
 #ifdef PERFECT_RESTART
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'two',           &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'two',          &
      &                 2, DimIDs(30))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname, 'three',         &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname, 'three',        &
      &                 3, DimIDs(31))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 
-        status=def_dim(ng, iNLM, RST(ng)%ncid, ncname,                  &
+        status=def_dim(ng, model, RST(ng)%ncid, ncname,                 &
      &                 TRIM(ADJUSTL(Vname(5,idtime))),                  &
      &                 nf90_unlimited, DimIDs(12))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -621,7 +627,7 @@
 !  Define time-recordless information variables.
 !-----------------------------------------------------------------------
 !
-        CALL def_info (ng, iNLM, RST(ng)%ncid, ncname, DimIDs)
+        CALL def_info (ng, model, RST(ng)%ncid, ncname, DimIDs)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
@@ -635,42 +641,42 @@
 # ifdef SOLVE3D
         Vinfo( 1)='nstp'
         Vinfo( 2)='3D equations time level index, nstp'
-        status=def_var(ng, iNLM, RST(ng)%ncid, varid, nf90_int,         &
+        status=def_var(ng, model, RST(ng)%ncid, varid, nf90_int,        &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         Vinfo( 1)='nrhs'
         Vinfo( 2)='3D equations time level index, nrhs'
-        status=def_var(ng, iNLM, RST(ng)%ncid, varid, nf90_int,         &
+        status=def_var(ng, model, RST(ng)%ncid, varid, nf90_int,        &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         Vinfo( 1)='nnew'
         Vinfo( 2)='3D equations time level index, nnew'
-        status=def_var(ng, iNLM, RST(ng)%ncid, varid, nf90_int,         &
+        status=def_var(ng, model, RST(ng)%ncid, varid, nf90_int,        &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
         Vinfo( 1)='kstp'
         Vinfo( 2)='3D equations time level index, kstp'
-        status=def_var(ng, iNLM, RST(ng)%ncid, varid, nf90_int,         &
+        status=def_var(ng, model, RST(ng)%ncid, varid, nf90_int,        &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         Vinfo( 1)='krhs'
         Vinfo( 2)='3D equations time level index, krhs'
-        status=def_var(ng, iNLM, RST(ng)%ncid, varid, nf90_int,         &
+        status=def_var(ng, model, RST(ng)%ncid, varid, nf90_int,        &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
         Vinfo( 1)='knew'
         Vinfo( 2)='3D equations time level index, knew'
-        status=def_var(ng, iNLM, RST(ng)%ncid, varid, nf90_int,         &
+        status=def_var(ng, model, RST(ng)%ncid, varid, nf90_int,        &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -683,7 +689,8 @@
         WRITE (Vinfo( 3),'(a,a)') 'seconds since ', TRIM(Rclock%string)
         Vinfo( 4)=TRIM(Rclock%calendar)
         Vinfo(14)=Vname(4,idtime)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idtime),     &
+        Vinfo(21)=Vname(6,idtime)
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idtime),    &
      &                 NF_TOUT, 1, (/recdim/), Aval, Vinfo, ncname,     &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -699,9 +706,10 @@
         Vinfo(10)='water'
         Vinfo(14)=Vname(4,idPwet)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idPwet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idPwet,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idPwet),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idPwet),    &
      &                 NF_FRST, nvd3, sp2dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -715,9 +723,10 @@
         Vinfo(10)='water'
         Vinfo(14)=Vname(4,idRwet)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idRwet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idRwet,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idRwet),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idRwet),    &
      &                 NF_FRST, nvd3, sr2dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -731,9 +740,10 @@
         Vinfo(10)='water'
         Vinfo(14)=Vname(4,idUwet)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idUwet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idUwet,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idUwet),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idUwet),    &
      &                 NF_FRST, nvd3, su2dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -747,9 +757,10 @@
         Vinfo(16)=Vname(1,idtime)
         Vinfo( 9)='land'
         Vinfo(10)='water'
+        Vinfo(21)=Vname(6,idVwet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVwet,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVwet),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVwet),    &
      &                 NF_FRST, nvd3, sv2dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -785,9 +796,10 @@
         Vinfo( 3)=Vname(3,idbath)
         Vinfo(14)=Vname(4,idbath)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idbath)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idbath,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idbath),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idbath),    &
      &                 NF_FRST, nvd3, t2dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -808,10 +820,11 @@
         Vinfo(20)='mask_rho'
 # endif
 #endif
+        Vinfo(21)=Vname(6,idFsur)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idFsur,ng),r8)
 #ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idFsur),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idFsur),    &
 # ifdef WET_DRY
      &                 NF_FRST, nvd4, t2dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
@@ -819,7 +832,7 @@
      &                 NF_FRST, nvd4, t2dgrd, Aval, Vinfo, ncname)
 # endif
 #else
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idFsur),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idFsur),    &
 # ifdef WET_DRY
      &                 NF_FRST, nvd3, t2dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
@@ -847,9 +860,10 @@
         Vinfo(20)='mask_rho'
 #  endif
 # endif
+        Vinfo(21)=Vname(6,idRzet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idFsur,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idRzet),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idRzet),    &
      &                 NF_FRST, nvd4, r2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
@@ -869,13 +883,14 @@
         Vinfo(20)='mask_u'
 # endif
 #endif
+        Vinfo(21)=Vname(6,idUbar)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idUbar,ng),r8)
 #ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idUbar),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idUbar),    &
      &                 NF_FRST, nvd4, u2dgrd, Aval, Vinfo, ncname)
 #else
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idUbar),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idUbar),    &
      &                 NF_FRST, nvd3, u2dgrd, Aval, Vinfo, ncname)
 #endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -897,9 +912,10 @@
         Vinfo(20)='mask_u'
 #  endif
 # endif
+        Vinfo(21)=Vname(6,idRu2d)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idRu2d,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idRu2d),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idRu2d),    &
      &                 NF_FRST, nvd4, ru2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
@@ -919,13 +935,14 @@
         Vinfo(20)='mask_v'
 # endif
 #endif
+        Vinfo(21)=Vname(6,idVbar)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVbar,ng),r8)
 #ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVbar),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVbar),    &
      &                 NF_FRST, nvd4, v2dgrd, Aval, Vinfo, ncname)
 #else
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVbar),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVbar),    &
      &                 NF_FRST, nvd3, v2dgrd, Aval, Vinfo, ncname)
 #endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -947,9 +964,10 @@
         Vinfo(20)='mask_v'
 #  endif
 # endif
+        Vinfo(21)=Vname(6,idRv2d)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idRv2d,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idRv2d),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idRv2d),    &
      &                 NF_FRST, nvd4, rv2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
@@ -970,13 +988,14 @@
         Vinfo(20)='mask_u'
 #  endif
 # endif
+        Vinfo(21)=Vname(6,idUvel)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idUvel,ng),r8)
 # ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idUvel),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idUvel),    &
      &                 NF_FRST, nvd5, u3dgrd, Aval, Vinfo, ncname)
 # else
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idUvel),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idUvel),    &
      &                 NF_FRST, nvd4, u3dgrd, Aval, Vinfo, ncname)
 # endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1001,9 +1020,10 @@
         Vinfo(20)='mask_u'
 #   endif
 #  endif
+        Vinfo(21)=Vname(6,idRu3d)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(-u3dvar,r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idRu3d),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idRu3d),    &
      &                 NF_FRST, nvd5, ru3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
@@ -1023,13 +1043,14 @@
         Vinfo(20)='mask_v'
 #  endif
 # endif
+        Vinfo(21)=Vname(6,idVvel)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVvel,ng),r8)
 # ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVvel),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVvel),    &
      &                 NF_FRST, nvd5, v3dgrd, Aval, Vinfo, ncname)
 # else
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVvel),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVvel),    &
      &                 NF_FRST, nvd4, v3dgrd, Aval, Vinfo, ncname)
 # endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1054,9 +1075,10 @@
         Vinfo(20)='mask_v'
 #   endif
 #  endif
+        Vinfo(21)=Vname(6,idRv3d)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(-v3dvar,r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idRv3d),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idRv3d),    &
      &                 NF_FRST, nvd5, rv3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
@@ -1084,13 +1106,14 @@
           Vinfo(20)='mask_rho'
 #  endif
 # endif
+          Vinfo(21)=Vname(6,idTvar(itrc))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(r3dvar,r8)
 # ifdef PERFECT_RESTART
-          status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Tid(itrc),     &
+          status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Tid(itrc),    &
      &                   NF_FRST, nvd5, t3dgrd, Aval, Vinfo, ncname)
 # else
-          status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Tid(itrc),     &
+          status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Tid(itrc),    &
      &                   NF_FRST, nvd4, t3dgrd, Aval, Vinfo, ncname)
 # endif
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1111,9 +1134,10 @@
         Vinfo(20)='mask_rho'
 #  endif
 # endif
+        Vinfo(21)=Vname(6,idDano)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idDano,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idDano),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idDano),    &
      &                 NF_FRST, nvd4, r3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
@@ -1134,9 +1158,10 @@
         Vinfo(20)='mask_rho'
 #   endif
 #  endif
+        Vinfo(21)=Vname(6,idHsbl)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idHsbl,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idHsbl),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idHsbl),    &
      &                 NF_FRST, nvd3, sr2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
@@ -1158,9 +1183,10 @@
         Vinfo(20)='mask_rho'
 #   endif
 #  endif
+        Vinfo(21)=Vname(6,idHbbl)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idHbbl,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idHbbl),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idHbbl),    &
      &                 NF_FRST, nvd3, sr2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
@@ -1177,9 +1203,10 @@
 #  if defined WRITE_WATER && defined MASKING
           Vinfo(20)='mask_rho'
 #  endif
+          Vinfo(21)=Vname(6,idGhat(itrc))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idGhat(itrc),ng),r8)
-          status=def_var(ng, iNLM, RST(ng)%ncid,                        &
+          status=def_var(ng, model, RST(ng)%ncid,                       &
      &                     RST(ng)%Vid(idGhat(itrc)), NF_FRST,          &
      &                     nvd4, w3dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1195,9 +1222,10 @@
         Vinfo( 3)=Vname(3,idVvis)
         Vinfo(14)=Vname(4,idVvis)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idVvis)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVvis,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVvis),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVvis),    &
      &                 NF_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1209,9 +1237,10 @@
         Vinfo( 3)=Vname(3,idTdif)
         Vinfo(14)=Vname(4,idTdif)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idTdif)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idTdif,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idTdif),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idTdif),    &
      &                 NF_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1225,9 +1254,10 @@
         Vinfo( 3)=Vname(3,idSdif)
         Vinfo(14)=Vname(4,idSdif)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idSdif)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idSdif,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idSdif),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idSdif),    &
      &                 NF_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1243,9 +1273,10 @@
         Vinfo( 3)=Vname(3,idMtke)
         Vinfo(14)=Vname(4,idMtke)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idMtke)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idMtke,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idMtke),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idMtke),    &
      &                 NF_FRST, nvd5, k3dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1257,9 +1288,10 @@
         Vinfo( 3)=Vname(3,idMtls)
         Vinfo(14)=Vname(4,idMtls)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idMtls)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idMtls,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idMtls),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idMtls),    &
      &                 NF_FRST, nvd5, k3dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1279,9 +1311,10 @@
         Vinfo(20)='mask_rho'
 #   endif
 #  endif
+        Vinfo(21)=Vname(6,idVmLS)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVmLS,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVmLS),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVmLS),    &
      &                 NF_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
@@ -1300,9 +1333,10 @@
         Vinfo(20)='mask_rho'
 #   endif
 #  endif
+        Vinfo(21)=Vname(6,idVmKK)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVmKK,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVmKK),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVmKK),    &
      &                 NF_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
@@ -1323,9 +1357,10 @@
         Vinfo(20)='mask_rho'
 #    endif
 #   endif
+        Vinfo(21)=Vname(6,idVmKP)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVmKP,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idVmKP),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idVmKP),    &
      &                 NF_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
@@ -1349,9 +1384,10 @@
           Vinfo(20)='mask_u'
 #    endif
 #   endif
+          Vinfo(21)=Vname(6,idUbld(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idUbld(i),ng),r8)
-          status=def_var(ng, iNLM, RST(ng)%ncid,                        &
+          status=def_var(ng, model, RST(ng)%ncid,                       &
      &                   RST(ng)%Vid(idUbld(i)), NF_FRST,               &
      &                   nvd3, su2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1371,9 +1407,10 @@
           Vinfo(20)='mask_v'
 #    endif
 #   endif
+          Vinfo(21)=Vname(6,idVbld(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idVbld(i),ng),r8)
-          status=def_var(ng, iNLM, RST(ng)%ncid,                        &
+          status=def_var(ng, model, RST(ng)%ncid,                       &
      &                   RST(ng)%Vid(idVbld(i)), NF_FRST,               &
      &                   nvd3, sv2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1397,9 +1434,10 @@
           Vinfo(20)='mask_rho'
 #  endif
 # endif
+          Vinfo(21)=Vname(6,idfrac(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idfrac(i),ng),r8)
-          status=def_var(ng, iNLM, RST(ng)%ncid,                        &
+          status=def_var(ng, model, RST(ng)%ncid,                       &
      &                   RST(ng)%Vid(idfrac(i)), NF_FRST,               &
      &                   nvd4, sr3dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1422,9 +1460,10 @@
           Vinfo(20)='mask_rho'
 #  endif
 # endif
+          Vinfo(21)=Vname(6,idBmas(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idBmas(i),ng),r8)
-          status=def_var(ng, iNLM, RST(ng)%ncid,                        &
+          status=def_var(ng, model, RST(ng)%ncid,                       &
      &                   RST(ng)%Vid(idBmas(i)), NF_FRST,               &
      &                   nvd4, sr3dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1446,9 +1485,10 @@
           Vinfo(20)='mask_rho'
 #  endif
 # endif
+          Vinfo(21)=Vname(6,idSbed(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idSbed(i),ng),r8)
-          status=def_var(ng, iNLM, RST(ng)%ncid,                        &
+          status=def_var(ng, model, RST(ng)%ncid,                       &
      &                   RST(ng)%Vid(idSbed(i)), NF_FRST,               &
      &                   nvd4, sr3dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1475,18 +1515,19 @@
           Vinfo(20)='mask_rho'
 #   endif
 #  endif
+          Vinfo(21)=Vname(6,idBott(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idBott(i),ng),r8)
-          status=def_var(ng, iNLM, RST(ng)%ncid,                        &
+          status=def_var(ng, model, RST(ng)%ncid,                       &
      &                   RST(ng)%Vid(idBott(i)), NF_FRST,               &
      &                   nvd3, sr2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
 # endif
 #endif
-#ifdef NEARSHORE_MELLOR
+#ifdef WEC
 !
-!  Define 2D u-stokes velocity.
+!  Define 2D Stokes U-velocity.
 !
         Vinfo( 1)=Vname(1,idU2Sd)
         Vinfo( 2)=Vname(2,idU2Sd)
@@ -1501,13 +1542,14 @@
         Vinfo(20)='mask_u'
 #  endif
 # endif
+        Vinfo(21)=Vname(6,idU2Sd)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idU2Sd,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idU2Sd),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idU2Sd),    &
      &                 NF_FRST, nvd3, su2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-!  Define 2D v-stokes velocity.
+!  Define 2D Stokes V-velocity.
 !
         Vinfo( 1)=Vname(1,idV2Sd)
         Vinfo( 2)=Vname(2,idV2Sd)
@@ -1522,15 +1564,16 @@
         Vinfo(20)='mask_v'
 #  endif
 # endif
+        Vinfo(21)=Vname(6,idV2Sd)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idV2Sd,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idV2Sd),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idV2Sd),    &
      &                 NF_FRST, nvd3, sv2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
 # ifdef SOLVE3D
 !
-!  Define 3D u-stokes velocity.
+!  Define 3D Stokes U-velocity.
 !
         Vinfo( 1)=Vname(1,idU3Sd)
         Vinfo( 2)=Vname(2,idU3Sd)
@@ -1545,13 +1588,14 @@
         Vinfo(20)='mask_u'
 #   endif
 #  endif
+        Vinfo(21)=Vname(6,idU3Sd)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idU3Sd,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idU3Sd),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idU3Sd),    &
      &                 NF_FRST, nvd4, su3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-!  Define 3D v-stokes velocity.
+!  Define 3D Stokes V-velocity.
 !
         Vinfo( 1)=Vname(1,idV3Sd)
         Vinfo( 2)=Vname(2,idV3Sd)
@@ -1566,26 +1610,37 @@
         Vinfo(20)='mask_v'
 #   endif
 #  endif
+        Vinfo(21)=Vname(6,idV3Sd)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idV3Sd,ng),r8)
-        status=def_var(ng, iNLM, RST(ng)%ncid, RST(ng)%Vid(idV3Sd),     &
+        status=def_var(ng, model, RST(ng)%ncid, RST(ng)%Vid(idV3Sd),    &
      &                 NF_FRST, nvd4, sv3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
+#endif
+#ifdef ICE_MODEL
+!
+!-----------------------------------------------------------------------
+!  Define sea-ice model variables.
+!-----------------------------------------------------------------------
+!
+        CALL ice_def_nf90 (ng, model, Ldefine, Hout, RST,               &
+                           t2dgrd, u2dgrd, v2dgrd)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 !
 !-----------------------------------------------------------------------
 !  Leave definition mode.
 !-----------------------------------------------------------------------
 !
-        CALL netcdf_enddef (ng, iNLM, ncname, RST(ng)%ncid)
+        CALL netcdf_enddef (ng, model, ncname, RST(ng)%ncid)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Write out time-recordless, information variables.
 !-----------------------------------------------------------------------
 !
-        CALL wrt_info (ng, iNLM, RST(ng)%ncid, ncname)
+        CALL wrt_info (ng, model, RST(ng)%ncid, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       END IF DEFINE
@@ -1600,7 +1655,7 @@
 !
 !  Open restart file for read/write.
 !
-        CALL netcdf_open (ng, iNLM, ncname, 1, RST(ng)%ncid)
+        CALL netcdf_open (ng, model, ncname, 1, RST(ng)%ncid)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) THEN
           WRITE (stdout,50) TRIM(ncname)
           RETURN
@@ -1608,13 +1663,13 @@
 !
 !  Inquire about the dimensions and check for consistency.
 !
-        CALL netcdf_check_dim (ng, iNLM, ncname,                        &
+        CALL netcdf_check_dim (ng, model, ncname,                       &
      &                         ncid = RST(ng)%ncid)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Inquire about the variables.
 !
-        CALL netcdf_inq_var (ng, iNLM, ncname,                          &
+        CALL netcdf_inq_var (ng, model, ncname,                         &
      &                       ncid = RST(ng)%ncid)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
@@ -1746,7 +1801,7 @@
 #  endif
 # endif
 #endif
-#if defined NEARSHORE_MELLOR
+#ifdef WEC
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idU2Sd))) THEN
             got_var(idU2Sd)=.TRUE.
             RST(ng)%Vid(idU2Sd)=var_id(i)
@@ -1974,7 +2029,7 @@
 #  endif
 # endif
 #endif
-#if defined NEARSHORE_MELLOR
+#ifdef WEC
         IF (.not.got_var(idU2Sd)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idU2Sd)),          &
      &                                  TRIM(ncname)
@@ -2070,6 +2125,13 @@
         END DO
 # endif
 #endif
+#ifdef ICE_MODEL
+!
+!  Scan sea-ice variables from input NetCDF and activate switches for
+!  restart variables. Get variable IDs.
+!
+        CALL ice_def_nf90 (ng, model, Ldefine, Hout, RST)
+#endif
 !
 !  Set unlimited time record dimension to current value.
 !
@@ -2098,14 +2160,14 @@
 #if defined PIO_LIB && defined DISTRIBUTE
 !
 !***********************************************************************
-      SUBROUTINE def_rst_pio (ng)
+      SUBROUTINE def_rst_pio (ng, model)
 !***********************************************************************
 !
       USE mod_pio_netcdf
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng
+      integer, intent(in) :: ng, model
 !
 !  Local variable declarations.
 !
@@ -2126,18 +2188,18 @@
       integer :: sr3dgrd(4), su3dgrd(4), sv3dgrd(4)
       integer :: t2dgrd(4), u2dgrd(4), v2dgrd(4)
 
-#ifdef SOLVE3D
+# ifdef SOLVE3D
       integer :: itrc
 
       integer :: k3dgrd(5), t3dgrd(5)
       integer :: r3dgrd(4), ru3dgrd(5), rv3dgrd(5)
       integer :: u3dgrd(5), v3dgrd(5), w3dgrd(4)
-#endif
+# endif
 !
       real(r8) :: Aval(6)
 !
-      character (len=120) :: Vinfo(Natt)
-      character (len=256) :: ncname
+      character (len=256)    :: ncname
+      character (len=MaxLen) :: Vinfo(Natt)
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", def_rst_pio"
@@ -2176,7 +2238,7 @@
 !=======================================================================
 !
       DEFINE : IF (Ldefine) THEN
-        CALL pio_netcdf_create (ng, iNLM, TRIM(ncname), RST(ng)%pioFile)
+        CALL pio_netcdf_create (ng, model, TRIM(ncname), RST(ng)%pioFile)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) THEN
           IF (Master) WRITE (stdout,30) TRIM(ncname)
           RETURN
@@ -2188,150 +2250,150 @@
 !
         DimIDs=0
 !
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xi_rho',     &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xi_rho',    &
      &                 IOBOUNDS(ng)%xi_rho, DimIDs( 1))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xi_u',       &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xi_u',      &
      &                 IOBOUNDS(ng)%xi_u, DimIDs( 2))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xi_v',       &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xi_v',      &
      &                 IOBOUNDS(ng)%xi_v, DimIDs( 3))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xi_psi',     &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xi_psi',    &
      &                 IOBOUNDS(ng)%xi_psi, DimIDs( 4))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'eta_rho',    &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'eta_rho',   &
      &                 IOBOUNDS(ng)%eta_rho, DimIDs( 5))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'eta_u',      &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'eta_u',     &
      &                 IOBOUNDS(ng)%eta_u, DimIDs( 6))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'eta_v',      &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'eta_v',     &
      &                 IOBOUNDS(ng)%eta_v, DimIDs( 7))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'eta_psi',    &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'eta_psi',   &
      &                 IOBOUNDS(ng)%eta_psi, DimIDs( 8))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-#if !defined PERFECT_RESTART && \
-    (defined WRITE_WATER && defined MASKING)
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xy_rho',     &
+# if !defined PERFECT_RESTART && \
+     (defined WRITE_WATER && defined MASKING)
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xy_rho',    &
      &                 IOBOUNDS(ng)%xy_rho, DimIDs(17))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xy_u',       &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xy_u',      &
      &                 IOBOUNDS(ng)%xy_u, DimIDs(18))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xy_v',       &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xy_v',      &
      &                 IOBOUNDS(ng)%xy_v, DimIDs(19))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
-
-#ifdef SOLVE3D
-# if !defined PERFECT_RESTART && \
-     (defined WRITE_WATER && defined MASKING)
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xyz_rho',    &
-     &                 IOBOUNDS(ng)%xy_rho*N(ng), DimIDs(20))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xyz_u',      &
-     &                 IOBOUNDS(ng)%xy_u*N(ng), DimIDs(21))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xyz_v',      &
-     &                 IOBOUNDS(ng)%xy_v*N(ng), DimIDs(22))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xyz_w',      &
-     &                 IOBOUNDS(ng)%xy_rho*(N(ng)+1), DimIDs(23))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'N',          &
+# ifdef SOLVE3D
+#  if !defined PERFECT_RESTART && \
+     (defined WRITE_WATER && defined MASKING)
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xyz_rho',   &
+     &                 IOBOUNDS(ng)%xy_rho*N(ng), DimIDs(20))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xyz_u',     &
+     &                 IOBOUNDS(ng)%xy_u*N(ng), DimIDs(21))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xyz_v',     &
+     &                 IOBOUNDS(ng)%xy_v*N(ng), DimIDs(22))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xyz_w',     &
+     &                 IOBOUNDS(ng)%xy_rho*(N(ng)+1), DimIDs(23))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'N',         &
      &                 N(ng), DimIDs( 9))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 's_rho',      &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 's_rho',     &
      &                 N(ng), DimIDs( 9))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 's_w',        &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 's_w',       &
      &                 N(ng)+1, DimIDs(10))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'tracer',     &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'tracer',    &
      &                 NT(ng), DimIDs(11))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-# ifdef SEDIMENT
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'NST',        &
+#  ifdef SEDIMENT
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'NST',       &
      &                 NST, DimIDs(32))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'Nbed',       &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'Nbed',      &
      &                 Nbed, DimIDs(16))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-#  if !defined PERFECT_RESTART && \
-      (defined WRITE_WATER && defined MASKING)
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'xybed',      &
+#   if !defined PERFECT_RESTART && \
+       (defined WRITE_WATER && defined MASKING)
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'xybed',     &
      &                 IOBOUNDS(ng)%xy_rho*Nbed, DimIDs(24))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
+#  endif
+
+#  ifdef ECOSIM
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'Nbands',    &
+     &                 NBands, DimIDs(33))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'Nphy',      &
+     &                 Nphy, DimIDs(25))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'Nbac',      &
+     &                 Nbac, DimIDs(26))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'Ndom',      &
+     &                 Ndom, DimIDs(27))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'Nfec',      &
+     &                 Nfec, DimIDs(28))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 # endif
 
-# ifdef ECOSIM
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'Nbands',     &
-     &                 NBands, DimIDs(33))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'Nphy',       &
-     &                 Nphy, DimIDs(25))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'Nbac',       &
-     &                 Nbac, DimIDs(26))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'Ndom',       &
-     &                 Ndom, DimIDs(27))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'Nfec',       &
-     &                 Nfec, DimIDs(28))
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-# endif
-#endif
-
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'boundary',   &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'boundary',  &
      &                 4, DimIDs(14))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-#ifdef FOUR_DVAR
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'Nstate',     &
+# ifdef FOUR_DVAR
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'Nstate',    &
      &                 NstateVar(ng), DimIDs(29))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
+# endif
 
-#ifdef PERFECT_RESTART
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'two',        &
+# ifdef PERFECT_RESTART
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'two',       &
      &                 2, DimIDs(30))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname, 'three',      &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname, 'three',     &
      &                 3, DimIDs(31))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
+# endif
 
-        status=def_dim(ng, iNLM, RST(ng)%pioFile, ncname,               &
+        status=def_dim(ng, model, RST(ng)%pioFile, ncname,              &
      &                 TRIM(ADJUSTL(Vname(5,idtime))),                  &
      &                 PIO_unlimited, DimIDs(12))
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -2340,59 +2402,59 @@
 !
 !  Set number of dimensions for output variables.
 !
-#if !defined PERFECT_RESTART && \
+# if !defined PERFECT_RESTART && \
     (defined WRITE_WATER && defined MASKING)
         nvd3=2
         nvd4=2
         nvd5=2
-#else
+# else
         nvd3=3
         nvd4=4
         nvd5=5
-#endif
+# endif
 !
 !  Define dimension vectors for staggered tracer type variables.
 !
-#if !defined PERFECT_RESTART && \
-    (defined WRITE_WATER && defined MASKING)
+# if !defined PERFECT_RESTART && \
+     (defined WRITE_WATER && defined MASKING)
         t2dgrd(1)=DimIDs(17)
         t2dgrd(2)=DimIDs(12)
         sr2dgrd(1)=DimIDs(17)
         sr2dgrd(2)=DimIDs(12)
-# ifdef SOLVE3D
+#  ifdef SOLVE3D
         t3dgrd(1)=DimIDs(20)
         t3dgrd(2)=DimIDs(12)
         r3dgrd(1)=DimIDs(20)
         r3dgrd(2)=DimIDs(12)
-# endif
-#else
+#  endif
+# else
         t2dgrd(1)=DimIDs( 1)
         t2dgrd(2)=DimIDs( 5)
         sr2dgrd(1)=DimIDs( 1)
         sr2dgrd(2)=DimIDs( 5)
         sr2dgrd(3)=DimIDs(12)
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
         t2dgrd(3)=DimIDs(31)
         t2dgrd(4)=DimIDs(12)
-# else
+#  else
         t2dgrd(3)=DimIDs(12)
-# endif
-# ifdef SOLVE3D
+#  endif
+#  ifdef SOLVE3D
         t3dgrd(1)=DimIDs( 1)
         t3dgrd(2)=DimIDs( 5)
         t3dgrd(3)=DimIDs( 9)
         r3dgrd(1)=DimIDs( 1)
         r3dgrd(2)=DimIDs( 5)
         r3dgrd(3)=DimIDs( 9)
-#  ifdef PERFECT_RESTART
+#   ifdef PERFECT_RESTART
         t3dgrd(4)=DimIDs(30)
         t3dgrd(5)=DimIDs(12)
-#  else
+#   else
         t3dgrd(4)=DimIDs(12)
-#  endif
+#   endif
         r3dgrd(4)=DimIDs(12)
+#  endif
 # endif
-#endif
 !
 !  Define dimension vectors for staggered type variables at PSI-points.
 !
@@ -2402,117 +2464,117 @@
 !
 !  Define dimension vectors for staggered u-momentum type variables.
 !
-#if !defined PERFECT_RESTART && \
-    (defined WRITE_WATER && defined MASKING)
+# if !defined PERFECT_RESTART && \
+     (defined WRITE_WATER && defined MASKING)
         u2dgrd(1)=DimIDs(18)
         u2dgrd(2)=DimIDs(12)
-# ifdef SOLVE3D
+#  ifdef SOLVE3D
         u3dgrd(1)=DimIDs(21)
         u3dgrd(2)=DimIDs(12)
-# endif
-#else
+#  endif
+# else
         u2dgrd(1)=DimIDs( 2)
         u2dgrd(2)=DimIDs( 6)
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
         u2dgrd(3)=DimIDs(31)
         u2dgrd(4)=DimIDs(12)
-# else
+#  else
         u2dgrd(3)=DimIDs(12)
-# endif
-# ifdef SOLVE3D
+#  endif
+#  ifdef SOLVE3D
         u3dgrd(1)=DimIDs( 2)
         u3dgrd(2)=DimIDs( 6)
         u3dgrd(3)=DimIDs( 9)
-#  ifdef PERFECT_RESTART
+#   ifdef PERFECT_RESTART
         u3dgrd(4)=DimIDs(30)
         u3dgrd(5)=DimIDs(12)
-#  else
+#   else
         u3dgrd(4)=DimIDs(12)
+#   endif
 #  endif
 # endif
-#endif
 !
 !  Define dimension vectors for staggered v-momentum type variables.
 !
-#if !defined PERFECT_RESTART && \
-    (defined WRITE_WATER && defined MASKING)
+# if !defined PERFECT_RESTART && \
+     (defined WRITE_WATER && defined MASKING)
         v2dgrd(1)=DimIDs(19)
         v2dgrd(2)=DimIDs(12)
-# ifdef SOLVE3D
+#  ifdef SOLVE3D
         v3dgrd(1)=DimIDs(22)
         v3dgrd(2)=DimIDs(12)
-# endif
-#else
+#  endif
+# else
         v2dgrd(1)=DimIDs( 3)
         v2dgrd(2)=DimIDs( 7)
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
         v2dgrd(3)=DimIDs(31)
         v2dgrd(4)=DimIDs(12)
-# else
+#  else
         v2dgrd(3)=DimIDs(12)
-# endif
-# ifdef SOLVE3D
+#  endif
+#  ifdef SOLVE3D
         v3dgrd(1)=DimIDs( 3)
         v3dgrd(2)=DimIDs( 7)
         v3dgrd(3)=DimIDs( 9)
-#  ifdef PERFECT_RESTART
+#   ifdef PERFECT_RESTART
         v3dgrd(4)=DimIDs(30)
         v3dgrd(5)=DimIDs(12)
-#  else
+#   else
         v3dgrd(4)=DimIDs(12)
+#   endif
 #  endif
 # endif
-#endif
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
 !
 !  Define dimension vectors for RHS free-surface equation.
 !
-# if !defined PERFECT_RESTART && \
-     (defined WRITE_WATER && defined MASKING)
+#  if !defined PERFECT_RESTART && \
+      (defined WRITE_WATER && defined MASKING)
         r2dgrd(1)=DimIDs(17)
         r2dgrd(2)=DimIDs(12)
-# else
+#  else
         r2dgrd(1)=DimIDs( 1)
         r2dgrd(2)=DimIDs( 5)
         r2dgrd(3)=DimIDs(30)
         r2dgrd(4)=DimIDs(12)
-# endif
+#  endif
 !
 !  Define dimension vectors for RHS u-momentum equation.
 !
-# if !defined PERFECT_RESTART && \
+#  if !defined PERFECT_RESTART && \
      (defined WRITE_WATER && defined MASKING)
         ru2dgrd(1)=DimIDs(18)
         ru2dgrd(2)=DimIDs(12)
-#  ifdef SOLVE3D
+#   ifdef SOLVE3D
         ru2dgrd(1)=DimIDs(21)
         ru2dgrd(2)=DimIDs(12)
-#  endif
-# else
+#   endif
+#  else
         ru2dgrd(1)=DimIDs( 2)
         ru2dgrd(2)=DimIDs( 6)
         ru2dgrd(3)=DimIDs(30)
         ru2dgrd(4)=DimIDs(12)
-#  ifdef SOLVE3D
+#   ifdef SOLVE3D
         ru3dgrd(1)=DimIDs( 2)
         ru3dgrd(2)=DimIDs( 6)
         ru3dgrd(3)=DimIDs(10)
         ru3dgrd(4)=DimIDs(30)
         ru3dgrd(5)=DimIDs(12)
+#   endif
 #  endif
-# endif
 !
 !  Define dimension vectors for RHS v-momentum equation.
 !
-# if !defined PERFECT_RESTART && \
-     (defined WRITE_WATER && defined MASKING)
+#  if !defined PERFECT_RESTART && \
+      (defined WRITE_WATER && defined MASKING)
         rv2dgrd(1)=DimIDs(19)
         rv2dgrd(2)=DimIDs(12)
-#  ifdef SOLVE3D
+#   ifdef SOLVE3D
         rv3dgrd(1)=DimIDs(22)
         rv3dgrd(2)=DimIDs(12)
-#  endif
-# else
+#   endif
+#  else
         rv2dgrd(1)=DimIDs( 3)
         rv2dgrd(2)=DimIDs( 7)
         rv2dgrd(3)=DimIDs(30)
@@ -2523,62 +2585,62 @@
         rv3dgrd(3)=DimIDs(10)
         rv3dgrd(4)=DimIDs(30)
         rv3dgrd(5)=DimIDs(12)
+#   endif
 #  endif
 # endif
-#endif
-#ifdef SOLVE3D
+# ifdef SOLVE3D
 !
 !  Define dimension vector for staggered w-momentum type variables.
 !
-# if !defined PERFECT_RESTART && \
-     (defined WRITE_WATER && defined MASKING)
+#  if !defined PERFECT_RESTART && \
+      (defined WRITE_WATER && defined MASKING)
         w3dgrd(1)=DimIDs(23)
         w3dgrd(2)=DimIDs(12)
-#  ifdef PERFECT_RESTART
+#   ifdef PERFECT_RESTART
         k3dgrd(1)=DimIDs(23)
         k3dgrd(2)=DimIDs(12)
-#  endif
-# else
+#   endif
+#  else
         w3dgrd(1)=DimIDs( 1)
         w3dgrd(2)=DimIDs( 5)
         w3dgrd(3)=DimIDs(10)
         w3dgrd(4)=DimIDs(12)
-#  ifdef PERFECT_RESTART
+#   ifdef PERFECT_RESTART
         k3dgrd(1)=DimIDs( 1)
         k3dgrd(2)=DimIDs( 5)
         k3dgrd(3)=DimIDs(10)
         k3dgrd(4)=DimIDs(30)
         k3dgrd(5)=DimIDs(12)
+#   endif
 #  endif
 # endif
-#endif
 !
 !  Define dimension vector for sediment, radiation stress variables.
 !
-#if !defined PERFECT_RESTART && \
-    (defined WRITE_WATER && defined MASKING)
+# if !defined PERFECT_RESTART && \
+     (defined WRITE_WATER && defined MASKING)
         su2dgrd(1)=DimIDs(18)
         su2dgrd(2)=DimIDs(12)
         sv2dgrd(1)=DimIDs(19)
         sv2dgrd(2)=DimIDs(12)
-#else
+# else
         su2dgrd(1)=DimIDs( 2)
         su2dgrd(2)=DimIDs( 6)
         su2dgrd(3)=DimIDs(12)
         sv2dgrd(1)=DimIDs( 3)
         sv2dgrd(2)=DimIDs( 7)
         sv2dgrd(3)=DimIDs(12)
-#endif
-#ifdef SOLVE3D
-# if !defined PERFECT_RESTART && \
-     (defined WRITE_WATER && defined MASKING)
+# endif
+# ifdef SOLVE3D
+#  if !defined PERFECT_RESTART && \
+      (defined WRITE_WATER && defined MASKING)
         sr3dgrd(1)=DimIDs(24)
         sr3dgrd(2)=DimIDs(12)
         su3dgrd(1)=DimIDs(21)
         su3dgrd(2)=DimIDs(12)
         sv3dgrd(1)=DimIDs(22)
         sv3dgrd(2)=DimIDs(12)
-# else
+#  else
         sr3dgrd(1)=DimIDs( 1)
         sr3dgrd(2)=DimIDs( 5)
         sr3dgrd(3)=DimIDs(16)
@@ -2591,8 +2653,8 @@
         sv3dgrd(2)=DimIDs( 7)
         sv3dgrd(3)=DimIDs( 9)
         sv3dgrd(4)=DimIDs(12)
+#  endif
 # endif
-#endif
 !
 !  Initialize unlimited time record dimension.
 !
@@ -2613,61 +2675,61 @@
 !  Define time-recordless information variables.
 !-----------------------------------------------------------------------
 !
-        CALL def_info (ng, iNLM, RST(ng)%pioFile, ncname, DimIDs)
+        CALL def_info (ng, model, RST(ng)%pioFile, ncname, DimIDs)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Define time-varying variables.
 !-----------------------------------------------------------------------
 
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
 !
 !  Define time-stepping indices.
 !
-# ifdef SOLVE3D
+#  ifdef SOLVE3D
         Vinfo( 1)='nstp'
         Vinfo( 2)='3D equations time level index, nstp'
-        status=def_var(ng, iNLM, RST(ng)%pioFile, varDesc, PIO_int,     &
+        status=def_var(ng, model, RST(ng)%pioFile, varDesc, PIO_int,    &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
         Vinfo( 1)='nrhs'
         Vinfo( 2)='3D equations time level index, nrhs'
-        status=def_var(ng, iNLM, RST(ng)%pioFile, varDesc, PIO_int,     &
+        status=def_var(ng, model, RST(ng)%pioFile, varDesc, PIO_int,    &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
         Vinfo( 1)='nnew'
         Vinfo( 2)='3D equations time level index, nnew'
-        status=def_var(ng, iNLM, RST(ng)%pioFile, varDesc, PIO_int,     &
+        status=def_var(ng, model, RST(ng)%pioFile, varDesc, PIO_int,    &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-# endif
+#  endif
         Vinfo( 1)='kstp'
         Vinfo( 2)='3D equations time level index, kstp'
-        status=def_var(ng, iNLM, RST(ng)%pioFile, varDesc, PIO_int,     &
+        status=def_var(ng, model, RST(ng)%pioFile, varDesc, PIO_int,    &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
         Vinfo( 1)='krhs'
         Vinfo( 2)='3D equations time level index, krhs'
-        status=def_var(ng, iNLM, RST(ng)%pioFile, varDesc, PIO_int,     &
+        status=def_var(ng, model, RST(ng)%pioFile, varDesc, PIO_int,    &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
         Vinfo( 1)='knew'
         Vinfo( 2)='3D equations time level index, knew'
-        status=def_var(ng, iNLM, RST(ng)%pioFile, varDesc, PIO_int,     &
+        status=def_var(ng, model, RST(ng)%pioFile, varDesc, PIO_int,    &
      &                 1, (/recdim/), Aval, Vinfo, ncname,              &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
+# endif
 !
 !  Define model time.
 !
@@ -2676,16 +2738,17 @@
         WRITE (Vinfo( 3),'(a,a)') 'seconds since ', TRIM(Rclock%string)
         Vinfo( 4)=TRIM(Rclock%calendar)
         Vinfo(14)=Vname(4,idtime)
+        Vinfo(21)=Vname(6,idtime)
         RST(ng)%pioVar(idtime)%dkind=PIO_TOUT
         RST(ng)%pioVar(idtime)%gtype=0
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idtime)%vd,                       &
      &                 PIO_TOUT, 1, (/recdim/), Aval, Vinfo, ncname,    &
      &                 SetParAccess = .TRUE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-#ifdef WET_DRY
+# ifdef WET_DRY
 !
 !  Define wet/dry mask on PSI-points.
 !
@@ -2696,12 +2759,13 @@
         Vinfo(10)='water'
         Vinfo(14)=Vname(4,idPwet)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idPwet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idPwet,ng),r8)
         RST(ng)%pioVar(idPwet)%dkind=PIO_FRST
         RST(ng)%pioVar(idPwet)%gtype=p2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idPwet)%vd,                       &
      &                 PIO_FRST, nvd3, sp2dgrd, Aval, Vinfo, ncname,    &
      &                 SetFillVal = .FALSE.)
@@ -2716,12 +2780,13 @@
         Vinfo(10)='water'
         Vinfo(14)=Vname(4,idRwet)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idRwet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idRwet,ng),r8)
         RST(ng)%pioVar(idRwet)%dkind=PIO_FRST
         RST(ng)%pioVar(idRwet)%gtype=r2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idRwet)%vd,                       &
      &                 PIO_FRST, nvd3, sr2dgrd, Aval, Vinfo, ncname,    &
      &                 SetFillVal = .FALSE.)
@@ -2736,12 +2801,13 @@
         Vinfo(10)='water'
         Vinfo(14)=Vname(4,idUwet)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idUwet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idUwet,ng),r8)
         RST(ng)%pioVar(idUwet)%dkind=PIO_FRST
         RST(ng)%pioVar(idUwet)%gtype=u2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idUwet)%vd,                       &
      &                 PIO_FRST, nvd3, su2dgrd, Aval, Vinfo, ncname,    &
      &                 SetFillVal = .FALSE.)
@@ -2756,18 +2822,19 @@
         Vinfo(16)=Vname(1,idtime)
         Vinfo( 9)='land'
         Vinfo(10)='water'
+        Vinfo(21)=Vname(6,idVwet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVwet,ng),r8)
         RST(ng)%pioVar(idVwet)%dkind=PIO_FRST
         RST(ng)%pioVar(idVwet)%gtype=v2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idVwet)%vd,                       &
      &                 PIO_FRST, nvd3, sv2dgrd, Aval, Vinfo, ncname,    &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
-#if defined SEDIMENT && defined SED_MORPH
+# endif
+# if defined SEDIMENT && defined SED_MORPH
 !
 !  Define time-varying bathymetry.
 !
@@ -2776,17 +2843,18 @@
         Vinfo( 3)=Vname(3,idbath)
         Vinfo(14)=Vname(4,idbath)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idbath)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idbath,ng),r8)
         RST(ng)%pioVar(idbath)%dkind=PIO_FRST
         RST(ng)%pioVar(idbath)%gtype=r2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idbath)%vd,                       &
      &                 PIO_FRST, nvd3, t2dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
+# endif
 !
 !  Define free-surface.
 !
@@ -2795,42 +2863,43 @@
         Vinfo( 3)=Vname(3,idFsur)
         Vinfo(14)=Vname(4,idFsur)
         Vinfo(16)=Vname(1,idtime)
-#if defined WRITE_WATER && defined MASKING
-# if !defined WET_DRY && defined PERFECT_RESTART
+# if defined WRITE_WATER && defined MASKING
+#  if !defined WET_DRY && defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-# else
+#  else
         Vinfo(20)='mask_rho'
+#  endif
 # endif
-#endif
+        Vinfo(21)=Vname(6,idFsur)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idFsur,ng),r8)
         RST(ng)%pioVar(idFsur)%dkind=PIO_FRST
         RST(ng)%pioVar(idFsur)%gtype=r2dvar
 !
-#ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+# ifdef PERFECT_RESTART
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idFsur)%vd,                       &
-# ifdef WET_DRY
+#  ifdef WET_DRY
      &                 PIO_FRST, nvd4, t2dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
-# else
+#  else
      &                 PIO_FRST, nvd4, t2dgrd, Aval, Vinfo, ncname)
-# endif
-#else
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+#  endif
+# else
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idFsur)%vd,                       &
-# ifdef WET_DRY
+#  ifdef WET_DRY
      &                 PIO_FRST, nvd3, t2dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
-# else
+#  else
      &                 PIO_FRST, nvd3, t2dgrd, Aval, Vinfo, ncname)
 
+#  endif
 # endif
-#endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
 !
 !  Define RHS of free-surface equation.
 !
@@ -2839,24 +2908,25 @@
         Vinfo( 3)=Vname(3,idRzet)
         Vinfo(14)=Vname(4,idRzet)
         Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
         Vinfo(20)='mask_rho'
+#   endif
 #  endif
-# endif
+        Vinfo(21)=Vname(6,idRzet)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idFsur,ng),r8)
         RST(ng)%pioVar(idRzet)%dkind=PIO_FRST
         RST(ng)%pioVar(idRzet)%gtype=r2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idRzet)%vd,                       &
      &                 PIO_FRST, nvd4, r2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
+# endif
 !
 !  Define 2D momentum in the XI-direction.
 !
@@ -2865,31 +2935,32 @@
         Vinfo( 3)=Vname(3,idUbar)
         Vinfo(14)=Vname(4,idUbar)
         Vinfo(16)=Vname(1,idtime)
-#if defined WRITE_WATER && defined MASKING
-# if defined PERFECT_RESTART
+# if defined WRITE_WATER && defined MASKING
+#  if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-# else
+#  else
         Vinfo(20)='mask_u'
+#  endif
 # endif
-#endif
+        Vinfo(21)=Vname(6,idUbar)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idUbar,ng),r8)
         RST(ng)%pioVar(idUbar)%dkind=PIO_FRST
         RST(ng)%pioVar(idUbar)%gtype=u2dvar
 !
-#ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+# ifdef PERFECT_RESTART
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idUbar)%vd,                       &
      &                 PIO_FRST, nvd4, u2dgrd, Aval, Vinfo, ncname)
-#else
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+# else
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idUbar)%vd,                       &
      &                 PIO_FRST, nvd3, u2dgrd, Aval, Vinfo, ncname)
-#endif
+# endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
 !
 !  Define RHS of 2D momentum equation in the XI-direction.
 !
@@ -2898,24 +2969,25 @@
         Vinfo( 3)=Vname(3,idRu2d)
         Vinfo(14)=Vname(4,idRu2d)
         Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
         Vinfo(20)='mask_u'
+#   endif
 #  endif
-# endif
+        Vinfo(21)=Vname(6,idRu2d)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idRu2d,ng),r8)
         RST(ng)%pioVar(idRu2d)%dkind=PIO_FRST
         RST(ng)%pioVar(idRu2d)%gtype=u2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idRu2d)%vd,                       &
      &                 PIO_FRST, nvd4, ru2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
+# endif
 !
 !  Define 2D momentum in the ETA-direction.
 !
@@ -2924,31 +2996,32 @@
         Vinfo( 3)=Vname(3,idVbar)
         Vinfo(14)=Vname(4,idVbar)
         Vinfo(16)=Vname(1,idtime)
-#if defined WRITE_WATER && defined MASKING
-# if defined PERFECT_RESTART
+# if defined WRITE_WATER && defined MASKING
+#  if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-# else
+#  else
         Vinfo(20)='mask_v'
+#  endif
 # endif
-#endif
+        Vinfo(21)=Vname(6,idVbar)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVbar,ng),r8)
         RST(ng)%pioVar(idVbar)%dkind=PIO_FRST
         RST(ng)%pioVar(idVbar)%gtype=v2dvar
 !
-#ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+# ifdef PERFECT_RESTART
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idVbar)%vd,                       &
      &                 PIO_FRST, nvd4, v2dgrd, Aval, Vinfo, ncname)
-#else
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+# else
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idVbar)%vd,                       &
      &                 PIO_FRST, nvd3, v2dgrd, Aval, Vinfo, ncname)
-#endif
+# endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
 !
 !  Define RHS of 2D momentum equation in the ETA-direction.
 !
@@ -2957,25 +3030,26 @@
         Vinfo( 3)=Vname(3,idRv2d)
         Vinfo(14)=Vname(4,idRv2d)
         Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
         Vinfo(20)='mask_v'
+#   endif
 #  endif
-# endif
+        Vinfo(21)=Vname(6,idRv2d)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idRv2d,ng),r8)
         RST(ng)%pioVar(idRv2d)%dkind=PIO_FRST
         RST(ng)%pioVar(idRv2d)%gtype=v2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idRv2d)%vd,                       &
      &                 PIO_FRST, nvd4, rv2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-#endif
-#ifdef SOLVE3D
+# endif
+# ifdef SOLVE3D
 !
 !  Define 3D momentum component in the XI-direction.
 !
@@ -2984,31 +3058,32 @@
         Vinfo( 3)=Vname(3,idUvel)
         Vinfo(14)=Vname(4,idUvel)
         Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
         Vinfo(20)='mask_u'
+#   endif
 #  endif
-# endif
+        Vinfo(21)=Vname(6,idUvel)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idUvel,ng),r8)
         RST(ng)%pioVar(idUvel)%dkind=PIO_FRST
         RST(ng)%pioVar(idUvel)%gtype=u3dvar
 !
-# ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+#  ifdef PERFECT_RESTART
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idUvel)%vd,                       &
      &                 PIO_FRST, nvd5, u3dgrd, Aval, Vinfo, ncname)
-# else
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+#  else
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idUvel)%vd,                       &
      &                 PIO_FRST, nvd4, u3dgrd, Aval, Vinfo, ncname)
-# endif
+#  endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
 !
 !  Define RHS of 3D momentum equation in the XI-direction.
 !  Although this variable is a U-points, a negative value is used
@@ -3020,24 +3095,25 @@
         Vinfo( 3)=Vname(3,idRu3d)
         Vinfo(14)=Vname(4,idRu3d)
         Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
+#   if defined WRITE_WATER && defined MASKING
+#    if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#   else
+#    else
         Vinfo(20)='mask_u'
+#    endif
 #   endif
-#  endif
+        Vinfo(21)=Vname(6,idRu3d)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(-u3dvar,r8)
         RST(ng)%pioVar(idRu3d)%dkind=PIO_FRST
         RST(ng)%pioVar(idRu3d)%gtype=u3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idRu3d)%vd,                       &
      &                 PIO_FRST, nvd5, ru3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-# endif
+#  endif
 !
 !  Define 3D momentum component in the ETA-direction.
 !
@@ -3046,31 +3122,32 @@
         Vinfo( 3)=Vname(3,idVvel)
         Vinfo(14)=Vname(4,idVvel)
         Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
         Vinfo(20)='mask_v'
+#   endif
 #  endif
-# endif
+        Vinfo(21)=Vname(6,idVvel)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVvel,ng),r8)
         RST(ng)%pioVar(idVvel)%dkind=PIO_FRST
         RST(ng)%pioVar(idVvel)%gtype=v3dvar
 !
-# ifdef PERFECT_RESTART
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+#  ifdef PERFECT_RESTART
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idVvel)%vd,                       &
      &                 PIO_FRST, nvd5, v3dgrd, Aval, Vinfo, ncname)
-# else
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+#  else
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idVvel)%vd,                       &
      &                 PIO_FRST, nvd4, v3dgrd, Aval, Vinfo, ncname)
-# endif
+#  endif
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
 !
 !  Define RHS of 3D momentum equation in the ETA-direction.
 !  Although this variable is a V-points, a negative value is used
@@ -3082,24 +3159,25 @@
         Vinfo( 3)=Vname(3,idRv3d)
         Vinfo(14)=Vname(4,idRv3d)
         Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
+#   if defined WRITE_WATER && defined MASKING
+#    if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#   else
+#    else
         Vinfo(20)='mask_v'
+#    endif
 #   endif
-#  endif
+        Vinfo(21)=Vname(6,idRv3d)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(-v3dvar,r8)
         RST(ng)%pioVar(idRv3d)%dkind=PIO_FRST
         RST(ng)%pioVar(idRv3d)%gtype=v3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idRv3d)%vd,                       &
      &                 PIO_FRST, nvd5, rv3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-# endif
+#  endif
 !
 !  Define tracer type variables.
 !
@@ -3109,35 +3187,36 @@
           Vinfo( 3)=Vname(3,idTvar(itrc))
           Vinfo(14)=Vname(4,idTvar(itrc))
           Vinfo(16)=Vname(1,idtime)
-# ifdef SEDIMENT
+#  ifdef SEDIMENT
             DO i=1,NST
               IF (itrc.eq.idsed(i)) THEN
                 WRITE (Vinfo(19),40) 1000.0_r8*Sd50(i,ng)
               END IF
             END DO
-# endif
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  endif
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
           Vinfo(20)='mask_rho'
+#   endif
 #  endif
-# endif
+          Vinfo(21)=Vname(6,idTvar(itrc))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(r3dvar,r8)
           RST(ng)%pioTrc(itrc)%dkind=PIO_FRST
           RST(ng)%pioTrc(itrc)%gtype=r3dvar
 !
-# ifdef PERFECT_RESTART
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+#  ifdef PERFECT_RESTART
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioTrc(itrc)%vd,                       &
      &                   PIO_FRST, nvd5, t3dgrd, Aval, Vinfo, ncname)
-# else
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+#  else
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioTrc(itrc)%vd,                       &
      &                   PIO_FRST, nvd4, t3dgrd, Aval, Vinfo, ncname)
-# endif
+#  endif
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
 !
@@ -3148,25 +3227,26 @@
         Vinfo( 3)=Vname(3,idDano)
         Vinfo(14)=Vname(4,idDano)
         Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
         Vinfo(20)='mask_rho'
+#   endif
 #  endif
-# endif
+        Vinfo(21)=Vname(6,idDano)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idDano,ng),r8)
         RST(ng)%pioVar(idDano)%dkind=PIO_FRST
         RST(ng)%pioVar(idDano)%gtype=r3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idDano)%vd,                       &
      &                 PIO_FRST, nvd4, r3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-# ifdef LMD_SKPP
+#  ifdef LMD_SKPP
 !
 !  Define depth of surface boundary layer.
 !
@@ -3175,26 +3255,27 @@
         Vinfo( 3)=Vname(3,idHsbl)
         Vinfo(14)=Vname(4,idHsbl)
         Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
+#   if defined WRITE_WATER && defined MASKING
+#    if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#   else
+#    else
         Vinfo(20)='mask_rho'
+#    endif
 #   endif
-#  endif
+        Vinfo(21)=Vname(6,idHsbl)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idHsbl,ng),r8)
         RST(ng)%pioVar(idHsbl)%dkind=PIO_FRST
         RST(ng)%pioVar(idHsbl)%gtype=r2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idHsbl)%vd,                       &
      &                 PIO_FRST, nvd3, sr2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-# endif
+#  endif
 
-# ifdef LMD_BKPP
+#  ifdef LMD_BKPP
 !
 !  Define depth of bottom boundary layer.
 !
@@ -3203,25 +3284,26 @@
         Vinfo( 3)=Vname(3,idHbbl)
         Vinfo(14)=Vname(4,idHbbl)
         Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
+#   if defined WRITE_WATER && defined MASKING
+#    if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#   else
+#    else
         Vinfo(20)='mask_rho'
+#    endif
 #   endif
-#  endif
+        Vinfo(21)=Vname(6,idHbbl)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idHbbl,ng),r8)
         RST(ng)%pioVar(idHbbl)%dkind=PIO_FRST
         RST(ng)%pioVar(idHbbl)%gtype=r2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idHbbl)%vd,                       &
      &                 PIO_FRST, nvd3, sr2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-# endif
-# if defined PERFECT_RESTART && defined LMD_NONLOCAL
+#  endif
+#  if defined PERFECT_RESTART && defined LMD_NONLOCAL
 !
 !  Define out KPP nonlocal transport.
 !
@@ -3231,21 +3313,22 @@
           Vinfo( 3)=Vname(3,idGhat(itrc))
           Vinfo(14)=Vname(4,idGhat(itrc))
           Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
           Vinfo(20)='mask_rho'
-#  endif
+#   endif
+          Vinfo(21)=Vname(6,idGhat(itrc))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idGhat(itrc),ng),r8)
           RST(ng)%pioVar(idGhat(itrc))%dkind=PIO_FRST
           RST(ng)%pioVar(idGhat(itrc))%gtype=w3dvar
 !
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioVar(idGhat(itrc))%vd,               &
      &                   PIO_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
-# endif
-# if defined BVF_MIXING || defined LMD_MIXING || \
+#  endif
+#  if defined BVF_MIXING || defined LMD_MIXING || \
      defined GLS_MIXING || defined MY25_MIXING
 !
 !  Define vertical viscosity coefficient.
@@ -3255,12 +3338,13 @@
         Vinfo( 3)=Vname(3,idVvis)
         Vinfo(14)=Vname(4,idVvis)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idVvis)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVvis,ng),r8)
         RST(ng)%pioVar(idVvis)%dkind=PIO_FRST
         RST(ng)%pioVar(idVvis)%gtype=w3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idVvis)%vd,                       &
      &                 PIO_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
@@ -3273,18 +3357,19 @@
         Vinfo( 3)=Vname(3,idTdif)
         Vinfo(14)=Vname(4,idTdif)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idTdif)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idTdif,ng),r8)
         RST(ng)%pioVar(idTdif)%dkind=PIO_FRST
         RST(ng)%pioVar(idTdif)%gtype=w3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idTdif)%vd,                       &
      &                 PIO_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-#  ifdef SALINITY
+#   ifdef SALINITY
 !
 !  Define vertical diffusion coefficient for salinity.
 !
@@ -3293,19 +3378,20 @@
         Vinfo( 3)=Vname(3,idSdif)
         Vinfo(14)=Vname(4,idSdif)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idSdif)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idSdif,ng),r8)
         RST(ng)%pioVar(idSdif)%dkind=PIO_FRST
         RST(ng)%pioVar(idSdif)%gtype=w3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idSdif)%vd,                       &
      &                 PIO_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
 #  endif
-# endif
-# if defined PERFECT_RESTART && \
+#  if defined PERFECT_RESTART && \
      (defined GLS_MIXING     || defined MY25_MIXING)
 !
 !  Define turbulent kinetic energy.
@@ -3315,12 +3401,13 @@
         Vinfo( 3)=Vname(3,idMtke)
         Vinfo(14)=Vname(4,idMtke)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idMtke)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idMtke,ng),r8)
         RST(ng)%pioVar(idMtke)%dkind=PIO_FRST
         RST(ng)%pioVar(idMtke)%gtype=w3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idMtke)%vd,                       &
      &                 PIO_FRST, nvd5, k3dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
@@ -3333,12 +3420,13 @@
         Vinfo( 3)=Vname(3,idMtls)
         Vinfo(14)=Vname(4,idMtls)
         Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idMtls)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idMtls,ng),r8)
         RST(ng)%pioVar(idMtls)%dkind=PIO_FRST
         RST(ng)%pioVar(idMtls)%gtype=w3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idMtls)%vd,                       &
      &                 PIO_FRST, nvd5, k3dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
@@ -3351,20 +3439,21 @@
         Vinfo( 3)=Vname(3,idVmLS)
         Vinfo(14)=Vname(4,idVmLS)
         Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
+#   if defined WRITE_WATER && defined MASKING
+#    if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#   else
+#    else
         Vinfo(20)='mask_rho'
+#    endif
 #   endif
-#  endif
+        Vinfo(21)=Vname(6,idVmLS)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVmLS,ng),r8)
         RST(ng)%pioVar(idVmLS)%dkind=PIO_FRST
         RST(ng)%pioVar(idVmLS)%gtype=w3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idVmLS)%vd,                       &
      &                 PIO_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3376,33 +3465,6 @@
         Vinfo( 3)=Vname(3,idVmKK)
         Vinfo(14)=Vname(4,idVmKK)
         Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
-        Vinfo(24)='_FillValue'
-        Aval(6)=spval
-#   else
-        Vinfo(20)='mask_rho'
-#   endif
-#  endif
-        Vinfo(22)='coordinates'
-        Aval(5)=REAL(Iinfo(1,idVmKK,ng),r8)
-        RST(ng)%pioVar(idVmKK)%dkind=PIO_FRST
-        RST(ng)%pioVar(idVmKK)%gtype=w3dvar
-!
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
-     &                 RST(ng)%pioVar(idVmKK)%vd,                       &
-     &                 PIO_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname)
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-
-#  ifdef GLS_MIXING
-!
-!  Define turbulent length scale vertical diffusion coefficient.
-!
-        Vinfo( 1)=Vname(1,idVmKP)
-        Vinfo( 2)=Vname(2,idVmKP)
-        Vinfo( 3)=Vname(3,idVmKP)
-        Vinfo(14)=Vname(4,idVmKP)
-        Vinfo(16)=Vname(1,idtime)
 #   if defined WRITE_WATER && defined MASKING
 #    if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
@@ -3411,19 +3473,48 @@
         Vinfo(20)='mask_rho'
 #    endif
 #   endif
+        Vinfo(21)=Vname(6,idVmKK)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idVmKK,ng),r8)
+        RST(ng)%pioVar(idVmKK)%dkind=PIO_FRST
+        RST(ng)%pioVar(idVmKK)%gtype=w3dvar
+!
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
+     &                 RST(ng)%pioVar(idVmKK)%vd,                       &
+     &                 PIO_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+#   ifdef GLS_MIXING
+!
+!  Define turbulent length scale vertical diffusion coefficient.
+!
+        Vinfo( 1)=Vname(1,idVmKP)
+        Vinfo( 2)=Vname(2,idVmKP)
+        Vinfo( 3)=Vname(3,idVmKP)
+        Vinfo(14)=Vname(4,idVmKP)
+        Vinfo(16)=Vname(1,idtime)
+#    if defined WRITE_WATER && defined MASKING
+#     if defined PERFECT_RESTART
+        Vinfo(24)='_FillValue'
+        Aval(6)=spval
+#     else
+        Vinfo(20)='mask_rho'
+#     endif
+#    endif
+        Vinfo(21)=Vname(6,idVmKP)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idVmKP,ng),r8)
         RST(ng)%pioVar(idVmKP)%dkind=PIO_FRST
         RST(ng)%pioVar(idVmKP)%gtype=w3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idVmKP)%vd,                       &
      &                 PIO_FRST, nvd4, w3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
 #  endif
-# endif
-# ifdef SEDIMENT
-#  ifdef BEDLOAD
+#  ifdef SEDIMENT
+#   ifdef BEDLOAD
 !
 !  Define Bedload U-direction.
 !
@@ -3433,20 +3524,21 @@
           Vinfo( 3)=Vname(3,idUbld(i))
           Vinfo(14)=Vname(4,idUbld(i))
           Vinfo(16)=Vname(1,idtime)
-#   if defined WRITE_WATER && defined MASKING
-#    if defined PERFECT_RESTART
+#    if defined WRITE_WATER && defined MASKING
+#     if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#    else
+#     else
           Vinfo(20)='mask_u'
+#     endif
 #    endif
-#   endif
+          Vinfo(21)=Vname(6,idUbld(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idUbld(i),ng),r8)
           RST(ng)%pioVar(idUbld(i))%dkind=PIO_FRST
           RST(ng)%pioVar(idUbld(i))%gtype=u2dvar
 !
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioVar(idUbld(i))%vd,                  &
      &                   PIO_FRST, nvd3, su2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3458,25 +3550,26 @@
           Vinfo( 3)=Vname(3,idVbld(i))
           Vinfo(14)=Vname(4,idVbld(i))
           Vinfo(16)=Vname(1,idtime)
-#   if defined WRITE_WATER && defined MASKING
-#    if defined PERFECT_RESTART
+#    if defined WRITE_WATER && defined MASKING
+#     if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#    else
+#     else
           Vinfo(20)='mask_v'
+#     endif
 #    endif
-#   endif
+          Vinfo(21)=Vname(6,idVbld(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idVbld(i),ng),r8)
           RST(ng)%pioVar(idVbld(i))%dkind=PIO_FRST
           RST(ng)%pioVar(idVbld(i))%gtype=v2dvar
 !
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioVar(idVbld(i))%vd,                  &
      &                   PIO_FRST, nvd3, sv2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
-#  endif
+#   endif
 !
 !  Define sediment fraction of each size class in each bed layer.
 !
@@ -3487,20 +3580,21 @@
           Vinfo(14)=Vname(4,idfrac(i))
           Vinfo(16)=Vname(1,idtime)
           WRITE (Vinfo(19),40) 1000.0_r8*Sd50(i,ng)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
           Vinfo(20)='mask_rho'
+#   endif
 #  endif
-# endif
+          Vinfo(21)=Vname(6,idfrac(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idfrac(i),ng),r8)
           RST(ng)%pioVar(idfrac(i))%dkind=PIO_FRST
           RST(ng)%pioVar(idfrac(i))%gtype=b3dvar
 !
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioVar(idfrac(i))%vd,                  &
      &                   PIO_FRST, nvd4, sr3dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3515,20 +3609,21 @@
           Vinfo(14)=Vname(4,idBmas(i))
           Vinfo(16)=Vname(1,idtime)
           WRITE (Vinfo(19),40) 1000.0_r8*Sd50(i,ng)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
         Vinfo(24)='_FillValue'
         Aval(6)=spval
-#  else
+#   else
           Vinfo(20)='mask_rho'
+#   endif
 #  endif
-# endif
+          Vinfo(21)=Vname(6,idBmas(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idBmas(i),ng),r8)
           RST(ng)%pioVar(idBmas(i))%dkind=PIO_FRST
           RST(ng)%pioVar(idBmas(i))%gtype=b3dvar
 !
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioVar(idBmas(i))%vd,                  &
      &                   PIO_FRST, nvd4, sr3dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3542,26 +3637,27 @@
           Vinfo( 3)=Vname(3,idSbed(i))
           Vinfo(14)=Vname(4,idSbed(i))
           Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
+#  if defined WRITE_WATER && defined MASKING
+#   if defined PERFECT_RESTART
           Vinfo(24)='_FillValue'
           Aval(6)=spval
-#  else
+#   else
           Vinfo(20)='mask_rho'
+#   endif
 #  endif
-# endif
+          Vinfo(21)=Vname(6,idSbed(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idSbed(i),ng),r8)
           RST(ng)%pioVar(idSbed(i))%dkind=PIO_FRST
           RST(ng)%pioVar(idSbed(i))%gtype=b3dvar
 !
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioVar(idSbed(i))%vd,                  &
      &                   PIO_FRST, nvd4, sr3dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
-# endif
-# if defined SEDIMENT || defined BBL_MODEL
+#  endif
+#  if defined SEDIMENT || defined BBL_MODEL
 !
 !  define exposed sediment layer properties. Notice that only the
 !  first four properties (mean grain diameter, mean grain density,
@@ -3574,144 +3670,140 @@
           Vinfo( 3)=Vname(3,idBott(i))
           Vinfo(14)=Vname(4,idBott(i))
           Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
+#   if defined WRITE_WATER && defined MASKING
+#    if defined PERFECT_RESTART
           Vinfo(24)='_FillValue'
           Aval(6)=spval
-#   else
+#    else
           Vinfo(20)='mask_rho'
+#    endif
 #   endif
-#  endif
+          Vinfo(21)=Vname(6,idBott(i))
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idBott(i),ng),r8)
           RST(ng)%pioVar(idBott(i))%dkind=PIO_FRST
           RST(ng)%pioVar(idBott(i))%gtype=r2dvar
 !
-          status=def_var(ng, iNLM, RST(ng)%pioFile,                     &
+          status=def_var(ng, model, RST(ng)%pioFile,                    &
      &                   RST(ng)%pioVar(idBott(i))%vd,                  &
      &                   PIO_FRST, nvd3, sr2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END DO
+#  endif
 # endif
-#endif
-#ifdef NEARSHORE_MELLOR
+# ifdef WEC
 !
-!  Define 2D u-stokes velocity.
+!  Define 2D Stokes U-velocity.
 !
         Vinfo( 1)=Vname(1,idU2Sd)
         Vinfo( 2)=Vname(2,idU2Sd)
         Vinfo( 3)=Vname(3,idU2Sd)
         Vinfo(14)=Vname(4,idU2Sd)
         Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
-        Vinfo(24)='_FillValue'
-        Aval(6)=spval
-#  else
+#  if defined WRITE_WATER && defined MASKING
         Vinfo(20)='mask_u'
 #  endif
-# endif
+        Vinfo(21)=Vname(6,idU2Sd)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idU2Sd,ng),r8)
         RST(ng)%pioVar(idU2Sd)%dkind=PIO_FRST
         RST(ng)%pioVar(idU2Sd)%gtype=u2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idU2Sd)%vd,                       &
-     &                 PIO_FRST, nvd3, su2dgrd, Aval, Vinfo, ncname)
+     &                 PIO_FRST, nvd3, u2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-!  Define 2D v-stokes velocity.
+!  Define 2D Stokes V-velocity.
 !
         Vinfo( 1)=Vname(1,idV2Sd)
         Vinfo( 2)=Vname(2,idV2Sd)
         Vinfo( 3)=Vname(3,idV2Sd)
         Vinfo(14)=Vname(4,idV2Sd)
         Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
-#  if defined PERFECT_RESTART
-        Vinfo(24)='_FillValue'
-        Aval(6)=spval
-#  else
-        Vinfo(20)='mask_v'
+#  if defined WRITE_WATER && defined MASKING
+        Vinfo(20)='mask_u'
 #  endif
-# endif
+        Vinfo(21)=Vname(6,idV2Sd)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idV2Sd,ng),r8)
         RST(ng)%pioVar(idV2Sd)%dkind=PIO_FRST
         RST(ng)%pioVar(idV2Sd)%gtype=v2dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idV2Sd)%vd,                       &
-     &                 PIO_FRST, nvd3, sv2dgrd, Aval, Vinfo, ncname)
+     &                 PIO_FRST, nvd3, u2dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-# ifdef SOLVE3D
+#  ifdef SOLVE3D
 !
-!  Define 3D u-stokes velocity.
+!  Define 3D Stokes U-velocity.
 !
         Vinfo( 1)=Vname(1,idU3Sd)
         Vinfo( 2)=Vname(2,idU3Sd)
         Vinfo( 3)=Vname(3,idU3Sd)
         Vinfo(14)=Vname(4,idU3Sd)
         Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
-        Vinfo(24)='_FillValue'
-        Aval(6)=spval
-#   else
-        Vinfo(20)='mask_u'
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_u'
 #   endif
-#  endif
+        Vinfo(21)=Vname(6,idU3Sd)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idU3Sd,ng),r8)
-        RST(ng)%pioVar(idU3Sd)%dkind=PIO_FRST
+        RST(ng)%pioVar(idU3Sd)%dkind=PIO_FOUT
         RST(ng)%pioVar(idU3Sd)%gtype=u3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idU3Sd)%vd,                       &
-     &                 PIO_FRST, nvd4, su3dgrd, Aval, Vinfo, ncname)
+     &                 PIO_FRST, nvd4, u3dgrd, Aval, Vinfo, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-!  Define 3D v-stokes velocity.
+!  Define 3D Stokes V-velocity.
 !
         Vinfo( 1)=Vname(1,idV3Sd)
         Vinfo( 2)=Vname(2,idV3Sd)
         Vinfo( 3)=Vname(3,idV3Sd)
         Vinfo(14)=Vname(4,idV3Sd)
         Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-#   if defined PERFECT_RESTART
-        Vinfo(24)='_FillValue'
-        Aval(6)=spval
-#   else
+#   if defined WRITE_WATER && defined MASKING
         Vinfo(20)='mask_v'
 #   endif
-#  endif
+        Vinfo(21)=Vname(6,idV3Sd)
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idV3Sd,ng),r8)
         RST(ng)%pioVar(idV3Sd)%dkind=PIO_FRST
         RST(ng)%pioVar(idV3Sd)%gtype=v3dvar
 !
-        status=def_var(ng, iNLM, RST(ng)%pioFile,                       &
+        status=def_var(ng, model, RST(ng)%pioFile,                      &
      &                 RST(ng)%pioVar(idV3Sd)%vd,                       &
-     &                 PIO_FRST, nvd4, sv3dgrd, Aval, Vinfo, ncname)
+     &                 PIO_FRST, nvd4, v3dgrd, Aval, Vinfo, ncname)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+#  endif
+# endif
+# ifdef ICE_MODEL
+!
+!-----------------------------------------------------------------------
+!  Define sea-ice model variables.
+!-----------------------------------------------------------------------
+!
+        CALL ice_def_pio (ng, model, Ldefine, Hout, RST,                &
+     &                    t2dgrd, u2dgrd, v2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
-#endif
 !
 !-----------------------------------------------------------------------
 !  Leave definition mode.
 !-----------------------------------------------------------------------
 !
-        CALL pio_netcdf_enddef (ng, iNLM, ncname, RST(ng)%pioFile)
+        CALL pio_netcdf_enddef (ng, model, ncname, RST(ng)%pioFile)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !-----------------------------------------------------------------------
 !  Write out time-recordless, information variables.
 !-----------------------------------------------------------------------
 !
-        CALL wrt_info (ng, iNLM, RST(ng)%pioFile, ncname)
+        CALL wrt_info (ng, model, RST(ng)%pioFile, ncname)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
       END IF DEFINE
@@ -3726,7 +3818,7 @@
 !
 !  Open restart file for read/write.
 !
-        CALL pio_netcdf_open (ng, iNLM, ncname, 1, RST(ng)%pioFile)
+        CALL pio_netcdf_open (ng, model, ncname, 1, RST(ng)%pioFile)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) THEN
           WRITE (stdout,50) TRIM(ncname)
           RETURN
@@ -3734,13 +3826,13 @@
 !
 !  Inquire about the dimensions and check for consistency.
 !
-        CALL pio_netcdf_check_dim (ng, iNLM, ncname,                    &
+        CALL pio_netcdf_check_dim (ng, model, ncname,                   &
      &                             pioFile = RST(ng)%pioFile)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Inquire about the variables.
 !
-        CALL pio_netcdf_inq_var (ng, iNLM, ncname,                      &
+        CALL pio_netcdf_inq_var (ng, model, ncname,                     &
      &                           pioFile = RST(ng)%pioFile)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
@@ -3759,14 +3851,14 @@
             RST(ng)%pioVar(idtime)%vd=var_desc(i)
             RST(ng)%pioVar(idtime)%dkind=PIO_TOUT
             RST(ng)%pioVar(idtime)%gtype=0
-#if defined SEDIMENT && defined SED_MORPH
+# if defined SEDIMENT && defined SED_MORPH
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idbath))) THEN
             got_var(idbath)=.TRUE.
             RST(ng)%pioVar(idbath)%vd=var_desc(i)
             RST(ng)%pioVar(idbath)%dkind=PIO_FRST
             RST(ng)%pioVar(idbath)%gtype=r2dvar
-#endif
-#if defined WET_DRY
+# endif
+# if defined WET_DRY
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRwet))) THEN
             got_var(idRwet)=.TRUE.
             RST(ng)%pioVar(idRwet)%vd=var_desc(i)
@@ -3787,103 +3879,103 @@
             RST(ng)%pioVar(idPwet)%vd=var_desc(i)
             RST(ng)%pioVar(idPwet)%dkind=PIO_FRST
             RST(ng)%pioVar(idPwet)%gtype=p2dvar
-#endif
+# endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idFsur))) THEN
             got_var(idFsur)=.TRUE.
             RST(ng)%pioVar(idFsur)%vd=var_desc(i)
             RST(ng)%pioVar(idFsur)%dkind=PIO_FRST
             RST(ng)%pioVar(idFsur)%gtype=r2dvar
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRzet))) THEN
             got_var(idRzet)=.TRUE.
             RST(ng)%pioVar(idRzet)%vd=var_desc(i)
             RST(ng)%pioVar(idRzet)%dkind=PIO_FRST
             RST(ng)%pioVar(idRzet)%gtype=r2dvar
-#endif
+# endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUbar))) THEN
             got_var(idUbar)=.TRUE.
             RST(ng)%pioVar(idUbar)%vd=var_desc(i)
             RST(ng)%pioVar(idUbar)%dkind=PIO_FRST
             RST(ng)%pioVar(idUbar)%gtype=u2dvar
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRu2d))) THEN
             got_var(idRu2d)=.TRUE.
             RST(ng)%pioVar(idRu2d)%vd=var_desc(i)
             RST(ng)%pioVar(idRu2d)%dkind=PIO_FRST
             RST(ng)%pioVar(idRu2d)%gtype=u2dvar
-#endif
+# endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVbar))) THEN
             got_var(idVbar)=.TRUE.
             RST(ng)%pioVar(idVbar)%vd=var_desc(i)
             RST(ng)%pioVar(idVbar)%dkind=PIO_FRST
             RST(ng)%pioVar(idVbar)%gtype=v2dvar
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRv2d))) THEN
             got_var(idRv2d)=.TRUE.
             RST(ng)%pioVar(idRv2d)%vd=var_desc(i)
             RST(ng)%pioVar(idRv2d)%dkind=PIO_FRST
             RST(ng)%pioVar(idRv2d)%gtype=v2dvar
-#endif
-#ifdef SOLVE3D
+# endif
+# ifdef SOLVE3D
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUvel))) THEN
             got_var(idUvel)=.TRUE.
             RST(ng)%pioVar(idUvel)%vd=var_desc(i)
             RST(ng)%pioVar(idUvel)%dkind=PIO_FRST
             RST(ng)%pioVar(idUvel)%gtype=u3dvar
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRu3d))) THEN
             got_var(idRu3d)=.TRUE.
             RST(ng)%pioVar(idRu3d)%vd=var_desc(i)
             RST(ng)%pioVar(idRu3d)%dkind=PIO_FRST
             RST(ng)%pioVar(idRu3d)%gtype=u3dvar
-# endif
+#  endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVvel))) THEN
             got_var(idVvel)=.TRUE.
             RST(ng)%pioVar(idVvel)%vd=var_desc(i)
             RST(ng)%pioVar(idVvel)%dkind=PIO_FRST
             RST(ng)%pioVar(idVvel)%gtype=v3dvar
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRv3d))) THEN
             got_var(idRv3d)=.TRUE.
             RST(ng)%pioVar(idRv3d)%vd=var_desc(i)
             RST(ng)%pioVar(idRv3d)%dkind=PIO_FRST
             RST(ng)%pioVar(idRv3d)%gtype=v3dvar
-# endif
+#  endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idDano))) THEN
             got_var(idDano)=.TRUE.
             RST(ng)%pioVar(idDano)%vd=var_desc(i)
             RST(ng)%pioVar(idDano)%dkind=PIO_FRST
             RST(ng)%pioVar(idDano)%gtype=r3dvar
-# ifdef LMD_SKPP
+#  ifdef LMD_SKPP
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idHsbl))) THEN
             got_var(idHsbl)=.TRUE.
             RST(ng)%pioVar(idHsbl)%vd=var_desc(i)
             RST(ng)%pioVar(idHsbl)%dkind=PIO_FRST
             RST(ng)%pioVar(idHsbl)%gtype=r2dvar
-# endif
-# ifdef LMD_BKPP
+#  endif
+#  ifdef LMD_BKPP
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idHbbl))) THEN
             got_var(idHbbl)=.TRUE.
             RST(ng)%pioVar(idHbbl)%vd=var_desc(i)
             RST(ng)%pioVar(idHbbl)%dkind=PIO_FRST
             RST(ng)%pioVar(idHbbl)%gtype=r2dvar
-# endif
-# if defined PERFECT_RESTART && defined LMD_NONLOCAL
+#  endif
+#  if defined PERFECT_RESTART && defined LMD_NONLOCAL
           ELSE IF (TRIM(var_name(i)).eq.                                &
      &             TRIM(Vname(1,idGhat(itemp)))) THEN
             got_var(idGhat(itemp))=.TRUE.
             RST(ng)%pioVar(idGhat(itemp))%vd=var_desc(i)
             RST(ng)%pioVar(idGhat(itemp))%dkind=PIO_FRST
             RST(ng)%pioVar(idGhat(itemp))%gtype=w3dvar
-#  ifdef SALINITY
+#   ifdef SALINITY
           ELSE IF (TRIM(var_name(i)).eq.                                &
      &             TRIM(Vname(1,idGhat(isalt)))) THEN
             got_var(idGhat(isalt))=.TRUE.
             RST(ng)%pioVar(idGhat(isalt))%vd=var_desc(i)
             RST(ng)%pioVar(idGhat(isalt))%dkind=PIO_FRST
             RST(ng)%pioVar(idGhat(isalt))%gtype=w3dvar
+#   endif
 #  endif
-# endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVvis))) THEN
             got_var(idVvis)=.TRUE.
             RST(ng)%pioVar(idVvis)%vd=var_desc(i)
@@ -3899,7 +3991,7 @@
             RST(ng)%pioVar(idSdif)%vd=var_desc(i)
             RST(ng)%pioVar(idSdif)%dkind=PIO_FRST
             RST(ng)%pioVar(idSdif)%gtype=w3dvar
-# if defined PERFECT_RESTART && \
+#  if defined PERFECT_RESTART && \
      (defined GLS_MIXING     || defined MY25_MIXING)
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idMtke))) THEN
             got_var(idMtke)=.TRUE.
@@ -3921,16 +4013,16 @@
             RST(ng)%pioVar(idVmKK)%vd=var_desc(i)
             RST(ng)%pioVar(idVmKK)%dkind=PIO_FRST
             RST(ng)%pioVar(idVmKK)%gtype=w3dvar
-#  ifdef GLS_MIXING
+#   ifdef GLS_MIXING
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVmKP))) THEN
             got_var(idVmKP)=.TRUE.
             RST(ng)%pioVar(idVmKP)%vd=var_desc(i)
             RST(ng)%pioVar(idVmKP)%dkind=PIO_FRST
             RST(ng)%pioVar(idVmKP)%gtype=w3dvar
+#   endif
 #  endif
 # endif
-#endif
-#if defined NEARSHORE_MELLOR
+# ifdef WEC
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idU2Sd))) THEN
             got_var(idU2Sd)=.TRUE.
             RST(ng)%pioVar(idU2Sd)%vd=var_desc(i)
@@ -3938,10 +4030,10 @@
             RST(ng)%pioVar(idU2Sd)%gtype=u2dvar
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idV2Sd))) THEN
             got_var(idV2Sd)=.TRUE.
-            RST(ng)%pioVar(idV2Sd)%vd=var_desc(i)
-            RST(ng)%pioVar(idV2Sd)%dkind=PIO_FRST
-            RST(ng)%pioVar(idV2Sd)%gtype=v2dvar
-# ifdef SOLVE3D
+            RST(ng)%pioVar(idV2rs)%vd=var_desc(i)
+            RST(ng)%pioVar(idV2rs)%dkind=PIO_FRST
+            RST(ng)%pioVar(idV2rs)%gtype=v2dvar
+#  ifdef SOLVE3D
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idU3Sd))) THEN
             got_var(idU3Sd)=.TRUE.
             RST(ng)%pioVar(idU3Sd)%vd=var_desc(i)
@@ -3952,10 +4044,10 @@
             RST(ng)%pioVar(idV3Sd)%vd=var_desc(i)
             RST(ng)%pioVar(idV3Sd)%dkind=PIO_FRST
             RST(ng)%pioVar(idV3Sd)%gtype=v3dvar
+#  endif
 # endif
-#endif
           END IF
-#ifdef SOLVE3D
+# ifdef SOLVE3D
           DO itrc=1,NT(ng)
             IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idTvar(itrc)))) THEN
               got_var(idTvar(itrc))=.TRUE.
@@ -3964,7 +4056,7 @@
               RST(ng)%pioTrc(itrc)%gtype=r3dvar
             END IF
           END DO
-# ifdef SEDIMENT
+#  ifdef SEDIMENT
           DO itrc=1,NST
             IF (TRIM(var_name(i)).eq.                                   &
      &          TRIM(Vname(1,idfrac(itrc)))) THEN
@@ -3978,7 +4070,7 @@
               RST(ng)%pioVar(idBmas(itrc))%vd=var_desc(i)
               RST(ng)%pioVar(idBmas(itrc))%dkind=PIO_FRST
               RST(ng)%pioVar(idBmas(itrc))%gtype=b3dvar
-#  ifdef BEDLOAD
+#   ifdef BEDLOAD
             ELSE IF (TRIM(var_name(i)).eq.                              &
      &               TRIM(Vname(1,idUbld(itrc)))) THEN
               got_var(idUbld(itrc))=.true.
@@ -3991,7 +4083,7 @@
               RST(ng)%pioVar(idVbld(itrc))%vd=var_desc(i)
               RST(ng)%pioVar(idVbld(itrc))%dkind=PIO_FRST
               RST(ng)%pioVar(idVbld(itrc))%gtype=v2dvar
-#  endif
+#   endif
             END IF
           END DO
           DO itrc=1,MBEDP
@@ -4002,8 +4094,8 @@
               RST(ng)%pioVar(idSbed(itrc))%gtype=b3dvar
             END IF
           END DO
-# endif
-# if defined SEDIMENT || defined BBL_MODEL
+#  endif
+#  if defined SEDIMENT || defined BBL_MODEL
           DO itrc=1,6
             IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idBott(itrc)))) THEN
               got_var(idBott(itrc))=.TRUE.
@@ -4012,8 +4104,8 @@
               RST(ng)%pioVar(idBott(itrc))%gtype=r2dvar
             END IF
           END DO
+#  endif
 # endif
-#endif
         END DO
 !
 !  Check if initialization variables are available in input NetCDF
@@ -4025,15 +4117,15 @@
           exit_flag=3
           RETURN
         END IF
-#if defined SEDIMENT && defined SED_MORPH
+# if defined SEDIMENT && defined SED_MORPH
         IF (.not.got_var(idbath)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idbath)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-#endif
-#if defined WET_DRY
+# endif
+# if defined WET_DRY
         IF (.not.got_var(idRwet)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idRwet)),          &
      &                                  TRIM(ncname)
@@ -4058,85 +4150,85 @@
           exit_flag=3
           RETURN
         END IF
-#endif
+# endif
         IF (.not.got_var(idFsur)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idFsur)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
         IF (.not.got_var(idRzet)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idRzet)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-#endif
+# endif
         IF (.not.got_var(idUbar)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idUbar)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
         IF (.not.got_var(idRu2d)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idRu2d)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-#endif
+# endif
         IF (.not.got_var(idVbar)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idVbar)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
         IF (.not.got_var(idRv2d)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idRv2d)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-#endif
-#ifdef SOLVE3D
+# endif
+# ifdef SOLVE3D
         IF (.not.got_var(idUvel)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idUvel)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
         IF (.not.got_var(idRu3d)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idRu3d)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-# endif
+#  endif
         IF (.not.got_var(idVvel)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idVvel)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-# ifdef PERFECT_RESTART
+#  ifdef PERFECT_RESTART
         IF (.not.got_var(idRv3d)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idRv3d)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-# endif
+#  endif
         IF (.not.got_var(idDano)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idDano)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-# if defined PERFECT_RESTART && \
+#  if defined PERFECT_RESTART && \
      (defined GLS_MIXING     || defined MY25_MIXING)
         IF (.not.got_var(idMtke)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idMtke)),          &
@@ -4162,17 +4254,17 @@
           exit_flag=3
           RETURN
         END IF
-#  ifdef GLS_MIXING
+#   ifdef GLS_MIXING
         IF (.not.got_var(idVmKP)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idVmKP)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
+#   endif
 #  endif
 # endif
-#endif
-#if defined NEARSHORE_MELLOR
+# ifdef WEC
         IF (.not.got_var(idU2Sd)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idU2Sd)),          &
      &                                  TRIM(ncname)
@@ -4185,7 +4277,7 @@
           exit_flag=3
           RETURN
         END IF
-# ifdef SOLVE3D
+#  ifdef SOLVE3D
         IF (.not.got_var(idU3Sd)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idU3Sd)),          &
      &                                  TRIM(ncname)
@@ -4198,9 +4290,9 @@
           exit_flag=3
           RETURN
         END IF
+#  endif
 # endif
-#endif
-#ifdef SOLVE3D
+# ifdef SOLVE3D
         DO itrc=1,NT(ng)
           IF (.not.got_var(idTvar(itrc))) THEN
             IF (Master) WRITE (stdout,60) TRIM(Vname(1,idTvar(itrc))),  &
@@ -4209,7 +4301,7 @@
             RETURN
           END IF
         END DO
-# ifdef SEDIMENT
+#  ifdef SEDIMENT
         DO i=1,NST
           IF (.not.got_var(idfrac(i))) THEN
             IF (Master) WRITE (stdout,60) TRIM(Vname(1,idfrac(i))),     &
@@ -4223,7 +4315,7 @@
             exit_flag=3
             RETURN
           END IF
-#  ifdef BEDLOAD
+#   ifdef BEDLOAD
           IF (.not.got_var(idUbld(i))) THEN
             IF (Master) WRITE (stdout,60) TRIM(Vname(1,idUbld(i))),     &
      &                                    TRIM(ncname)
@@ -4236,7 +4328,7 @@
             exit_flag=3
             RETURN
           END IF
-#  endif
+#   endif
         END DO
         DO i=1,MBEDP
           IF (.not.got_var(idSbed(i))) THEN
@@ -4246,8 +4338,8 @@
             RETURN
           END IF
         END DO
-# endif
-# if defined SEDIMENT || defined BBL_MODEL
+#  endif
+#  if defined SEDIMENT || defined BBL_MODEL
         DO i=1,6
           IF (.not.got_var(idBott(i))) THEN
             IF (Master) WRITE (stdout,60) TRIM(Vname(1,idBott(i))),     &
@@ -4256,8 +4348,15 @@
             RETURN
           END IF
         END DO
+#  endif
 # endif
-#endif
+# ifdef ICE_MODEL
+!
+!  Scan sea-ice variables from input NetCDF and activate switches for
+!  restart variables. Get variable IDs.
+!
+        CALL ice_def_pio (ng, model, Ldefine, Hout, RST)
+# endif
 !
 !  Set unlimited time record dimension to current value.
 !

@@ -2,11 +2,11 @@
       MODULE get_gst_mod
 #if defined PROPAGATOR && defined CHECKPOINTING
 !
-!svn $Id: get_gst.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: get_gst.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine reads in GST checkpointing restart file using either   !
@@ -64,7 +64,8 @@
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
-  10  FORMAT (' GET_GST - Illegal output type, io_type = ',i0)
+  10  FORMAT (' GET_GST - Illegal input file type, io_type = ',i0,      &
+     &        /,11x,'Check KeyWord ''INP_LIB'' in ''roms.in''.')
 !
       RETURN
       END SUBROUTINE get_gst

@@ -1,15 +1,15 @@
 /*
-** svn $Id: hypoxia_srm_var.h 1099 2022-01-06 21:01:01Z arango $
+** svn $Id: hypoxia_srm_var.h 1210 2024-01-03 22:03:03Z arango $
 *************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2022 The ROMS/TOMS Group                        **
+** Copyright (c) 2002-2024 The ROMS/TOMS Group                        **
 **   Licensed under a MIT/X style license                             **
-**   See License_ROMS.txt                                             **
+**   See License_ROMS.md                                              **
 ************************************************************************
 **                                                                    **
 **  Assigns metadata indices for the Hypoxia Simple Respiration       **
 **  Model biological variables that are used in input and output      **
 **  NetCDF files. The metadata information is read from               **
-**  "varinfo.dat".                                                    **
+**  "varinfo.yaml".                                                   **
 **                                                                    **
 **  This file is included in file "mod_ncparam.F", routine            **
 **  "initialize_ncparm".                                              **
@@ -21,10 +21,10 @@
 **  Model state biological tracers.
 */
 
-            CASE ('idResR')
-              idResR=varid
-            CASE ('idTvar(iOxyg)')
-              idTvar(iOxyg)=varid
+          CASE ('idResR')
+            idResR=varid
+          CASE ('idTvar(iOxyg)')
+            idTvar(iOxyg)=varid
 
 #if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
@@ -34,26 +34,26 @@
 **  Adjoint sensitivity state biological tracers.
 */
 
-            CASE ('idTads(iOxyg)')
-              idTads(iOxyg)=varid
+          CASE ('idTads(iOxyg)')
+            idTads(iOxyg)=varid
 #endif
 
 /*
 **  Biological tracers open boundary conditions.
 */
 
-            CASE ('idTbry(iwest,iOxyg)')
-              idTbry(iwest,iOxyg)=varid
-            CASE ('idTbry(ieast,iOxyg)')
-              idTbry(ieast,iOxyg)=varid
-            CASE ('idTbry(isouth,iOxyg)')
-              idTbry(isouth,iOxyg)=varid
-            CASE ('idTbry(inorth,iOxyg)')
-              idTbry(inorth,iOxyg)=varid
+          CASE ('idTbry(iwest,iOxyg)')
+            idTbry(iwest,iOxyg)=varid
+          CASE ('idTbry(ieast,iOxyg)')
+            idTbry(ieast,iOxyg)=varid
+          CASE ('idTbry(isouth,iOxyg)')
+            idTbry(isouth,iOxyg)=varid
+          CASE ('idTbry(inorth,iOxyg)')
+            idTbry(inorth,iOxyg)=varid
 
 /*
 **  Biological tracers point Source/Sinks (river runoff).
 */
 
-            CASE ('idRtrc(iOxyg)')
-              idRtrc(iOxyg)=varid
+          CASE ('idRtrc(iOxyg)')
+            idRtrc(iOxyg)=varid

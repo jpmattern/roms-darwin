@@ -2,11 +2,11 @@
       MODULE wetdry_mod
 #ifdef WET_DRY
 !
-!svn $Id: wetdry.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: wetdry.F 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                           Hernan G. Arango   !
+!    See License_ROMS.md                            Hernan G. Arango   !
 !==================================================== John C. Warner ===
 !                                                                      !
 !  This routine computes the wet/dry masking arrays.                   !
@@ -312,7 +312,7 @@
      &          ((JstrR.le.j).and.(j.le.JendR))) THEN
               IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
                 umask_full(i,j)=1.0_r8
-              ELSE
+              ELSE IF (INT(SOURCES(ng)%Dsrc(is)).eq.1) THEN
                 vmask_full(i,j)=1.0_r8
               END IF
             END IF
@@ -516,7 +516,7 @@
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
             IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
               umask_full(i,j)=1.0_r8
-            ELSE
+            ELSE IF (INT(SOURCES(ng)%Dsrc(is)).eq.1) THEN
               vmask_full(i,j)=1.0_r8
             END IF
           END IF

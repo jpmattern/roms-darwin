@@ -2,11 +2,11 @@
 #include "cppdefs.h"
       MODULE obc_volcons_mod
 !
-!svn $Id: obc_volcons.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: obc_volcons.F 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                           Hernan G. Arango   !
+!    See License_ROMS.md                            Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
 !                                                                      !
 !  This routine computes integral mass flux  "obc_flux" across         !
@@ -103,9 +103,9 @@
       real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: om_v(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: on_u(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
 #endif
 !
 !  Local variable declarations.
@@ -278,8 +278,8 @@
 # endif
       real(r8), intent(in) :: om_v(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: on_u(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,:)
       real(r8), intent(in) :: Drhs(IminS:ImaxS,JminS:JmaxS)
 
       real(r8), intent(inout) :: Duon(IminS:ImaxS,JminS:JmaxS)
@@ -422,8 +422,8 @@
       real(r8), intent(in) :: vmask(LBi:UBi,LBj:UBj)
 # endif
 
-      real(r8), intent(inout) :: ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(inout) :: vbar(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(inout) :: vbar(LBi:UBi,LBj:UBj,:)
 #endif
 !
 !  Local variable declarations.

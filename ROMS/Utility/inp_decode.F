@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE inp_decode_mod
 !
-!svn $Id: inp_decode.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: inp_decode.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module contains several routines to process and decode ROMS    !
@@ -193,6 +193,7 @@
 !
 !  SP    32        Space
 !  !     33        Exclamation mark
+!  #     35        Number sign, hash, or pound sign
 !  *     42        Asterisk (star, multiply)
 !  +     43        Plus
 !  -     45        Hyphen, dash, minus
@@ -207,6 +208,7 @@
 !  7     55        Seven
 !  8     56        Eight
 !  9     57        Nine
+!  :     58        colon sign
 !  =     61        Equals sign
 !  \     92        Reverse slant (Backslash)
 !  |    124        Vertical line
@@ -1627,6 +1629,9 @@
               S(ib,isFsur,igrid)%acquire = .TRUE.
             CASE ('GRA')
               S(ib,ifield,igrid)%gradient = .TRUE.
+            CASE ('MIX')
+              S(ib,ifield,igrid)%mixed   = .TRUE.
+              S(ib,ifield,igrid)%acquire = .TRUE.
             CASE ('NES')
               S(ib,ifield,igrid)%nested = .TRUE.
             CASE ('PER')

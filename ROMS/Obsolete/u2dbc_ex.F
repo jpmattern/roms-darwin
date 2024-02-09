@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE u2dbc_mod
 !
-!svn $Id: u2dbc_ex.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: u2dbc_ex.F 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                           Hernan G. Arango   !
+!    See License_ROMS.md                            Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
 !                                                                      !
 !  This subroutine sets lateral boundary conditions for vertically     !
@@ -76,10 +76,10 @@
 
       real(r8), intent(inout) :: ubar(LBi:,LBj:,:)
 #else
-      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj,:)
 
-      real(r8), intent(inout) :: ubar(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: ubar(LBi:UBi,LBj:UBj,:)
 #endif
 !
 !  Local variable declarations.

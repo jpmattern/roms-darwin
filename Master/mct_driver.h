@@ -1,10 +1,10 @@
       PROGRAM mct_driver
 !
-!svn $Id: mct_driver.h 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: mct_driver.h 1210 2024-01-03 22:03:03Z arango $
 !=======================================================================
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                           Hernan G. Arango   !
+!    See License_ROMS.md                            Hernan G. Arango   !
 !==================================================== John C. Warner ===
 !                                                                      !
 !  Master program to couple ROMS/TOMS to other models using the Model  !
@@ -32,15 +32,15 @@
 !
       USE m_MCTWorld,        ONLY : MCTWorld_clean => clean
 
+#ifdef WRF_COUPLING
+      USE mct_coupler_mod,   ONLY : finalize_ocn2atm_coupling
+#endif
+#if defined SWAN_COUPLING || defined REFDIF_COUPLING
+      USE mct_coupler_mod,   ONLY : finalize_ocn2wav_coupling
+#endif
       USE roms_kernel_mod,   ONLY : ROMS_initialize
       USE roms_kernel_mod,   ONLY : ROMS_run
       USE roms_kernel_mod,   ONLY : ROMS_finalize
-#ifdef WRF_COUPLING
-      USE ocean_coupler_mod, ONLY : finalize_ocn2atm_coupling
-#endif
-#if defined SWAN_COUPLING || defined REFDIF_COUPLING
-      USE ocean_coupler_mod, ONLY : finalize_ocn2wav_coupling
-#endif
 #if defined PIO_LIB && defined DISTRIBUTE
       USE set_pio_mod,       ONLY : finalize_pio
 #endif

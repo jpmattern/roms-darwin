@@ -3,11 +3,11 @@
 
 #if defined FOUR_DVAR
 !
-!svn $Id: normalization.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: normalization.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine computes the background covariance, B, normalization   !
@@ -440,7 +440,7 @@
       real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
 #   endif
 #   if defined SEDIMENT && defined SED_MORPH
-      real(r8), intent(in):: bed_thick0(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(in):: bed_thick0(LBi:UBi,LBj:UBj,3)
 #   endif
       real(r8), intent(inout) :: h(LBi:UBi,LBj:UBj)
 #  endif
@@ -3514,7 +3514,7 @@
       real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
 #   endif
 #   if defined SEDIMENT && defined SED_MORPH
-      real(r8), intent(in):: bed_thick(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(in):: bed_thick(LBi:UBi,LBj:UBj,3)
 #   endif
       real(r8), intent(inout) :: h(LBi:UBi,LBj:UBj)
 #  endif
@@ -6015,7 +6015,8 @@
 !
       gtype=gfactor*Iinfo(1,ifield,ng)
       scale=1.0_dp
-      status=nf_fwrite2d(ng, model, ncid, ncvarid, tindex, gtype,       &
+      status=nf_fwrite2d(ng, model, ncid, ifield,                       &
+     &                   ncvarid, tindex, gtype,                        &
      &                   LBi, UBi, LBj, UBj, scale,                     &
 # ifdef MASKING
      &                   Amask,                                         &
@@ -6107,7 +6108,8 @@
 !  Write out 2D normalization field.
 !
       scale=1.0_dp
-      status=nf_fwrite2d(ng, model, pioFile, pioVar, tindex, pioDesc,   &
+      status=nf_fwrite2d(ng, model, pioFile, ifield,                    &
+     &                   pioVar, tindex, pioDesc,                       &
      &                   LBi, UBi, LBj, UBj, scale,                     &
 #  ifdef MASKING
      &                   Amask,                                         &
@@ -6204,7 +6206,8 @@
 !
       gtype=gfactor*Iinfo(1,ifield,ng)
       scale=1.0_dp
-      status=nf_fwrite3d(ng, model, ncid, ncvarid, tindex, gtype,       &
+      status=nf_fwrite3d(ng, model, ncid, ifield,                       &
+     &                   ncvarid, tindex, gtype,                        &
      &                   LBi, UBi, LBj, UBj, LBk, UBk, scale,           &
 # ifdef MASKING
      &                   Amask,                                         &
@@ -6296,7 +6299,8 @@
 !  Write out 3D normalization field.
 !
       scale=1.0_dp
-      status=nf_fwrite3d(ng, model, pioFile, pioVar, tindex, pioDesc,   &
+      status=nf_fwrite3d(ng, model, pioFile, ifield,                    &
+     &                   pioVar, tindex, pioDesc,                       &
      &                   LBi, UBi, LBj, UBj, LBk, UBk, scale,           &
 #  ifdef MASKING
      &                   Amask,                                         &

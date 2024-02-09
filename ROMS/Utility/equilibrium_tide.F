@@ -2,11 +2,11 @@
       MODULE equilibrium_tide_mod
 #if defined TIDE_GENERATING_FORCES
 !
-!svn $Id: equilibrium_tide.F 1106 2022-01-26 02:36:18Z arango $
+!svn $Id: equilibrium_tide.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group           John Wilkin   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group           John Wilkin   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module computes the equilibrium tide defined as the shape      !
@@ -203,7 +203,7 @@
      &                     deg2rad*(2.0_r8*lonr(i,j)+M2%chi+M2%nu))+    &
      &                 S2%Afl*Cos2Lat(i,j)*                             &
      &                 COS(S2%omega*t_time_sec+                         &
-     &                     deg2rad*(2.0+r8*lonr(i,j)+S2%chi+S2%nu))+    &
+     &                     deg2rad*(2.0_r8*lonr(i,j)+S2%chi+S2%nu))+    &
      &                 K2%Afl*Cos2Lat(i,j)*                             &
      &                 COS(K2%omega*t_time_sec+                         &
      &                     deg2rad*(2.0_r8*lonr(i,j)+K2%chi+K2%nu))

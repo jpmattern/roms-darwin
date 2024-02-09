@@ -5,11 +5,11 @@
    (defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR)
 !
-!svn $Id: adsen_force.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: adsen_force.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine forces the adjoint state with the functional whose     !
@@ -162,10 +162,10 @@
       real(r8), intent(inout) :: ad_t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
       real(r8), intent(inout) :: ad_Zt_avg1(LBi:UBi,LBj:UBj)
 #  else
-      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: ad_zeta(LBi:UBi,LBj:UBj,:)
 #  endif
-      real(r8), intent(inout) :: ad_ubar(LBi:UBi,LBj:UBj,3)
-      real(r8), intent(inout) :: ad_vbar(LBi:UBi,LBj:UBj,3)
+      real(r8), intent(inout) :: ad_ubar(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(inout) :: ad_vbar(LBi:UBi,LBj:UBj,:)
 # endif
 !
 !  Local variable declarations.

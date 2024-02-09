@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE dateclock_mod
 !
-!svn $Id: dateclock.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: dateclock.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module contains several routines to manage ROMS date, clocks,  !
@@ -650,7 +650,7 @@
         seconds=ABS(seconds-REAL(hour*3600,dp))
         F_minutes=seconds/60.0_dp
         minutes=INT(F_minutes)
-        seconds=ABS(seconds-REAL(F_minutes*60,dp))
+        seconds=ABS(seconds-REAL(minutes*60,dp))
 !
 !-----------------------------------------------------------------------
 !  Compute date vector from date mumber for the 360_day calendar: the
@@ -1117,7 +1117,7 @@
         isec=0
         yday=yearday(iyear, month, iday)
         DateNumber(1)=2440000.0_dp              ! Truncated offset
-        DateNumber(2)=DateNumber(1)*86400_dp
+        DateNumber(2)=DateNumber(1)*86400.0_dp
       END IF
 !
 !-----------------------------------------------------------------------

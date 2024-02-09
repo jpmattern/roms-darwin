@@ -4,11 +4,11 @@
 
 #if !defined TS_FIXED && (defined TL_IOMS && defined SOLVE3D)
 !
-!svn $Id: rp_step3d_t.F 1103 2022-01-13 03:38:35Z arango $
+!svn $Id: rp_step3d_t.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This routine time-steps representers tangent linear tracer          !
@@ -1265,7 +1265,7 @@
                 IF (((Istr.le.Isrc).and.(Isrc.le.Iend+1)).and.          &
      &              ((Jstr.le.Jsrc).and.(Jsrc.le.Jend+1))) THEN
                   DO k=1,N(ng)
-                    cff=dt(ng)*pm(i,j)*pn(i,j)
+                    cff=dt(ng)*pm(Isrc,Jsrc)*pn(Isrc,Jsrc)
 # ifdef SPLINES_VDIFF
                     cff=cff*oHz(Isrc,Jsrc,k)
                     tl_cff=cff*tl_oHz(Isrc,Jsrc,k)

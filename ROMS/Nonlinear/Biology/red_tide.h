@@ -3,11 +3,11 @@
 
       MODULE biology_mod
 !
-!svn $Id: red_tide.h 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: red_tide.h 1210 2024-01-03 22:03:03Z arango $
 !======================================================== Ruoying He ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                           Hernan G. Arango   !
+!    See License_ROMS.md                            Hernan G. Arango   !
 !========================================== Alexander F. Shchepetkin ===
 !                                                                      !
 !  Red Tide Biological Model: Alexandrium fundyense                    !

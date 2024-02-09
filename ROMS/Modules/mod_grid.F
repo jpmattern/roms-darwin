@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE mod_grid
 !
-!svn $Id: mod_grid.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: mod_grid.F 1210 2024-01-03 22:03:03Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  IJwaterR   Water points IJ couter for RHO-points masked variables.  !
@@ -208,9 +208,8 @@
     defined BBL_MODEL  || defined SEDIMENT
           real(r8), pointer :: ZoBot(:,:)
 #endif
-#if defined UV_LDRAG
           real(r8), pointer :: rdrag(:,:)
-#elif defined UV_QDRAG
+#if defined UV_QDRAG
           real(r8), pointer :: rdrag2(:,:)
 #endif
           real(r8), pointer :: xp(:,:)
@@ -488,11 +487,10 @@
       Dmem(ng)=Dmem(ng)+size2d
 #endif
 
-#if defined UV_LDRAG
       allocate ( GRID(ng) % rdrag(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 
-#elif defined UV_QDRAG
+#if defined UV_QDRAG
       allocate ( GRID(ng) % rdrag2(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 #endif
@@ -879,11 +877,10 @@
      &                 __LINE__, 'GRID(ng)%ZoBot')) RETURN
 # endif
 
-# if defined UV_LDRAG
       IF (.not.destroy(ng, GRID(ng)%rdrag, MyFile,                      &
      &                 __LINE__, 'GRID(ng)%rdrag')) RETURN
 
-# elif defined UV_QDRAG
+# if defined UV_QDRAG
       IF (.not.destroy(ng, GRID(ng)%rdrag2, MyFile,                     &
      &                 __LINE__, 'GRID(ng)%rdrag2')) RETURN
 # endif
@@ -1255,9 +1252,8 @@
     defined BBL_MODEL  || defined SEDIMENT
             GRID(ng) % ZoBot(i,j) = Zob(ng)
 #endif
-#if defined UV_LDRAG
             GRID(ng) % rdrag(i,j) = rdrg(ng)
-#elif defined UV_QDRAG
+#if defined UV_QDRAG
             GRID(ng) % rdrag2(i,j) = rdrg2(ng)
 #endif
 

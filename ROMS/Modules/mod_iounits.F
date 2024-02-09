@@ -1,11 +1,11 @@
 #include "cppdefs.h"
       MODULE mod_iounits
 !
-!svn $Id: mod_iounits.F 1099 2022-01-06 21:01:01Z arango $
+!svn $Id: mod_iounits.F 1212 2024-01-26 20:59:21Z arango $
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2022 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
 !    Licensed under a MIT/X style license                              !
-!    See License_ROMS.txt                                              !
+!    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  The input and output files information is stored in compact derived !
@@ -72,11 +72,12 @@
 #endif
 !    SSF       Input Sources/Sinks forcing (river runoff)              !
 !    STA       Output station data                                     !
-!    STD       Input error covariance standard deviations              !
+!    STD       Error covariance standard deviations                    !
 !                STD(1,ng)  initial conditions                         !
 !                STD(2,ng)  model error                                !
 !                STD(3,ng)  lateral open boundary conditions           !
 !                STD(4,ng)  surface forcing                            !
+!                STD(5,ng)  computed from background (output)          !
 #if defined DARWIN_RADTRANS_IO
 !    DRT       Darwin radiative transfer                               !
 #endif
@@ -479,7 +480,7 @@
         allocate ( NRM(4,Ngrids) )
       END IF
       IF (.not.allocated(STD)) THEN
-        allocate ( STD(4,Ngrids) )
+        allocate ( STD(5,Ngrids) )
       END IF
 !
 !-----------------------------------------------------------------------
@@ -542,15 +543,13 @@
         STA(ng)%ncid=-1
         TLF(ng)%ncid=-1
         TLM(ng)%ncid=-1
-
         TIDE(ng)%ncid=-1
 #if defined DARWIN_RADTRANS_IO
         DRT(ng)%ncid=-1
 #endif
 
         NRM(1:4,ng)%ncid=-1
-        STD(1:4,ng)%ncid=-1
-
+        STD(1:5,ng)%ncid=-1
         nBCfiles(ng)=-1
         nCLMfiles(ng)=-1
         nFfiles(ng)=-1
@@ -721,9 +720,9 @@
           NRM(1:4,ng)%base(i:i)=blank
           NRM(1:4,ng)%name(i:i)=blank
 
-          STD(1:4,ng)%head(i:i)=blank
-          STD(1:4,ng)%base(i:i)=blank
-          STD(1:4,ng)%name(i:i)=blank
+          STD(1:5,ng)%head(i:i)=blank
+          STD(1:5,ng)%base(i:i)=blank
+          STD(1:5,ng)%name(i:i)=blank
         END DO
       END DO
 !

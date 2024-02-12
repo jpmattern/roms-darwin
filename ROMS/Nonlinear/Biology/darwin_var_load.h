@@ -1,4 +1,4 @@
-            SELECT CASE (TRIM(ADJUSTL(Vinfo(6))))
+            SELECT CASE (TRIM(ADJUSTL(Vinfo(8))))
 !
 !  all plankton groups
 !
@@ -21,6 +21,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a)')                          &
+     &              TRIM(plankname(i))
                 END DO
               CASE ('idTbry(iwest,ic_)')
                 varid=varid-1
@@ -41,6 +43,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,a)')                        &
+     &              TRIM(plankname(i)),'_west'
                 END DO
               CASE ('idTbry(ieast,ic_)')
                 varid=varid-1
@@ -61,6 +65,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,a)')                        &
+     &              TRIM(plankname(i)),'_east'
                 END DO
               CASE ('idTbry(isouth,ic_)')
                 varid=varid-1
@@ -81,6 +87,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,a)')                        &
+     &              TRIM(plankname(i)),'_south'
                 END DO
               CASE ('idTbry(inorth,ic_)')
                 varid=varid-1
@@ -101,57 +109,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
-                END DO
-              ! TODO remove if really not needed
-              CASE ('idTbry(idir,ic_)')
-                varid=varid-1
-                DO j=1,4
-                  ic=0
-                  DO i=1,nplank
-                    varid=varid+1
-                    IF (j==1) THEN
-                      idTbry(iwest,ic_+ic)=varid
-                    ELSE IF (j==2) THEN
-                      idTbry(ieast,ic_+ic)=varid
-                    ELSE IF (j==3) THEN
-                      idTbry(isouth,ic_+ic)=varid
-                    ELSE IF (j==4) THEN
-                      idTbry(inorth,ic_+ic)=varid
-                    END IF
-                    ! for labelling use ic+1 (1,2,3,...)
-                    ic=ic+1
-                    DO ng=1,Ngrids
-                      Fscale(varid,ng)=scale
-                      Iinfo(1,varid,ng)=gtype
-                    END DO
-                    IF (j==1) THEN
-                      WRITE (Vname(1,varid),'(a,i2.2,a)')               &
-     &                  TRIM(ADJUSTL(Vinfo(1))), ic, '_west'
-                      WRITE (Vname(2,varid),'(a,i2.2,a)')               &
-     &                  'plankton',ic,' western boundary condition'
-                    ELSE IF (j==2) THEN
-                      WRITE (Vname(1,varid),'(a,i2.2,a)')               &
-     &                  TRIM(ADJUSTL(Vinfo(1))), ic, '_east'
-                      WRITE (Vname(2,varid),'(a,i2.2,a)')               &
-     &                  'plankton',ic,' eastern boundary condition'
-                    ELSE IF (j==3) THEN
-                      WRITE (Vname(1,varid),'(a,i2.2,a)')               &
-     &                  TRIM(ADJUSTL(Vinfo(1))), ic, '_south'
-                      WRITE (Vname(2,varid),'(a,i2.2,a)')               &
-     &                  'plankton',ic,' southern boundary condition'
-                    ELSE IF (j==4) THEN
-                      WRITE (Vname(1,varid),'(a,i2.2,a)')               &
-     &                  TRIM(ADJUSTL(Vinfo(1))), ic, '_north'
-                      WRITE (Vname(2,varid),'(a,i2.2,a)')               &
-     &                  'plankton',ic,' northern boundary condition'
-                    END IF
-                    WRITE (Vname(3,varid),'(a)')                        &
-     &                TRIM(ADJUSTL(Vinfo(3)))
-                    WRITE (Vname(4,varid),'(a,a)')                      &
-     &                TRIM(Vname(1,varid)), ', scalar, series'
-                    WRITE (Vname(5,varid),'(a)')                        &
-     &                TRIM(ADJUSTL(Vinfo(5)))
-                  END DO
+                  WRITE (Vname(6,varid),'(a,a)')                        &
+     &              TRIM(plankname(i)),'_north'
                 END DO
 !
 !  chlorophyll
@@ -175,6 +134,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
                 END DO
               CASE ('idTbry(iwest,iChl)')
                 varid=varid-1
@@ -196,6 +157,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
                 END DO
               CASE ('idTbry(ieast,iChl)')
                 varid=varid-1
@@ -217,6 +180,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
                 END DO
               CASE ('idTbry(isouth,iChl)')
                 varid=varid-1
@@ -238,6 +203,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
                 END DO
               CASE ('idTbry(inorth,iChl)')
                 varid=varid-1
@@ -259,6 +226,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
                 END DO
 #if defined DIAGNOSTICS_BIO_DEACTIVATED
 !
@@ -272,6 +241,7 @@
                 WRITE (Vname(2,varid),'(a)') 'Should contain ones'
                 WRITE (Vname(3,varid),'(a)') 'dimensionless'
                 WRITE (Vname(4,varid),'(a)') 'ones, ones, ones'
+                WRITE (Vname(6,varid),'(a)') 'Ones'
                 DO ng=1,Ngrids
                   Dout(iDbio3(iOnes),ng)=.true.
                 END DO
@@ -295,6 +265,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(3a)')                         &
+     &              TRIM(ADJUSTL(Vinfo(1))),'_',TRIM(plankname(i))
                 END DO
               CASE ('iDbio3(iGRplank)')
                 varid=varid-1
@@ -315,6 +287,8 @@
      &              TRIM(Vname(1,varid)), ', scalar, series'
                   WRITE (Vname(5,varid),'(a)')                          &
      &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(3a)')                         &
+     &              TRIM(ADJUSTL(Vinfo(1))),'_',TRIM(plankname(i))
                 END DO
 #endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
             END SELECT

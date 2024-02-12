@@ -1437,6 +1437,13 @@
         Ldone = io_metadata(FirstPass, Vinfo, scale, add_offset)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         IF (Ldone) EXIT
+#if defined VARINFO_DEBUG
+        if (Master) then
+          write(stdout,*) 'VARINFO_DEBUG: processing "',                &
+     &    TRIM(ADJUSTL(Vinfo(1))), '" (',                               &
+     &    TRIM(ADJUSTL(Vinfo(2))), ')'
+        endif
+#endif
 !
 !  Determine staggered C-grid variable.
 !

@@ -6,7 +6,7 @@
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.txt                                              !
 !***********************************************************************
-!                                                                      ! 
+!                                                                      !
 !  Hajoon : subroutine that applies positive definite only             !
 !                                                                      !
 !***********************************************************************
@@ -27,6 +27,8 @@
 !
 !  Local variable declarations.
 !
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__
 #include "tile.h"
 !
 !  Set header file name.
@@ -41,7 +43,7 @@
       END IF
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 15)
+      CALL wclock_on (ng, iNLM, 15, __LINE__, MyFile)
 #endif
       CALL positive_tile (ng, tile,                                     &
      &                   LBi, UBi, LBj, UBj, N(ng), NT(ng),             &
@@ -55,10 +57,10 @@
      &                   OCEAN(ng) % t)
 
 #ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 15)
+      CALL wclock_off (ng, iNLM, 15, __LINE__, MyFile)
 #endif
       RETURN
-      END SUBROUTINE positive 
+      END SUBROUTINE positive
 !
 !-----------------------------------------------------------------------
       SUBROUTINE positive_tile (ng, tile,                               &
@@ -73,7 +75,7 @@
 !-----------------------------------------------------------------------
 !
       USE mod_param
-      USE mod_biology 
+      USE mod_biology
       USE mod_ncparam
       USE mod_scalars
 
@@ -184,7 +186,7 @@
               t(i,j,k,nnew,ibio)=BioTrc(ibio,nnew)*Hz(i,j,k)
               ! this is new:
               !t(i,j,k,nstp,ibio)=BioTrc(ibio,nstp)
-#if defined DIAGNOSTICS_BIO_DEACTIVATED 
+#if defined DIAGNOSTICS_BIO_DEACTIVATED
               ivar=0
 # ifdef DIAGNOSTICS_NEM_PHY
               IF (ibio.eq.iSphy) THEN

@@ -3593,6 +3593,2099 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+#
+# created by create_darwin_headerfiles (written by J. Paul Mattern)
+#
+
+  ##########################################
+  ###  Darwin ecosystem model variables  ###
+  ##########################################
+
+  - variable:       DIC
+    standard_name:  DIC
+    long_name:      DIC concentration
+    units:          mmol C m-3
+    field:          DIC
+    time:           ocean_time
+    index_code:     idTvar(iDIC)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NH4
+    standard_name:  NH4
+    long_name:      NH4 concentration
+    units:          mmol N m-3
+    field:          NH4
+    time:           ocean_time
+    index_code:     idTvar(iNH4)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO2
+    standard_name:  NO2
+    long_name:      NO2 concentration
+    units:          mmol N m-3
+    field:          NO2
+    time:           ocean_time
+    index_code:     idTvar(iNO2)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO3
+    standard_name:  NO3
+    long_name:      NO3 concentration
+    units:          mmol N m-3
+    field:          NO3
+    time:           ocean_time
+    index_code:     idTvar(iNO3)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PO4
+    standard_name:  PO4
+    long_name:      PO4 concentration
+    units:          mmol P m-3
+    field:          PO4
+    time:           ocean_time
+    index_code:     idTvar(iPO4)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       SiO2
+    standard_name:  SiO2
+    long_name:      SiO2 concentration
+    units:          mmol Si m-3
+    field:          SiO2
+    time:           ocean_time
+    index_code:     idTvar(iSiO2)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       FeT
+    standard_name:  FeT
+    long_name:      FeT concentration
+    units:          mmol Fe m-3
+    field:          FeT
+    time:           ocean_time
+    index_code:     idTvar(iFeT)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOC
+    standard_name:  DOC
+    long_name:      DOC concentration
+    units:          mmol C m-3
+    field:          DOC
+    time:           ocean_time
+    index_code:     idTvar(iDOC)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DON
+    standard_name:  DON
+    long_name:      DON concentration
+    units:          mmol N m-3
+    field:          DON
+    time:           ocean_time
+    index_code:     idTvar(iDON)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOP
+    standard_name:  DOP
+    long_name:      DOP concentration
+    units:          mmol P m-3
+    field:          DOP
+    time:           ocean_time
+    index_code:     idTvar(iDOP)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOFe
+    standard_name:  DOFe
+    long_name:      DOFe concentration
+    units:          mmol Fe m-3
+    field:          DOFe
+    time:           ocean_time
+    index_code:     idTvar(iDOFe)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POC
+    standard_name:  POC
+    long_name:      POC concentration
+    units:          mmol C m-3
+    field:          POC
+    time:           ocean_time
+    index_code:     idTvar(iPOC)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PON
+    standard_name:  PON
+    long_name:      PON concentration
+    units:          mmol N m-3
+    field:          PON
+    time:           ocean_time
+    index_code:     idTvar(iPON)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POP
+    standard_name:  POP
+    long_name:      POP concentration
+    units:          mmol P m-3
+    field:          POP
+    time:           ocean_time
+    index_code:     idTvar(iPOP)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POSi
+    standard_name:  POSi
+    long_name:      POSi concentration
+    units:          mmol Si m-3
+    field:          POSi
+    time:           ocean_time
+    index_code:     idTvar(iPOSi)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POFe
+    standard_name:  POFe
+    long_name:      POFe concentration
+    units:          mmol Fe m-3
+    field:          POFe
+    time:           ocean_time
+    index_code:     idTvar(iPOFe)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PIC
+    standard_name:  PIC
+    long_name:      PIC concentration
+    units:          mmol C m-3
+    field:          PIC
+    time:           ocean_time
+    index_code:     idTvar(iPIC)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       total_chlorophyll
+    standard_name:  total_chlorophyll
+    long_name:      total_chlorophyll concentration
+    units:          mg chl m-3
+    field:          total_chlorophyll
+    time:           ocean_time
+    index_code:     idTvar(iTChl)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       alkalinity
+    standard_name:  alkalinity
+    long_name:      alkalinity concentration
+    units:          meq m-3
+    field:          alkalinity
+    time:           ocean_time
+    index_code:     idTvar(iALK)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       O2
+    standard_name:  O2
+    long_name:      O2 concentration
+    units:          mmol O m-3
+    field:          O2
+    time:           ocean_time
+    index_code:     idTvar(iO2)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       CDOM
+    standard_name:  CDOM
+    long_name:      CDOM concentration
+    units:          mmol m-3
+    field:          CDOM
+    time:           ocean_time
+    index_code:     idTvar(iCDOM)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cflx
+    standard_name:  Cflx
+    long_name:      surface carbon flux
+    units:          mmol C m-2
+    field:          Cflx
+    time:           ocean_time
+    index_code:     idTvar(idCflx)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pCO2
+    standard_name:  pCO2
+    long_name:      partial pressure of CO2
+    units:          ppm
+    field:          pCO2
+    time:           ocean_time
+    index_code:     idTvar(idpCO2)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pH
+    standard_name:  pH
+    long_name:      pH concentration
+    units:          nondimensional
+    field:          pH
+    time:           ocean_time
+    index_code:     idTvar(idpH)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton
+    standard_name:  plankton
+    long_name:      plankton concentration
+    units:          mmol C m-3
+    field:          plankton
+    time:           ocean_time
+    index_code:     idTvar(ic_)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Nquota
+    standard_name:  Nquota
+    long_name:      Nquota concentration
+    units:          mmol N m-3
+    field:          Nquota
+    time:           ocean_time
+    index_code:     idTvar(in_)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Pquota
+    standard_name:  Pquota
+    long_name:      Pquota concentration
+    units:          mmol P m-3
+    field:          Pquota
+    time:           ocean_time
+    index_code:     idTvar(ip_)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Siquota
+    standard_name:  Siquota
+    long_name:      Siquota concentration
+    units:          mmol Si m-3
+    field:          Siquota
+    time:           ocean_time
+    index_code:     idTvar(isi)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Fequota
+    standard_name:  Fequota
+    long_name:      Fequota concentration
+    units:          mmol Fe m-3
+    field:          Fequota
+    time:           ocean_time
+    index_code:     idTvar(ife)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       chlorophyll
+    standard_name:  chlorophyll
+    long_name:      chlorophyll concentration
+    units:          mg chl m-3
+    field:          chlorophyll
+    time:           ocean_time
+    index_code:     idTvar(iChl)
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DIC_west
+    standard_name:  DIC_west
+    long_name:      DIC western boundary condition
+    units:          mmol C m-3
+    field:          DIC_west
+    time:           bry_time
+    index_code:     idTbry(iwest,iDIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DIC_east
+    standard_name:  DIC_east
+    long_name:      DIC eastern boundary condition
+    units:          mmol C m-3
+    field:          DIC_east
+    time:           bry_time
+    index_code:     idTbry(ieast,iDIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DIC_south
+    standard_name:  DIC_south
+    long_name:      DIC southern boundary condition
+    units:          mmol C m-3
+    field:          DIC_south
+    time:           bry_time
+    index_code:     idTbry(isouth,iDIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DIC_north
+    standard_name:  DIC_north
+    long_name:      DIC northern boundary condition
+    units:          mmol C m-3
+    field:          DIC_north
+    time:           bry_time
+    index_code:     idTbry(inorth,iDIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NH4_west
+    standard_name:  NH4_west
+    long_name:      NH4 western boundary condition
+    units:          mmol N m-3
+    field:          NH4_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iNH4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NH4_east
+    standard_name:  NH4_east
+    long_name:      NH4 eastern boundary condition
+    units:          mmol N m-3
+    field:          NH4_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iNH4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NH4_south
+    standard_name:  NH4_south
+    long_name:      NH4 southern boundary condition
+    units:          mmol N m-3
+    field:          NH4_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iNH4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NH4_north
+    standard_name:  NH4_north
+    long_name:      NH4 northern boundary condition
+    units:          mmol N m-3
+    field:          NH4_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iNH4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO2_west
+    standard_name:  NO2_west
+    long_name:      NO2 western boundary condition
+    units:          mmol N m-3
+    field:          NO2_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iNO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO2_east
+    standard_name:  NO2_east
+    long_name:      NO2 eastern boundary condition
+    units:          mmol N m-3
+    field:          NO2_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iNO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO2_south
+    standard_name:  NO2_south
+    long_name:      NO2 southern boundary condition
+    units:          mmol N m-3
+    field:          NO2_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iNO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO2_north
+    standard_name:  NO2_north
+    long_name:      NO2 northern boundary condition
+    units:          mmol N m-3
+    field:          NO2_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iNO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO3_west
+    standard_name:  NO3_west
+    long_name:      NO3 western boundary condition
+    units:          mmol N m-3
+    field:          NO3_west
+    time:           bry_time
+    index_code:     idTbry(iwest,iNO3)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO3_east
+    standard_name:  NO3_east
+    long_name:      NO3 eastern boundary condition
+    units:          mmol N m-3
+    field:          NO3_east
+    time:           bry_time
+    index_code:     idTbry(ieast,iNO3)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO3_south
+    standard_name:  NO3_south
+    long_name:      NO3 southern boundary condition
+    units:          mmol N m-3
+    field:          NO3_south
+    time:           bry_time
+    index_code:     idTbry(isouth,iNO3)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NO3_north
+    standard_name:  NO3_north
+    long_name:      NO3 northern boundary condition
+    units:          mmol N m-3
+    field:          NO3_north
+    time:           bry_time
+    index_code:     idTbry(inorth,iNO3)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PO4_west
+    standard_name:  PO4_west
+    long_name:      PO4 western boundary condition
+    units:          mmol P m-3
+    field:          PO4_west
+    time:           bry_time
+    index_code:     idTbry(iwest,iPO4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PO4_east
+    standard_name:  PO4_east
+    long_name:      PO4 eastern boundary condition
+    units:          mmol P m-3
+    field:          PO4_east
+    time:           bry_time
+    index_code:     idTbry(ieast,iPO4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PO4_south
+    standard_name:  PO4_south
+    long_name:      PO4 southern boundary condition
+    units:          mmol P m-3
+    field:          PO4_south
+    time:           bry_time
+    index_code:     idTbry(isouth,iPO4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PO4_north
+    standard_name:  PO4_north
+    long_name:      PO4 northern boundary condition
+    units:          mmol P m-3
+    field:          PO4_north
+    time:           bry_time
+    index_code:     idTbry(inorth,iPO4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       SiO2_west
+    standard_name:  SiO2_west
+    long_name:      SiO2 western boundary condition
+    units:          mmol Si m-3
+    field:          SiO2_west
+    time:           bry_time
+    index_code:     idTbry(iwest,iSiO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       SiO2_east
+    standard_name:  SiO2_east
+    long_name:      SiO2 eastern boundary condition
+    units:          mmol Si m-3
+    field:          SiO2_east
+    time:           bry_time
+    index_code:     idTbry(ieast,iSiO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       SiO2_south
+    standard_name:  SiO2_south
+    long_name:      SiO2 southern boundary condition
+    units:          mmol Si m-3
+    field:          SiO2_south
+    time:           bry_time
+    index_code:     idTbry(isouth,iSiO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       SiO2_north
+    standard_name:  SiO2_north
+    long_name:      SiO2 northern boundary condition
+    units:          mmol Si m-3
+    field:          SiO2_north
+    time:           bry_time
+    index_code:     idTbry(inorth,iSiO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       FeT_west
+    standard_name:  FeT_west
+    long_name:      FeT western boundary condition
+    units:          mmol Fe m-3
+    field:          FeT_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iFeT)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       FeT_east
+    standard_name:  FeT_east
+    long_name:      FeT eastern boundary condition
+    units:          mmol Fe m-3
+    field:          FeT_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iFeT)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       FeT_south
+    standard_name:  FeT_south
+    long_name:      FeT southern boundary condition
+    units:          mmol Fe m-3
+    field:          FeT_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iFeT)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       FeT_north
+    standard_name:  FeT_north
+    long_name:      FeT northern boundary condition
+    units:          mmol Fe m-3
+    field:          FeT_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iFeT)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOC_west
+    standard_name:  DOC_west
+    long_name:      DOC western boundary condition
+    units:          mmol C m-3
+    field:          DOC_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iDOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOC_east
+    standard_name:  DOC_east
+    long_name:      DOC eastern boundary condition
+    units:          mmol C m-3
+    field:          DOC_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iDOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOC_south
+    standard_name:  DOC_south
+    long_name:      DOC southern boundary condition
+    units:          mmol C m-3
+    field:          DOC_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iDOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOC_north
+    standard_name:  DOC_north
+    long_name:      DOC northern boundary condition
+    units:          mmol C m-3
+    field:          DOC_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iDOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DON_west
+    standard_name:  DON_west
+    long_name:      DON western boundary condition
+    units:          mmol N m-3
+    field:          DON_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iDON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DON_east
+    standard_name:  DON_east
+    long_name:      DON eastern boundary condition
+    units:          mmol N m-3
+    field:          DON_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iDON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DON_south
+    standard_name:  DON_south
+    long_name:      DON southern boundary condition
+    units:          mmol N m-3
+    field:          DON_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iDON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DON_north
+    standard_name:  DON_north
+    long_name:      DON northern boundary condition
+    units:          mmol N m-3
+    field:          DON_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iDON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOP_west
+    standard_name:  DOP_west
+    long_name:      DOP western boundary condition
+    units:          mmol P m-3
+    field:          DOP_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iDOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOP_east
+    standard_name:  DOP_east
+    long_name:      DOP eastern boundary condition
+    units:          mmol P m-3
+    field:          DOP_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iDOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOP_south
+    standard_name:  DOP_south
+    long_name:      DOP southern boundary condition
+    units:          mmol P m-3
+    field:          DOP_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iDOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOP_north
+    standard_name:  DOP_north
+    long_name:      DOP northern boundary condition
+    units:          mmol P m-3
+    field:          DOP_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iDOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOFe_west
+    standard_name:  DOFe_west
+    long_name:      DOFe western boundary condition
+    units:          mmol Fe m-3
+    field:          DOFe_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iDOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOFe_east
+    standard_name:  DOFe_east
+    long_name:      DOFe eastern boundary condition
+    units:          mmol Fe m-3
+    field:          DOFe_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iDOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOFe_south
+    standard_name:  DOFe_south
+    long_name:      DOFe southern boundary condition
+    units:          mmol Fe m-3
+    field:          DOFe_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iDOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DOFe_north
+    standard_name:  DOFe_north
+    long_name:      DOFe northern boundary condition
+    units:          mmol Fe m-3
+    field:          DOFe_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iDOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POC_west
+    standard_name:  POC_west
+    long_name:      POC western boundary condition
+    units:          mmol C m-3
+    field:          POC_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iPOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POC_east
+    standard_name:  POC_east
+    long_name:      POC eastern boundary condition
+    units:          mmol C m-3
+    field:          POC_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iPOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POC_south
+    standard_name:  POC_south
+    long_name:      POC southern boundary condition
+    units:          mmol C m-3
+    field:          POC_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iPOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POC_north
+    standard_name:  POC_north
+    long_name:      POC northern boundary condition
+    units:          mmol C m-3
+    field:          POC_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iPOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PON_west
+    standard_name:  PON_west
+    long_name:      PON western boundary condition
+    units:          mmol N m-3
+    field:          PON_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iPON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PON_east
+    standard_name:  PON_east
+    long_name:      PON eastern boundary condition
+    units:          mmol N m-3
+    field:          PON_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iPON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PON_south
+    standard_name:  PON_south
+    long_name:      PON southern boundary condition
+    units:          mmol N m-3
+    field:          PON_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iPON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PON_north
+    standard_name:  PON_north
+    long_name:      PON northern boundary condition
+    units:          mmol N m-3
+    field:          PON_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iPON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POP_west
+    standard_name:  POP_west
+    long_name:      POP western boundary condition
+    units:          mmol P m-3
+    field:          POP_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iPOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POP_east
+    standard_name:  POP_east
+    long_name:      POP eastern boundary condition
+    units:          mmol P m-3
+    field:          POP_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iPOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POP_south
+    standard_name:  POP_south
+    long_name:      POP southern boundary condition
+    units:          mmol P m-3
+    field:          POP_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iPOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POP_north
+    standard_name:  POP_north
+    long_name:      POP northern boundary condition
+    units:          mmol P m-3
+    field:          POP_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iPOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POSi_west
+    standard_name:  POSi_west
+    long_name:      POSi western boundary condition
+    units:          mmol Si m-3
+    field:          POSi_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iPOSi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POSi_east
+    standard_name:  POSi_east
+    long_name:      POSi eastern boundary condition
+    units:          mmol Si m-3
+    field:          POSi_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iPOSi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POSi_south
+    standard_name:  POSi_south
+    long_name:      POSi southern boundary condition
+    units:          mmol Si m-3
+    field:          POSi_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iPOSi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POSi_north
+    standard_name:  POSi_north
+    long_name:      POSi northern boundary condition
+    units:          mmol Si m-3
+    field:          POSi_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iPOSi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POFe_west
+    standard_name:  POFe_west
+    long_name:      POFe western boundary condition
+    units:          mmol Fe m-3
+    field:          POFe_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iPOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POFe_east
+    standard_name:  POFe_east
+    long_name:      POFe eastern boundary condition
+    units:          mmol Fe m-3
+    field:          POFe_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iPOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POFe_south
+    standard_name:  POFe_south
+    long_name:      POFe southern boundary condition
+    units:          mmol Fe m-3
+    field:          POFe_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iPOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POFe_north
+    standard_name:  POFe_north
+    long_name:      POFe northern boundary condition
+    units:          mmol Fe m-3
+    field:          POFe_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iPOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PIC_west
+    standard_name:  PIC_west
+    long_name:      PIC western boundary condition
+    units:          mmol C m-3
+    field:          PIC_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iPIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PIC_east
+    standard_name:  PIC_east
+    long_name:      PIC eastern boundary condition
+    units:          mmol C m-3
+    field:          PIC_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iPIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PIC_south
+    standard_name:  PIC_south
+    long_name:      PIC southern boundary condition
+    units:          mmol C m-3
+    field:          PIC_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iPIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PIC_north
+    standard_name:  PIC_north
+    long_name:      PIC northern boundary condition
+    units:          mmol C m-3
+    field:          PIC_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iPIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       total_chlorophyll_west
+    standard_name:  total_chlorophyll_west
+    long_name:      total_chlorophyll western boundary condition
+    units:          mg chl m-3
+    field:          total_chlorophyll_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iTChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       total_chlorophyll_east
+    standard_name:  total_chlorophyll_east
+    long_name:      total_chlorophyll eastern boundary condition
+    units:          mg chl m-3
+    field:          total_chlorophyll_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iTChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       total_chlorophyll_south
+    standard_name:  total_chlorophyll_south
+    long_name:      total_chlorophyll southern boundary condition
+    units:          mg chl m-3
+    field:          total_chlorophyll_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iTChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       total_chlorophyll_north
+    standard_name:  total_chlorophyll_north
+    long_name:      total_chlorophyll northern boundary condition
+    units:          mg chl m-3
+    field:          total_chlorophyll_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iTChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       alkalinity_west
+    standard_name:  alkalinity_west
+    long_name:      alkalinity western boundary condition
+    units:          meq m-3
+    field:          alkalinity_west
+    time:           bry_time
+    index_code:     idTbry(iwest,iALK)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       alkalinity_east
+    standard_name:  alkalinity_east
+    long_name:      alkalinity eastern boundary condition
+    units:          meq m-3
+    field:          alkalinity_east
+    time:           bry_time
+    index_code:     idTbry(ieast,iALK)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       alkalinity_south
+    standard_name:  alkalinity_south
+    long_name:      alkalinity southern boundary condition
+    units:          meq m-3
+    field:          alkalinity_south
+    time:           bry_time
+    index_code:     idTbry(isouth,iALK)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       alkalinity_north
+    standard_name:  alkalinity_north
+    long_name:      alkalinity northern boundary condition
+    units:          meq m-3
+    field:          alkalinity_north
+    time:           bry_time
+    index_code:     idTbry(inorth,iALK)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       O2_west
+    standard_name:  O2_west
+    long_name:      O2 western boundary condition
+    units:          mmol O m-3
+    field:          O2_west
+    time:           bry_time
+    index_code:     idTbry(iwest,iO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       O2_east
+    standard_name:  O2_east
+    long_name:      O2 eastern boundary condition
+    units:          mmol O m-3
+    field:          O2_east
+    time:           bry_time
+    index_code:     idTbry(ieast,iO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       O2_south
+    standard_name:  O2_south
+    long_name:      O2 southern boundary condition
+    units:          mmol O m-3
+    field:          O2_south
+    time:           bry_time
+    index_code:     idTbry(isouth,iO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       O2_north
+    standard_name:  O2_north
+    long_name:      O2 northern boundary condition
+    units:          mmol O m-3
+    field:          O2_north
+    time:           bry_time
+    index_code:     idTbry(inorth,iO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       CDOM_west
+    standard_name:  CDOM_west
+    long_name:      CDOM western boundary condition
+    units:          mmol m-3
+    field:          CDOM_west
+    time:           bio_time
+    index_code:     idTbry(iwest,iCDOM)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       CDOM_east
+    standard_name:  CDOM_east
+    long_name:      CDOM eastern boundary condition
+    units:          mmol m-3
+    field:          CDOM_east
+    time:           bio_time
+    index_code:     idTbry(ieast,iCDOM)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       CDOM_south
+    standard_name:  CDOM_south
+    long_name:      CDOM southern boundary condition
+    units:          mmol m-3
+    field:          CDOM_south
+    time:           bio_time
+    index_code:     idTbry(isouth,iCDOM)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       CDOM_north
+    standard_name:  CDOM_north
+    long_name:      CDOM northern boundary condition
+    units:          mmol m-3
+    field:          CDOM_north
+    time:           bio_time
+    index_code:     idTbry(inorth,iCDOM)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cflx_west
+    standard_name:  Cflx_west
+    long_name:      surface carbon flux
+    units:          mmol C m-2
+    field:          Cflx_west
+    time:           bio_time
+    index_code:     idTbry(iwest,idCflx)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cflx_east
+    standard_name:  Cflx_east
+    long_name:      surface carbon flux
+    units:          mmol C m-2
+    field:          Cflx_east
+    time:           bio_time
+    index_code:     idTbry(ieast,idCflx)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cflx_south
+    standard_name:  Cflx_south
+    long_name:      surface carbon flux
+    units:          mmol C m-2
+    field:          Cflx_south
+    time:           bio_time
+    index_code:     idTbry(isouth,idCflx)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cflx_north
+    standard_name:  Cflx_north
+    long_name:      surface carbon flux
+    units:          mmol C m-2
+    field:          Cflx_north
+    time:           bio_time
+    index_code:     idTbry(inorth,idCflx)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pCO2_west
+    standard_name:  pCO2_west
+    long_name:      partial pressure of CO2
+    units:          ppm
+    field:          pCO2_west
+    time:           bio_time
+    index_code:     idTbry(iwest,idpCO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pCO2_east
+    standard_name:  pCO2_east
+    long_name:      partial pressure of CO2
+    units:          ppm
+    field:          pCO2_east
+    time:           bio_time
+    index_code:     idTbry(ieast,idpCO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pCO2_south
+    standard_name:  pCO2_south
+    long_name:      partial pressure of CO2
+    units:          ppm
+    field:          pCO2_south
+    time:           bio_time
+    index_code:     idTbry(isouth,idpCO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pCO2_north
+    standard_name:  pCO2_north
+    long_name:      partial pressure of CO2
+    units:          ppm
+    field:          pCO2_north
+    time:           bio_time
+    index_code:     idTbry(inorth,idpCO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pH_west
+    standard_name:  pH_west
+    long_name:      pH western boundary condition
+    units:          nondimensional
+    field:          pH_west
+    time:           bio_time
+    index_code:     idTbry(iwest,idpH)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pH_east
+    standard_name:  pH_east
+    long_name:      pH eastern boundary condition
+    units:          nondimensional
+    field:          pH_east
+    time:           bio_time
+    index_code:     idTbry(ieast,idpH)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pH_south
+    standard_name:  pH_south
+    long_name:      pH southern boundary condition
+    units:          nondimensional
+    field:          pH_south
+    time:           bio_time
+    index_code:     idTbry(isouth,idpH)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       pH_north
+    standard_name:  pH_north
+    long_name:      pH northern boundary condition
+    units:          nondimensional
+    field:          pH_north
+    time:           bio_time
+    index_code:     idTbry(inorth,idpH)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton
+    standard_name:  plankton
+    long_name:      plankton western boundary condition
+    units:          mmol C m-3
+    field:          plankton
+    time:           bio_time
+    index_code:     idTbry(iwest,ic_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton
+    standard_name:  plankton
+    long_name:      plankton eastern boundary condition
+    units:          mmol C m-3
+    field:          plankton
+    time:           bio_time
+    index_code:     idTbry(ieast,ic_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton
+    standard_name:  plankton
+    long_name:      plankton southern boundary condition
+    units:          mmol C m-3
+    field:          plankton
+    time:           bio_time
+    index_code:     idTbry(isouth,ic_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton
+    standard_name:  plankton
+    long_name:      plankton northern boundary condition
+    units:          mmol C m-3
+    field:          plankton
+    time:           bio_time
+    index_code:     idTbry(inorth,ic_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Nquota
+    standard_name:  Nquota
+    long_name:      Nquota western boundary condition
+    units:          mmol N m-3
+    field:          Nquota
+    time:           bio_time
+    index_code:     idTbry(iwest,in_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Nquota
+    standard_name:  Nquota
+    long_name:      Nquota eastern boundary condition
+    units:          mmol N m-3
+    field:          Nquota
+    time:           bio_time
+    index_code:     idTbry(ieast,in_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Nquota
+    standard_name:  Nquota
+    long_name:      Nquota southern boundary condition
+    units:          mmol N m-3
+    field:          Nquota
+    time:           bio_time
+    index_code:     idTbry(isouth,in_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Nquota
+    standard_name:  Nquota
+    long_name:      Nquota northern boundary condition
+    units:          mmol N m-3
+    field:          Nquota
+    time:           bio_time
+    index_code:     idTbry(inorth,in_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Pquota
+    standard_name:  Pquota
+    long_name:      Pquota western boundary condition
+    units:          mmol P m-3
+    field:          Pquota
+    time:           bio_time
+    index_code:     idTbry(iwest,ip_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Pquota
+    standard_name:  Pquota
+    long_name:      Pquota eastern boundary condition
+    units:          mmol P m-3
+    field:          Pquota
+    time:           bio_time
+    index_code:     idTbry(ieast,ip_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Pquota
+    standard_name:  Pquota
+    long_name:      Pquota southern boundary condition
+    units:          mmol P m-3
+    field:          Pquota
+    time:           bio_time
+    index_code:     idTbry(isouth,ip_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Pquota
+    standard_name:  Pquota
+    long_name:      Pquota northern boundary condition
+    units:          mmol P m-3
+    field:          Pquota
+    time:           bio_time
+    index_code:     idTbry(inorth,ip_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Siquota
+    standard_name:  Siquota
+    long_name:      Siquota western boundary condition
+    units:          mmol Si m-3
+    field:          Siquota
+    time:           bio_time
+    index_code:     idTbry(iwest,isi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Siquota
+    standard_name:  Siquota
+    long_name:      Siquota eastern boundary condition
+    units:          mmol Si m-3
+    field:          Siquota
+    time:           bio_time
+    index_code:     idTbry(ieast,isi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Siquota
+    standard_name:  Siquota
+    long_name:      Siquota southern boundary condition
+    units:          mmol Si m-3
+    field:          Siquota
+    time:           bio_time
+    index_code:     idTbry(isouth,isi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Siquota
+    standard_name:  Siquota
+    long_name:      Siquota northern boundary condition
+    units:          mmol Si m-3
+    field:          Siquota
+    time:           bio_time
+    index_code:     idTbry(inorth,isi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Fequota
+    standard_name:  Fequota
+    long_name:      Fequota western boundary condition
+    units:          mmol Fe m-3
+    field:          Fequota
+    time:           bio_time
+    index_code:     idTbry(iwest,ife)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Fequota
+    standard_name:  Fequota
+    long_name:      Fequota eastern boundary condition
+    units:          mmol Fe m-3
+    field:          Fequota
+    time:           bio_time
+    index_code:     idTbry(ieast,ife)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Fequota
+    standard_name:  Fequota
+    long_name:      Fequota southern boundary condition
+    units:          mmol Fe m-3
+    field:          Fequota
+    time:           bio_time
+    index_code:     idTbry(isouth,ife)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Fequota
+    standard_name:  Fequota
+    long_name:      Fequota northern boundary condition
+    units:          mmol Fe m-3
+    field:          Fequota
+    time:           bio_time
+    index_code:     idTbry(inorth,ife)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       chlorophyll
+    standard_name:  chlorophyll
+    long_name:      chlorophyll western boundary condition
+    units:          mg chl m-3
+    field:          chlorophyll
+    time:           bio_time
+    index_code:     idTbry(iwest,iChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       chlorophyll
+    standard_name:  chlorophyll
+    long_name:      chlorophyll eastern boundary condition
+    units:          mg chl m-3
+    field:          chlorophyll
+    time:           bio_time
+    index_code:     idTbry(ieast,iChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       chlorophyll
+    standard_name:  chlorophyll
+    long_name:      chlorophyll southern boundary condition
+    units:          mg chl m-3
+    field:          chlorophyll
+    time:           bio_time
+    index_code:     idTbry(isouth,iChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       chlorophyll
+    standard_name:  chlorophyll
+    long_name:      chlorophyll northern boundary condition
+    units:          mg chl m-3
+    field:          chlorophyll
+    time:           bio_time
+    index_code:     idTbry(inorth,iChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_DIC
+    standard_name:  river_DIC
+    long_name:      river runoff DIC concentration
+    units:          mmol C m-3
+    field:          river_DIC
+    time:           river_time
+    index_code:     idRtrc(iDIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_NH4
+    standard_name:  river_NH4
+    long_name:      river runoff NH4 concentration
+    units:          mmol N m-3
+    field:          river_NH4
+    time:           river_time
+    index_code:     idRtrc(iNH4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_NO2
+    standard_name:  river_NO2
+    long_name:      river runoff NO2 concentration
+    units:          mmol N m-3
+    field:          river_NO2
+    time:           river_time
+    index_code:     idRtrc(iNO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_NO3
+    standard_name:  river_NO3
+    long_name:      river runoff NO3 concentration
+    units:          mmol N m-3
+    field:          river_NO3
+    time:           river_time
+    index_code:     idRtrc(iNO3)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_PO4
+    standard_name:  river_PO4
+    long_name:      river runoff PO4 concentration
+    units:          mmol P m-3
+    field:          river_PO4
+    time:           river_time
+    index_code:     idRtrc(iPO4)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_SiO2
+    standard_name:  river_SiO2
+    long_name:      river runoff SiO2 concentration
+    units:          mmol Si m-3
+    field:          river_SiO2
+    time:           river_time
+    index_code:     idRtrc(iSiO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_FeT
+    standard_name:  river_FeT
+    long_name:      river runoff FeT concentration
+    units:          mmol Fe m-3
+    field:          river_FeT
+    time:           river_time
+    index_code:     idRtrc(iFeT)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_DOC
+    standard_name:  river_DOC
+    long_name:      river runoff DOC concentration
+    units:          mmol C m-3
+    field:          river_DOC
+    time:           river_time
+    index_code:     idRtrc(iDOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_DON
+    standard_name:  river_DON
+    long_name:      river runoff DON concentration
+    units:          mmol N m-3
+    field:          river_DON
+    time:           river_time
+    index_code:     idRtrc(iDON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_DOP
+    standard_name:  river_DOP
+    long_name:      river runoff DOP concentration
+    units:          mmol P m-3
+    field:          river_DOP
+    time:           river_time
+    index_code:     idRtrc(iDOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_DOFe
+    standard_name:  river_DOFe
+    long_name:      river runoff DOFe concentration
+    units:          mmol Fe m-3
+    field:          river_DOFe
+    time:           river_time
+    index_code:     idRtrc(iDOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_POC
+    standard_name:  river_POC
+    long_name:      river runoff POC concentration
+    units:          mmol C m-3
+    field:          river_POC
+    time:           river_time
+    index_code:     idRtrc(iPOC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_PON
+    standard_name:  river_PON
+    long_name:      river runoff PON concentration
+    units:          mmol N m-3
+    field:          river_PON
+    time:           river_time
+    index_code:     idRtrc(iPON)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_POP
+    standard_name:  river_POP
+    long_name:      river runoff POP concentration
+    units:          mmol P m-3
+    field:          river_POP
+    time:           river_time
+    index_code:     idRtrc(iPOP)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_POSi
+    standard_name:  river_POSi
+    long_name:      river runoff POSi concentration
+    units:          mmol Si m-3
+    field:          river_POSi
+    time:           river_time
+    index_code:     idRtrc(iPOSi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_POFe
+    standard_name:  river_POFe
+    long_name:      river runoff POFe concentration
+    units:          mmol Fe m-3
+    field:          river_POFe
+    time:           river_time
+    index_code:     idRtrc(iPOFe)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_PIC
+    standard_name:  river_PIC
+    long_name:      river runoff PIC concentration
+    units:          mmol C m-3
+    field:          river_PIC
+    time:           river_time
+    index_code:     idRtrc(iPIC)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_total_chlorophyll
+    standard_name:  river_total_chlorophyll
+    long_name:      river runoff total_chlorophyll concentration
+    units:          mg chl m-3
+    field:          river_total_chlorophyll
+    time:           river_time
+    index_code:     idRtrc(iTChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_alkalinity
+    standard_name:  river_alkalinity
+    long_name:      river runoff alkalinity concentration
+    units:          meq m-3
+    field:          river_alkalinity
+    time:           river_time
+    index_code:     idRtrc(iALK)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_O2
+    standard_name:  river_O2
+    long_name:      river runoff O2 concentration
+    units:          mmol O m-3
+    field:          river_O2
+    time:           river_time
+    index_code:     idRtrc(iO2)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_CDOM
+    standard_name:  river_CDOM
+    long_name:      river runoff CDOM concentration
+    units:          mmol m-3
+    field:          river_CDOM
+    time:           river_time
+    index_code:     idRtrc(iCDOM)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_plankton
+    standard_name:  river_plankton
+    long_name:      river runoff plankton concentration
+    units:          mmol C m-3
+    field:          river_plankton
+    time:           river_time
+    index_code:     idRtrc(ic_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_Nquota
+    standard_name:  river_Nquota
+    long_name:      river runoff Nquota concentration
+    units:          mmol N m-3
+    field:          river_Nquota
+    time:           river_time
+    index_code:     idRtrc(in_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_Pquota
+    standard_name:  river_Pquota
+    long_name:      river runoff Pquota concentration
+    units:          mmol P m-3
+    field:          river_Pquota
+    time:           river_time
+    index_code:     idRtrc(ip_)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_Siquota
+    standard_name:  river_Siquota
+    long_name:      river runoff Siquota concentration
+    units:          mmol Si m-3
+    field:          river_Siquota
+    time:           river_time
+    index_code:     idRtrc(isi)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_Fequota
+    standard_name:  river_Fequota
+    long_name:      river runoff Fequota concentration
+    units:          mmol Fe m-3
+    field:          river_Fequota
+    time:           river_time
+    index_code:     idRtrc(ife)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       river_chlorophyll
+    standard_name:  river_chlorophyll
+    long_name:      river runoff chlorophyll concentration
+    units:          mg chl m-3
+    field:          river_chlorophyll
+    time:           river_time
+    index_code:     idRtrc(iChl)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  ##########################################
+  ###  BIO_SEDIMENTVARIABLES  variables  ###
+  ###  created using varinfo_dat2yaml    ###
+  ##########################################
+
+  - variable:       PIC_sed
+    standard_name:  PIC_sed
+    long_name:      PIC sediment mass
+    units:          mmol C m-2
+    field:          PIC, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(iPIC)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POC_sed
+    standard_name:  POC_sed
+    long_name:      POC sediment mass
+    units:          mmol C m-2
+    field:          POC, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(iPOC)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PON_sed
+    standard_name:  PON_sed
+    long_name:      PON sediment mass
+    units:          mmol N m-2
+    field:          PON, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(iPON)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POP_sed
+    standard_name:  POP_sed
+    long_name:      POP sediment mass
+    units:          mmol P m-2
+    field:          POP, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(iPOP)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POSi_sed
+    standard_name:  POSi_sed
+    long_name:      POSi sediment mass
+    units:          mmol Si m-2
+    field:          POSi, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(iPOSi)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POFe_sed
+    standard_name:  POFe_sed
+    long_name:      POFe sediment mass
+    units:          mmol Fe m-2
+    field:          POFe, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(iPOFe)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton_C_sed
+    standard_name:  plankton_C_sed
+    long_name:      plankton C sediment mass
+    units:          mmol C m-2
+    field:          plankton_C_sed, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(isedc)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton_N_sed
+    standard_name:  plankton_N_sed
+    long_name:      plankton N sediment mass
+    units:          mmol N m-2
+    field:          plankton_N_sed, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(isedn)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton_P_sed
+    standard_name:  plankton_P_sed
+    long_name:      plankton P sediment mass
+    units:          mmol P m-2
+    field:          plankton_P_sed, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(isedp)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton_Si_sed
+    standard_name:  plankton_Si_sed
+    long_name:      plankton Si sediment mass
+    units:          mmol Si m-2
+    field:          plankton_Si_sed, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(isedsi)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       plankton_Fe_sed
+    standard_name:  plankton_Fe_sed
+    long_name:      plankton Fe sediment mass
+    units:          mmol Fe m-2
+    field:          plankton_Fe_sed, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(isedfe)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       chl_sed
+    standard_name:  chl_sed
+    long_name:      chlorophyll sediment mass
+    units:          mg chl m-2
+    field:          plankton_chl_sed, scalar, series
+    time:           ocean_time
+    index_code:     idBSMa(isedchl)
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+
   ##################################################################
   ###  Ecosystem Variables: BIO_FENNEL, NEMURO, NPZD or HYPOXIA  ###
   ##################################################################

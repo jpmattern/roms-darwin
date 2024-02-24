@@ -3790,9 +3790,9 @@ metadata:
 
   - variable:       total_chlorophyll
     standard_name:  total_chlorophyll
-    long_name:      total_chlorophyll concentration
+    long_name:      total chlorophyll concentration
     units:          mg chl m-3
-    field:          total_chlorophyll
+    field:          total chlorophyll
     time:           ocean_time
     index_code:     idTvar(iTChl)
     type:           r3dvar

@@ -3980,7 +3980,7 @@ metadata:
     long_name:      NH4 western boundary condition
     units:          mmol N m-3
     field:          NH4_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iNH4)
     type:           nulvar
     add_offset:     0.0d0
@@ -3991,7 +3991,7 @@ metadata:
     long_name:      NH4 eastern boundary condition
     units:          mmol N m-3
     field:          NH4_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iNH4)
     type:           nulvar
     add_offset:     0.0d0
@@ -4002,7 +4002,7 @@ metadata:
     long_name:      NH4 southern boundary condition
     units:          mmol N m-3
     field:          NH4_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iNH4)
     type:           nulvar
     add_offset:     0.0d0
@@ -4013,7 +4013,7 @@ metadata:
     long_name:      NH4 northern boundary condition
     units:          mmol N m-3
     field:          NH4_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iNH4)
     type:           nulvar
     add_offset:     0.0d0
@@ -4024,7 +4024,7 @@ metadata:
     long_name:      NO2 western boundary condition
     units:          mmol N m-3
     field:          NO2_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iNO2)
     type:           nulvar
     add_offset:     0.0d0
@@ -4035,7 +4035,7 @@ metadata:
     long_name:      NO2 eastern boundary condition
     units:          mmol N m-3
     field:          NO2_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iNO2)
     type:           nulvar
     add_offset:     0.0d0
@@ -4046,7 +4046,7 @@ metadata:
     long_name:      NO2 southern boundary condition
     units:          mmol N m-3
     field:          NO2_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iNO2)
     type:           nulvar
     add_offset:     0.0d0
@@ -4057,7 +4057,7 @@ metadata:
     long_name:      NO2 northern boundary condition
     units:          mmol N m-3
     field:          NO2_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iNO2)
     type:           nulvar
     add_offset:     0.0d0
@@ -4200,7 +4200,7 @@ metadata:
     long_name:      FeT western boundary condition
     units:          mmol Fe m-3
     field:          FeT_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iFeT)
     type:           nulvar
     add_offset:     0.0d0
@@ -4211,7 +4211,7 @@ metadata:
     long_name:      FeT eastern boundary condition
     units:          mmol Fe m-3
     field:          FeT_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iFeT)
     type:           nulvar
     add_offset:     0.0d0
@@ -4222,7 +4222,7 @@ metadata:
     long_name:      FeT southern boundary condition
     units:          mmol Fe m-3
     field:          FeT_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iFeT)
     type:           nulvar
     add_offset:     0.0d0
@@ -4233,7 +4233,7 @@ metadata:
     long_name:      FeT northern boundary condition
     units:          mmol Fe m-3
     field:          FeT_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iFeT)
     type:           nulvar
     add_offset:     0.0d0
@@ -4244,7 +4244,7 @@ metadata:
     long_name:      DOC western boundary condition
     units:          mmol C m-3
     field:          DOC_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iDOC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4255,7 +4255,7 @@ metadata:
     long_name:      DOC eastern boundary condition
     units:          mmol C m-3
     field:          DOC_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iDOC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4266,7 +4266,7 @@ metadata:
     long_name:      DOC southern boundary condition
     units:          mmol C m-3
     field:          DOC_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iDOC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4277,7 +4277,7 @@ metadata:
     long_name:      DOC northern boundary condition
     units:          mmol C m-3
     field:          DOC_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iDOC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4288,7 +4288,7 @@ metadata:
     long_name:      DON western boundary condition
     units:          mmol N m-3
     field:          DON_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iDON)
     type:           nulvar
     add_offset:     0.0d0
@@ -4299,7 +4299,7 @@ metadata:
     long_name:      DON eastern boundary condition
     units:          mmol N m-3
     field:          DON_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iDON)
     type:           nulvar
     add_offset:     0.0d0
@@ -4310,7 +4310,7 @@ metadata:
     long_name:      DON southern boundary condition
     units:          mmol N m-3
     field:          DON_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iDON)
     type:           nulvar
     add_offset:     0.0d0
@@ -4321,7 +4321,7 @@ metadata:
     long_name:      DON northern boundary condition
     units:          mmol N m-3
     field:          DON_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iDON)
     type:           nulvar
     add_offset:     0.0d0
@@ -4332,7 +4332,7 @@ metadata:
     long_name:      DOP western boundary condition
     units:          mmol P m-3
     field:          DOP_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iDOP)
     type:           nulvar
     add_offset:     0.0d0
@@ -4343,7 +4343,7 @@ metadata:
     long_name:      DOP eastern boundary condition
     units:          mmol P m-3
     field:          DOP_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iDOP)
     type:           nulvar
     add_offset:     0.0d0
@@ -4354,7 +4354,7 @@ metadata:
     long_name:      DOP southern boundary condition
     units:          mmol P m-3
     field:          DOP_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iDOP)
     type:           nulvar
     add_offset:     0.0d0
@@ -4365,7 +4365,7 @@ metadata:
     long_name:      DOP northern boundary condition
     units:          mmol P m-3
     field:          DOP_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iDOP)
     type:           nulvar
     add_offset:     0.0d0
@@ -4376,7 +4376,7 @@ metadata:
     long_name:      DOFe western boundary condition
     units:          mmol Fe m-3
     field:          DOFe_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iDOFe)
     type:           nulvar
     add_offset:     0.0d0
@@ -4387,7 +4387,7 @@ metadata:
     long_name:      DOFe eastern boundary condition
     units:          mmol Fe m-3
     field:          DOFe_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iDOFe)
     type:           nulvar
     add_offset:     0.0d0
@@ -4398,7 +4398,7 @@ metadata:
     long_name:      DOFe southern boundary condition
     units:          mmol Fe m-3
     field:          DOFe_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iDOFe)
     type:           nulvar
     add_offset:     0.0d0
@@ -4409,7 +4409,7 @@ metadata:
     long_name:      DOFe northern boundary condition
     units:          mmol Fe m-3
     field:          DOFe_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iDOFe)
     type:           nulvar
     add_offset:     0.0d0
@@ -4420,7 +4420,7 @@ metadata:
     long_name:      POC western boundary condition
     units:          mmol C m-3
     field:          POC_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iPOC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4431,7 +4431,7 @@ metadata:
     long_name:      POC eastern boundary condition
     units:          mmol C m-3
     field:          POC_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iPOC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4442,7 +4442,7 @@ metadata:
     long_name:      POC southern boundary condition
     units:          mmol C m-3
     field:          POC_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iPOC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4453,7 +4453,7 @@ metadata:
     long_name:      POC northern boundary condition
     units:          mmol C m-3
     field:          POC_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iPOC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4464,7 +4464,7 @@ metadata:
     long_name:      PON western boundary condition
     units:          mmol N m-3
     field:          PON_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iPON)
     type:           nulvar
     add_offset:     0.0d0
@@ -4475,7 +4475,7 @@ metadata:
     long_name:      PON eastern boundary condition
     units:          mmol N m-3
     field:          PON_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iPON)
     type:           nulvar
     add_offset:     0.0d0
@@ -4486,7 +4486,7 @@ metadata:
     long_name:      PON southern boundary condition
     units:          mmol N m-3
     field:          PON_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iPON)
     type:           nulvar
     add_offset:     0.0d0
@@ -4497,7 +4497,7 @@ metadata:
     long_name:      PON northern boundary condition
     units:          mmol N m-3
     field:          PON_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iPON)
     type:           nulvar
     add_offset:     0.0d0
@@ -4508,7 +4508,7 @@ metadata:
     long_name:      POP western boundary condition
     units:          mmol P m-3
     field:          POP_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iPOP)
     type:           nulvar
     add_offset:     0.0d0
@@ -4519,7 +4519,7 @@ metadata:
     long_name:      POP eastern boundary condition
     units:          mmol P m-3
     field:          POP_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iPOP)
     type:           nulvar
     add_offset:     0.0d0
@@ -4530,7 +4530,7 @@ metadata:
     long_name:      POP southern boundary condition
     units:          mmol P m-3
     field:          POP_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iPOP)
     type:           nulvar
     add_offset:     0.0d0
@@ -4541,7 +4541,7 @@ metadata:
     long_name:      POP northern boundary condition
     units:          mmol P m-3
     field:          POP_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iPOP)
     type:           nulvar
     add_offset:     0.0d0
@@ -4552,7 +4552,7 @@ metadata:
     long_name:      POSi western boundary condition
     units:          mmol Si m-3
     field:          POSi_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iPOSi)
     type:           nulvar
     add_offset:     0.0d0
@@ -4563,7 +4563,7 @@ metadata:
     long_name:      POSi eastern boundary condition
     units:          mmol Si m-3
     field:          POSi_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iPOSi)
     type:           nulvar
     add_offset:     0.0d0
@@ -4574,7 +4574,7 @@ metadata:
     long_name:      POSi southern boundary condition
     units:          mmol Si m-3
     field:          POSi_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iPOSi)
     type:           nulvar
     add_offset:     0.0d0
@@ -4585,7 +4585,7 @@ metadata:
     long_name:      POSi northern boundary condition
     units:          mmol Si m-3
     field:          POSi_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iPOSi)
     type:           nulvar
     add_offset:     0.0d0
@@ -4596,7 +4596,7 @@ metadata:
     long_name:      POFe western boundary condition
     units:          mmol Fe m-3
     field:          POFe_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iPOFe)
     type:           nulvar
     add_offset:     0.0d0
@@ -4607,7 +4607,7 @@ metadata:
     long_name:      POFe eastern boundary condition
     units:          mmol Fe m-3
     field:          POFe_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iPOFe)
     type:           nulvar
     add_offset:     0.0d0
@@ -4618,7 +4618,7 @@ metadata:
     long_name:      POFe southern boundary condition
     units:          mmol Fe m-3
     field:          POFe_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iPOFe)
     type:           nulvar
     add_offset:     0.0d0
@@ -4629,7 +4629,7 @@ metadata:
     long_name:      POFe northern boundary condition
     units:          mmol Fe m-3
     field:          POFe_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iPOFe)
     type:           nulvar
     add_offset:     0.0d0
@@ -4640,7 +4640,7 @@ metadata:
     long_name:      PIC western boundary condition
     units:          mmol C m-3
     field:          PIC_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iPIC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4651,7 +4651,7 @@ metadata:
     long_name:      PIC eastern boundary condition
     units:          mmol C m-3
     field:          PIC_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iPIC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4662,7 +4662,7 @@ metadata:
     long_name:      PIC southern boundary condition
     units:          mmol C m-3
     field:          PIC_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iPIC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4673,7 +4673,7 @@ metadata:
     long_name:      PIC northern boundary condition
     units:          mmol C m-3
     field:          PIC_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iPIC)
     type:           nulvar
     add_offset:     0.0d0
@@ -4684,7 +4684,7 @@ metadata:
     long_name:      total_chlorophyll western boundary condition
     units:          mg chl m-3
     field:          total_chlorophyll_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iTChl)
     type:           nulvar
     add_offset:     0.0d0
@@ -4695,7 +4695,7 @@ metadata:
     long_name:      total_chlorophyll eastern boundary condition
     units:          mg chl m-3
     field:          total_chlorophyll_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iTChl)
     type:           nulvar
     add_offset:     0.0d0
@@ -4706,7 +4706,7 @@ metadata:
     long_name:      total_chlorophyll southern boundary condition
     units:          mg chl m-3
     field:          total_chlorophyll_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iTChl)
     type:           nulvar
     add_offset:     0.0d0
@@ -4717,7 +4717,7 @@ metadata:
     long_name:      total_chlorophyll northern boundary condition
     units:          mg chl m-3
     field:          total_chlorophyll_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iTChl)
     type:           nulvar
     add_offset:     0.0d0
@@ -4816,7 +4816,7 @@ metadata:
     long_name:      CDOM western boundary condition
     units:          mmol m-3
     field:          CDOM_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iCDOM)
     type:           nulvar
     add_offset:     0.0d0
@@ -4827,7 +4827,7 @@ metadata:
     long_name:      CDOM eastern boundary condition
     units:          mmol m-3
     field:          CDOM_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iCDOM)
     type:           nulvar
     add_offset:     0.0d0
@@ -4838,7 +4838,7 @@ metadata:
     long_name:      CDOM southern boundary condition
     units:          mmol m-3
     field:          CDOM_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iCDOM)
     type:           nulvar
     add_offset:     0.0d0
@@ -4849,7 +4849,7 @@ metadata:
     long_name:      CDOM northern boundary condition
     units:          mmol m-3
     field:          CDOM_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iCDOM)
     type:           nulvar
     add_offset:     0.0d0
@@ -4860,7 +4860,7 @@ metadata:
     long_name:      surface carbon flux
     units:          mmol C m-2
     field:          Cflx_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,idCflx)
     type:           nulvar
     add_offset:     0.0d0
@@ -4871,7 +4871,7 @@ metadata:
     long_name:      surface carbon flux
     units:          mmol C m-2
     field:          Cflx_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,idCflx)
     type:           nulvar
     add_offset:     0.0d0
@@ -4882,7 +4882,7 @@ metadata:
     long_name:      surface carbon flux
     units:          mmol C m-2
     field:          Cflx_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,idCflx)
     type:           nulvar
     add_offset:     0.0d0
@@ -4893,7 +4893,7 @@ metadata:
     long_name:      surface carbon flux
     units:          mmol C m-2
     field:          Cflx_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,idCflx)
     type:           nulvar
     add_offset:     0.0d0
@@ -4904,7 +4904,7 @@ metadata:
     long_name:      partial pressure of CO2
     units:          ppm
     field:          pCO2_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,idpCO2)
     type:           nulvar
     add_offset:     0.0d0
@@ -4915,7 +4915,7 @@ metadata:
     long_name:      partial pressure of CO2
     units:          ppm
     field:          pCO2_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,idpCO2)
     type:           nulvar
     add_offset:     0.0d0
@@ -4926,7 +4926,7 @@ metadata:
     long_name:      partial pressure of CO2
     units:          ppm
     field:          pCO2_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,idpCO2)
     type:           nulvar
     add_offset:     0.0d0
@@ -4937,7 +4937,7 @@ metadata:
     long_name:      partial pressure of CO2
     units:          ppm
     field:          pCO2_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,idpCO2)
     type:           nulvar
     add_offset:     0.0d0
@@ -4948,7 +4948,7 @@ metadata:
     long_name:      pH western boundary condition
     units:          nondimensional
     field:          pH_west
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,idpH)
     type:           nulvar
     add_offset:     0.0d0
@@ -4959,7 +4959,7 @@ metadata:
     long_name:      pH eastern boundary condition
     units:          nondimensional
     field:          pH_east
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,idpH)
     type:           nulvar
     add_offset:     0.0d0
@@ -4970,7 +4970,7 @@ metadata:
     long_name:      pH southern boundary condition
     units:          nondimensional
     field:          pH_south
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,idpH)
     type:           nulvar
     add_offset:     0.0d0
@@ -4981,7 +4981,7 @@ metadata:
     long_name:      pH northern boundary condition
     units:          nondimensional
     field:          pH_north
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,idpH)
     type:           nulvar
     add_offset:     0.0d0
@@ -4992,7 +4992,7 @@ metadata:
     long_name:      plankton western boundary condition
     units:          mmol C m-3
     field:          plankton
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,ic_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5003,7 +5003,7 @@ metadata:
     long_name:      plankton eastern boundary condition
     units:          mmol C m-3
     field:          plankton
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,ic_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5014,7 +5014,7 @@ metadata:
     long_name:      plankton southern boundary condition
     units:          mmol C m-3
     field:          plankton
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,ic_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5025,7 +5025,7 @@ metadata:
     long_name:      plankton northern boundary condition
     units:          mmol C m-3
     field:          plankton
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,ic_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5036,7 +5036,7 @@ metadata:
     long_name:      Nquota western boundary condition
     units:          mmol N m-3
     field:          Nquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,in_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5047,7 +5047,7 @@ metadata:
     long_name:      Nquota eastern boundary condition
     units:          mmol N m-3
     field:          Nquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,in_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5058,7 +5058,7 @@ metadata:
     long_name:      Nquota southern boundary condition
     units:          mmol N m-3
     field:          Nquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,in_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5069,7 +5069,7 @@ metadata:
     long_name:      Nquota northern boundary condition
     units:          mmol N m-3
     field:          Nquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,in_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5080,7 +5080,7 @@ metadata:
     long_name:      Pquota western boundary condition
     units:          mmol P m-3
     field:          Pquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,ip_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5091,7 +5091,7 @@ metadata:
     long_name:      Pquota eastern boundary condition
     units:          mmol P m-3
     field:          Pquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,ip_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5102,7 +5102,7 @@ metadata:
     long_name:      Pquota southern boundary condition
     units:          mmol P m-3
     field:          Pquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,ip_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5113,7 +5113,7 @@ metadata:
     long_name:      Pquota northern boundary condition
     units:          mmol P m-3
     field:          Pquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,ip_)
     type:           nulvar
     add_offset:     0.0d0
@@ -5124,7 +5124,7 @@ metadata:
     long_name:      Siquota western boundary condition
     units:          mmol Si m-3
     field:          Siquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,isi)
     type:           nulvar
     add_offset:     0.0d0
@@ -5135,7 +5135,7 @@ metadata:
     long_name:      Siquota eastern boundary condition
     units:          mmol Si m-3
     field:          Siquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,isi)
     type:           nulvar
     add_offset:     0.0d0
@@ -5146,7 +5146,7 @@ metadata:
     long_name:      Siquota southern boundary condition
     units:          mmol Si m-3
     field:          Siquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,isi)
     type:           nulvar
     add_offset:     0.0d0
@@ -5157,7 +5157,7 @@ metadata:
     long_name:      Siquota northern boundary condition
     units:          mmol Si m-3
     field:          Siquota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,isi)
     type:           nulvar
     add_offset:     0.0d0
@@ -5168,7 +5168,7 @@ metadata:
     long_name:      Fequota western boundary condition
     units:          mmol Fe m-3
     field:          Fequota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,ife)
     type:           nulvar
     add_offset:     0.0d0
@@ -5179,7 +5179,7 @@ metadata:
     long_name:      Fequota eastern boundary condition
     units:          mmol Fe m-3
     field:          Fequota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,ife)
     type:           nulvar
     add_offset:     0.0d0
@@ -5190,7 +5190,7 @@ metadata:
     long_name:      Fequota southern boundary condition
     units:          mmol Fe m-3
     field:          Fequota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,ife)
     type:           nulvar
     add_offset:     0.0d0
@@ -5201,7 +5201,7 @@ metadata:
     long_name:      Fequota northern boundary condition
     units:          mmol Fe m-3
     field:          Fequota
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,ife)
     type:           nulvar
     add_offset:     0.0d0
@@ -5212,7 +5212,7 @@ metadata:
     long_name:      chlorophyll western boundary condition
     units:          mg chl m-3
     field:          chlorophyll
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(iwest,iChl)
     type:           nulvar
     add_offset:     0.0d0
@@ -5223,7 +5223,7 @@ metadata:
     long_name:      chlorophyll eastern boundary condition
     units:          mg chl m-3
     field:          chlorophyll
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(ieast,iChl)
     type:           nulvar
     add_offset:     0.0d0
@@ -5234,7 +5234,7 @@ metadata:
     long_name:      chlorophyll southern boundary condition
     units:          mg chl m-3
     field:          chlorophyll
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(isouth,iChl)
     type:           nulvar
     add_offset:     0.0d0
@@ -5245,7 +5245,7 @@ metadata:
     long_name:      chlorophyll northern boundary condition
     units:          mg chl m-3
     field:          chlorophyll
-    time:           bio_time
+    time:           bry_time
     index_code:     idTbry(inorth,iChl)
     type:           nulvar
     add_offset:     0.0d0

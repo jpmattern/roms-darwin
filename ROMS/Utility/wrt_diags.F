@@ -330,7 +330,7 @@
         IF (Dout(ifield,ng)) THEN
           scale=1.0_dp  ! no adjustment
           gtype=gfactor*l3dvar
-          status=nf_fwrite3d(ng, iNLM, DIA(ng)%ncid,                    &
+          status=nf_fwrite3d(ng, iNLM, DIA(ng)%ncid, ifield,            &
      &                       DIA(ng)%Vid(ifield),                       &
      &                       DIA(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -357,7 +357,7 @@
         IF (Dout(ifield,ng)) THEN
           scale=1.0_dp  ! no adjustment
           gtype=gfactor*l4dvar
-          status=nf_fwrite4d(ng, iNLM, DIA(ng)%ncid,                    &
+          status=nf_fwrite4d(ng, iNLM, DIA(ng)%ncid, ifield,            &
      &                       DIA(ng)%Vid(ifield),                       &
      &                       DIA(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), 1, nplank,   &

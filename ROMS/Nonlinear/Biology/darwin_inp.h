@@ -556,6 +556,17 @@
               END DO
 #endif
 #if defined DIAGNOSTICS_BIO
+            CASE ('Dout(idGrazRt)')
+              IF (iDbio4(idGrazRt).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio4(idGrazRt)'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              i=iDbio4(idGrazRt)
+              DO ng=1,Ngrids
+                Dout(i,ng)=Lbio(ng)
+              END DO
             CASE ('Dout(idGrazPr)')
               IF (iDbio4(idGrazPr).eq.0) THEN
                 IF (Master) WRITE (out,40) 'iDbio4(idGrazPr)'
@@ -564,6 +575,39 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio4(idGrazPr)
+              DO ng=1,Ngrids
+                Dout(i,ng)=Lbio(ng)
+              END DO
+            CASE ('Dout(idNPP4d)')
+              IF (iDbio4(idNPP4d).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio4(idNPP4d)'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              i=iDbio4(idNPP4d)
+              DO ng=1,Ngrids
+                Dout(i,ng)=Lbio(ng)
+              END DO
+            CASE ('Dout(idPGrowthRate)')
+              IF (iDbio4(idPGrowthRate).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio4(idPGrowthRate)'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              i=iDbio4(idPGrowthRate)
+              DO ng=1,Ngrids
+                Dout(i,ng)=Lbio(ng)
+              END DO
+            CASE ('Dout(idNUpNorm)')
+              IF (iDbio4(idNUpNorm).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio4(idNUpNorm)'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              i=iDbio4(idNUpNorm)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO

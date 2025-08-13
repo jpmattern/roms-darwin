@@ -403,6 +403,14 @@
 /*
 **  Biological tracers term diagnostics.
 */
+            CASE ('iDbio4(idGrazRt)')
+              iDbio4(idGrazRt)=varid
             CASE ('iDbio4(idGrazPr)')
               iDbio4(idGrazPr)=varid
+            CASE ('iDbio4(idNPP4d)')
+              iDbio4(idNPP4d)=varid
+            CASE ('iDbio4(idPGrowthRate)')
+              iDbio4(idPGrowthRate)=varid
+            CASE ('iDbio4(idNUpNorm)')
+              iDbio4(idNUpNorm)=varid
 #endif

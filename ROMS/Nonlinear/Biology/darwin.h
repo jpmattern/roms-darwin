@@ -454,7 +454,12 @@
 #if defined DARWIN_PLANK_BUOYCTRL
      &    limitnut_save, limitlight_save,                               &
 #endif
-     &    photoTempFunc, reminTempFunc, uptakeTempFunc, diags)
+     &    photoTempFunc, reminTempFunc, uptakeTempFunc,                 &
+#if defined DIAGNOSTICS_BIO
+     &    diags, diags4d)
+#else
+     &    diags)
+#endif /* DIAGNOSTICS_BIO */
         CALL darwin_grazing(tile, ng, IminS, ImaxS, Bio,                &
      &    grazTempFunc, reminTempFunc, mortTempFunc, mort2TempFunc      &
 #if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK

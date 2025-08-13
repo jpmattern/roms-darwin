@@ -634,7 +634,12 @@
 #if defined DARWIN_PLANK_BUOYCTRL
      &  limitnut_save, limitlight_save,                                 &
 #endif
-     &  photoTempFunc, reminTempFunc, uptakeTempFunc, diags)
+     &  photoTempFunc, reminTempFunc, uptakeTempFunc,                   &
+#if defined DIAGNOSTICS_BIO
+     &  diags, diags4d)
+#else
+     &  diags)
+#endif /* DIAGNOSTICS_BIO */
 !
       USE mod_biology
       USE mod_scalars, ONLY: dt
@@ -649,6 +654,10 @@
       real(r8),intent(in),dimension(IminS:ImaxS,N(ng),nlam) :: PAR
       real(r8),intent(inout),                                           &
      &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) ::diags
+#if defined DIAGNOSTICS_BIO
+      real(r8),intent(inout),                                           &
+     &  dimension(IminS:ImaxS,N(ng),nplank,NDbio4d) :: diags4d
+#endif /*DIAGNOSTICS_BIO*/
       real(r8), intent(in), dimension(IminS:ImaxS,N(ng),nplank) ::      &
      &  photoTempFunc
       real(r8), intent(in), dimension(IminS:ImaxS,N(ng)) ::             &
@@ -723,6 +732,11 @@
         DO i=Istr,Iend
 #if defined DARWIN_DEBUG_DIAG
           diags(i,k,iOnes)=diags(i,k,iOnes)+dtbio(ng)/86400.0_r8
+#endif
+#if defined DIAGNOSTICS_BIO
+          diags4d(i,k,:,idNPP4d) = 0.0_r8
+          diags4d(i,k,:,idPGrowthRate) = 0.0_r8
+          diags4d(i,k,:,idNUpNorm) = 0.0_r8
 #endif
           PARtot=SUM(PAR(i,k,:))
 # include <darwin_model.h>

@@ -191,7 +191,9 @@
             END IF
 #endif
 #if ! defined DARWIN_FEQUOTA
+# if ! defined DARWIN_NO_IRONLIMIT
             limitnut = MIN(limitnut, limitfe)
+# endif
 #endif
 
             limitpCO2 = 1.0_r8
@@ -407,6 +409,16 @@
             IF (diazo(ic,ng) .GT. 0.0_r8) THEN
              diags(i,k,iNfix)=diags(i,k,iNfix)+uptakeN-uptakeNH4-uptakeNO2-uptakeNO3
             ENDIF
+#if defined DIAGNOSTICS_BIO
+            diags4d(i,k,ic,idNPP4d)=diags4d(i,k,ic,idNPP4d)+            &
+     &          growth * 86400.0_r8
+            ! in units of d-1
+            diags4d(i,k,ic,idPGrowthRate)=diags4d(i,k,ic,idPGrowthRate)+&
+     &          PC*ngrow * 86400.0_r8
+            diags4d(i,k,ic,idNUpNorm)=diags4d(i,k,ic,idNUpNorm)+        &
+     &          uptakeN/(Bio(i,k,iNO2)+Bio(i,k,iNO3)+Bio(i,k,iNH4))*    &
+     &          86400.0_r8
+#endif
 
 !=======================================================================
 #if defined DARWIN_VERBOSE_PLANK_OLD

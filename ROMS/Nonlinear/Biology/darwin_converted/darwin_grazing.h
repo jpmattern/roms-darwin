@@ -69,6 +69,7 @@
           grazphy_all(:,:) = 0.0_r8
 #endif
 #if defined DIAGNOSTICS_BIO
+          diags4d(i,k,:,idGrazRt) = 0.0_r8
           diags4d(i,k,:,idGrazPr) = 0.0_r8
 #endif
 
@@ -167,6 +168,8 @@
 
               preygraz(ip) = preygraz(ip) + grazphy
 #if defined DIAGNOSTICS_BIO
+              diags4d(i,k,ip,idGrazRt) = diags4d(i,k,ip,idGrazRt) +     &
+     &          grazphy * 86400.0_r8
               ! in units of d-1
               diags4d(i,k,ip,idGrazPr) = diags4d(i,k,ip,idGrazPr) +     &
      &          grazphy/X(ip) * 86400.0_r8

@@ -152,7 +152,11 @@
 !
       integer, allocatable :: iDbio4(:)       ! 4D terms with nplank
 !
-      integer  :: idGrazPr = 1                ! grazing pressure
+      integer  :: idGrazRt = 1                ! grazing rate
+      integer  :: idGrazPr = 2                ! grazing pressure
+      integer  :: idNPP4d = 3                 ! NPP
+      integer  :: idPGrowthRate = 4           ! growth rate
+      integer  :: idNUpNorm = 5               ! normalized N uptake
 # if defined DIAGNOSTICS_BIO_MAPPING
 !
 !  Biological 3D diagnostic variable mapping.
@@ -332,7 +336,7 @@
 !-----------------------------------------------------------------------
 !
       NDbio3d=0  ! TODO at some point set to darwin_nDiag
-      NDbio4d=1
+      NDbio4d=5
 !
 !  Allocate biological diagnostics vectors
 !

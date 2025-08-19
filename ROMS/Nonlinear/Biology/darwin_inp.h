@@ -1240,6 +1240,18 @@
      &      ksatNO3(i,ng),ksatNO2(i,ng),ksatNH4(i,ng),                  &
      &      ksatPO4(i,ng),ksatSiO2(i,ng),ksatFeT(i,ng)
           END DO
+#if defined DARWIN_BACT_ALLOMETRIC
+!TODO perhaps do not report irrelevant values
+          write (out,'(/22x,9(1x,a12))')                                &
+     &      'PCmax','PCmax (d-1)',                                      &
+     &      'ksatDON','ksatDOC','ksatDOP','ksatDOFe'
+          DO i=iMinBact,iMaxBact
+            write (out,'(a20,": ",9(1x,f12.9))') trim(plankname(i)),    &
+     &      PCmax(i,ng),PCmax(i,ng)*day2sec,                            &
+     &      ksatDON(i,ng),ksatDOC(i,ng),ksatDOP(i,ng),                  &
+     &      ksatDOFe(i,ng)
+          END DO
+#endif
 !
 !  Report mortality rates.
 !
@@ -1521,7 +1533,13 @@
             ENDIF
 #endif
           ELSE
+#if defined DARWIN_BACT_ALLOMETRIC
+            IF (bactType(ip,ng).LE.0) THEN
+              PCmax(ip,ng) = 0.0_r8
+            END IF
+#else /* DARWIN_BACT_ALLOMETRIC */
             PCmax(ip,ng) = 0.0_r8
+#endif /* DARWIN_BACT_ALLOMETRIC */
             Vmax_PO4(ip,ng) = 0.0_r8
             Vmax_NO3(ip,ng) = 0.0_r8
             Vmax_NO2(ip,ng) = 0.0_r8

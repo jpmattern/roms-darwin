@@ -547,6 +547,12 @@
       real(r8), allocatable :: pmaxDIN_pday(:)        ! d^-1
 #if ! defined DARWIN_RANDOM_TRAITS
       real(r8), allocatable :: ksatPOM(:)             ! mmol N m^-3
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && defined DARWIN_BACT_ALLOMETRIC
+      real(r8), allocatable :: a_kdon(:,:)            ! mmol N m^-3
+      real(r8), allocatable :: b_kdon(:,:)            ! dimensionless
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && ! defined DARWIN_BACT_ALLOMETRIC
       real(r8), allocatable :: ksatDOM(:)             ! mmol N m^-3
 #endif
       real(r8), allocatable :: ksatDIN(:)             ! mmol N m-3

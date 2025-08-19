@@ -7,7 +7,8 @@
 **                                                                    **
 **  Assigns metadata indices for Darwin ecosystem model variables     **
 **  that are used in input and output NetCDF files. The metadata      **
-**  information is read from the file "varinfo.dat".                  **
+**  information is read from the file "varinfo.dat" or "varinfo.yaml" **
+**  depending on the ROMS version.                                    **
 **                                                                    **
 **  This file is included in the file "mod_ncparam.F".                **
 **                                                                    **

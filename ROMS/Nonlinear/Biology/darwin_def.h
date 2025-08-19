@@ -2984,6 +2984,24 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && defined DARWIN_BACT_ALLOMETRIC
+      Vinfo( 1)='a_kdon'
+      Vinfo( 2)='a-coefficient for ksatDON'
+      Vinfo( 3)='mmol N m^-3'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='b_kdon'
+      Vinfo( 2)='b-coefficient for ksatDON'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && ! defined DARWIN_BACT_ALLOMETRIC
       Vinfo( 1)='ksatDOM'
       Vinfo( 2)='ksatDON base value'
       Vinfo( 3)='mmol N m^-3'

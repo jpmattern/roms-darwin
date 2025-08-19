@@ -2044,6 +2044,18 @@
         allocate ( ksatPOM(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && defined DARWIN_BACT_ALLOMETRIC
+      IF (.not.allocated(a_kdon)) THEN
+        allocate ( a_kdon(nGroup,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
+      END IF
+      IF (.not.allocated(b_kdon)) THEN
+        allocate ( b_kdon(nGroup,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
+      END IF
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && ! defined DARWIN_BACT_ALLOMETRIC
       IF (.not.allocated(ksatDOM)) THEN
         allocate ( ksatDOM(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)

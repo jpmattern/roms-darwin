@@ -1062,6 +1062,20 @@
 #if ! defined DARWIN_RANDOM_TRAITS
             WRITE (out,70) ksatPOM(ng), 'ksatPOM',                      &
      &        'ksatPON base value (mmol N m^-3).'
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && defined DARWIN_BACT_ALLOMETRIC
+            WRITE (out,120) 'a_kdon',                                   &
+     &        'a-coefficient for ksatDON (mmol N m^-3).'
+            DO is=1,nGroup
+              WRITE (out,140) a_kdon(is,ng), TRIM(grp_names(is))
+            END DO
+            WRITE (out,120) 'b_kdon',                                   &
+     &        'b-coefficient for ksatDON (dimensionless).'
+            DO is=1,nGroup
+              WRITE (out,140) b_kdon(is,ng), TRIM(grp_names(is))
+            END DO
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && ! defined DARWIN_BACT_ALLOMETRIC
             WRITE (out,70) ksatDOM(ng), 'ksatDOM',                      &
      &        'ksatDON base value (mmol N m^-3).'
 #endif

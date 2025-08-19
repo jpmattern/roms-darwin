@@ -325,8 +325,12 @@
             yieldNO3(ip,ng) = yne(ng)
           ENDIF
 
-          ksatPON(ip,ng) = ksatPOM(ng)
+#if defined DARWIN_BACT_ALLOMETRIC
+          ksatDON(ip,ng) = a_kdon(ig,ng)*biovol(ip,ng)**b_kdon(ig,ng)
+#else /* DARWIN_BACT_ALLOMETRIC */
           ksatDON(ip,ng) = ksatDOM(ng)
+#endif /* DARWIN_BACT_ALLOMETRIC */
+          ksatPON(ip,ng) = ksatPOM(ng)
           ksatPOC(ip,ng) = ksatPON(ip,ng)/R_NC(ip,ng)
           ksatPOP(ip,ng) = ksatPON(ip,ng)/R_NC(ip,ng)*R_PC(ip,ng)
           ksatPOFe(ip,ng) = ksatPON(ip,ng)/R_NC(ip,ng)*R_FeC(ip,ng)

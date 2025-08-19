@@ -837,6 +837,14 @@
 #if ! defined DARWIN_RANDOM_TRAITS
             CASE ('ksatPOM')
               Npts=load_r(Nval, Rval, Ngrids, ksatPOM)
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && defined DARWIN_BACT_ALLOMETRIC
+            CASE ('a_kdon')
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, a_kdon)
+            CASE ('b_kdon')
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, b_kdon)
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && ! defined DARWIN_BACT_ALLOMETRIC
             CASE ('ksatDOM')
               Npts=load_r(Nval, Rval, Ngrids, ksatDOM)
 #endif

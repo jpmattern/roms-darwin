@@ -2161,6 +2161,20 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && defined DARWIN_BACT_ALLOMETRIC
+      CALL netcdf_put_fvar (ng, model, ncname, 'a_kdon',                &
+     &  a_kdon(:,ng), (/1/), (/nGroup/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'b_kdon',                &
+     &  b_kdon(:,ng), (/1/), (/nGroup/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS && ! defined DARWIN_BACT_ALLOMETRIC
       CALL netcdf_put_fvar (ng, model, ncname, 'ksatDOM',               &
      &  ksatDOM(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &

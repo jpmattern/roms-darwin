@@ -537,8 +537,11 @@
 
 ! DOM-consuming (free-living):
             ELSEIF (bactType(ic,ng) .EQ. 2) THEN
-
+#if defined DARWIN_BACT_ALLOMETRIC
+              PCm = yield(ic,ng)*PCmax(ic,ng)*reminTempFunc(i,k)
+#else
               PCm = yield(ic,ng)*pmaxDON(ng)*reminTempFunc(i,k)
+#endif
               muDON = PCm*Bio(i,k,iDON)/(Bio(i,k,iDON) + ksatDON(ic,ng))
               muDOC = PCm*Bio(i,k,iDOC)/(Bio(i,k,iDOC) + ksatDOC(ic,ng))
               muDOP = PCm*Bio(i,k,iDOP)/(Bio(i,k,iDOP) + ksatDOP(ic,ng))

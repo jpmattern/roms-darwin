@@ -9,7 +9,7 @@ It permits running Darwin in a regional configuration.
 
 ## Getting started
 
-To get started using ROMS-Darwin, we recommend using the Darwin 6 phytoplankton 4 zooplankton setup, and to follow [these instructions](darwin/README.md).
+To get started using ROMS-Darwin, we recommend using the Darwin 6 phytoplankton 4 zooplankton setup, and to follow [these instructions](Darwin/README.md).
 
 ## Documentation
 

@@ -7,9 +7,13 @@
 ROMS-Darwin is an implementation of the [Darwin ecosystem model](http://darwinproject.mit.edu/) in the Regional Ocean Modeling System ([ROMS](https://www.myroms.org/)).
 It permits running Darwin in a regional configuration.
 
+## Getting started
+
+To get started using ROMS-Darwin, we recommend using the Darwin 6 phytoplankton 4 zooplankton setup, and to follow [these instructions](darwin/README.md).
+
 ## Documentation
 
-As of now, there is no official documentation available for ROMS-Darwin in this repository, and we will attempt to add documentation on demand. If there are specific aspects or components you would like to see documented, please raise an issue, and we will prioritize its addition.
+As of now, there is no official documentation available for ROMS-Darwin in this repository, and we will attempt to add documentation on demand. If there are specific aspects or components you would like to see documented, please raise a GitHub issue.
 
 ## Work in progress / features not yet implemented
 

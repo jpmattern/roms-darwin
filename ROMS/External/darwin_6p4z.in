@@ -1830,42 +1830,42 @@ ad_Vadvection == C4                             ! idbio(:), compact
 !
 !                   1       2       3       4
 
-   LBC(isTvar) ==   RadNud  RadNud  RadNud  RadNud \    ! idbio( 1) DIC
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 2) NH4
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 3) NO2
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 4) NO3
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 5) PO4
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 6) SiO2
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 7) FeT
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 8) DOC
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio( 9) DON
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(10) DOP
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(11) DOFe
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(12) POC
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(13) PON
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(14) POP
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(15) POSi
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(16) POFe
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(17) PIC
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(18) alkalinity
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(19) O2
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(20) CDOM
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(21) phytoplankton01
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(22) phytoplankton02
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(23) phytoplankton03
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(24) phytoplankton04
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(25) phytoplankton05
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(26) phytoplankton06
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(27) zooplankton01
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(28) zooplankton02
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(29) zooplankton03
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(30) zooplankton04
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(31) chlorophyll01
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(32) chlorophyll02
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(33) chlorophyll03
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(34) chlorophyll04
-                    RadNud  RadNud  RadNud  RadNud \    ! idbio(35) chlorophyll05
-                    RadNud  RadNud  RadNud  RadNud      ! idbio(36) chlorophyll06
+   LBC(isTvar) ==   Cla     Cla     Cla     Cla    \    ! idbio( 1) DIC
+                    Cla     Cla     Cla     Cla    \    ! idbio( 2) NH4
+                    Cla     Cla     Cla     Cla    \    ! idbio( 3) NO2
+                    Cla     Cla     Cla     Cla    \    ! idbio( 4) NO3
+                    Cla     Cla     Cla     Cla    \    ! idbio( 5) PO4
+                    Cla     Cla     Cla     Cla    \    ! idbio( 6) SiO2
+                    Cla     Cla     Cla     Cla    \    ! idbio( 7) FeT
+                    Cla     Cla     Cla     Cla    \    ! idbio( 8) DOC
+                    Cla     Cla     Cla     Cla    \    ! idbio( 9) DON
+                    Cla     Cla     Cla     Cla    \    ! idbio(10) DOP
+                    Cla     Cla     Cla     Cla    \    ! idbio(11) DOFe
+                    Cla     Cla     Cla     Cla    \    ! idbio(12) POC
+                    Cla     Cla     Cla     Cla    \    ! idbio(13) PON
+                    Cla     Cla     Cla     Cla    \    ! idbio(14) POP
+                    Cla     Cla     Cla     Cla    \    ! idbio(15) POSi
+                    Cla     Cla     Cla     Cla    \    ! idbio(16) POFe
+                    Cla     Cla     Cla     Cla    \    ! idbio(17) PIC
+                    Cla     Cla     Cla     Cla    \    ! idbio(18) alkalinity
+                    Cla     Cla     Cla     Cla    \    ! idbio(19) O2
+                    Cla     Cla     Cla     Cla    \    ! idbio(20) CDOM
+                    Gra     Gra     Gra     Gra    \    ! idbio(21) phytoplankton01
+                    Gra     Gra     Gra     Gra    \    ! idbio(22) phytoplankton02
+                    Gra     Gra     Gra     Gra    \    ! idbio(23) phytoplankton03
+                    Gra     Gra     Gra     Gra    \    ! idbio(24) phytoplankton04
+                    Gra     Gra     Gra     Gra    \    ! idbio(25) phytoplankton05
+                    Gra     Gra     Gra     Gra    \    ! idbio(26) phytoplankton06
+                    Gra     Gra     Gra     Gra    \    ! idbio(27) zooplankton01
+                    Gra     Gra     Gra     Gra    \    ! idbio(28) zooplankton02
+                    Gra     Gra     Gra     Gra    \    ! idbio(29) zooplankton03
+                    Gra     Gra     Gra     Gra    \    ! idbio(30) zooplankton04
+                    Gra     Gra     Gra     Gra    \    ! idbio(31) chlorophyll01
+                    Gra     Gra     Gra     Gra    \    ! idbio(32) chlorophyll02
+                    Gra     Gra     Gra     Gra    \    ! idbio(33) chlorophyll03
+                    Gra     Gra     Gra     Gra    \    ! idbio(34) chlorophyll04
+                    Gra     Gra     Gra     Gra    \    ! idbio(35) chlorophyll05
+                    Gra     Gra     Gra     Gra         ! idbio(36) chlorophyll06
 
 ! Adjoint-based algorithms can have different lateral boundary
 ! conditions keywords.

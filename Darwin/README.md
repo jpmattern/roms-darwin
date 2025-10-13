@@ -16,7 +16,7 @@ To compile the ROMS-Darwin executable for the 6p4z configuration:
 ```
 MY_CPP_FLAGS="${MY_CPP_FLAGS} -DDARWIN -DDARWIN_6P4Z -DDARWIN_NOREAD_GRAZEMAX -DDARWIN_NOREAD_MORT2"
 ```
-2. Add the lines from the `darwin_additions.h` file (located in this directory) to your ROMS application header file (the h-file specified using the `ROMS_APPLICATION` variable in the `build_roms.sh` script).
+2. Add the lines from the `darwin_additions.h` file ([link](darwin_additions.h)) to your ROMS application header file (the h-file specified using the `ROMS_APPLICATION` variable in the `build_roms.sh` script).
     * These additional lines activate Darwin-related options and provide values for 6p4z-specific parameters.
     * The easiest approach is to copy-paste the entire contents of `darwin_additions.h` to the end of your application CPP definitions header file.
 
@@ -40,7 +40,7 @@ Add initial conditions and boundary values for Darwin biological tracer variable
 
 ROMS-Darwin requires additional configuration-specific variables in the initial file, such as the grazing palatability matrix (`palat`).
 
-Use the `darwin_varutil.py` Python script (located in this directory) to create the default values for the 6p4z configuration:
+Use the `darwin_varutil.py` Python script ([link](darwin_varutil.py)) to create the default values for the 6p4z configuration:
 ```
 python darwin_varutil.py add-var ROMS_DARWIN_INITIAL_FILE all --defaultvalues --darwin 6p4z
 ```
@@ -50,6 +50,6 @@ python darwin_varutil.py add-var ROMS_DARWIN_INITIAL_FILE all --defaultvalues --
 
 You should now be ready to start the ROMS executable and perform a Darwin run.
 
-### Support
+## Support
 
 If you experience problems with these steps, please open a GitHub issue.

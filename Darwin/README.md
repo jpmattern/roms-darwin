@@ -4,7 +4,7 @@ This guide provides step-by-step instructions for setting up a ROMS-Darwin simul
 
 ## Prerequisites
 
-A working physical ROMS setup and the ability to successfully compile and run the physical ROMS setup using the ROMS code from the ROMS-Darwin repository, without yet activating any Darwin-related options.
+A working physical ROMS setup and the ability to successfully compile and run the physical ROMS setup using the ROMS code from the ROMS-Darwin repository (including the `varinfo.yaml` file ([link](../ROMS/External/varinfo.yaml)) with variable information required by Darwin), without yet activating any Darwin-related options.
 
 ## Getting Started
 

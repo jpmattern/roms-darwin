@@ -68,19 +68,19 @@
 
 ! chlorophyll absorption (m^-1 (mg Chl m^-3)^-1)
 
-      aphy_chl == 1.0d0 1.0d0 1.0d0 1.0d0
+      aphy_chl == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
 
 ! chlorophyll PS absorption (m^-1 (mg Chl m^-3)^-1)
 
-   aphy_chl_ps == 1.0d0 1.0d0 1.0d0 1.0d0
+   aphy_chl_ps == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
 
 ! phytoplankton backscatter (m^-1 (mg C m^-3)^-1)
 
-      bphy_mgC == 1.0d0 1.0d0 1.0d0 1.0d0
+      bphy_mgC == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
 
 ! phytoplankton backscatter (m^-1 (mg C m^-3)^-1)
 
-     bbphy_mgC == 1.0d0 1.0d0 1.0d0 1.0d0
+     bbphy_mgC == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
 
 ! small phytoplankton growth rate (d^-1)
 ! only active for option(s) "DARWIN_RANDOM_TRAITS"
@@ -718,7 +718,7 @@ gud_select_kn_allom == 2
 ! group value for Xmin (mmol C m^-3)
 ! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
 
-      grp_Xmin == 6*120.0d-20
+      grp_Xmin == 7*120.0d-20
 
 ! group value N:C ratio (mmol N (mmol C)^-1)
 ! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
@@ -1642,7 +1642,7 @@ CDOMbleach_pday == 0.259200d0
 
 ! phytoplankton random number generation seed (dimensionless)
 
-seed_phytoplankton == -1 -1 -1 -1 -1
+seed_phytoplankton == -1 -1 -1 -1 -1 -1 -1
 
 ! Darwin 1D integer (dimensionless)
 
@@ -1655,7 +1655,7 @@ darwin_debug_2df == 1.0d0
 ! allow group to adjust buoyancy (dimensionless)
 ! only active for option(s) " ! DARWIN_RANDOM_TRAITS & DARWIN_PLANK_BUOYCTRL"
 
-  grp_buoyctrl == F F F F F
+  grp_buoyctrl == F F F F F F F
 
 !^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 !

@@ -2,6 +2,9 @@
 
 This guide provides step-by-step instructions for setting up a ROMS-Darwin simulation using the 6 phytoplankton, 4 zooplankton (6p4z) configuration. The 6p4z configuration is a relatively simple Darwin setup that serves as a good starting point for using ROMS-Darwin. It can later be easily expanded to include more plankton groups or size classes.
 
+**Notes:**
+* 2025-12-03: removed the automatic inclusion of CDOM in the 6p4z configuration (to add it manually, compile with the `DARWIN_CDOM` option)
+
 ## Prerequisites
 
 A working physical ROMS setup and the ability to successfully compile and run the physical ROMS setup using the ROMS code from the ROMS-Darwin repository (including the `varinfo.yaml` file ([link](../ROMS/External/varinfo.yaml)) with variable information required by Darwin), without yet activating any Darwin-related options.

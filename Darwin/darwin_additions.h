@@ -14,7 +14,7 @@
 # if defined DARWIN_6P4Z
 /* 2018-07-23 6P4Z setup from Stephanie Dutkiewicz */
 #  define DARWIN_CHLQUOTA
-#  define DARWIN_CDOM
+!#  define DARWIN_CDOM  /* 2025-12-03: no longer activated automically */
 #  define DARWIN_CARBON
 
 #  define DARWIN_DENIT

@@ -166,7 +166,7 @@
             fracNH4 = limitNH4/(limitn + BioMin(ng))
             fracNO2 = limitNO2/(limitn + BioMin(ng))
             fracNO3 = limitNO3/(limitn + BioMin(ng))
-! if diazo(ng), all fracN* == 0 but want no N limitation
+! if diazo, all fracN* == 0 but want no N limitation
             limitn = MIN(1.0_r8, limitn + diazo(ic,ng))
 #endif /* DARWIN_NQUOTA */
 ! IF (limitn .GT. 0.0_r8) THEN

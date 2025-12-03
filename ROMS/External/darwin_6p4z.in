@@ -1668,30 +1668,30 @@ RADTRANSFILE == /home/pmattern/roms/data/darwin/radtrans_monod_1d_cdom.nc
 ! Harmonic/biharmonic horizontal diffusion of biological tracer for
 ! nonlinear model and adjoint-based algorithms: [1:NBT,Ngrids].
 
-        TNU2 == 36*70.0d0                   ! m2/s
-        TNU4 == 36*0.0d0                   ! m4/s
+        TNU2 == 35*70.0d0                   ! m2/s
+        TNU4 == 35*0.0d0                   ! m4/s
 
-     ad_TNU2 == 36*4.0d0                   ! m2/s
-     ad_TNU4 == 36*0.0d0                   ! m4/s
+     ad_TNU2 == 35*4.0d0                   ! m2/s
+     ad_TNU4 == 35*0.0d0                   ! m4/s
 
 ! Logical switches (TRUE/FALSE) to increase/decrease horizontal diffusivity
 ! in specific areas of the application domain (like sponge areas) for the
 ! desired grid: [Ngrids]
 
-LtracerSponge == 36*F
+LtracerSponge == 35*F
 
 ! Vertical mixing coefficients for biological tracers for nonlinear
 ! model and basic state scale factor in adjoint-based algorithms:
 ! [1:NBT,Ngrids].
 
-     AKT_BAK == 36*1.0d-5                  ! m2/s
+     AKT_BAK == 35*1.0d-5                  ! m2/s
 
-  ad_AKT_fac == 36*1.0d0                   ! nondimensional
+  ad_AKT_fac == 35*1.0d0                   ! nondimensional
 
 ! Nudging/relaxation time scales, inverse scales will be computed
 ! internally: [1:NBT,Ngrids].
 
-       TNUDG == 36*3.0d0                  ! days
+       TNUDG == 35*3.0d0                  ! days
 
 ! Set horizontal and vertical advection schemes for biological tracers.
 ! A different advection scheme is allowed for each tracer. For example,
@@ -1733,23 +1733,22 @@ LtracerSponge == 36*F
                  HSIMT    \                     ! idbio(17), PIC
                  HSIMT    \                     ! idbio(18), alkalinity
                  HSIMT    \                     ! idbio(19), O2
-                 HSIMT    \                     ! idbio(20), CDOM
-                 HSIMT    \                     ! idbio(21), phytoplankton01
-                 HSIMT    \                     ! idbio(22), phytoplankton02
-                 HSIMT    \                     ! idbio(23), phytoplankton03
-                 HSIMT    \                     ! idbio(24), phytoplankton04
-                 HSIMT    \                     ! idbio(25), phytoplankton05
-                 HSIMT    \                     ! idbio(26), phytoplankton06
-                 HSIMT    \                     ! idbio(27), zooplankton01
-                 HSIMT    \                     ! idbio(28), zooplankton02
-                 HSIMT    \                     ! idbio(29), zooplankton03
-                 HSIMT    \                     ! idbio(30), zooplankton04
-                 HSIMT    \                     ! idbio(31), chlorophyll01
-                 HSIMT    \                     ! idbio(32), chlorophyll02
-                 HSIMT    \                     ! idbio(33), chlorophyll03
-                 HSIMT    \                     ! idbio(34), chlorophyll04
-                 HSIMT    \                     ! idbio(35), chlorophyll05
-                 HSIMT                          ! idbio(36), chlorophyll06
+                 HSIMT    \                     ! idbio(20), phytoplankton01
+                 HSIMT    \                     ! idbio(21), phytoplankton02
+                 HSIMT    \                     ! idbio(22), phytoplankton03
+                 HSIMT    \                     ! idbio(23), phytoplankton04
+                 HSIMT    \                     ! idbio(24), phytoplankton05
+                 HSIMT    \                     ! idbio(25), phytoplankton06
+                 HSIMT    \                     ! idbio(26), zooplankton01
+                 HSIMT    \                     ! idbio(27), zooplankton02
+                 HSIMT    \                     ! idbio(28), zooplankton03
+                 HSIMT    \                     ! idbio(29), zooplankton04
+                 HSIMT    \                     ! idbio(30), chlorophyll01
+                 HSIMT    \                     ! idbio(31), chlorophyll02
+                 HSIMT    \                     ! idbio(32), chlorophyll03
+                 HSIMT    \                     ! idbio(33), chlorophyll04
+                 HSIMT    \                     ! idbio(34), chlorophyll05
+                 HSIMT                          ! idbio(35), chlorophyll06
 
    Vadvection == HSIMT    \                     ! idbio( 1), DIC
                  HSIMT    \                     ! idbio( 2), NH4
@@ -1770,23 +1769,22 @@ LtracerSponge == 36*F
                  HSIMT    \                     ! idbio(17), PIC
                  HSIMT    \                     ! idbio(18), alkalinity
                  HSIMT    \                     ! idbio(19), O2
-                 HSIMT    \                     ! idbio(20), CDOM
-                 HSIMT    \                     ! idbio(21), phytoplankton01
-                 HSIMT    \                     ! idbio(22), phytoplankton02
-                 HSIMT    \                     ! idbio(23), phytoplankton03
-                 HSIMT    \                     ! idbio(24), phytoplankton04
-                 HSIMT    \                     ! idbio(25), phytoplankton05
-                 HSIMT    \                     ! idbio(26), phytoplankton06
-                 HSIMT    \                     ! idbio(27), zooplankton01
-                 HSIMT    \                     ! idbio(28), zooplankton02
-                 HSIMT    \                     ! idbio(29), zooplankton03
-                 HSIMT    \                     ! idbio(30), zooplankton04
-                 HSIMT    \                     ! idbio(31), chlorophyll01
-                 HSIMT    \                     ! idbio(32), chlorophyll02
-                 HSIMT    \                     ! idbio(33), chlorophyll03
-                 HSIMT    \                     ! idbio(34), chlorophyll04
-                 HSIMT    \                     ! idbio(35), chlorophyll05
-                 HSIMT                          ! idbio(36), chlorophyll06
+                 HSIMT    \                     ! idbio(20), phytoplankton01
+                 HSIMT    \                     ! idbio(21), phytoplankton02
+                 HSIMT    \                     ! idbio(22), phytoplankton03
+                 HSIMT    \                     ! idbio(23), phytoplankton04
+                 HSIMT    \                     ! idbio(23), phytoplankton05
+                 HSIMT    \                     ! idbio(25), phytoplankton06
+                 HSIMT    \                     ! idbio(26), zooplankton01
+                 HSIMT    \                     ! idbio(27), zooplankton02
+                 HSIMT    \                     ! idbio(28), zooplankton03
+                 HSIMT    \                     ! idbio(29), zooplankton04
+                 HSIMT    \                     ! idbio(30), chlorophyll01
+                 HSIMT    \                     ! idbio(31), chlorophyll02
+                 HSIMT    \                     ! idbio(32), chlorophyll03
+                 HSIMT    \                     ! idbio(33), chlorophyll04
+                 HSIMT    \                     ! idbio(34), chlorophyll05
+                 HSIMT                          ! idbio(35), chlorophyll06
 
 ! Adjoint-based algorithms can have different horizontal and schemes
 ! for active and inert tracers.
@@ -1887,13 +1885,13 @@ ad_LBC(isTvar) ==   Cla     Cla     Cla     Cla \    ! idbio( 1)
 ! to consider: [NBT,Ngrids] values are expected. See glossary below for
 ! details.
 
-  LtracerSrc == 36*F
+  LtracerSrc == 35*F
 
 ! Logical switches (TRUE/FALSE) to read and process biological tracer
 ! climatology fields: [NBT,Ngrids] values are expected. See glossary below
 ! for details.
 
-  LtracerCLM == 36*F
+  LtracerCLM == 35*F
 
 ! Logical switches (TRUE/FALSE) to nudge the desired biological tracer
 ! climatology field. If not analytical climatology fields, users need to
@@ -1901,33 +1899,33 @@ ad_LBC(isTvar) ==   Cla     Cla     Cla     Cla \    ! idbio( 1)
 ! climatology NetCDF file that are needed for nudging; [NBT,Ngrids]
 ! values are expected. See glossary below for details.
 
-  LnudgeTCLM == 36*F
+  LnudgeTCLM == 35*F
 
 ! Logical switches (TRUE/FALSE) to activate writing of biological fields
 ! into HISTORY output file: [1:NBT,Ngrids].
 
-Hout(idTvar) == 36*T    ! ..., NO3, ...          biological tracers
-Hout(idTsur) == 36*F    ! ..., NO3_sflux, ...    surface tracer flux
-Hout(idBSMa) == 36*T    ! ..., POC, ...          sediment variables
+Hout(idTvar) == 35*T    ! ..., NO3, ...          biological tracers
+Hout(idTsur) == 35*F    ! ..., NO3_sflux, ...    surface tracer flux
+Hout(idBSMa) == 35*T    ! ..., POC, ...          sediment variables
 
 ! Logical switches (TRUE/FALSE) to activate writing of biological fields
 ! into QUICKSAVE output file: [1:NBT,Ngrids].
 
-Qout(idTvar) == 36*F    ! ..., NO3, ...          biological tracers
-Qout(idsurT) == 36*F    ! ..., NO3_sur, ...      surface biological tracer
-Qout(idTsur) == 36*F    ! ..., NO3_sflux, ...    surface tracer flux
-Qout(idBSMa) == 36*T    ! ..., POC, ...          sediment variables
+Qout(idTvar) == 35*F    ! ..., NO3, ...          biological tracers
+Qout(idsurT) == 35*F    ! ..., NO3_sur, ...      surface biological tracer
+Qout(idTsur) == 35*F    ! ..., NO3_sflux, ...    surface tracer flux
+Qout(idBSMa) == 35*T    ! ..., POC, ...          sediment variables
 
 ! Logical switches (TRUE/FALSE) to activate writing of time-averaged fields
 ! into AVERAGE output file: [1;NBT,Ngrids].
 
-Aout(idTvar) == 36*T    ! ..., NO3, ...          biological tracer
-Aout(idTTav) == 36*F    ! ..., NO3_2, ...        quadratic <t*t> tracer terms
-Aout(idUTav) == 36*F    ! ..., u_NO3, ...        quadratic <u*t> tracer terms
-Aout(idVTav) == 36*F    ! ..., v_NO3, ...        quadratic <v*t> tracer terms
-Aout(iHUTav) == 36*F    ! ..., Huon_NO3, ...     tracer volume flux, <Huon*t>
-Aout(iHVTav) == 36*F    ! ..., Hvom_NO3, ...     tracer volume flux, <Hvom*t>
-Aout(idBSMa) == 36*T    ! ..., POC, ...          sediment variables
+Aout(idTvar) == 35*T    ! ..., NO3, ...          biological tracer
+Aout(idTTav) == 35*F    ! ..., NO3_2, ...        quadratic <t*t> tracer terms
+Aout(idUTav) == 35*F    ! ..., u_NO3, ...        quadratic <u*t> tracer terms
+Aout(idVTav) == 35*F    ! ..., v_NO3, ...        quadratic <v*t> tracer terms
+Aout(iHUTav) == 35*F    ! ..., Huon_NO3, ...     tracer volume flux, <Huon*t>
+Aout(iHVTav) == 35*F    ! ..., Hvom_NO3, ...     tracer volume flux, <Hvom*t>
+Aout(idBSMa) == 35*T    ! ..., POC, ...          sediment variables
 
 ! Logical switches (TRUE/FALSE) to activate writing of time-averaged,
 ! biological tracer diagnostic terms into DIAGNOSTIC output file:

@@ -1847,23 +1847,22 @@ ad_Vadvection == C4                             ! idbio(:), compact
                     Cla     Cla     Cla     Cla    \    ! idbio(17) PIC
                     Cla     Cla     Cla     Cla    \    ! idbio(18) alkalinity
                     Cla     Cla     Cla     Cla    \    ! idbio(19) O2
-                    Cla     Cla     Cla     Cla    \    ! idbio(20) CDOM
-                    Gra     Gra     Gra     Gra    \    ! idbio(21) phytoplankton01
-                    Gra     Gra     Gra     Gra    \    ! idbio(22) phytoplankton02
-                    Gra     Gra     Gra     Gra    \    ! idbio(23) phytoplankton03
-                    Gra     Gra     Gra     Gra    \    ! idbio(24) phytoplankton04
-                    Gra     Gra     Gra     Gra    \    ! idbio(25) phytoplankton05
-                    Gra     Gra     Gra     Gra    \    ! idbio(26) phytoplankton06
-                    Gra     Gra     Gra     Gra    \    ! idbio(27) zooplankton01
-                    Gra     Gra     Gra     Gra    \    ! idbio(28) zooplankton02
-                    Gra     Gra     Gra     Gra    \    ! idbio(29) zooplankton03
-                    Gra     Gra     Gra     Gra    \    ! idbio(30) zooplankton04
-                    Gra     Gra     Gra     Gra    \    ! idbio(31) chlorophyll01
-                    Gra     Gra     Gra     Gra    \    ! idbio(32) chlorophyll02
-                    Gra     Gra     Gra     Gra    \    ! idbio(33) chlorophyll03
-                    Gra     Gra     Gra     Gra    \    ! idbio(34) chlorophyll04
-                    Gra     Gra     Gra     Gra    \    ! idbio(35) chlorophyll05
-                    Gra     Gra     Gra     Gra         ! idbio(36) chlorophyll06
+                    Gra     Gra     Gra     Gra    \    ! idbio(20) phytoplankton01
+                    Gra     Gra     Gra     Gra    \    ! idbio(21) phytoplankton02
+                    Gra     Gra     Gra     Gra    \    ! idbio(22) phytoplankton03
+                    Gra     Gra     Gra     Gra    \    ! idbio(23) phytoplankton04
+                    Gra     Gra     Gra     Gra    \    ! idbio(24) phytoplankton05
+                    Gra     Gra     Gra     Gra    \    ! idbio(25) phytoplankton06
+                    Gra     Gra     Gra     Gra    \    ! idbio(26) zooplankton01
+                    Gra     Gra     Gra     Gra    \    ! idbio(27) zooplankton02
+                    Gra     Gra     Gra     Gra    \    ! idbio(28) zooplankton03
+                    Gra     Gra     Gra     Gra    \    ! idbio(29) zooplankton04
+                    Gra     Gra     Gra     Gra    \    ! idbio(30) chlorophyll01
+                    Gra     Gra     Gra     Gra    \    ! idbio(31) chlorophyll02
+                    Gra     Gra     Gra     Gra    \    ! idbio(32) chlorophyll03
+                    Gra     Gra     Gra     Gra    \    ! idbio(33) chlorophyll04
+                    Gra     Gra     Gra     Gra    \    ! idbio(34) chlorophyll05
+                    Gra     Gra     Gra     Gra         ! idbio(35) chlorophyll06
 
 ! Adjoint-based algorithms can have different lateral boundary
 ! conditions keywords.

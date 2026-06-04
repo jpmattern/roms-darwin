@@ -104,8 +104,14 @@
 !  Maximum number of variables in a generic NetCDF file (MV) and
 !  maximum number of variables in information arrays (NV).
 !
+#if defined NCPARAM_MV
+      integer, parameter :: MV = NCPARAM_MV
+      ! must have the same value or risk a segmentation fault
+      integer, parameter :: NV = NCPARAM_MV
+#else
       integer, parameter :: MV = 2000
       integer, parameter :: NV = 2000
+#endif
 !
 !  Maximum number of dimension IDs stored in local array DimIDs used to
 !  defined variable dimensions in output NetCDF files.

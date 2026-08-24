@@ -63,6 +63,9 @@
       integer :: Nsed
       integer, allocatable :: idsed(:)
 #endif
+#if defined DAILY_SHORTWAVE
+      integer :: idAsrf                 ! Averaged shortwave radiation
+#endif /* DAILY_SHORTWAVE */
       ! TODO move elsewhere?
 ! taken from GUD_SIZE.h
       !integer :: nplank

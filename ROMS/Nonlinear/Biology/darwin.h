@@ -55,6 +55,9 @@
      &                   GRID(ng) % Hz,                                 &
      &                   GRID(ng) % z_r,                                &
      &                   GRID(ng) % z_w,                                &
+#if defined DAILY_SHORTWAVE
+     &                   FORCES(ng) % srflx_avg,                        &
+#endif /* DAILY_SHORTWAVE */
      &                   FORCES(ng) % srflx,                            &
 #if defined BULK_FLUXES
      &                   FORCES(ng) % Uwind,                            &
@@ -95,6 +98,9 @@
 #endif /* MASKING */
      &                         h,                                       &
      &                         Hz, z_r, z_w,                            &
+#if defined DAILY_SHORTWAVE
+     &                         srflx_avg,                               &
+#endif /* DAILY_SHORTWAVE */
      &                         srflx,                                   &
 #if defined BULK_FLUXES
      &                         Uwind, Vwind,                            &
@@ -139,6 +145,9 @@
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
+# if defined DAILY_SHORTWAVE
+      real(r8), intent(in) :: srflx_avg(LBi:,LBj:)
+# endif /* DAILY_SHORTWAVE */
       real(r8), intent(in) :: srflx(LBi:,LBj:)
 # if defined BULK_FLUXES
       real(r8), intent(in) :: Uwind(LBi:,LBj:)
@@ -170,6 +179,9 @@
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,UBk)
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:UBk)
       real(r8), intent(in) :: srflx(LBi:UBi,LBj:UBj)
+# if defined DAILY_SHORTWAVE
+      real(r8), intent(in) :: srflx_avg(LBi:UBi,LBj:UBj)
+# endif /* DAILY_SHORTWAVE */
 # if defined BULK_FLUXES
       real(r8), intent(in) :: Uwind(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Vwind(LBi:UBi,LBj:UBj)
@@ -357,7 +369,14 @@
 #if defined LET_THERE_BE_LIGHT
           PARsur(i)=100.0_r8
 #else /* LET_THERE_BE_LIGHT */
+# if defined DAILY_SHORTWAVE
+!  srflx_avg is used only for biology and is not rescaled
+!  by rho0*Cp on input in inp_par.F or darwin_inp.h.
+!  It does not need to be rescaled back to W/m2 here.
+          PARsur(i)=PARfrac(ng)*srflx_avg(i,j)
+# else /* DAILY_SHORTWAVE */
           PARsur(i)=PARfrac(ng)*srflx(i,j)*rho0*Cp
+# endif /* DAILY_SHORTWAVE */
 #endif /* LET_THERE_BE_LIGHT */
         END DO
 #if defined DARWIN_INPUTFE

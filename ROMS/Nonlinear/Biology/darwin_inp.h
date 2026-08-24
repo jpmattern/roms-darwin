@@ -7,9 +7,9 @@
 !    See License_ROMS.txt                                              !
 !=======================================================================
 !                                                                      !
-!  This routine reads in NPZD iron (Fiechter, et al. 2009) ecosystem   !
+!  This routine reads in Darwin ecosystem                              !
 !  model input parameters. They are specified in input script          !
-!  "npzd_iron.in".                                                     !
+!  "darwin.in".                                                        !
 !                                                                      !
 !=======================================================================
 !

@@ -968,7 +968,7 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' CURVGRID,'
 #endif
-#if defined DAILY_SHORTWAVE && defined RED_TIDE
+#if defined DAILY_SHORTWAVE
 !
       IF (Master) WRITE (stdout,20) 'DAILY_SHORTWAVE',                  &
      &   'Daily-averaged surface solar shortwave radiation flux'

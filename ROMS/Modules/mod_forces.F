@@ -347,7 +347,7 @@
 #  endif
 # endif
 
-# if defined RED_TIDE && defined DAILY_SHORTWAVE
+# if defined DAILY_SHORTWAVE
           real(r8), pointer :: srflx_avg(:,:)
           real(r8), pointer :: srflxG_avg(:,:,:)
 # endif
@@ -790,7 +790,7 @@
 #  endif
 # endif
 
-# if defined RED_TIDE && defined DAILY_SHORTWAVE
+# if defined DAILY_SHORTWAVE
       allocate ( FORCES(ng) % srflx_avg(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 
@@ -1373,7 +1373,7 @@
 #   endif
 #  endif
 
-#  if defined RED_TIDE && defined DAILY_SHORTWAVE
+#  if defined DAILY_SHORTWAVE
       IF (.not.destroy(ng, FORCES(ng)%srflx_avg, MyFile,                &
      &                 __LINE__, 'FORCES(ng)%srflx_avg')) RETURN
 
@@ -1970,7 +1970,7 @@
 #   endif
 #  endif
 # endif
-# if defined RED_TIDE && defined DAILY_SHORTWAVE
+# if defined DAILY_SHORTWAVE
             FORCES(ng) % srflx_avg(i,j) = IniVal
             FORCES(ng) % srflxG_avg(i,j,1) = IniVal
             FORCES(ng) % srflxG_avg(i,j,2) = IniVal

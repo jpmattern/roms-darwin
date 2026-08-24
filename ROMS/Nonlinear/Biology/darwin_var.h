@@ -79,6 +79,10 @@
             CASE ('idTvar(iCDOM)')
               idTvar(iCDOM)=varid
 #endif
+#if defined DAILY_SHORTWAVE
+            CASE ('idAsrf')
+              idAsrf=varid
+#endif /* DAILY_SHORTWAVE */
 
 /*
 **  Biological tracers open boundary conditions.

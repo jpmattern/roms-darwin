@@ -19,7 +19,7 @@
 !=======================================================================
 !
       USE mod_param
-#if defined HYPOXIA_SRM || defined RED_TIDE
+#if defined HYPOXIA_SRM || defined RED_TIDE || defined DAILY_SHORTWAVE
       USE mod_biology
 #endif
       USE mod_boundary
@@ -444,7 +444,7 @@
       END IF
 # endif
 
-# if defined RED_TIDE && defined DAILY_SHORTWAVE
+# if defined DAILY_SHORTWAVE
 !
 !  Daily-averaged Surface solar shortwave radiation.
 !

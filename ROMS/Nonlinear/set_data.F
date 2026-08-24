@@ -47,7 +47,7 @@
 !***********************************************************************
 !
       USE mod_param
-# if defined HYPOXIA_SRM || defined RED_TIDE
+# if defined HYPOXIA_SRM || defined RED_TIDE || defined DAILY_SHORTWAVE
       USE mod_biology
 # endif
       USE mod_boundary
@@ -274,7 +274,7 @@
 #   endif
 #  endif
 
-#  if defined RED_TIDE && defined DAILY_SHORTWAVE
+#  if defined DAILY_SHORTWAVE
 !
 !  Set kinematic daily-averaged surface solar shortwave radiation flux
 !  (degC m/s).

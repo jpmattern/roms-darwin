@@ -128,6 +128,9 @@
 # endif
       USE mod_ocean
       USE mod_scalars
+#if defined DAILY_SHORTWAVE
+      USE mod_biology, ONLY: idAsrf
+#endif
 # if defined BBL_MODEL
       USE mod_bbl
 # endif
@@ -888,6 +891,19 @@
           END DO
         END IF
 #  endif
+#  if defined DAILY_SHORTWAVE
+        IF (Aout(idAsrf,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgasrf(i,j)=FORCES(ng)%srflx_avg(i,j)
+#   ifdef WET_DRY
+              AVERAGE(ng)%avgasrf(i,j)=AVERAGE(ng)%avgasrf(i,j)*        &
+     &                                 GRID(ng)%rmask_full(i,j)
+#   endif
+            END DO
+          END DO
+        END IF
+#  endif /* DAILY_SHORTWAVE */
 
 #  if defined BULK_FLUXES || defined FRC_COUPLING
         IF (Aout(idLhea,ng)) THEN
@@ -2263,6 +2279,19 @@
           END DO
         END IF
 #  endif
+#  if defined DAILY_SHORTWAVE
+        IF (Aout(idSrad,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgasrf(i,j)=AVERAGE(ng)%avgasrf(i,j)+        &
+#   ifdef WET_DRY
+     &                                 GRID(ng)%rmask_full(i,j)*        &
+#   endif
+     &                                 FORCES(ng)%srflx_avg(i,j)
+            END DO
+          END DO
+        END IF
+#  endif /* DAILY_SHORTWAVE */
 
 #  if defined BULK_FLUXES || defined FRC_COUPLING
         IF (Aout(idLhea,ng)) THEN
@@ -4060,6 +4089,28 @@
           END IF
         END IF
 #  endif
+#  if defined DAILY_SHORTWAVE
+        IF (Aout(idAsrf,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              AVERAGE(ng)%avgasrf(i,j)=rfac(i,j)*                       &
+     &                                 AVERAGE(ng)%avgasrf(i,j)
+            END DO
+          END DO
+          IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+            CALL exchange_r2d_tile (ng, tile,                           &
+     &                              LBi, UBi, LBj, UBj,                 &
+     &                              AVERAGE(ng)%avgasrf)
+#   ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          AVERAGE(ng)%avgasrf)
+#   endif
+          END IF
+        END IF
+#  endif /* DAILY_SHORTWAVE */
 
 #  if defined BULK_FLUXES || defined FRC_COUPLING
         IF (Aout(idLhea,ng)) THEN

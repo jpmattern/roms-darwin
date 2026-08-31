@@ -1806,6 +1806,29 @@
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 #  endif
+#  if defined DAILY_SHORTWAVE
+!
+!  Define average net shortwave radiation flux.
+!
+        IF (Aout(idAsrf,ng)) THEN
+          Vinfo( 1)=Vname(1,idAsrf)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idAsrf))
+          Vinfo( 3)=Vname(3,idAsrf)
+          Vinfo(11)='upward flux, cooling'
+          Vinfo(12)='downward flux, heating'
+          Vinfo(14)=Vname(4,idAsrf)
+          Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#   endif
+          Vinfo(21)=Vname(6,idAsrf)
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idAsrf,ng),r8)
+          status=def_var(ng, model, AVG(ng)%ncid, AVG(ng)%Vid(idAsrf),  &
+     &                   NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+#  endif /* DAILY_SHORTWAVE */
 # endif
 !
 !  Define surface u-momentum stress.
@@ -2193,6 +2216,11 @@
             got_var(idSrad)=.TRUE.
             AVG(ng)%Vid(idSrad)=var_id(i)
 #  endif
+#  if defined DAILY_SHORTWAVE
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idAsrf))) THEN
+            got_var(idAsrf)=.TRUE.
+            AVG(ng)%Vid(idAsrf)=var_id(i)
+#  endif /* DAILY_SHORTWAVE */
 # endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUsms))) THEN
             got_var(idUsms)=.TRUE.
@@ -2653,6 +2681,14 @@
           RETURN
         END IF
 #  endif
+#  if defined DAILY_SHORTWAVE
+        IF (.not.got_var(idAsrf).and.Aout(idAsrf,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idAsrf)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+#  endif /* DAILY_SHORTWAVE */
 # endif
         IF (.not.got_var(idUsms).and.Aout(idUsms,ng)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idUsms)),          &
@@ -4727,6 +4763,33 @@
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 #   endif
+#   if defined DAILY_SHORTWAVE
+!
+!  Define average net shortwave radiation flux.
+!
+        IF (Aout(idAsrf,ng)) THEN
+          Vinfo( 1)=Vname(1,idAsrf)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idAsrf))
+          Vinfo( 3)=Vname(3,idAsrf)
+          Vinfo(11)='upward flux, cooling'
+          Vinfo(12)='downward flux, heating'
+          Vinfo(14)=Vname(4,idAsrf)
+          Vinfo(16)=Vname(1,idtime)
+#    if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#    endif
+          Vinfo(21)=Vname(6,idAsrf)
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idAsrf,ng),r8)
+          AVG(ng)%pioVar(idAsrf)%dkind=PIO_FOUT
+          AVG(ng)%pioVar(idAsrf)%gtype=r2dvar
+!
+          status=def_var(ng, model, AVG(ng)%pioFile,                    &
+     &                   AVG(ng)%pioVar(idAsrf)%vd,                     &
+     &                   PIO_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+#   endif /* DAILY_SHORTWAVE */
 #  endif
 !
 !  Define surface u-momentum stress.
@@ -5241,6 +5304,13 @@
             AVG(ng)%pioVar(idSrad)%dkind=PIO_FOUT
             AVG(ng)%pioVar(idSrad)%gtype=r2dvar
 #   endif
+#   if defined DAILY_SHORTWAVE
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idAsrf))) THEN
+            got_var(idAsrf)=.TRUE.
+            AVG(ng)%pioVar(idAsrf)%vd=var_desc(i)
+            AVG(ng)%pioVar(idAsrf)%dkind=PIO_FOUT
+            AVG(ng)%pioVar(idAsrf)%gtype=r2dvar
+#   endif /* DAILY_SHORTWAVE */
 #  endif
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUsms))) THEN
             got_var(idUsms)=.TRUE.
@@ -5745,6 +5815,14 @@
           RETURN
         END IF
 #   endif
+#   if defined DAILY_SHORTWAVE
+        IF (.not.got_var(idAsrf).and.Aout(idAsrf,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idAsrf)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+#   endif /* DAILY_SHORTWAVE */
 #  endif
         IF (.not.got_var(idUsms).and.Aout(idUsms,ng)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idUsms)),          &

@@ -178,10 +178,10 @@
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,UBk)
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,UBk)
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:UBk)
-      real(r8), intent(in) :: srflx(LBi:UBi,LBj:UBj)
 # if defined DAILY_SHORTWAVE
       real(r8), intent(in) :: srflx_avg(LBi:UBi,LBj:UBj)
 # endif /* DAILY_SHORTWAVE */
+      real(r8), intent(in) :: srflx(LBi:UBi,LBj:UBj)
 # if defined BULK_FLUXES
       real(r8), intent(in) :: Uwind(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Vwind(LBi:UBi,LBj:UBj)

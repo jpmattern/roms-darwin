@@ -30,6 +30,9 @@
       USE mod_ncparam
       USE mod_netcdf
       USE mod_scalars
+#if defined DAILY_SHORTWAVE
+      USE mod_biology, ONLY: idAsrf
+#endif
 # if defined SEDIMENT || defined BBL_MODEL
       USE mod_sedbed
       USE mod_sediment
@@ -1628,6 +1631,31 @@
         END IF
       END IF
 #  endif
+#  if defined DAILY_SHORTWAVE
+!
+!  Write out average net shortwave radiation flux.
+!
+      IF (Aout(idAsrf,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*r2dvar
+        status=nf_fwrite2d(ng, model, AVG(ng)%ncid, idAsrf,             &
+     &                     AVG(ng)%Vid(idAsrf),                         &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, scale,                   &
+#    ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#    endif
+     &                     AVERAGE(ng) % avgasrf)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idAsrf)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#  endif /* DAILY_SHORTWAVE */
 # endif
 !
 !  Write out surface u-momentum stress.
@@ -3706,6 +3734,36 @@
         END IF
       END IF
 #   endif
+#   if defined DAILY_SHORTWAVE
+!
+!  Write out average net shortwave radiation flux.
+!
+      IF (Aout(idAsrf,ng)) THEN
+        scale=1.0_dp
+        IF (AVG(ng)%pioVar(idAsrf)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r2dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r2dvar(ng)
+        END IF
+        status=nf_fwrite2d(ng, model, AVG(ng)%pioFile, idAsrf,          &
+     &                     AVG(ng)%pioVar(idAsrf),                      &
+     &                     AVG(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, scale,                   &
+#     ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#     endif
+     &                     AVERAGE(ng) % avgasrf)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idAsrf)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#   endif /* DAILY_SHORTWAVE */
 #  endif
 !
 !  Write out surface u-momentum stress.

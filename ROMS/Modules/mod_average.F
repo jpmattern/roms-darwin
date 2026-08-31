@@ -78,6 +78,9 @@
 #  ifdef SHORTWAVE
 !  avgsrf     Shortwave radiation flux (W/m2).                         !
 #  endif
+#  if defined DAILY_SHORTWAVE
+!  avgasrf    Average shortwave radiation flux (W/m2).                 !
+#  endif /* DAILY_SHORTWAVE */
 #  if defined BULK_FLUXES || defined FRC_COUPLING
 !  avglhf     Latent heat flux (W/m2).                                 !
 !  avglrf     Longwave radiation flux (W/m2).                          !
@@ -242,6 +245,9 @@
 #  ifdef SHORTWAVE
           real(r8), pointer :: avgsrf(:,:)
 #  endif
+#  if defined DAILY_SHORTWAVE
+          real(r8), pointer :: avgasrf(:,:)
+#  endif /* DAILY_SHORTWAVE */
 #  if defined BULK_FLUXES || defined FRC_COUPLING
           real(r8), pointer :: avglhf(:,:)
           real(r8), pointer :: avglrf(:,:)
@@ -370,6 +376,9 @@
       USE mod_param
       USE mod_ncparam
       USE mod_scalars
+#if defined DAILY_SHORTWAVE
+      USE mod_biology, ONLY: idAsrf
+#endif
 !
 !  Imported variable declarations.
 !
@@ -634,6 +643,12 @@
         Dmem(ng)=Dmem(ng)+size2d
       END IF
 #  endif
+#  if defined DAILY_SHORTWAVE
+      IF (Aout(idAsrf,ng)) THEN
+        allocate ( AVERAGE(ng) % avgasrf(LBi:UBi,LBj:UBj) )
+        Dmem(ng)=Dmem(ng)+size2d
+      END IF
+#  endif /* DAILY_SHORTWAVE */
 #  if defined BULK_FLUXES || defined FRC_COUPLING
       IF (Aout(idLhea,ng)) THEN
         allocate ( AVERAGE(ng) % avglhf(LBi:UBi,LBj:UBj) )
@@ -932,6 +947,9 @@
       USE mod_param
       USE mod_ncparam
       USE mod_scalars
+#if defined DAILY_SHORTWAVE
+      USE mod_biology, ONLY: idAsrf
+#endif
 
 # ifdef SUBOBJECT_DEALLOCATION
 !
@@ -1231,6 +1249,13 @@
      &                   __LINE__, 'AVERAGE(ng)%avgsrf')) RETURN
       END IF
 #   endif
+#   if defined DAILY_SHORTWAVE
+
+      IF (Aout(idAsrf,ng)) THEN
+        IF (.not.destroy(ng, AVERAGE(ng)%avgasrf, MyFile,               &
+     &                   __LINE__, 'AVERAGE(ng)%avgasrf')) RETURN
+      END IF
+#   endif /* DAILY_SHORTWAVE */
 
 #   if defined BULK_FLUXES || defined FRC_COUPLING
       IF (Aout(idLhea,ng)) THEN
@@ -1564,6 +1589,9 @@
       USE mod_param
       USE mod_ncparam
       USE mod_scalars
+#if defined DAILY_SHORTWAVE
+      USE mod_biology, ONLY: idAsrf
+#endif
 !
 !  Imported variable declarations.
 !
@@ -2022,6 +2050,16 @@
         END DO
       END IF
 #  endif
+#  if defined DAILY_SHORTWAVE
+
+      IF (Aout(idAsrf,ng)) THEN
+        DO j=Jmin,Jmax
+          DO i=Imin,Imax
+            AVERAGE(ng) % avgasrf(i,j) = IniVal
+          END DO
+        END DO
+      END IF
+#  endif /* DAILY_SHORTWAVE */
 
 #  if defined BULK_FLUXES || defined FRC_COUPLING
       IF (Aout(idLhea,ng)) THEN

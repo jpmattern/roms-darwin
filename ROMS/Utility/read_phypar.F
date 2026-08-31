@@ -2069,6 +2069,16 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Hout(idSrad,1:Ngrids)=Lswitch(1:Ngrids)
+#if defined DAILY_SHORTWAVE
+            CASE ('Hout(idAsrf)')
+              IF (idAsrf.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idAsrf'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idAsrf,1:Ngrids)=Lswitch(1:Ngrids)
+#endif /* DAILY_SHORTWAVE */
             CASE ('Hout(idEmPf)')
               IF (idEmPf.eq.0) THEN
                 IF (Master) WRITE (out,280) 'idEmPf'
@@ -2494,6 +2504,11 @@
             CASE ('Qout(idSrad)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idSrad,1:Ngrids)=Lswitch(1:Ngrids)
+#if defined DAILY_SHORTWAVE
+            CASE ('Qout(idAsrf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idAsrf,1:Ngrids)=Lswitch(1:Ngrids)
+#endif /* DAILY_SHORTWAVE */
             CASE ('Qout(idEmPf)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idEmPf,1:Ngrids)=Lswitch(1:Ngrids)
@@ -2822,6 +2837,11 @@
             CASE ('Aout(idSrad)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idSrad,1:Ngrids)=Lswitch(1:Ngrids)
+#if defined DAILY_SHORTWAVE
+            CASE ('Aout(idAsrf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idAsrf,1:Ngrids)=Lswitch(1:Ngrids)
+#endif /* DAILY_SHORTWAVE */
             CASE ('Aout(idevap)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idevap,1:Ngrids)=Lswitch(1:Ngrids)
@@ -6094,6 +6114,11 @@
      &         'Hout(idSrad)',                                          &
      &         'Write out shortwave radiation flux.'
 # endif
+# if defined DAILY_SHORTWAVE
+            IF (Hout(idAsrf,ng)) WRITE (out,170) Hout(idAsrf,ng),       &
+     &         'Hout(idAsrf)',                                          &
+     &         'Write out average shortwave radiation flux.'
+# endif /* DAILY_SHORTWAVE */
 # if defined BULK_FLUXES || defined FRC_COUPLING
             IF (Hout(idLrad,ng)) WRITE (out,170) Hout(idLrad,ng),       &
      &         'Hout(idLrad)',                                          &
@@ -6460,6 +6485,11 @@
      &         'Qout(idSrad)',                                          &
      &         'Write out shortwave radiation flux.'
 # endif
+# if defined DAILY_SHORTWAVE
+            IF (Qout(idAsrf,ng)) WRITE (out,170) Qout(idAsrf,ng),       &
+     &         'Qout(idAsrf)',                                          &
+     &         'Write out average shortwave radiation flux.'
+# endif /* DAILY_SHORTWAVE */
 # if defined BULK_FLUXES || defined FRC_COUPLING
             IF (Qout(idLrad,ng)) WRITE (out,170) Qout(idLrad,ng),       &
      &         'Qout(idLrad)',                                          &
@@ -6705,6 +6735,11 @@
      &         'Aout(idSrad)',                                          &
      &         'Write out averaged shortwave radiation flux.'
 #  endif
+#  if defined DAILY_SHORTWAVE
+            IF (Aout(idAsrf,ng)) WRITE (out,170) Aout(idAsrf,ng),       &
+     &         'Aout(idAsrf)',                                          &
+     &         'Write out averaged average shortwave radiation flux.'
+#  endif /* DAILY_SHORTWAVE */
 #  ifdef BULK_FLUXES
             IF (Aout(idLrad,ng)) WRITE (out,170) Aout(idLrad,ng),       &
      &         'Aout(idLrad)',                                          &

@@ -2280,7 +2280,7 @@
         END IF
 #  endif
 #  if defined DAILY_SHORTWAVE
-        IF (Aout(idSrad,ng)) THEN
+        IF (Aout(idAsrf,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgasrf(i,j)=AVERAGE(ng)%avgasrf(i,j)+        &

@@ -449,12 +449,13 @@
           END IF
 #endif
 
-          CALL DARWIN_CARBON_COEFFS(surftemp,surfsalt,drF(i,:),         &
+          CALL DARWIN_CARBON_COEFFS(                                    &
+     &      ng,i,IminS,ImaxS,drF,                                       &
+     &      surftemp,surfsalt,                                          &
      &      fugf,ff,ak0,ak1,ak2,akb,ak1p,ak2p,ak3p,aksi,akw,aks,        &
      &      akf,bt,st,ft,Ksp_TP_Calc,                                   &
-     &      Istr,Iend,                                                  &
 #if defined DARWIN_VERBOSE_PLANK_OLD
-     &      i,j,                                                        &
+     &      j,                                                          &
 #endif
      &      k,ks)
 !====================================================================

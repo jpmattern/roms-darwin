@@ -38,7 +38,7 @@
 ! sit = inorganic silicate (mol/^3)
 ! t = temperature (degrees C)
 ! s = salinity (PSU)
-        INTEGER,intent(in) :: ng 
+        INTEGER,intent(in) :: ng
         INTEGER,intent(in) :: donewt
         INTEGER,intent(in) :: inewtonmax
         INTEGER,intent(in) :: ibrackmax
@@ -376,7 +376,7 @@
 ! sit = inorganic silicate (mol/^3)
 ! t = temperature (degrees C)
 ! s = salinity (PSU)
-        INTEGER,intent(in) :: ng 
+        INTEGER,intent(in) :: ng
         real(r8),intent(in) :: t
         real(r8),intent(in) :: s
 #if defined DARWIN_VERBOSE_PLANK_OLD
@@ -478,9 +478,9 @@
 !mick - now determine [CO2*]
 #if defined DARWIN_VERBOSE_PLANK_OLD
             IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-              write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'CALC_PCO2_APPROX','cag=',ta ,'-', bohg ,'-(',kwlocal,'/',hguess,') + ',hguess ,'-', hpo4g ,'- 2.0_r8*',po4g ,'+', h3po4g ,'-', siooh3g 
-              write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'CALC_PCO2_APPROX','gamm=',diclocal,'/',cag 
-              write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'CALC_PCO2_APPROX','hnew= 0.5 *((',gamm,'- 1.0) *',k1local,' + sqrt(',stuff,')' 
+              write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'CALC_PCO2_APPROX','cag=',ta ,'-', bohg ,'-(',kwlocal,'/',hguess,') + ',hguess ,'-', hpo4g ,'- 2.0_r8*',po4g ,'+', h3po4g ,'-', siooh3g
+              write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'CALC_PCO2_APPROX','gamm=',diclocal,'/',cag
+              write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'CALC_PCO2_APPROX','hnew= 0.5 *((',gamm,'- 1.0) *',k1local,' + sqrt(',stuff,')'
               write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'CALC_PCO2_APPROX','co2s=', diclocal , '/(1+', k1local,'/',hnew,'+(',k1local,'*',k2local,')/',hnew,'**2'
             END IF
 #endif
@@ -523,12 +523,12 @@
 ! !ROUTINE: CARBON_COEFFS
 ! !INTERFACE: ==========================================================
       SUBROUTINE DARWIN_CARBON_COEFFS(                                  &
-     & ttemp,stemp,drF,                                                 &
+     & ng, i, IminS, ImaxS, drF,                                        &
+     & ttemp,stemp,                                                     &
      & fugf,ff,ak0,ak1,ak2,akb,ak1p,ak2p,ak3p,aksi,akw,aks,             &
      & akf,bt,st,ft,Ksp_TP_Calc,                                        &
-     & Istr,Iend,                                                       &
 #if defined DARWIN_VERBOSE_PLANK_OLD
-     & i,j,                                                             &
+     &      j,                                                          &
 #endif
      & kLevel,ksurface)
 
@@ -573,9 +573,12 @@
 ! dont really need to pass T and S in, could use theta, salt in
 ! common block in DYNVARS.h, but this way keeps subroutine more
 ! general
+        integer,intent(in) :: ng, i
+        integer,intent(in) :: IminS
+        integer,intent(in) :: ImaxS
+        real(r8),intent(in),dimension(IminS:ImaxS,N(ng)) :: drF
         real(r8),intent(in) :: ttemp
         real(r8),intent(in) :: stemp
-        real(r8),intent(in),dimension(1:ksurface) :: drF
         !real(r8),intent(in),dimension(1-OLx:sNx+OLx,1-OLy:sNy+OLy) :: ttemp
         !real(r8),intent(in),dimension(1-OLx:sNx+OLx,1-OLy:sNy+OLy) :: stemp
         real(r8),intent(out) :: fugf
@@ -595,10 +598,8 @@
         real(r8),intent(out) :: st
         real(r8),intent(out) :: ft
         real(r8),intent(out) :: Ksp_TP_Calc
-        INTEGER,intent(in) :: Istr
-        INTEGER,intent(in) :: Iend
 #if defined DARWIN_VERBOSE_PLANK_OLD
-        INTEGER,intent(in) :: i,j
+        INTEGER,intent(in) :: j
 #endif
         INTEGER,intent(in) :: kLevel
         INTEGER,intent(in) :: ksurface
@@ -678,14 +679,14 @@
              ! orig code:
              ! cdepth = bdepth + 0.5_r8*drF(k)
              ! bdepth = bdepth + drF(k)
-             cdepth = bdepth + 0.5_r8*drF(k)
-             bdepth = bdepth + drF(k)
+             cdepth = bdepth + 0.5_r8*drF(i,k)
+             bdepth = bdepth + drF(i,k)
              pressc = 1.0_r8 + 0.1_r8*cdepth
          end do
         else
           pressc = 1.01325_r8
         endif
-        
+
           !in ROMS, no grid cells with 0 volume
           !if (hFacC(kLevel).gt.0._r8) then
            t = ttemp

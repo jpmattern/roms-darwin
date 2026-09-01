@@ -3838,7 +3838,7 @@ metadata:
     units:          mmol C m-2
     field:          Cflx
     time:           ocean_time
-    index_code:     idTvar(idCflx)
+    index_code:     idCflx
     type:           r3dvar
     add_offset:     0.0d0
     scale:          1.0d0
@@ -3849,7 +3849,7 @@ metadata:
     units:          ppm
     field:          pCO2
     time:           ocean_time
-    index_code:     idTvar(idpCO2)
+    index_code:     idpCO2
     type:           r3dvar
     add_offset:     0.0d0
     scale:          1.0d0
@@ -3860,7 +3860,7 @@ metadata:
     units:          nondimensional
     field:          pH
     time:           ocean_time
-    index_code:     idTvar(idpH)
+    index_code:     idpH
     type:           r3dvar
     add_offset:     0.0d0
     scale:          1.0d0

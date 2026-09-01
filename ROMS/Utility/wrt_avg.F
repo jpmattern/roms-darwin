@@ -2581,7 +2581,7 @@
 !
 !  Write out air-sea CO2.
 !
-      IF (Aout(idTvar(idCflx),ng)) THEN
+      IF (Aout(idCflx,ng)) THEN
         scale=1.0_dp
         IF (AVG(ng)%pioVar(idCflx)%dkind.eq.PIO_double) THEN
           ioDesc => ioDesc_dp_r2dvar(ng)
@@ -2609,7 +2609,7 @@
 !
 !  Write out pCO2.
 !
-      IF (Aout(idTvar(idpCO2),ng)) THEN
+      IF (Aout(idpCO2,ng)) THEN
         scale=1.0_dp
         IF (AVG(ng)%pioVar(idpCO2)%dkind.eq.PIO_double) THEN
           ioDesc => ioDesc_dp_r3dvar(ng)
@@ -2637,7 +2637,7 @@
 !
 !  Write out pH.
 !
-      IF (Aout(idTvar(idpH),ng)) THEN
+      IF (Aout(idpH,ng)) THEN
         scale=1.0_dp
         IF (AVG(ng)%pioVar(idpH)%dkind.eq.PIO_double) THEN
           ioDesc => ioDesc_dp_r3dvar(ng)

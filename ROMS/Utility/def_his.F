@@ -1316,7 +1316,7 @@
 !
 !  Define air-sea CO2 flux.
 !
-        IF (Hout(idTvar(idCflx),ng)) THEN
+        IF (Hout(idCflx,ng)) THEN
           Vinfo( 1)=Vname(1,idCflx)
           Vinfo( 2)=Vname(2,idCflx)
           Vinfo( 3)=Vname(3,idCflx)
@@ -1335,7 +1335,7 @@
 !
 !  Define pCO2.
 !
-        IF (Hout(idTvar(idpCO2),ng)) THEN
+        IF (Hout(idpCO2,ng)) THEN
           Vinfo( 1)=Vname(1,idpCO2)
           Vinfo( 2)=Vname(2,idpCO2)
           Vinfo( 3)=Vname(3,idpCO2)
@@ -1354,7 +1354,7 @@
 !
 !  Define pH.
 !
-        IF (Hout(idTvar(idpH),ng)) THEN
+        IF (Hout(idpH,ng)) THEN
           Vinfo( 1)=Vname(1,idpH)
           Vinfo( 2)=Vname(2,idpH)
           Vinfo( 3)=Vname(3,idpH)
@@ -2651,19 +2651,19 @@
           RETURN
         END IF
 # if defined DARWIN_CARBON_EXTRAOUT
-        IF (.not.got_var(idCflx).and.Hout(idTvar(idCflx),ng)) THEN
+        IF (.not.got_var(idCflx).and.Hout(idCflx,ng)) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idCflx)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-        IF (.not.got_var(idpCO2).and.Hout(idTvar(idpCO2),ng)) THEN
+        IF (.not.got_var(idpCO2).and.Hout(idpCO2,ng)) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idpCO2)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
         END IF
-        IF (.not.got_var(idpH).and.Hout(idTvar(idpH),ng)) THEN
+        IF (.not.got_var(idpH).and.Hout(idpH,ng)) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idpH)),            &
      &                                  TRIM(ncname)
           exit_flag=3

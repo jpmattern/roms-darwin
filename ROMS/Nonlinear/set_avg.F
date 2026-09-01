@@ -436,14 +436,14 @@
         END DO
 
 #  if defined DARWIN_CARBON_EXTRAOUT
-        IF (Aout(idTvar(idCflx),ng)) THEN
+        IF (Aout(idCflx,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgCO2flx(i,j)=OCEAN(ng)%CO2flx(i,j)
             END DO
           END DO
         END IF
-        IF (Aout(idTvar(idpCO2),ng)) THEN
+        IF (Aout(idpCO2,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               DO k=1,N(ng)
@@ -452,7 +452,7 @@
             END DO
           END DO
         END IF
-        IF (Aout(idTvar(idpH),ng)) THEN
+        IF (Aout(idpH,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               DO k=1,N(ng)
@@ -1818,7 +1818,7 @@
         END DO
 
 #  if defined DARWIN_CARBON_EXTRAOUT
-        IF (Aout(idTvar(idCflx),ng)) THEN
+        IF (Aout(idCflx,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgCO2flx(i,j)=                               &
@@ -1826,7 +1826,7 @@
             END DO
           END DO
         END IF
-        IF (Aout(idTvar(idpCO2),ng)) THEN
+        IF (Aout(idpCO2,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               DO k=1,N(ng)
@@ -1836,7 +1836,7 @@
             END DO
           END DO
         END IF
-        IF (Aout(idTvar(idpH),ng)) THEN
+        IF (Aout(idpH,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               DO k=1,N(ng)
@@ -3313,7 +3313,7 @@
         END DO
 
 #  if defined DARWIN_CARBON_EXTRAOUT
-        IF (Aout(idTvar(idCflx),ng)) THEN
+        IF (Aout(idCflx,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               AVERAGE(ng)%avgCO2flx(i,j)=rfac(i,j)*                     &
@@ -3321,7 +3321,7 @@
             END DO
           END DO
         END IF
-        IF (Aout(idTvar(idpCO2),ng)) THEN
+        IF (Aout(idpCO2,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               DO k=1,N(ng)
@@ -3331,7 +3331,7 @@
             END DO
           END DO
         END IF
-        IF (Aout(idTvar(idpH),ng)) THEN
+        IF (Aout(idpH,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
               DO k=1,N(ng)

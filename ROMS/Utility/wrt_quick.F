@@ -894,7 +894,7 @@
 !
 !  Write out air-sea CO2 flux.
 !
-      IF (Qout(idTvar(idCflx),ng)) THEN
+      IF (Qout(idCflx,ng)) THEN
         scale=1.0_r8
         gtype=gfactor*r2dvar
         status=nf_fwrite2d(ng, model, QCK(ng)%ncid, idCflx,             &
@@ -917,7 +917,7 @@
 !
 !  Write out pCO2.
 !
-      IF (Qout(idTvar(idpCO2),ng)) THEN
+      IF (Qout(idpCO2,ng)) THEN
         scale=1.0_r8
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, model, QCK(ng)%ncid, idpCO2,             &
@@ -940,7 +940,7 @@
 !
 !  Write out pH.
 !
-      IF (Qout(idTvar(idpH),ng)) THEN
+      IF (Qout(idpH,ng)) THEN
         scale=1.0_r8
         gtype=gfactor*r3dvar
         status=nf_fwrite3d(ng, model, QCK(ng)%ncid, idpH,               &

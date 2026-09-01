@@ -461,15 +461,15 @@
       END IF
 
 #  if defined DARWIN_CARBON_EXTRAOUT
-      IF (Aout(idTvar(idCflx),ng)) THEN
+      IF (Aout(idCflx,ng)) THEN
         allocate ( AVERAGE(ng) % avgCO2flx(LBi:UBi,LBj:UBj) )
         Dmem(ng)=Dmem(ng)+size2d
       END IF
-      IF (Aout(idTvar(idpCO2),ng)) THEN
+      IF (Aout(idpCO2,ng)) THEN
         allocate ( AVERAGE(ng) % avgPCO2(LBi:UBi,LBj:UBj,N(ng)) )
         Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
       END IF
-      IF (Aout(idTvar(idpH),ng)) THEN
+      IF (Aout(idpH,ng)) THEN
         allocate ( AVERAGE(ng) % avgPH(LBi:UBi,LBj:UBj,N(ng)) )
         Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
       END IF
@@ -1042,17 +1042,17 @@
       END IF
 
 #   if defined DARWIN_CARBON_EXTRAOUT
-      IF (Aout(idTvar(idCflx),ng)) THEN
+      IF (Aout(idCflx,ng)) THEN
         IF (.not.destroy(ng, AVERAGE(ng)%avgCO2flx, MyFile,             &
      &                   __LINE__, 'AVERAGE(ng)%avgCO2flx')) RETURN
       END IF
 
-      IF (Aout(idTvar(idpCO2),ng)) THEN
+      IF (Aout(idpCO2,ng)) THEN
         IF (.not.destroy(ng, AVERAGE(ng)%avgPCO2, MyFile,               &
      &                   __LINE__, 'AVERAGE(ng)%avgPCO2')) RETURN
       END IF
 
-      IF (Aout(idTvar(idpH),ng)) THEN
+      IF (Aout(idpH,ng)) THEN
         IF (.not.destroy(ng, AVERAGE(ng)%avgPH, MyFile,                 &
      &                   __LINE__, 'AVERAGE(ng)%avgPH')) RETURN
       END IF

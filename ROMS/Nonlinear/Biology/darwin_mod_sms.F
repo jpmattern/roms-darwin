@@ -986,7 +986,7 @@
 
 ! scavenging
       DO k=1,N(ng)
-        DO i=IminS,ImaxS
+        DO i=Istr,Iend
 #if defined DARWIN_PART_SCAV_POP
           scav_poc = MAX(0.0_r8, Bio(i,k,iPOP))/scav_R_POPPOC(ng)
           scv = scav_rat(ng)*scav_inter(ng)*(scav_poc**scav_exp(ng))
@@ -1003,7 +1003,7 @@
         write(*,*) '<<2b',IminS,ImaxS,j,maxval(Bio(:,:,iFet))
 #endif
 ! iron flux
-      DO i=IminS,ImaxS
+      DO i=Istr,Iend
 #if defined DARWIN_IRON_SED_SOURCE_VARIABLE
         !TODO this needs to be improved
         flx = fesedflux_pcm(ng)*wP_sink(ng)*R_CP_fesed(ng)*             &

@@ -129,6 +129,10 @@
 #if defined DIAGNOSTICS_BIO_MAPPING
       USE mod_ncparam, only: Dout
 #endif
+#if defined DARWIN_DUMP_TILE
+      USE mod_iounits, only: usrout, USRname, stdout
+      USE mod_ncparam, only: Vname, idTvar
+#endif
 !
 !  Imported variable declarations.
 !
@@ -243,6 +247,14 @@
 
       !TODO read this somewhere
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: inputFe
+#if defined DARWIN_DUMP_TILE
+      integer :: io_err
+      character (len=256) :: io_errmsg
+      character (len=16) :: DumpVname
+      character (len=*), parameter :: DumpFmt =                        &
+     &  '(a3,1x,i8,1x,f14.6,1x,i3,1x,i4,1x,i4,1x,i4,1x,i4,1x,a16,1x,'// &
+     &  'es24.16)'
+#endif
 #include "set_bounds.h"
 #if defined DIAGNOSTICS_BIO
 !
@@ -286,6 +298,10 @@
     ELSE
       RETURN
     END IF
+!
+#if defined DARWIN_DUMP_TILE
+# include "darwin_dump_input.h"
+#endif
 !
 !  Compute inverse thickness to avoid repeated divisions.
 !
@@ -621,6 +637,10 @@
         END DO
 
       END DO J_LOOP
+!
+#if defined DARWIN_DUMP_TILE
+# include "darwin_dump_output.h"
+#endif
 !
       RETURN
       END SUBROUTINE darwin_tile

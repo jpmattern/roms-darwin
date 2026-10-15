@@ -89,3 +89,10 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+16)=' DARWIN_VERBOSE,'
 # endif
+# if defined DARWIN_DUMP_TILE
+!
+      IF (Master) WRITE (stdout,20) 'DARWIN_DUMP_TILE',                 &
+     &   'Dump darwin_tile inputs/outputs for regression testing.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' DARWIN_DUMP_TILE,'
+# endif

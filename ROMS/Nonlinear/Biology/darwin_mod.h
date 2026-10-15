@@ -15,22 +15,6 @@
 !
       implicit none
       ! TODO move elsewhere?
-#if defined DARWIN_DIMS_FIXED
-      integer, parameter :: nplank=2
-      integer, parameter :: nGroup=2
-      integer, parameter :: nlam=1
-      integer, parameter :: nopt=1
-      integer, parameter :: nPhoto=1
-      integer, parameter :: nPPplank=0
-      integer, parameter :: nGRplank=0
-
-      integer, parameter :: iMinBact=0
-      integer, parameter :: iMaxBact=0
-      integer, parameter :: iMinPrey=1
-      integer, parameter :: iMaxPrey=1
-      integer, parameter :: iMinPred=2
-      integer, parameter :: iMaxPred=2
-#else
       integer, parameter :: nplank=DARWIN_DIM_NPLANK
       integer, parameter :: nGroup=DARWIN_DIM_NGROUP
       integer, parameter :: nlam=DARWIN_DIM_NLAM
@@ -38,7 +22,22 @@
       integer, parameter :: nPhoto=DARWIN_DIM_NPHOTO
       integer, parameter :: nPPplank=DARWIN_DIM_NPPPLANK
       integer, parameter :: nGRplank=DARWIN_DIM_NGRPLANK
-
+!
+!  Legacy fixed predator/prey/bacteria index ranges. These have been
+!  superseded everywhere by the isPhoto/isPred/bactType per-type trait
+!  flags (read from the .in file) -- except for constructing
+!  descriptive plankname labels (below), which happens at a point in
+!  model start-up before the .in file has been read, so the trait
+!  flags are not yet available there. If an application still defines
+!  these macros, they are used only for that early naming step; if not
+!  defined, plankname falls back to generic "planktonNN" labels. All
+!  six must be defined together, or none at all.
+!
+#if defined DARWIN_INDEX_MINBACT || defined DARWIN_INDEX_MAXBACT || defined DARWIN_INDEX_MINPREY || defined DARWIN_INDEX_MAXPREY || defined DARWIN_INDEX_MINPRED || defined DARWIN_INDEX_MAXPRED
+# if ! defined DARWIN_INDEX_MINBACT || ! defined DARWIN_INDEX_MAXBACT || ! defined DARWIN_INDEX_MINPREY || ! defined DARWIN_INDEX_MAXPREY || ! defined DARWIN_INDEX_MINPRED || ! defined DARWIN_INDEX_MAXPRED
+#  error "DARWIN_INDEX_MINBACT/MAXBACT/MINPREY/MAXPREY/MINPRED/MAXPRED must all be defined together, or none at all."
+# endif
+# define DARWIN_INDEX_NAMING
       integer, parameter :: iMinBact=DARWIN_INDEX_MINBACT
       integer, parameter :: iMaxBact=DARWIN_INDEX_MAXBACT
       integer, parameter :: iMinPrey=DARWIN_INDEX_MINPREY
@@ -475,6 +474,7 @@
 !  Initialize names.
 !-----------------------------------------------------------------------
 !
+#if defined DARWIN_INDEX_NAMING
       ic=1
       DO i=iMinPrey,nPhoto
         WRITE (plankname(i),'(a,i2.2)') 'phytoplankton', ic
@@ -495,6 +495,17 @@
           ic=ic+1
         END IF
       END DO
+#else
+!
+!  No DARWIN_INDEX_* macros defined -- the isPhoto/isPred/bactType
+!  trait flags that would otherwise distinguish plankton types are not
+!  read from the .in file until later in model start-up (darwin_inp.h),
+!  so generic names are used here instead.
+!
+      DO i=1,nplank
+        WRITE (plankname(i),'(a,i2.2)') 'plankton', i
+      END DO
+#endif
 !
 !  Initialize group names. Better names are written to the variable
 !  once input has been read (in darwin_inp.h).

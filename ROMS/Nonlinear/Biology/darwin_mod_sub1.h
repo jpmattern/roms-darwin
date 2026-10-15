@@ -3,6 +3,8 @@
 !
 
       integer, allocatable :: isPhoto(:,:)            ! dimensionless
+      integer, allocatable :: isPred(:,:)             ! dimensionless
+      integer, allocatable :: isPrey(:,:)             ! dimensionless
       integer, allocatable :: bactType(:,:)           ! dimensionless
       integer, allocatable :: isAerobic(:,:)          ! dimensionless
       integer, allocatable :: isDenit(:,:)            ! dimensionless
@@ -20,9 +22,10 @@
       real(r8), allocatable :: mort2(:,:)             ! (mmol C m^-3)^-1 s^-1
       integer, allocatable :: tempMort(:,:)           ! dimensionless
       integer, allocatable :: tempMort2(:,:)          ! dimensionless
+      integer, allocatable :: tempGraz(:,:)           ! dimensionless
       real(r8), allocatable :: ExportFracMort(:,:)    ! dimensionless
       real(r8), allocatable :: ExportFracMort2(:,:)   ! dimensionless
-      real(r8), allocatable :: ExportFrac(:,:)        ! dimensionless
+      real(r8), allocatable :: ExportFracExude(:,:)   ! dimensionless
       real(r8), allocatable :: phytoTempCoeff(:,:)    ! dimensionless
       real(r8), allocatable :: phytoTempExp1(:,:)     ! ln(degree)
       real(r8), allocatable :: phytoTempExp2(:,:)     ! (degree C)^-phytoDecayPower
@@ -36,7 +39,7 @@
       real(r8), allocatable :: R_PICPOC(:,:)          ! mmol C (mmol C)-1
       real(r8), allocatable :: wsink(:,:)             ! m s^-1
       real(r8), allocatable :: wswim(:,:)             ! m s^-1
-      real(r8), allocatable :: respiration(:,:)       ! s^-1
+      real(r8), allocatable :: respRate(:,:)          ! s^-1
       real(r8), allocatable :: PCmax(:,:)             ! s-1
       real(r8), allocatable :: Qnmax(:,:)             ! mmol N (mmol C)^-1
       real(r8), allocatable :: Qnmin(:,:)             ! mmol N (mmol C)^-1
@@ -46,26 +49,32 @@
       real(r8), allocatable :: Qsimin(:,:)            ! mmol Si (mmol C)^-1
       real(r8), allocatable :: Qfemax(:,:)            ! mmol Fe (mmol C)^-1
       real(r8), allocatable :: Qfemin(:,:)            ! mmol Fe (mmol C)^-1
-      real(r8), allocatable :: Vmax_NH4(:,:)          ! mmol N (mmol C)^-1 s^-1
-      real(r8), allocatable :: Vmax_NO2(:,:)          ! mmol N (mmol C)^-1 s^-1
-      real(r8), allocatable :: Vmax_NO3(:,:)          ! mmol N (mmol C)^-1 s^-1
-      real(r8), allocatable :: Vmax_N(:,:)            ! mmol N (mmol C)^-1 s^-1
-      real(r8), allocatable :: Vmax_PO4(:,:)          ! mmol P (mmol C)^-1 s^-1
-      real(r8), allocatable :: Vmax_SiO2(:,:)         ! mmol Si (mmol C)^-1 s^-1
-      real(r8), allocatable :: Vmax_FeT(:,:)          ! mmol Fe (mmol C)^-1 s^-1
+      real(r8), allocatable :: VmaxNH4(:,:)           ! mmol N (mmol C)^-1 s^-1
+      real(r8), allocatable :: VmaxNO2(:,:)           ! mmol N (mmol C)^-1 s^-1
+      real(r8), allocatable :: VmaxNO3(:,:)           ! mmol N (mmol C)^-1 s^-1
+      real(r8), allocatable :: VmaxN(:,:)             ! mmol N (mmol C)^-1 s^-1
+      real(r8), allocatable :: VmaxPO4(:,:)           ! mmol P (mmol C)^-1 s^-1
+      real(r8), allocatable :: VmaxSiO2(:,:)          ! mmol Si (mmol C)^-1 s^-1
+      real(r8), allocatable :: VmaxFeT(:,:)           ! mmol Fe (mmol C)^-1 s^-1
       real(r8), allocatable :: ksatNH4(:,:)           ! mmol N m-3
       real(r8), allocatable :: ksatNO2(:,:)           ! mmol N m-3
       real(r8), allocatable :: ksatNO3(:,:)           ! mmol N m-3
       real(r8), allocatable :: ksatPO4(:,:)           ! mmol P m-3
       real(r8), allocatable :: ksatSiO2(:,:)          ! mmol Si m-3
       real(r8), allocatable :: ksatFeT(:,:)           ! mmol Fe m-3
+#if defined DARWIN_FUTURE
+      real(r8), allocatable :: hillnumDIN(:,:)        ! dimensionless
+      real(r8), allocatable :: hillnumPO4(:,:)        ! dimensionless
+      real(r8), allocatable :: hillnumFeT(:,:)        ! dimensionless
+      real(r8), allocatable :: hillnumSiO2(:,:)       ! dimensionless
+#endif
       real(r8), allocatable :: kexcC(:,:)             ! s^-1
       real(r8), allocatable :: kexcN(:,:)             ! s^-1
       real(r8), allocatable :: kexcP(:,:)             ! s^-1
       real(r8), allocatable :: kexcSi(:,:)            ! s^-1
       real(r8), allocatable :: kexcFe(:,:)            ! s^-1
 #if defined DARWIN_GEIDER
-      real(r8), allocatable :: inhibcoef_geid(:,:)    ! dimensionless
+      real(r8), allocatable :: inhibGeider(:,:)       ! dimensionless
 #endif
 #if ! defined DARWIN_GEIDER
       real(r8), allocatable :: ksatPAR(:,:)           ! (uEin m-2 s-1)-1
@@ -274,6 +283,15 @@
 #if ! defined DARWIN_RANDOM_TRAITS
       integer, allocatable :: grp_tempMort(:,:)       ! dimensionless
       integer, allocatable :: grp_tempMort2(:,:)      ! dimensionless
+      integer, allocatable :: grp_tempGraz(:,:)       ! dimensionless
+#endif
+#if defined DARWIN_FUTURE
+      real(r8), allocatable :: grp_hillnumDIN(:,:)    ! dimensionless
+      real(r8), allocatable :: grp_hillnumPO4(:,:)    ! dimensionless
+      real(r8), allocatable :: grp_hillnumFeT(:,:)    ! dimensionless
+      real(r8), allocatable :: grp_hillnumSiO2(:,:)   ! dimensionless
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS
       real(r8), allocatable :: grp_Xmin(:,:)          ! mmol C m^-3
       real(r8), allocatable :: grp_R_NC(:,:)          ! mmol N (mmol C)^-1
       real(r8), allocatable :: grp_R_PC(:,:)          ! mmol P (mmol C)^-1
@@ -485,6 +503,7 @@
       real(r8), allocatable :: KPON_pday(:)           ! d^-1
       real(r8), allocatable :: KPOFe(:)               ! s^-1
       real(r8), allocatable :: KPOFe_pday(:)          ! d^-1
+      real(r8), allocatable :: ksatO2remin(:)         ! mmol O2 m^-3
       real(r8), allocatable :: KPOSi(:)               ! s^-1
       real(r8), allocatable :: KPOSi_pday(:)          ! d^-1
       real(r8), allocatable :: wC_sink(:)             ! m/s
@@ -501,6 +520,11 @@
       real(r8), allocatable :: wPIC_sink_pday(:)      ! m/s s d^-1
       real(r8), allocatable :: Kdissc(:)              ! s^-1
       real(r8), allocatable :: Kdissc_pday(:)         ! d^-1
+      integer, allocatable :: darwin_disscSelect(:)   ! dimensionless
+#if defined DARWIN_FUTURE
+      real(r8), allocatable :: darwin_KeirCoeff(:)    ! s^-1
+      real(r8), allocatable :: darwin_KeirExp(:)      ! dimensionless
+#endif
 #if defined DARWIN_CARBON
       real(r8), allocatable :: gud_atmos_pCO2(:)      ! dimensionless
       real(r8), allocatable :: R_OP(:)                ! mmol O (mmol P)-1
@@ -534,7 +558,7 @@
 #endif
       real(r8), allocatable :: inhib_graz(:)          ! (mmol C m-3)-1
       real(r8), allocatable :: inhib_graz_exp(:)      ! dimensionless
-      real(r8), allocatable :: hillnum(:)             ! dimensionless
+      real(r8), allocatable :: hillnumGraz(:)         ! dimensionless
       real(r8), allocatable :: hollexp(:)             ! dimensionless
       real(r8), allocatable :: phygrazmin(:)          ! mmol C m-1
       real(r8), allocatable :: pmaxPON(:)             ! s^-1
@@ -616,3 +640,4 @@
 #if defined DARWIN_PLANK_BUOYCTRL
       logical, allocatable :: buoyctrl(:,:)           ! dimensionless
 #endif
+

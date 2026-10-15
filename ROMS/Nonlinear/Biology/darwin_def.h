@@ -22,6 +22,20 @@
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+      Vinfo( 1)='isPred'
+      Vinfo( 2)='plankton is a predator'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, nf90_int,                  &
+     &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='isPrey'
+      Vinfo( 2)='plankton can be prey'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, nf90_int,                  &
+     &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
       Vinfo( 1)='bactType'
       Vinfo( 2)='bacteria type'
       Vinfo( 3)='dimensionless'
@@ -141,6 +155,13 @@
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+      Vinfo( 1)='tempGraz'
+      Vinfo( 2)='temperature dependence of grazing (0=off, 1=on)'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, nf90_int,                  &
+     &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
       Vinfo( 1)='ExportFracMort'
       Vinfo( 2)='fraction of linear mortality to POM'
       Vinfo( 3)='dimensionless'
@@ -155,7 +176,7 @@
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='ExportFrac'
+      Vinfo( 1)='ExportFracExude'
       Vinfo( 2)='fraction of exudation to POM'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
@@ -253,7 +274,7 @@
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='respiration'
+      Vinfo( 1)='respRate'
       Vinfo( 2)='respiration rate'
       Vinfo( 3)='s^-1'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
@@ -323,49 +344,49 @@
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='Vmax_NH4'
+      Vinfo( 1)='VmaxNH4'
       Vinfo( 2)='maximum NH4 uptake rate'
       Vinfo( 3)='mmol N (mmol C)^-1 s^-1'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='Vmax_NO2'
+      Vinfo( 1)='VmaxNO2'
       Vinfo( 2)='maximum NO2 uptake rate'
       Vinfo( 3)='mmol N (mmol C)^-1 s^-1'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='Vmax_NO3'
+      Vinfo( 1)='VmaxNO3'
       Vinfo( 2)='maximum NO3 uptake rate'
       Vinfo( 3)='mmol N (mmol C)^-1 s^-1'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='Vmax_N'
+      Vinfo( 1)='VmaxN'
       Vinfo( 2)='maximum N uptake rate'
       Vinfo( 3)='mmol N (mmol C)^-1 s^-1'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='Vmax_PO4'
+      Vinfo( 1)='VmaxPO4'
       Vinfo( 2)='maximum PO4 uptake rate'
       Vinfo( 3)='mmol P (mmol C)^-1 s^-1'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='Vmax_SiO2'
+      Vinfo( 1)='VmaxSiO2'
       Vinfo( 2)='maximum SiO2 uptake rate'
       Vinfo( 3)='mmol Si (mmol C)^-1 s^-1'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='Vmax_FeT'
+      Vinfo( 1)='VmaxFeT'
       Vinfo( 2)='maximum Fe uptake rate'
       Vinfo( 3)='mmol Fe (mmol C)^-1 s^-1'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
@@ -414,6 +435,36 @@
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#if defined DARWIN_FUTURE
+      Vinfo( 1)='hillnumDIN'
+      Vinfo( 2)='Hill exponent for DIN quota down-regulation'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='hillnumPO4'
+      Vinfo( 2)='Hill exponent for PO4 quota down-regulation'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='hillnumFeT'
+      Vinfo( 2)='Hill exponent for FeT quota down-regulation'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='hillnumSiO2'
+      Vinfo( 2)='Hill exponent for SiO2 quota down-regulation'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
       Vinfo( 1)='kexcC'
       Vinfo( 2)='C excretion rate'
       Vinfo( 3)='s^-1'
@@ -450,7 +501,7 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
 #if defined DARWIN_GEIDER
-      Vinfo( 1)='inhibcoef_geid'
+      Vinfo( 1)='inhibGeider'
       Vinfo( 2)='unknown description'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
@@ -1612,6 +1663,45 @@
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+      Vinfo( 1)='grp_tempGraz'
+      Vinfo( 2)='group value for tempGraz'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, nf90_int,                  &
+     &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if defined DARWIN_FUTURE
+      Vinfo( 1)='grp_hillnumDIN'
+      Vinfo( 2)='group value for hillnumDIN'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='grp_hillnumPO4'
+      Vinfo( 2)='group value for hillnumPO4'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='grp_hillnumFeT'
+      Vinfo( 2)='group value for hillnumFeT'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='grp_hillnumSiO2'
+      Vinfo( 2)='group value for hillnumSiO2'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS
       Vinfo( 1)='grp_Xmin'
       Vinfo( 2)='group value for Xmin'
       Vinfo( 3)='mmol C m^-3'
@@ -1940,14 +2030,14 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='a_vmax_NO3_pday'
-      Vinfo( 2)='a-coefficient for Vmax_NO3'
+      Vinfo( 2)='a-coefficient for VmaxNO3'
       Vinfo( 3)='mmol N (mmol C)^-1 d^-1 um^-3'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='b_vmax_NO3'
-      Vinfo( 2)='b-coefficient for Vmax_NO3'
+      Vinfo( 2)='b-coefficient for VmaxNO3'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
@@ -2010,14 +2100,14 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='a_vmax_NO2_pday'
-      Vinfo( 2)='a-coefficient for Vmax_NO2'
+      Vinfo( 2)='a-coefficient for VmaxNO2'
       Vinfo( 3)='mmol N (mmol C)^-1 d^-1 um^-3'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='b_vmax_NO2'
-      Vinfo( 2)='b-coefficient for Vmax_NO2'
+      Vinfo( 2)='b-coefficient for VmaxNO2'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
@@ -2038,14 +2128,14 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='a_vmax_NH4_pday'
-      Vinfo( 2)='a-coefficient for Vmax_NH4'
+      Vinfo( 2)='a-coefficient for VmaxNH4'
       Vinfo( 3)='mmol N (mmol C)^-1 d^-1 um^-3'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='b_vmax_NH4'
-      Vinfo( 2)='b-coefficient for Vmax_NH4'
+      Vinfo( 2)='b-coefficient for VmaxNH4'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
@@ -2066,28 +2156,28 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='a_vmax_N_pday'
-      Vinfo( 2)='a-coefficient for Vmax_N'
+      Vinfo( 2)='a-coefficient for VmaxN'
       Vinfo( 3)='mmol N (mmol C)^-1 d^-1 um^-3'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='b_vmax_N'
-      Vinfo( 2)='b-coefficient for Vmax_N'
+      Vinfo( 2)='b-coefficient for VmaxN'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='a_vmax_PO4_pday'
-      Vinfo( 2)='a-coefficient for Vmax_PO4'
+      Vinfo( 2)='a-coefficient for VmaxPO4'
       Vinfo( 3)='mmol P (mmol C)^-1 d^-1 um^-3'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='b_vmax_PO4'
-      Vinfo( 2)='b-coefficient for Vmax_PO4'
+      Vinfo( 2)='b-coefficient for VmaxPO4'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
@@ -2150,14 +2240,14 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='a_vmax_SiO2_pday'
-      Vinfo( 2)='a-coefficient for Vmax_SiO2'
+      Vinfo( 2)='a-coefficient for VmaxSiO2'
       Vinfo( 3)='mmol Si (mmol C)^-1 d^-1 um^-3'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='b_vmax_SiO2'
-      Vinfo( 2)='b-coefficient for Vmax_SiO2'
+      Vinfo( 2)='b-coefficient for VmaxSiO2'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
@@ -2220,14 +2310,14 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='a_vmax_FeT_pday'
-      Vinfo( 2)='a-coefficient for Vmax_FeT'
+      Vinfo( 2)='a-coefficient for VmaxFeT'
       Vinfo( 3)='mmol Fe (mmol C)^-1 d^-1 um^-3'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
       Vinfo( 1)='b_vmax_FeT'
-      Vinfo( 2)='b-coefficient for Vmax_FeT'
+      Vinfo( 2)='b-coefficient for VmaxFeT'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
      &  1, (/groupdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
@@ -2688,6 +2778,13 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+      Vinfo( 1)='ksatO2remin'
+      Vinfo( 2)='half-saturation conc. of O2 for remineralization (0: disabled)'
+      Vinfo( 3)='mmol O2 m^-3'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
       Vinfo( 1)='KPOSi_pday'
       Vinfo( 2)='POSi remin rate'
       Vinfo( 3)='d^-1'
@@ -2744,6 +2841,29 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+      Vinfo( 1)='darwin_disscSelect'
+      Vinfo( 2)='PIC dissolution law (0: linear, 1: Keir 1980, 2: Naviaux et al. 2019)'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, nf90_int,                  &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#if defined DARWIN_FUTURE
+      Vinfo( 1)='darwin_KeirCoeff'
+      Vinfo( 2)='Keir 1980 PIC dissolution rate coefficient'
+      Vinfo( 3)='s^-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='darwin_KeirExp'
+      Vinfo( 2)='Keir 1980 PIC dissolution rate exponent'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
 #if defined DARWIN_CARBON
       Vinfo( 1)='gud_atmos_pCO2'
       Vinfo( 2)='CO2 fraction of air'
@@ -2927,7 +3047,7 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
-      Vinfo( 1)='hillnum'
+      Vinfo( 1)='hillnumGraz'
       Vinfo( 2)='exponent for limiting quota uptake in grazing'
       Vinfo( 3)='dimensionless'
       status=def_var(ng, model, ncid, varid, NF_TYPE,                   &

@@ -715,6 +715,31 @@ gud_select_kn_allom == 2
 
  grp_tempMort2 == 0 0 0 0 0 0 0
 
+! group value for tempgraz (dimensionless)
+! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
+
+ grp_tempGraz == 1 1 1 1 1 1 1
+
+! group value for hillnumDIN (dimensionless)
+! only active for option(s) "DARWIN_FUTURE"
+
+ grp_hillnumDIN == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
+
+! group value for hillnumPO4 (dimensionless)
+! only active for option(s) "DARWIN_FUTURE"
+
+ grp_hillnumPO4 == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
+
+! group value for hillnumFeT (dimensionless)
+! only active for option(s) "DARWIN_FUTURE"
+
+ grp_hillnumFeT == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
+
+! group value for hillnumSiO2 (dimensionless)
+! only active for option(s) "DARWIN_FUTURE"
+
+ grp_hillnumSiO2 == 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0 1.0d0
+
 ! group value for Xmin (mmol C m^-3)
 ! only active for option(s) " ! DARWIN_RANDOM_TRAITS"
 
@@ -1360,6 +1385,10 @@ fesedflux_pday == 0.0000001d0
 
     KPOFe_pday == 0.033333d0
 
+! half-saturation conc. of O2 for remineralization (0: disabled) (mmol O2 m^-3)
+
+ ksatO2remin == 0.0d0
+
 ! POSi remin rate (d^-1)
 ! original value (including pday correction): "1.0d0/(300.0d0*pday)"
 
@@ -1399,6 +1428,20 @@ wPIC_sink_pday == 15.0d0
 ! original value (including pday correction): "1.0d0/(300.0d0*pday)"
 
    Kdissc_pday == 0.00333333d0
+
+! PIC dissolution law: 0: linear (Kdissc*PIC), 1: Keir 1980 (needs
+! DARWIN_FUTURE), 2: Naviaux et al. 2019 (needs DARWIN_FUTURE)
+
+ darwin_disscSelect == 0
+
+! Keir 1980 PIC dissolution rate coefficient [s^-1] (DARWIN_FUTURE only)
+! original value: "exp(7.177d0)/100.0d0/86400.0d0"
+
+ darwin_KeirCoeff == 1.5150178653407725d-04
+
+! Keir 1980 PIC dissolution rate exponent [dimensionless] (DARWIN_FUTURE only)
+
+ darwin_KeirExp == 4.54d0
 
 ! CO2 fraction of air (dimensionless)
 ! only active for option(s) "DARWIN_CARBON"
@@ -1524,7 +1567,7 @@ inhib_graz_exp == 0.0d0
 
 ! exponent for limiting quota uptake in grazing (dimensionless)
 
-       hillnum == 1.0d0
+       hillnumGraz == 1.0d0
 
 ! grazing exponential 1=holling 2, 2=holling 3 (dimensionless)
 

@@ -229,6 +229,482 @@
                   WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
      &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
                 END DO
+#if defined DARWIN_NQUOTA
+!
+!  nitrogen quota
+!
+              CASE ('idTvar(in_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTvar(in_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,' concentration'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
+                END DO
+              CASE ('idTbry(iwest,in_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(iwest,in_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' western boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
+                END DO
+              CASE ('idTbry(ieast,in_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(ieast,in_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' eastern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
+                END DO
+              CASE ('idTbry(isouth,in_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(isouth,in_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' southern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
+                END DO
+              CASE ('idTbry(inorth,in_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(inorth,in_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' northern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
+                END DO
+#endif /* DARWIN_NQUOTA */
+#if defined DARWIN_PQUOTA
+!
+!  phosphorus quota
+!
+              CASE ('idTvar(ip_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTvar(ip_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,' concentration'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
+                END DO
+              CASE ('idTbry(iwest,ip_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(iwest,ip_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' western boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
+                END DO
+              CASE ('idTbry(ieast,ip_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(ieast,ip_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' eastern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
+                END DO
+              CASE ('idTbry(isouth,ip_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(isouth,ip_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' southern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
+                END DO
+              CASE ('idTbry(inorth,ip_)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(inorth,ip_+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' northern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
+                END DO
+#endif /* DARWIN_PQUOTA */
+#if defined DARWIN_FEQUOTA
+!
+!  iron quota
+!
+              CASE ('idTvar(ife)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTvar(ife+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,' concentration'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
+                END DO
+              CASE ('idTbry(iwest,ife)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(iwest,ife+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' western boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
+                END DO
+              CASE ('idTbry(ieast,ife)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(ieast,ife+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' eastern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
+                END DO
+              CASE ('idTbry(isouth,ife)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(isouth,ife+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' southern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
+                END DO
+              CASE ('idTbry(inorth,ife)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(inorth,ife+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' northern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
+                END DO
+#endif /* DARWIN_FEQUOTA */
+#if defined DARWIN_SIQUOTA
+!
+!  silica quota
+!
+              CASE ('idTvar(isi)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTvar(isi+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,' concentration'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2)')                     &
+     &              TRIM(ADJUSTL(Vinfo(1))),i
+                END DO
+              CASE ('idTbry(iwest,isi)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(iwest,isi+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' western boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_west'
+                END DO
+              CASE ('idTbry(ieast,isi)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(ieast,isi+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' eastern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_east'
+                END DO
+              CASE ('idTbry(isouth,isi)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(isouth,isi+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' southern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_south'
+                END DO
+              CASE ('idTbry(inorth,isi)')
+                varid=varid-1
+                DO i=1,nplank
+                  varid=varid+1
+                  idTbry(inorth,isi+i-1)=varid
+                  DO ng=1,Ngrids
+                    Fscale(varid,ng)=scale
+                    Iinfo(1,varid,ng)=gtype
+                  END DO
+                  WRITE (Vname(1,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
+                  WRITE (Vname(2,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,                          &
+     &              ' northern boundary condition'
+                  WRITE (Vname(3,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(3)))
+                  WRITE (Vname(4,varid),'(a,a)')                        &
+     &              TRIM(Vname(1,varid)), ', scalar, series'
+                  WRITE (Vname(5,varid),'(a)')                          &
+     &              TRIM(ADJUSTL(Vinfo(5)))
+                  WRITE (Vname(6,varid),'(a,i2.2,a)')                   &
+     &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
+                END DO
+#endif /* DARWIN_SIQUOTA */
 #if defined DIAGNOSTICS_BIO_DEACTIVATED
 !
 !  Higher-dimensional diagnostic terms.

@@ -1122,16 +1122,20 @@
      &      '==========================='
 #endif
           ic=1
-          DO i=iMinPred,iMaxPred
-            write(out,'(3x,a8,i4,a,1x,a)') 'predator',ic,':',           &
-     &        trim(plankname(i))
-            ic=ic+1
+          DO i=1,nplank
+            IF (isPred(i,ng).NE.0) THEN
+              write(out,'(3x,a8,i4,a,1x,a)') 'predator',ic,':',         &
+     &          trim(plankname(i))
+              ic=ic+1
+            END IF
           END DO
           ic=1
-          DO is=iMinPrey,iMaxPrey
-            write(out,'(3x,a8,i4,a,1x,a)') 'prey',ic,':',               &
-     &        trim(plankname(is))
-            ic=ic+1
+          DO is=1,nplank
+            IF (isPrey(is,ng).NE.0) THEN
+              write(out,'(3x,a8,i4,a,1x,a)') 'prey',ic,':',             &
+     &          trim(plankname(is))
+              ic=ic+1
+            END IF
           END DO
 #if ! defined DARWIN_RANDOM_TRAITS
 !
@@ -1245,11 +1249,13 @@
           write (out,'(/22x,9(1x,a12))')                                &
      &      'PCmax','PCmax (d-1)',                                      &
      &      'ksatDON','ksatDOC','ksatDOP','ksatDOFe'
-          DO i=iMinBact,iMaxBact
-            write (out,'(a20,": ",9(1x,f12.9))') trim(plankname(i)),    &
-     &      PCmax(i,ng),PCmax(i,ng)*day2sec,                            &
-     &      ksatDON(i,ng),ksatDOC(i,ng),ksatDOP(i,ng),                  &
-     &      ksatDOFe(i,ng)
+          DO i=1,nplank
+            IF (bactType(i,ng).NE.0) THEN
+              write (out,'(a20,": ",9(1x,f12.9))') trim(plankname(i)),  &
+     &        PCmax(i,ng),PCmax(i,ng)*day2sec,                          &
+     &        ksatDON(i,ng),ksatDOC(i,ng),ksatDOP(i,ng),                &
+     &        ksatDOFe(i,ng)
+            END IF
           END DO
 #endif
 !
@@ -1276,9 +1282,11 @@
      &      '========================================'
           write (out,'(22x,2(1x,a15))')                                 &
      &      'grazemax','grazemax (d-1)'
-          DO i=iMinPred,iMaxPred
-            write (out,'(a20,": ",2(1x,f15.9))') trim(plankname(i)),    &
-     &      grazemax(i,ng),grazemax(i,ng)*day2sec
+          DO i=1,nplank
+            IF (isPred(i,ng).NE.0) THEN
+              write (out,'(a20,": ",2(1x,f15.9))') trim(plankname(i)),  &
+     &        grazemax(i,ng),grazemax(i,ng)*day2sec
+            END IF
           END DO
 
 #if ! defined DARWIN_READ_PALAT
@@ -1289,16 +1297,25 @@
           write(out,'(10x,a)') 'predator'
           write(out,'(3x,a4,3x)',advance='no') 'prey'
           ic=1
-          DO i=iMinPred,iMaxPred
-            write(out,'(i6)',advance='no') ic
-            ic=ic+1
+          DO i=1,nplank
+            IF (isPred(i,ng).NE.0) THEN
+              write(out,'(i6)',advance='no') ic
+              ic=ic+1
+            END IF
           END DO
           write(out,*) ''
           ic=1
-          DO is=iMinPrey,iMaxPrey
-            write(out,'(3x,i4,3x,99(1x,f5.3))') ic,                     &
-     &        palat(is,iMinPred:iMaxPred,ng)
-            ic=ic+1
+          DO is=1,nplank
+            IF (isPrey(is,ng).NE.0) THEN
+              write(out,'(3x,i4,3x)',advance='no') ic
+              DO i=1,nplank
+                IF (isPred(i,ng).NE.0) THEN
+                  write(out,'(1x,f5.3)',advance='no') palat(is,i,ng)
+                END IF
+              END DO
+              write(out,*) ''
+              ic=ic+1
+            END IF
           END DO
 #endif
         END IF
@@ -1540,21 +1557,15 @@
 #else /* DARWIN_BACT_ALLOMETRIC */
             PCmax(ip,ng) = 0.0_r8
 #endif /* DARWIN_BACT_ALLOMETRIC */
-            Vmax_PO4(ip,ng) = 0.0_r8
-            Vmax_NO3(ip,ng) = 0.0_r8
-            Vmax_NO2(ip,ng) = 0.0_r8
-            Vmax_NH4(ip,ng) = 0.0_r8
-            Vmax_FeT(ip,ng) = 0.0_r8
-            Vmax_SiO2(ip,ng) = 0.0_r8
+            VmaxPO4(ip,ng) = 0.0_r8
+            VmaxNO3(ip,ng) = 0.0_r8
+            VmaxNO2(ip,ng) = 0.0_r8
+            VmaxNH4(ip,ng) = 0.0_r8
+            VmaxFeT(ip,ng) = 0.0_r8
+            VmaxSiO2(ip,ng) = 0.0_r8
           ENDIF
 
           IF (bactType(ip,ng) .NE. 0) THEN
-            IF (ip.LT.iMinBact .OR. ip.GT.iMaxBact) THEN
-              IF (Master) WRITE(out,'(2A,I4)') 'Error: ',               &
-     & 'bactType set for type outside of bacteria range: ', ip
-              exit_flag=5
-              RETURN
-            ENDIF
             IF (isAerobic(ip,ng).NE.0 .AND. isDenit(ip,ng).NE.0) THEN
               IF (Master) WRITE(out,'(2A,I4)') 'Error: ',               &
      & 'isAerobic and isDenit both set: ', ip
@@ -1578,11 +1589,11 @@
 
           DO i=1,nplank
             IF (palat(ip,i,ng) .NE. 0.0_r8) THEN
-              IF (ip.LT.iMinPrey .OR. ip.GT.iMaxPrey) THEN
+              IF (isPrey(ip,ng).EQ.0) THEN
                 IF (Master) WRITE(out,'(2A,I4)') ' Warning: ',          &
      & 'palat set for type outside of prey range: ', ip
               ENDIF
-              IF (i.LT.iMinPred .OR. i.GT.iMaxPred) THEN
+              IF (isPred(i,ng).EQ.0) THEN
                 IF (Master) WRITE(out,'(2A,I4)') 'Warning: ',           &
      & 'palat set for type outside of predator range: ', i
               ENDIF
@@ -1594,7 +1605,7 @@
 !  Converted from gud_init_fixed.F
 !
         DO i=1,nPlank
-          IF (ExportFrac(i,ng).ne.0.0_r8) THEN
+          IF (ExportFracExude(i,ng).ne.0.0_r8) THEN
             If (Master) WRITE(out,'(2a,/a,a)') 'Error: ',               &
      &        'ExportFrac can only be used with DARWIN_EXUDE.',         &
      &        'Use ExportFracMort and ExportFracMort2 ',                &
@@ -1610,8 +1621,10 @@
 !
 
 ! check all required palat are set
-        DO i=iMinPred,iMaxPred
-          DO is=iMinPrey,iMaxPrey
+        DO i=1,nplank
+          IF (isPred(i,ng).EQ.0) CYCLE
+          DO is=1,nplank
+            IF (isPrey(is,ng).EQ.0) CYCLE
             IF (palat(is,i,ng) .LT. 0.0_r8) THEN
               IF(Master) WRITE(out,'(a,i0,a,i0,a,i0,a)')                &
      &          'Error: Grid', ng,                                      &
@@ -1621,6 +1634,27 @@
             END IF
           END DO
         END DO
+! check darwin_disscSelect: options 1 (Keir 1980) and 2 (Naviaux et al.
+! 2019) need the calcite saturation state omegaCl, only available
+! under DARWIN_FUTURE.
+#if ! defined DARWIN_FUTURE
+        IF (darwin_disscSelect(ng).NE.0) THEN
+          IF (Master) WRITE(out,'(a,i0,a)')                             &
+     &      'Error: darwin_disscSelect must be 0 for Grid ', ng,        &
+     &      ' (values 1 and 2 require DARWIN_FUTURE).'
+          exit_flag=5
+          RETURN
+        END IF
+#else
+        IF (darwin_disscSelect(ng).LT.0 .OR.                            &
+     &      darwin_disscSelect(ng).GT.2) THEN
+          IF (Master) WRITE(out,'(a,i0,a)')                             &
+     &      'Error: darwin_disscSelect must be 0, 1, or 2 for Grid ',   &
+     &      ng, '.'
+          exit_flag=5
+          RETURN
+        END IF
+#endif
 ! check we are not using hollexp and also inhib_graz or DARWIN_GRAZING_SWITCH
         IF (hollexp(ng).ne.1.0_r8) THEN
           IF (inhib_graz_exp(ng).ne.0) THEN
@@ -1644,8 +1678,7 @@
 !
         DO i=1,nplank
           DO is=1,nplank
-            IF ((i.lt.iMinPrey.or.i.gt.iMaxPrey.or.                     &
-     &           is.lt.iMinPred.or.is.gt.iMaxPred).and.                 &
+            IF ((isPrey(i,ng).EQ.0.OR.isPred(is,ng).EQ.0).and.          &
      &           palat(i,is,ng).ne.0.0_r8) THEN
               IF(Master) WRITE(out,'(a,i0,a,i0,a,i0,a)')                &
      &          'Error: Grid', ng,                                      &

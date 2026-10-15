@@ -7,6 +7,16 @@
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
       isPhoto(:,:)=0
+      IF (.not.allocated(isPred)) THEN
+        allocate ( isPred(nplank,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
+      END IF
+      isPred(:,:)=0
+      IF (.not.allocated(isPrey)) THEN
+        allocate ( isPrey(nplank,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
+      END IF
+      isPrey(:,:)=0
       IF (.not.allocated(bactType)) THEN
         allocate ( bactType(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
@@ -92,6 +102,11 @@
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
       tempMort2(:,:)=0
+      IF (.not.allocated(tempGraz)) THEN
+        allocate ( tempGraz(nplank,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
+      END IF
+      tempGraz(:,:)=1
       IF (.not.allocated(ExportFracMort)) THEN
         allocate ( ExportFracMort(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
@@ -102,11 +117,11 @@
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
       ExportFracMort2(:,:)=0.0_r8
-      IF (.not.allocated(ExportFrac)) THEN
-        allocate ( ExportFrac(nplank,Ngrids) )
+      IF (.not.allocated(ExportFracExude)) THEN
+        allocate ( ExportFracExude(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      ExportFrac(:,:)=0.0_r8
+      ExportFracExude(:,:)=0.0_r8
       IF (.not.allocated(phytoTempCoeff)) THEN
         allocate ( phytoTempCoeff(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
@@ -172,11 +187,11 @@
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
       wswim(:,:)=0.0_r8
-      IF (.not.allocated(respiration)) THEN
-        allocate ( respiration(nplank,Ngrids) )
+      IF (.not.allocated(respRate)) THEN
+        allocate ( respRate(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      respiration(:,:)=0.0_r8
+      respRate(:,:)=0.0_r8
       IF (.not.allocated(PCmax)) THEN
         allocate ( PCmax(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
@@ -222,41 +237,41 @@
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
       Qfemin(:,:)=0.0_r8
-      IF (.not.allocated(Vmax_NH4)) THEN
-        allocate ( Vmax_NH4(nplank,Ngrids) )
+      IF (.not.allocated(VmaxNH4)) THEN
+        allocate ( VmaxNH4(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      Vmax_NH4(:,:)=0.0_r8
-      IF (.not.allocated(Vmax_NO2)) THEN
-        allocate ( Vmax_NO2(nplank,Ngrids) )
+      VmaxNH4(:,:)=0.0_r8
+      IF (.not.allocated(VmaxNO2)) THEN
+        allocate ( VmaxNO2(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      Vmax_NO2(:,:)=0.0_r8
-      IF (.not.allocated(Vmax_NO3)) THEN
-        allocate ( Vmax_NO3(nplank,Ngrids) )
+      VmaxNO2(:,:)=0.0_r8
+      IF (.not.allocated(VmaxNO3)) THEN
+        allocate ( VmaxNO3(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      Vmax_NO3(:,:)=0.0_r8
-      IF (.not.allocated(Vmax_N)) THEN
-        allocate ( Vmax_N(nplank,Ngrids) )
+      VmaxNO3(:,:)=0.0_r8
+      IF (.not.allocated(VmaxN)) THEN
+        allocate ( VmaxN(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      Vmax_N(:,:)=0.0_r8
-      IF (.not.allocated(Vmax_PO4)) THEN
-        allocate ( Vmax_PO4(nplank,Ngrids) )
+      VmaxN(:,:)=0.0_r8
+      IF (.not.allocated(VmaxPO4)) THEN
+        allocate ( VmaxPO4(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      Vmax_PO4(:,:)=0.0_r8
-      IF (.not.allocated(Vmax_SiO2)) THEN
-        allocate ( Vmax_SiO2(nplank,Ngrids) )
+      VmaxPO4(:,:)=0.0_r8
+      IF (.not.allocated(VmaxSiO2)) THEN
+        allocate ( VmaxSiO2(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      Vmax_SiO2(:,:)=0.0_r8
-      IF (.not.allocated(Vmax_FeT)) THEN
-        allocate ( Vmax_FeT(nplank,Ngrids) )
+      VmaxSiO2(:,:)=0.0_r8
+      IF (.not.allocated(VmaxFeT)) THEN
+        allocate ( VmaxFeT(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      Vmax_FeT(:,:)=0.0_r8
+      VmaxFeT(:,:)=0.0_r8
       IF (.not.allocated(ksatNH4)) THEN
         allocate ( ksatNH4(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
@@ -287,6 +302,28 @@
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
       ksatFeT(:,:)=0.0_r8
+#if defined DARWIN_FUTURE
+      IF (.not.allocated(hillnumDIN)) THEN
+        allocate ( hillnumDIN(nplank,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
+      END IF
+      hillnumDIN(:,:)=1.0_r8
+      IF (.not.allocated(hillnumPO4)) THEN
+        allocate ( hillnumPO4(nplank,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
+      END IF
+      hillnumPO4(:,:)=1.0_r8
+      IF (.not.allocated(hillnumFeT)) THEN
+        allocate ( hillnumFeT(nplank,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
+      END IF
+      hillnumFeT(:,:)=1.0_r8
+      IF (.not.allocated(hillnumSiO2)) THEN
+        allocate ( hillnumSiO2(nplank,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
+      END IF
+      hillnumSiO2(:,:)=1.0_r8
+#endif
       IF (.not.allocated(kexcC)) THEN
         allocate ( kexcC(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
@@ -313,11 +350,11 @@
       END IF
       kexcFe(:,:)=0.0_r8
 #if defined DARWIN_GEIDER
-      IF (.not.allocated(inhibcoef_geid)) THEN
-        allocate ( inhibcoef_geid(nplank,Ngrids) )
+      IF (.not.allocated(inhibGeider)) THEN
+        allocate ( inhibGeider(nplank,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
-      inhibcoef_geid(:,:)=0.0_r8
+      inhibGeider(:,:)=0.0_r8
 #endif
 #if ! defined DARWIN_GEIDER
       IF (.not.allocated(ksatPAR)) THEN
@@ -1054,6 +1091,30 @@
         allocate ( grp_tempMort2(nGroup,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
       END IF
+      IF (.not.allocated(grp_tempGraz)) THEN
+        allocate ( grp_tempGraz(nGroup,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
+      END IF
+#endif
+#if defined DARWIN_FUTURE
+      IF (.not.allocated(grp_hillnumDIN)) THEN
+        allocate ( grp_hillnumDIN(nGroup,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
+      END IF
+      IF (.not.allocated(grp_hillnumPO4)) THEN
+        allocate ( grp_hillnumPO4(nGroup,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
+      END IF
+      IF (.not.allocated(grp_hillnumFeT)) THEN
+        allocate ( grp_hillnumFeT(nGroup,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
+      END IF
+      IF (.not.allocated(grp_hillnumSiO2)) THEN
+        allocate ( grp_hillnumSiO2(nGroup,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
+      END IF
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS
       IF (.not.allocated(grp_Xmin)) THEN
         allocate ( grp_Xmin(nGroup,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nGroup*Ngrids,r8)
@@ -1823,6 +1884,10 @@
         allocate ( KPOFe_pday(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+      IF (.not.allocated(ksatO2remin)) THEN
+        allocate ( ksatO2remin(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
       IF (.not.allocated(KPOSi)) THEN
         allocate ( KPOSi(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -1887,6 +1952,20 @@
         allocate ( Kdissc_pday(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+      IF (.not.allocated(darwin_disscSelect)) THEN
+        allocate ( darwin_disscSelect(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+#if defined DARWIN_FUTURE
+      IF (.not.allocated(darwin_KeirCoeff)) THEN
+        allocate ( darwin_KeirCoeff(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+      IF (.not.allocated(darwin_KeirExp)) THEN
+        allocate ( darwin_KeirExp(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+#endif
 #if defined DARWIN_CARBON
       IF (.not.allocated(gud_atmos_pCO2)) THEN
         allocate ( gud_atmos_pCO2(Ngrids) )
@@ -1995,8 +2074,8 @@
         allocate ( inhib_graz_exp(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
-      IF (.not.allocated(hillnum)) THEN
-        allocate ( hillnum(Ngrids) )
+      IF (.not.allocated(hillnumGraz)) THEN
+        allocate ( hillnumGraz(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
       IF (.not.allocated(hollexp)) THEN
@@ -2258,3 +2337,4 @@
       END IF
       buoyctrl(:,:)=.FALSE.
 #endif
+

@@ -79,7 +79,7 @@
 !                (40) Two-way coupling to Sea Ice Model                !
 !                (41) Two-way coupling to Wave Model                   !
 !                (42) Sea-ice kernel                                   !
-!                (43) Unused 02                                        !
+!                (43) Darwin plankton growth/grazing kernel            !
 !                (44) Unused 03                                        !
 !                (45) Unused 04                                        !
 !                (46) Unused 05                                        !
@@ -202,7 +202,7 @@
      &      'Two-way coupling to Sea Ice Model ................',       & !40
      &      'Two-way coupling to Wave Model ...................',       & !41
      &      'Waves Effect on Currents kernel ..................',       & !42
-     &      'Unused 02 ........................................',       & !43
+     &      'Darwin plankton growth/grazing kernel ............',       & !43
      &      'Unused 03 ........................................',       & !44
      &      'Unused 04 ........................................',       & !45
      &      'Unused 05 ........................................',       & !46

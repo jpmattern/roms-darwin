@@ -49,7 +49,7 @@
 # if defined DARWIN_REPORT_TRAITS
       use mod_biology
 # elif defined DARWIN_READ_PALAT || defined DARWIN_READ_ASSEFF || defined DARWIN_READ_EXPORTFRACMORT || defined DARWIN_READ_EXPORTFRACMORT2 || defined DARWIN_READ_EXPORTFRACPREYPRED || defined DARWIN_READ_MORT2 || defined DARWIN_READ_GRAZEMAX
-      use mod_biology,        ONLY: nplank, iMinPred, iMaxPred, iMinPrey, iMaxPrey
+      use mod_biology,        ONLY: nplank, isPred, isPrey
 #  if defined DARWIN_READ_PALAT
       use mod_biology,        ONLY: palat
 #  endif
@@ -217,7 +217,7 @@
       logical, dimension(NV) :: get_var, have_var
 !
 #if defined DARWIN && defined DARWIN_READ_PALAT
-      integer :: ic, is
+      integer :: is
 #endif
       integer :: IDmod, InpRec, gtype, i, ifield, itrc, lstr, lend
       integer :: Nrec, mySize, ncINPid, nvatts, nvdim, status, varid
@@ -2390,23 +2390,6 @@
 !
         IF (Master) THEN
           WRITE (stdout,70) 'palat', MINVAL(palat), MAXVAL(palat)
-          !write(stdout,'(/18x,a)') 'palat:'
-          write(stdout,'(27x,a)') 'predator'
-          write(stdout,'(20x,a4,3x)',advance='no') 'prey'
-          ic=1
-          DO i=iMinPred,iMaxPred
-            write(stdout,'(i6)',advance='no') ic
-            ic=ic+1
-          END DO
-          write(stdout,*) ''
-          ic=1
-          DO is=iMinPrey,iMaxPrey
-            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                  &
-     &        palat(is,iMinPred:iMaxPred,ng)
-            ic=ic+1
-          END DO
-        END IF
-        IF (Master) THEN
           write(stdout,'(/20x,a)') 'non-zero elements:'
           DO is=1,nplank
             DO i=1,nplank
@@ -2418,16 +2401,18 @@
           END DO
         END IF
 !
-!  Check palat.
+!  Check palat: non-zero entries are only allowed where the prey index
+!  (first dimension) is tagged isPrey and the predator index (second
+!  dimension) is tagged isPred.
 !
         DO i=1,nplank
           DO is=1,nplank
-            IF ((i.lt.iMinPrey.or.i.gt.iMaxPrey.or.                     &
-     &           is.lt.iMinPred.or.is.gt.iMaxPred).and.                 &
+            IF ((isPrey(i,ng).eq.0.or.isPred(is,ng).eq.0).and.          &
      &           palat(i,is,ng).ne.0.0_r8) THEN
               IF(Master) WRITE(stdout,'(a,i0,a,i0,a,i0,a)')             &
      &          'GET_STATE - error: grid', ng,                          &
-     &          ': non-zero palat at unused index (',i,',',is,').'
+     &          ': non-zero palat at non-prey/predator index (',i,',', &
+     &          is,').'
               exit_flag=5
               ioerror=status
               RETURN
@@ -2461,20 +2446,14 @@
 !
         IF (Master) THEN
           WRITE (stdout,70) 'asseff', MINVAL(asseff), MAXVAL(asseff)
-          !write(stdout,'(/18x,a)') 'asseff:'
-          write(stdout,'(27x,a)') 'predator'
-          write(stdout,'(20x,a4,3x)',advance='no') 'prey'
-          ic=1
-          DO i=iMinPred,iMaxPred
-            write(stdout,'(i6)',advance='no') ic
-            ic=ic+1
-          END DO
-          write(stdout,*) ''
-          ic=1
-          DO is=iMinPrey,iMaxPrey
-            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                 &
-     &        asseff(is,iMinPred:iMaxPred,ng)
-            ic=ic+1
+          write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO is=1,nplank
+            DO i=1,nplank
+              IF (asseff(i,is,ng).gt.0.0_r8) THEN
+                write(stdout,'(22x,a,i2,a,i2,a,f5.3)')                   &
+     &           'asseff(',i,',',is,') = ',asseff(i,is,ng)
+              END IF
+            END DO
           END DO
         END IF
 #  endif /* DARWIN_READ_ASSEFF */
@@ -2506,19 +2485,15 @@
         IF (Master) THEN
           WRITE (stdout,70) 'ExportFracPreyPred',                       &
      &      MINVAL(ExportFracPreyPred), MAXVAL(ExportFracPreyPred)
-          write(stdout,'(27x,a)') 'predator'
-          write(stdout,'(20x,a4,3x)',advance='no') 'prey'
-          ic=1
-          DO i=iMinPred,iMaxPred
-            write(stdout,'(i6)',advance='no') ic
-            ic=ic+1
-          END DO
-          write(stdout,*) ''
-          ic=1
-          DO is=iMinPrey,iMaxPrey
-            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                 &
-     &        ExportFracPreyPred(is,iMinPred:iMaxPred,ng)
-            ic=ic+1
+          write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO is=1,nplank
+            DO i=1,nplank
+              IF (ExportFracPreyPred(i,is,ng).gt.0.0_r8) THEN
+                write(stdout,'(22x,a,i2,a,i2,a,f5.3)')                   &
+     &           'ExportFracPreyPred(',i,',',is,') = ',                 &
+     &           ExportFracPreyPred(i,is,ng)
+              END IF
+            END DO
           END DO
         END IF
 #  endif /* DARWIN_READ_EXPORTFRACPREYPRED */

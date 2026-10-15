@@ -312,6 +312,20 @@
               Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_tempMort)
             CASE ('grp_tempMort2')
               Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_tempMort2)
+            CASE ('grp_tempGraz')
+              Npts=load_i(Nval, Rval, nGroup, Ngrids, grp_tempGraz)
+#endif
+#if defined DARWIN_FUTURE
+            CASE ('grp_hillnumDIN')
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_hillnumDIN)
+            CASE ('grp_hillnumPO4')
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_hillnumPO4)
+            CASE ('grp_hillnumFeT')
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_hillnumFeT)
+            CASE ('grp_hillnumSiO2')
+              Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_hillnumSiO2)
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS
             CASE ('grp_Xmin')
               Npts=load_r(Nval, Rval, nGroup, Ngrids, grp_Xmin)
             CASE ('grp_R_NC')
@@ -710,6 +724,8 @@
               DO ng=1,Ngrids
                 KPOFe(ng)=KPOFe_pday(ng)*sec2day
               END DO
+            CASE ('ksatO2remin')
+              Npts=load_r(Nval, Rval, Ngrids, ksatO2remin)
             CASE ('KPOSi_pday')
               Npts=load_r(Nval, Rval, Ngrids, KPOSi_pday)
               DO ng=1,Ngrids
@@ -750,6 +766,14 @@
               DO ng=1,Ngrids
                 Kdissc(ng)=Kdissc_pday(ng)*sec2day
               END DO
+            CASE ('darwin_disscSelect')
+              Npts=load_i(Nval, Rval, Ngrids, darwin_disscSelect)
+#if defined DARWIN_FUTURE
+            CASE ('darwin_KeirCoeff')
+              Npts=load_r(Nval, Rval, Ngrids, darwin_KeirCoeff)
+            CASE ('darwin_KeirExp')
+              Npts=load_r(Nval, Rval, Ngrids, darwin_KeirExp)
+#endif
 #if defined DARWIN_CARBON
             CASE ('gud_atmos_pCO2')
               Npts=load_r(Nval, Rval, Ngrids, gud_atmos_pCO2)
@@ -808,8 +832,8 @@
               Npts=load_r(Nval, Rval, Ngrids, inhib_graz)
             CASE ('inhib_graz_exp')
               Npts=load_r(Nval, Rval, Ngrids, inhib_graz_exp)
-            CASE ('hillnum')
-              Npts=load_r(Nval, Rval, Ngrids, hillnum)
+            CASE ('hillnumGraz')
+              Npts=load_r(Nval, Rval, Ngrids, hillnumGraz)
             CASE ('hollexp')
               Npts=load_r(Nval, Rval, Ngrids, hollexp)
             CASE ('phygrazmin')
@@ -904,3 +928,4 @@
             CASE ('grp_buoyctrl')
               Npts=load_l(Nval, Cval, nGroup, Ngrids, grp_buoyctrl)
 #endif
+

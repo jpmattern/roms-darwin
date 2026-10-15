@@ -21,6 +21,16 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+      CALL netcdf_put_ivar (ng, model, ncname, 'isPred',                &
+     &  isPred(:,ng), (/1/), (/nplank/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_ivar (ng, model, ncname, 'isPrey',                &
+     &  isPrey(:,ng), (/1/), (/nplank/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
       CALL netcdf_put_ivar (ng, model, ncname, 'bactType',              &
      &  bactType(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -106,6 +116,11 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+      CALL netcdf_put_ivar (ng, model, ncname, 'tempGraz',              &
+     &  tempGraz(:,ng), (/1/), (/nplank/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
       CALL netcdf_put_fvar (ng, model, ncname, 'ExportFracMort',        &
      &  ExportFracMort(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -116,8 +131,8 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'ExportFrac',            &
-     &  ExportFrac(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'ExportFracExude',       &
+     &  ExportFracExude(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
@@ -186,8 +201,8 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'respiration',           &
-     &  respiration(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'respRate',              &
+     &  respRate(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
@@ -236,38 +251,38 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'Vmax_NH4',              &
-     &  Vmax_NH4(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'VmaxNH4',               &
+     &  VmaxNH4(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'Vmax_NO2',              &
-     &  Vmax_NO2(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'VmaxNO2',               &
+     &  VmaxNO2(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'Vmax_NO3',              &
-     &  Vmax_NO3(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'VmaxNO3',               &
+     &  VmaxNO3(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'Vmax_N',                &
-     &  Vmax_N(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'VmaxN',                 &
+     &  VmaxN(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'Vmax_PO4',              &
-     &  Vmax_PO4(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'VmaxPO4',               &
+     &  VmaxPO4(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'Vmax_SiO2',             &
-     &  Vmax_SiO2(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'VmaxSiO2',              &
+     &  VmaxSiO2(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'Vmax_FeT',              &
-     &  Vmax_FeT(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'VmaxFeT',               &
+     &  VmaxFeT(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
@@ -301,6 +316,28 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#if defined DARWIN_FUTURE
+      CALL netcdf_put_fvar (ng, model, ncname, 'hillnumDIN',            &
+     &  hillnumDIN(:,ng), (/1/), (/nplank/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'hillnumPO4',            &
+     &  hillnumPO4(:,ng), (/1/), (/nplank/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'hillnumFeT',            &
+     &  hillnumFeT(:,ng), (/1/), (/nplank/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'hillnumSiO2',           &
+     &  hillnumSiO2(:,ng), (/1/), (/nplank/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
       CALL netcdf_put_fvar (ng, model, ncname, 'kexcC',                 &
      &  kexcC(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -327,8 +364,8 @@
      &  __FILE__)) RETURN
 
 #if defined DARWIN_GEIDER
-      CALL netcdf_put_fvar (ng, model, ncname, 'inhibcoef_geid',        &
-     &  inhibcoef_geid(:,ng), (/1/), (/nplank/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'inhibGeider',           &
+     &  inhibGeider(:,ng), (/1/), (/nplank/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
@@ -1169,6 +1206,35 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+      CALL netcdf_put_ivar (ng, model, ncname, 'grp_tempGraz',          &
+     &  grp_tempGraz(:,ng), (/1/), (/nGroup/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if defined DARWIN_FUTURE
+      CALL netcdf_put_fvar (ng, model, ncname, 'grp_hillnumDIN',        &
+     &  grp_hillnumDIN(:,ng), (/1/), (/nGroup/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'grp_hillnumPO4',        &
+     &  grp_hillnumPO4(:,ng), (/1/), (/nGroup/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'grp_hillnumFeT',        &
+     &  grp_hillnumFeT(:,ng), (/1/), (/nGroup/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'grp_hillnumSiO2',       &
+     &  grp_hillnumSiO2(:,ng), (/1/), (/nGroup/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS
       CALL netcdf_put_fvar (ng, model, ncname, 'grp_Xmin',              &
      &  grp_Xmin(:,ng), (/1/), (/nGroup/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -1947,6 +2013,11 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+      CALL netcdf_put_fvar (ng, model, ncname, 'ksatO2remin',           &
+     &  ksatO2remin(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
       CALL netcdf_put_fvar (ng, model, ncname, 'KPOSi_pday',            &
      &  KPOSi_pday(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
@@ -1987,6 +2058,23 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+      CALL netcdf_put_ivar (ng, model, ncname, 'darwin_disscSelect',    &
+     &  darwin_disscSelect(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#if defined DARWIN_FUTURE
+      CALL netcdf_put_fvar (ng, model, ncname, 'darwin_KeirCoeff',      &
+     &  darwin_KeirCoeff(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'darwin_KeirExp',        &
+     &  darwin_KeirExp(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
 #if defined DARWIN_CARBON
       CALL netcdf_put_fvar (ng, model, ncname, 'gud_atmos_pCO2',        &
      &  gud_atmos_pCO2(ng), (/0/), (/0/), ncid = ncid)
@@ -2120,8 +2208,8 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
-      CALL netcdf_put_fvar (ng, model, ncname, 'hillnum',               &
-     &  hillnum(ng), (/0/), (/0/), ncid = ncid)
+      CALL netcdf_put_fvar (ng, model, ncname, 'hillnumGraz',           &
+     &  hillnumGraz(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 

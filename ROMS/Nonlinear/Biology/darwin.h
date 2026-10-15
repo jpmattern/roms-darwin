@@ -218,31 +218,38 @@
       integer :: idia
 #endif
 
+      character (len=*), parameter :: MyFile =                         &
+     &  __FILE__
+
       real(r8), parameter :: MinVal = 1.0e-6_r8
 
       real(r8) :: cff
       real(r8), dimension(NT(ng),2) :: BioTrc
-      real(r8), dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
-      real(r8), dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio_old
+      real(r8), dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
+      real(r8), dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio_old
       real(r8), dimension(IminS:ImaxS,N(ng)) :: Hz_inv
       real(r8), dimension(IminS:ImaxS,N(ng)) :: Hz_inv2
       real(r8), dimension(IminS:ImaxS,N(ng)) :: Hz_inv3
-      real(r8), dimension(IminS:ImaxS,N(ng),nlam) :: PAR
+      real(r8), dimension(nlam,N(ng),IminS:ImaxS) :: PAR
       real(r8), dimension(IminS:ImaxS) :: PARsur
       real(r8), dimension(IminS:ImaxS,N(ng)) :: drF
 
-      real(r8), dimension(IminS:ImaxS,N(ng),darwin_nDiag) :: diags
+      real(r8), dimension(darwin_nDiag,N(ng),IminS:ImaxS) :: diags
 #if defined DIAGNOSTICS_BIO
-      real(r8), dimension(IminS:ImaxS,N(ng),nplank,NDbio4d) :: diags4d
+      real(r8), dimension(nplank,NDbio4d,N(ng),IminS:ImaxS) :: diags4d
 #endif /* DIAGNOSTICS_BIO */
-      real(r8), dimension(IminS:ImaxS,N(ng),nplank) :: photoTempFunc
-      real(r8), dimension(IminS:ImaxS,N(ng),nplank) :: grazTempFunc
+      real(r8), dimension(nplank,N(ng),IminS:ImaxS) :: photoTempFunc
+      real(r8), dimension(nplank,N(ng),IminS:ImaxS) :: grazTempFunc
       real(r8), dimension(IminS:ImaxS,N(ng)) :: reminTempFunc,          &
      &  mortTempFunc, mort2TempFunc, uptakeTempFunc
+#if defined DARWIN_FUTURE
+      real(r8), dimension(IminS:ImaxS,N(ng)) :: hetTempFunc
+      real(r8), dimension(IminS:ImaxS,N(ng)) :: omegaCl
+#endif
       real(r8), dimension(IminS:ImaxS,N(ng)) :: freefe
 #if defined DARWIN_PLANK_BUOYCTRL
-      real(r8), dimension(IminS:ImaxS,N(ng),nplank) :: limitnut_save
-      real(r8), dimension(IminS:ImaxS,N(ng),nplank) :: limitlight_save
+      real(r8), dimension(nplank,N(ng),IminS:ImaxS) :: limitnut_save
+      real(r8), dimension(nplank,N(ng),IminS:ImaxS) :: limitlight_save
 #endif
 
       !TODO read this somewhere
@@ -348,8 +355,8 @@
           ibio=idbio(itrc)
           DO k=1,N(ng)
             DO i=Istr,Iend
-              Bio_old(i,k,ibio)=MAX(0.0_r8,t(i,j,k,bstp,ibio))
-              Bio(i,k,ibio)=Bio_old(i,k,ibio)
+              Bio_old(ibio,k,i)=MAX(0.0_r8,t(i,j,k,bstp,ibio))
+              Bio(ibio,k,i)=Bio_old(ibio,k,i)
             END DO
           END DO
         END DO
@@ -358,8 +365,8 @@
 !
         DO k=1,N(ng)
           DO i=Istr,Iend
-            Bio(i,k,itemp)=t(i,j,k,bstp,itemp)
-            Bio(i,k,isalt)=t(i,j,k,bstp,isalt)
+            Bio(itemp,k,i)=t(i,j,k,bstp,itemp)
+            Bio(isalt,k,i)=t(i,j,k,bstp,isalt)
           END DO
         END DO
 #if defined DARWIN_VERBOSE_NUT || defined DARWIN_VERBOSE_PLANK
@@ -369,10 +376,10 @@
           write(*,'(2a,3(i0,a))') 'DARWIN_VERBOSE',                     &
      &      ' reporting values at (',i,',',j,',',k,')'
 # if defined DARWIN_VERBOSE_NUT
-          write(*,'(a20,f18.12)') 'initial DIC = ',Bio(i,k,iDIC)
-          write(*,'(a20,f18.12)') 'initial NH4 = ',Bio(i,k,iNH4)
-          write(*,'(a20,f18.12)') 'initial NO2 = ',Bio(i,k,iNO2)
-          write(*,'(a20,f18.12)') 'initial NO3 = ',Bio(i,k,iNO3)
+          write(*,'(a20,f18.12)') 'initial DIC = ',Bio(iDIC,k,i)
+          write(*,'(a20,f18.12)') 'initial NH4 = ',Bio(iNH4,k,i)
+          write(*,'(a20,f18.12)') 'initial NO2 = ',Bio(iNO2,k,i)
+          write(*,'(a20,f18.12)') 'initial NO3 = ',Bio(iNO3,k,i)
 # endif
         END IF
 #endif
@@ -416,7 +423,7 @@
           DO k=N(ng),1,-1
             write(*,'(3x,a,f9.2,a,99f11.7)')                            &
      &        'depth:',0.5_r8*(z_w(i,j,k)+z_w(i,j,k-1)),                &
-     &        ' PAR: ',PAR(i,k,:)
+     &        ' PAR: ',PAR(:,k,i)
           END DO
         END IF
 #endif
@@ -431,7 +438,7 @@
           DO k=N(ng),1,-1
             write(*,'(3x,a,f9.2,a,99f11.7)')                            &
      &        'depth:',0.5_r8*(z_w(i,j,k)+z_w(i,j,k-1)),                &
-     &        ' PAR: ',PAR(i,k,:)
+     &        ' PAR: ',PAR(:,k,i)
           END DO
         END IF
 #endif
@@ -463,6 +470,9 @@
 !     &    pH(:,j,:), pCO2(:,j,:), CO2flx(:,j),                          &
      &    pH, pCO2, CO2flx,                                             &
 #endif /* DARWIN_CARBON_EXTRAOUT */
+#if defined DARWIN_FUTURE
+     &    omegaCl,                                                      &
+#endif
      &    drF, diags)
 !
 !  iron
@@ -481,30 +491,34 @@
 !
         CALL tempfunc(tile, ng, IminS, ImaxS, Bio,                      &
      &    photoTempFunc, grazTempFunc, reminTempFunc, mortTempFunc,     &
-     &    mort2TempFunc, uptakeTempFunc, diags)
-        CALL darwin_model(tile, ng, IminS, ImaxS, Bio, PAR,             &
-#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK
+     &    mort2TempFunc, uptakeTempFunc,                                &
+#if defined DARWIN_FUTURE
+     &    hetTempFunc,                                                 &
+#endif
+     &    diags)
+#if defined PROFILE
+        CALL wclock_on (ng, iNLM, 43, __LINE__, MyFile)
+#endif /* PROFILE */
+        CALL darwin_plankton_tile(tile, ng, IminS, ImaxS, Bio, PAR,     &
+#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK || defined DARWIN_DEBUG
      &    j,                                                            &
 #endif
 #if defined DARWIN_PLANK_BUOYCTRL
      &    limitnut_save, limitlight_save,                               &
 #endif
      &    photoTempFunc, reminTempFunc, uptakeTempFunc,                 &
+     &    grazTempFunc, mortTempFunc, mort2TempFunc,                    &
+#if defined DARWIN_FUTURE
+     &    hetTempFunc, omegaCl,                                        &
+#endif
 #if defined DIAGNOSTICS_BIO
      &    diags, diags4d)
 #else
      &    diags)
 #endif /* DIAGNOSTICS_BIO */
-        CALL darwin_grazing(tile, ng, IminS, ImaxS, Bio,                &
-     &    grazTempFunc, reminTempFunc, mortTempFunc, mort2TempFunc      &
-#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK
-     &    ,  j                                                          &
-#endif
-#if defined DIAGNOSTICS_BIO
-     &    , diags, diags4d)
-#else
-     &    )
-#endif
+#if defined PROFILE
+        CALL wclock_off (ng, iNLM, 43, __LINE__, MyFile)
+#endif /* PROFILE */
 !
 !  sinking
 !
@@ -534,13 +548,13 @@
 !
         DO k=1,N(ng)
           DO i=Istr,Iend
-            Bio(i,k,iTChl)=0.0_r8
+            Bio(iTChl,k,i)=0.0_r8
           END DO
         END DO
         DO ibio=iChl,eChl
           DO k=1,N(ng)
             DO i=Istr,Iend
-              Bio(i,k,iTChl)=Bio(i,k,iTChl)+Bio(i,k,ibio)
+              Bio(iTChl,k,i)=Bio(iTChl,k,i)+Bio(ibio,k,i)
             END DO
           END DO
         END DO
@@ -551,7 +565,7 @@
             DO k=1,N(ng)
               DO i=Istr,Iend
                 DiaBio4d(i,j,k,ibio,itrc)=DiaBio4d(i,j,k,ibio,itrc)     &
-     &           +diags4d(i,k,ibio,itrc)
+     &           +diags4d(ibio,itrc,k,i)
               END DO
             END DO
           END DO
@@ -573,7 +587,7 @@
             idia=iDbiomapping(itrc,ng)
             DO k=1,N(ng)
               DO i=Istr,Iend
-                DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(i,k,idia)
+                DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(idia,k,i)
               END DO
             END DO
           END IF
@@ -582,7 +596,7 @@
         DO itrc=1,darwin_nDiag
           DO k=1,N(ng)
             DO i=Istr,Iend
-              DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(i,k,itrc)
+              DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(itrc,k,i)
             END DO
           END DO
         END DO
@@ -591,7 +605,7 @@
         DO itrc=1,NDbio3d
           DO k=1,N(ng)
             DO i=Istr,Iend
-              DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(i,k,itrc)
+              DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(itrc,k,i)
             END DO
           END DO
         END DO
@@ -603,10 +617,10 @@
           i=DARWIN_VERBOSE_I
           k=DARWIN_VERBOSE_K
 # if defined DARWIN_VERBOSE_NUT
-          write(*,'(a20,f18.12)') 'final DIC = ',Bio(i,k,iDIC)
-          write(*,'(a20,f18.12)') 'final NH4 = ',Bio(i,k,iNH4)
-          write(*,'(a20,f18.12)') 'final NO2 = ',Bio(i,k,iNO2)
-          write(*,'(a20,f18.12)') 'final NO3 = ',Bio(i,k,iNO3)
+          write(*,'(a20,f18.12)') 'final DIC = ',Bio(iDIC,k,i)
+          write(*,'(a20,f18.12)') 'final NH4 = ',Bio(iNH4,k,i)
+          write(*,'(a20,f18.12)') 'final NO2 = ',Bio(iNO2,k,i)
+          write(*,'(a20,f18.12)') 'final NO3 = ',Bio(iNO3,k,i)
 # endif
         END IF
 #endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
@@ -630,7 +644,7 @@
           ibio=idbio(itrc)
           DO k=1,N(ng)
             DO i=Istr,Iend
-              cff=Bio(i,k,ibio)-Bio_old(i,k,ibio)
+              cff=Bio(ibio,k,i)-Bio_old(ibio,k,i)
               t(i,j,k,bnew,ibio)=t(i,j,k,bnew,ibio)+cff*Hz(i,j,k)
             END DO
           END DO

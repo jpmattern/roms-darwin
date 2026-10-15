@@ -18,9 +18,9 @@
 !
       integer, intent(in) :: tile, ng, j, IminS, ImaxS
       real(r8),intent(in),dimension(IminS:ImaxS,N(ng)) :: drF
-      real(r8),intent(out),dimension(IminS:ImaxS,N(ng),nlam) :: PAR
+      real(r8),intent(out),dimension(nlam,N(ng),IminS:ImaxS) :: PAR
       real(r8),intent(in),dimension(IminS:ImaxS) :: PARsur
-      real(r8),intent(in),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
+      real(r8),intent(in),dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
 !
 !  Local variable declarations
 !
@@ -64,21 +64,21 @@
             ! orig code:
             !dz_k(k) = drF(k)*HFacC(i,ic,k,bi,bj)
             dz=drF(i,k)
-            part = MAX(Bio(i,k,iPOP), 0.0_r8)
+            part = MAX(Bio(iPOP,k,i), 0.0_r8)
             DO ip=1,nPhoto
 #if defined DARWIN_CHLQUOTA
-              phychl(ip)=MAX(Bio(i,k,iChl+ip-1),0.0_r8)
+              phychl(ip)=MAX(Bio(iChl+ip-1,k,i),0.0_r8)
 #else
               ! TODO implement
               phychl(ip)=MAX(chlPrev(i,k,ip), 0.0_r8)
 #endif
             ENDDO
             DO ip=1,nPlank
-              plankcar(ip)=MAX(Bio(i,k,ic_+ip-1),0.0_r8)
+              plankcar(ip)=MAX(Bio(ic_+ip-1,k,i),0.0_r8)
             ENDDO
 #if defined DARWIN_CDOM
 ! use cdom-like tracer
-            CDOM = MAX(Bio(i,k,iCDOM), 0.0_r8)
+            CDOM = MAX(Bio(iCDOM,k,i), 0.0_r8)
             DO l = 1,nlam
               aCDOM(k,l) = CDOMcoeff(ng)*CDOM*exCDOM(l)
             ENDDO
@@ -146,7 +146,7 @@
 
           DO l = 1,nlam
             DO k = 1,N(ng)
-              PAR(i,k,l) = PAR_k(k,l)
+              PAR(l,k,i) = PAR_k(k,l)
             ENDDO
           ENDDO
 ! ======================================================================
@@ -156,12 +156,12 @@
 !#endif /* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX*/
         ELSE
           DO k=1,N(ng)
-            PAR(i,k,1) = 0.0_r8
+            PAR(1,k,i) = 0.0_r8
           END DO
         END IF
 #else /* DARWIN_RADTRANS */
 !
-! adapted from darwin_light.h / gud_light.F
+! adapted from gud_light.F
 ! DRF is w-spacing (dz here)
 ! conversion from uE/s to Wm-2 is performed here
 
@@ -178,7 +178,7 @@
 #if defined DARWIN_GEIDER
 #if defined DARWIN_CHLQUOTA
             DO ic = 1, nPhoto
-              Chl = Chl + MAX(0.0_r8, Bio(i,k,iChl+ic-1))
+              Chl = Chl + MAX(0.0_r8, Bio(iChl+ic-1,k,i))
             ENDDO
 #else /* DARWIN_CHLQUOTA */
 # error "DARWIN_GEIDER + DARWIN_CHLQUOTA not yet implemented"
@@ -187,15 +187,15 @@
 #endif /* DARWIN_CHLQUOTA */
 #else /* DARWIN_GEIDER */
             DO ic = 1, nPhoto
-              Chl = Chl + MAX(0.0_r8, Bio(i,k,ic_+ic-1)*R_ChlC(ic,ng))
+              Chl = Chl + MAX(0.0_r8, Bio(ic_+ic-1,k,i)*R_ChlC(ic,ng))
             ENDDO
 #endif /* DARWIN_GEIDER */
 
             atten = (katten_w(ng) + katten_chl(ng)*Chl)*dz
 #if defined DARWIN_AVPAR
-            PAR(i,k,1) = PARF*(1.0_r8 - EXP(-atten))/atten
+            PAR(1,k,i) = PARF*(1.0_r8 - EXP(-atten))/atten
 #else /* USE_MIDPAR */
-            PAR(i,k,1) = PARF*EXP(-0.5_r8*atten)
+            PAR(1,k,i) = PARF*EXP(-0.5_r8*atten)
 #endif
 #if defined DARWIN_DIAGNOSTICS
             IF (useDiagnostics .AND. myIter .GE.0) THEN
@@ -207,7 +207,7 @@
           END DO
         ELSE
           DO k=1,N(ng)
-            PAR(i,k,1) = 0.0_r8
+            PAR(1,k,i) = 0.0_r8
           END DO
         END IF
 #endif /* DARWIN_RADTRANS */
@@ -234,6 +234,9 @@
 # if defined DARWIN_CARBON_EXTRAOUT
      &  pH, pCO2, CO2flx,                                               &
 # endif
+# if defined DARWIN_FUTURE
+     &  omegaCl,                                                        &
+# endif
      &  drF, diags)
 !
       USE mod_biology
@@ -243,7 +246,7 @@
 !
       integer, intent(in) :: tile, ng, j, IminS, ImaxS
       integer, intent(in) :: LBi, LBj
-      real(r8),intent(inout),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
+      real(r8),intent(inout),dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
 #ifdef ASSUMED_SHAPE
 !# ifdef MASKING
 !      real(r8), intent(in) :: rmask(LBi:,LBj:)
@@ -280,7 +283,10 @@
 #endif
       real(r8),dimension(IminS:ImaxS,1:N(ng)) :: drF
       real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) ::diags
+     &  dimension(darwin_nDiag,N(ng),IminS:ImaxS) ::diags
+#if defined DARWIN_FUTURE
+      real(r8), intent(out), dimension(IminS:ImaxS,N(ng)) :: omegaCl
+#endif
 !
 !  Local variable declarations
 !
@@ -395,8 +401,8 @@
 ! flux of O2
 
 ! calculate SCHMIDT NO. for O2
-        ttemp = Bio(i,ks,itemp)
-        stemp = Bio(i,ks,isalt)
+        ttemp = Bio(itemp,ks,i)
+        stemp = Bio(isalt,ks,i)
 
         SchmidtNoO2 =sox1(ng)+ sox2(ng) * ttemp+ sox3(ng) * ttemp*ttemp+ sox4(ng) * ttemp*ttemp*ttemp
 
@@ -427,7 +433,7 @@
         O2sat = o2s/22.3916e-3_r8
 
 ! Determine flux, inc. correction for local atmos surface pressure
-        FluxO2 = Kwexch*(AtmosP*O2sat- Bio(i,ks,iO2))
+        FluxO2 = Kwexch*(AtmosP*O2sat- Bio(iO2,ks,i))
 
         ! recip_drF is the reciprocal of drF
         ! with definition of drF as above
@@ -441,8 +447,8 @@
 
 ! determine inorganic carbon chem coefficients
 ! put bounds on tracers so pH solver doesn't blow up
-          surfsalt = MAX(surfSaltMin(ng),MIN(surfSaltMax(ng), Bio(i,k,isalt)))
-          surftemp = MAX(surfTempMin(ng),MIN(surfTempMax(ng), Bio(i,k,itemp)))
+          surfsalt = MAX(surfSaltMin(ng),MIN(surfSaltMax(ng), Bio(isalt,k,i)))
+          surftemp = MAX(surfTempMin(ng),MIN(surfTempMax(ng), Bio(itemp,k,i)))
 #if defined DARWIN_VERBOSE_PLANK_OLD
           IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
             write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'surfforcing',       'surftemp=',surftemp,',surfsalt=',surfsalt
@@ -467,10 +473,10 @@
           END IF
 #endif
 ! put bounds on tracers so pH solver doesn't blow up
-          surfdic = ptr2mol(ng) * MAX(surfDICMin(ng),MIN(surfDICMax(ng), Bio(i,k,iDIC)))
-          surfalk = ptr2mol(ng) * MAX(surfALKMin(ng),MIN(surfALKMax(ng), Bio(i,k,iALK)))
-          surfphos = ptr2mol(ng) * MAX(surfPO4Min(ng),MIN(surfPO4Max(ng), Bio(i,k,iPO4)))
-          surfsi = ptr2mol(ng) * MAX(surfSiMinInit(ng),MIN(surfSiMax(ng), Bio(i,k,iSiO2)))
+          surfdic = ptr2mol(ng) * MAX(surfDICMin(ng),MIN(surfDICMax(ng), Bio(iDIC,k,i)))
+          surfalk = ptr2mol(ng) * MAX(surfALKMin(ng),MIN(surfALKMax(ng), Bio(iALK,k,i)))
+          surfphos = ptr2mol(ng) * MAX(surfPO4Min(ng),MIN(surfPO4Max(ng), Bio(iPO4,k,i)))
+          surfsi = ptr2mol(ng) * MAX(surfSiMinInit(ng),MIN(surfSiMax(ng), Bio(iSiO2,k,i)))
           CALL DARWIN_CALC_PCO2_APPROX(ng,surftemp, surfsalt,           &
 #if defined DARWIN_VERBOSE_PLANK_OLD
      &      i,j,k,                                                      &
@@ -489,8 +495,14 @@
 #endif
      &      co3dummy)
 
+#if defined DARWIN_FUTURE
+! calcite saturation state omegaCl = [Ca2+][CO3--]/Ksp, with [Ca2+]
+! parameterized from salinity (non-DARWIN_SOLVESAPHE formula)
+          omegaCl(i,k) = (0.01028_r8*surfsalt/35.0_r8)*co3dummy/Ksp_TP_Calc
+#endif
+
           IF (k .EQ. ks) THEN
-            ttemp = Bio(i,k,itemp)
+            ttemp = Bio(itemp,k,i)
 ! calculate SCHMIDT NO. for CO2
             SchmidtNoDIC =sca1(ng) +sca2(ng)*ttemp +sca3(ng)*ttemp*ttemp +sca4(ng)*ttemp*ttemp*ttemp
 ! make sure Schmidt number is not negative (will happen if temp>39C)
@@ -567,9 +579,9 @@
      &        )/drF(i,ks)
 ! k is at surface
           ENDIF
-          Bio(i,N(ng),iDIC)=Bio(i,N(ng),iDIC)+ gDIC(i)
-          Bio(i,N(ng),iALK)=Bio(i,N(ng),iALK)+ gALK(i)
-          Bio(i,N(ng),iO2) =Bio(i,N(ng),iO2) + gO2(i)
+          Bio(iDIC,N(ng),i)=Bio(iDIC,N(ng),i)+ gDIC(i)
+          Bio(iALK,N(ng),i)=Bio(iALK,N(ng),i)+ gALK(i)
+          Bio(iO2,N(ng),i) =Bio(iO2,N(ng),i) + gO2(i)
         END DO
       END DO
       RETURN
@@ -585,6 +597,9 @@
 #endif /*DARWIN_CARBON*/
       SUBROUTINE tempfunc(tile, ng, IminS, ImaxS, Bio,                  &
      &  photoFun, grazFun, reminFun, mortFun, mort2Fun, uptakeFun,      &
+#if defined DARWIN_FUTURE
+     &  hetFun,                                                        &
+#endif
      &  diags)
 !
       USE mod_biology
@@ -593,13 +608,16 @@
 !  Imported variable declarations.
 !
       integer, intent(in) :: tile, ng, IminS, ImaxS
-      real(r8),intent(inout),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
+      real(r8),intent(inout),dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
       real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) ::diags
-      real(r8), intent(out), dimension(IminS:ImaxS,N(ng), nplank) ::    &
+     &  dimension(darwin_nDiag,N(ng),IminS:ImaxS) ::diags
+      real(r8), intent(out), dimension(nplank,N(ng),IminS:ImaxS) ::    &
      &  photoFun, grazFun
       real(r8), intent(out), dimension(IminS:ImaxS,N(ng)) ::            &
      &  reminFun, mortFun, mort2Fun, uptakeFun
+#if defined DARWIN_FUTURE
+      real(r8), intent(out), dimension(IminS:ImaxS,N(ng)) :: hetFun
+#endif
       !real(r8),intent(in),dimension(IminS:ImaxS,N(ng)) :: Light
 !
 !  Local variable declarations
@@ -628,14 +646,18 @@
 !
 !
 !
-      SUBROUTINE darwin_model(tile, ng, IminS, ImaxS, Bio, PAR,         &
-#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK
+      SUBROUTINE darwin_plankton_tile(tile, ng, IminS, ImaxS, Bio, PAR, &
+#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK || defined DARWIN_DEBUG
      &  j,                                                              &
 #endif
 #if defined DARWIN_PLANK_BUOYCTRL
      &  limitnut_save, limitlight_save,                                 &
 #endif
      &  photoTempFunc, reminTempFunc, uptakeTempFunc,                   &
+     &  grazTempFunc, mortTempFunc, mort2TempFunc,                      &
+#if defined DARWIN_FUTURE
+     &  hetTempFunc, omegaCl,                                          &
+#endif
 #if defined DIAGNOSTICS_BIO
      &  diags, diags4d)
 #else
@@ -643,40 +665,138 @@
 #endif /* DIAGNOSTICS_BIO */
 !
       USE mod_biology
-      USE mod_scalars, ONLY: dt
 !
 !  Imported variable declarations.
 !
-#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK
+#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK || defined DARWIN_DEBUG
       integer, intent(in) :: j
 #endif
       integer, intent(in) :: tile, ng, IminS, ImaxS
-      real(r8),intent(inout),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
-      real(r8),intent(in),dimension(IminS:ImaxS,N(ng),nlam) :: PAR
+      real(r8),intent(inout),dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
+      real(r8),intent(in),dimension(nlam,N(ng),IminS:ImaxS) :: PAR
       real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) ::diags
+     &  dimension(darwin_nDiag,N(ng),IminS:ImaxS) ::diags
 #if defined DIAGNOSTICS_BIO
       real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),nplank,NDbio4d) :: diags4d
+     &  dimension(nplank,NDbio4d,N(ng),IminS:ImaxS) :: diags4d
 #endif /*DIAGNOSTICS_BIO*/
-      real(r8), intent(in), dimension(IminS:ImaxS,N(ng),nplank) ::      &
-     &  photoTempFunc
+      real(r8), intent(in), dimension(nplank,N(ng),IminS:ImaxS) ::      &
+     &  photoTempFunc, grazTempFunc
       real(r8), intent(in), dimension(IminS:ImaxS,N(ng)) ::             &
-     &  reminTempFunc, uptakeTempFunc
+     &  reminTempFunc, uptakeTempFunc, mortTempFunc, mort2TempFunc
+#if defined DARWIN_FUTURE
+      real(r8), intent(in), dimension(IminS:ImaxS,N(ng)) :: hetTempFunc
+      real(r8), intent(in), dimension(IminS:ImaxS,N(ng)) :: omegaCl
+#endif
 #if defined DARWIN_PLANK_BUOYCTRL
-      real(r8), intent(out), dimension(IminS:ImaxS,N(ng),nplank) ::     &
+      real(r8), intent(out), dimension(nplank,N(ng),IminS:ImaxS) ::     &
      &  limitnut_save, limitlight_save
 #endif
       !real(r8),intent(in),dimension(IminS:ImaxS,N(ng)) :: Light
 !
 !  Local variable declarations
 !
-      integer :: i, k, l, ic
+      integer :: i, k
+
+! instead of #include "set_bounds.h"
+      integer :: Istr, Iend
+      Istr   =BOUNDS(ng) % Istr   (tile)
+      Iend   =BOUNDS(ng) % Iend   (tile)
+      !cff=dtdays(ng)*VmaxS(ng)
+      DO k=1,N(ng)
+        DO i=Istr,Iend
+#if defined DARWIN_DEBUG_DIAG
+          diags(iOnes,k,i)=diags(iOnes,k,i)+dtbio(ng)/86400.0_r8
+#endif
+#if defined DIAGNOSTICS_BIO
+          diags4d(:,idNPP4d,k,i) = 0.0_r8
+          diags4d(:,idPGrowthRate,k,i) = 0.0_r8
+          diags4d(:,idNUpNorm,k,i) = 0.0_r8
+#endif
+          CALL darwin_plankton(ng,                                     &
+#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK || defined DARWIN_DEBUG
+     &      i, j, k,                                                   &
+#endif
+     &      Bio(:,k,i), PAR(:,k,i),                                    &
+#if defined DARWIN_PLANK_BUOYCTRL
+     &      limitnut_save(:,k,i), limitlight_save(:,k,i),              &
+#endif
+     &      photoTempFunc(:,k,i), reminTempFunc(i,k),                   &
+     &      uptakeTempFunc(i,k), grazTempFunc(:,k,i),                   &
+     &      mortTempFunc(i,k), mort2TempFunc(i,k),                     &
+#if defined DARWIN_FUTURE
+     &      hetTempFunc(i,k), omegaCl(i,k),                            &
+#endif
+#if defined DIAGNOSTICS_BIO
+     &      diags(:,k,i), diags4d(:,:,k,i))
+#else
+     &      diags(:,k,i))
+#endif
+        END DO
+      END DO
+      RETURN
+      END SUBROUTINE darwin_plankton_tile
+!
+!=======================================================================
+!  Growth/photosynthesis/nutrient uptake and grazing/mortality for a
+!  single grid point -- no tiling detail, matches upstream MITgcm
+!  Darwin's DARWIN_PLANKTON single-grid-point calling convention.
+!=======================================================================
+!
+      SUBROUTINE darwin_plankton(ng,                                   &
+#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK || defined DARWIN_DEBUG
+     &  i, j, k,                                                       &
+#endif
+     &  Bio, PAR,                                                      &
+#if defined DARWIN_PLANK_BUOYCTRL
+     &  limitnut_save, limitlight_save,                                &
+#endif
+     &  photoTempFunc, reminTempFunc, uptakeTempFunc,                  &
+     &  grazTempFunc, mortTempFunc, mort2TempFunc,                     &
+#if defined DARWIN_FUTURE
+     &  hetTempFunc, omegaCl,                                          &
+#endif
+#if defined DIAGNOSTICS_BIO
+     &  diags, diags4d)
+#else
+     &  diags)
+#endif /* DIAGNOSTICS_BIO */
+!
+      USE mod_biology
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng
+#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK || defined DARWIN_DEBUG
+      integer, intent(in) :: i, j, k
+#endif
+      real(r8),intent(inout),dimension(NT(ng)) :: Bio
+      real(r8),intent(in),dimension(nlam) :: PAR
+      real(r8),intent(inout),dimension(darwin_nDiag) ::diags
+#if defined DIAGNOSTICS_BIO
+      real(r8),intent(inout),dimension(nplank,NDbio4d) :: diags4d
+#endif /*DIAGNOSTICS_BIO*/
+      real(r8), intent(in), dimension(nplank) ::                       &
+     &  photoTempFunc, grazTempFunc
+      real(r8), intent(in) ::                                          &
+     &  reminTempFunc, uptakeTempFunc, mortTempFunc, mort2TempFunc
+#if defined DARWIN_FUTURE
+      real(r8), intent(in) :: hetTempFunc
+      real(r8), intent(in) :: omegaCl
+#endif
+#if defined DARWIN_PLANK_BUOYCTRL
+      real(r8), intent(out), dimension(nplank) ::                      &
+     &  limitnut_save, limitlight_save
+#endif
+!
+!  Local variable declarations
+!
+      integer :: l, ic, ip, iz
       real(r8) :: PARtot
 
       !integer, parameter :: itemp = 1
 
-      real(r8) :: X, Qn, Qc, PCm
+      real(r8) :: X, Qn, Qc, PCm, Qsi, Qfe
       real(r8) :: inhibNH4
       real(r8) :: ngrow
       real(r8) :: chlout
@@ -707,7 +827,7 @@
       real(r8) :: disscPIC
 #if defined DARWIN_GEIDER
       real(r8) :: alpha_I, alpha_I_growth, acclim
-      real(r8) :: tmp, Ek, EkoverE, rhochl, chl2c
+      real(r8) :: Ek, EkoverE, rhochl, chl2c
 # if defined DARWIN_CHLQUOTA
       real(r8) :: QChl
 # endif /* DARWIN_CHLQUOTA */
@@ -721,70 +841,20 @@
 #if defined DARWIN_DENIT
       real(r8) :: denitNH4, denit
 #endif /* DARWIN_DENIT */
+#if defined DARWIN_NQUOTA || defined DARWIN_PQUOTA || defined DARWIN_SIQUOTA || defined DARWIN_FEQUOTA
+      real(r8) :: regQ
+#endif
 #if defined DARWIN_PQUOTA
-      real(r8) :: Qp, regQ, uptakePO4, limitp
+      real(r8) :: Qp
 #endif
-! instead of #include "set_bounds.h"
-      integer :: Istr, Iend
-      Istr   =BOUNDS(ng) % Istr   (tile)
-      Iend   =BOUNDS(ng) % Iend   (tile)
-      !cff=dtdays(ng)*VmaxS(ng)
-      DO k=1,N(ng)
-        DO i=Istr,Iend
-#if defined DARWIN_DEBUG_DIAG
-          diags(i,k,iOnes)=diags(i,k,iOnes)+dtbio(ng)/86400.0_r8
-#endif
-#if defined DIAGNOSTICS_BIO
-          diags4d(i,k,:,idNPP4d) = 0.0_r8
-          diags4d(i,k,:,idPGrowthRate) = 0.0_r8
-          diags4d(i,k,:,idNUpNorm) = 0.0_r8
-#endif
-          PARtot=SUM(PAR(i,k,:))
-# include <darwin_model.h>
-        END DO
-      END DO
-      RETURN
-      END SUBROUTINE darwin_model
 !
+!  Local variable declarations (from former darwin_grazing, now the
+!  second half of darwin_plankton.h).  A few colliding names (community
+!  arrays X, Qc, Qn, Qp, Qsi, Qfe, QChl) are suffixed "graz" below to avoid
+!  clashing with the per-plankton-type scalars of the same name above;
+!  "tmp" is shared (same type, sequential use, no cross-read between the
+!  two loops).
 !
-!
-      SUBROUTINE darwin_grazing(tile, ng, IminS, ImaxS, Bio,            &
-     &  grazTempFunc, reminTempFunc, mortTempFunc, mort2TempFunc        &
-#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK
-     &  , j                                                             &
-#endif
-#if defined DIAGNOSTICS_BIO
-     &  , diags, diags4d)
-#else
-     &  )
-#endif /* DIAGNOSTICS_BIO */
-!
-      USE mod_biology
-      USE mod_scalars, ONLY: dt
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: tile, ng, IminS, ImaxS
-#if defined DARWIN_VERBOSE_PLANK_OLD || defined DARWIN_VERBOSE_PLANK
-      integer, intent(in) :: j
-#endif
-      real(r8), intent(in), dimension(IminS:ImaxS,N(ng),nplank) ::      &
-     &  grazTempFunc
-      real(r8), intent(in), dimension(IminS:ImaxS,N(ng)) ::             &
-     &  reminTempFunc, mortTempFunc, mort2TempFunc
-
-      real(r8),intent(inout),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
-#if defined DIAGNOSTICS_BIO
-      real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) :: diags
-      real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),nplank,NDbio4d) :: diags4d
-#endif /*DIAGNOSTICS_BIO*/
-      !real(r8),intent(in),dimension(IminS:ImaxS,N(ng)) :: Light
-!
-!  Local variable declarations
-!
-      integer :: i, k, ip, iz
       real(r8) :: tmp, Xe
       real(r8) :: graz2POC, graz2PON, graz2POP, graz2POSI, graz2PIC
       real(r8) :: graz2POFE, graz2OC, graz2ON, graz2OP, graz2OFE
@@ -798,6 +868,9 @@
       real(r8) :: exude_DOFe, exude_POFe, exude_DOP, exude_POP
       real(r8) :: exude_POSi, exude_PIC, respir, respir_c
       real(r8) :: mortX, mortX2
+#if defined DARWIN_FUTURE
+      real(r8) :: respirN, respirP, respirFe, respirSi
+#endif
 #if defined DARWIN_CARBON
       real(r8) :: totkillPIC
 #endif
@@ -805,7 +878,8 @@
       real(r8) :: graz2CDOM, exude_CDOM
 #endif /* DARWIN_CDOM */
 
-      real(r8),dimension(nplank) :: X, Xi, Qc, Qn, Qp, Qsi, Qfe
+      real(r8),dimension(nplank) :: Xgraz, Xi, Qcgraz, Qngraz, Qpgraz, &
+     &  Qsigraz, Qfegraz
       real(r8),dimension(nplank) :: mort_c
       real(r8),dimension(nplank) :: preygraz, predgrazc
 #if defined DARWIN_NQUOTA
@@ -818,27 +892,17 @@
       real(r8),dimension(nplank) :: predgrazfe
 #endif
 #if defined DARWIN_CHLQUOTA
-      real(r8),dimension(nChl) :: QChl
+      real(r8),dimension(nChl) :: QChlgraz
 #endif
 #if defined DARWIN_VERBOSE_PLANK
       real(r8),dimension(nplank) :: preygraz_rate
       real(r8),dimension(nplank,nplank) :: grazphy_all
 #endif
 
-      !integer, parameter :: itemp = 1
-
-! instead of #include "set_bounds.h"
-      integer :: Istr, Iend
-      Istr   =BOUNDS(ng) % Istr   (tile)
-      Iend   =BOUNDS(ng) % Iend   (tile)
-      !cff=dtdays(ng)*VmaxS(ng)
-      DO k=1,N(ng)
-        DO i=Istr,Iend
-# include <darwin_grazing.h>
-        END DO
-      END DO
+      PARtot=SUM(PAR(:))
+# include <darwin_plankton.h>
       RETURN
-      END SUBROUTINE darwin_grazing
+      END SUBROUTINE darwin_plankton
 !
 !
 !
@@ -855,7 +919,7 @@
 !  Imported variable declarations.
 !
       integer, intent(in) :: tile, ng, IminS, ImaxS
-      real(r8),intent(inout),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
+      real(r8),intent(inout),dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
       real(r8),intent(in),dimension(IminS:ImaxS) :: inputFe
       real(r8),intent(out),dimension(IminS:ImaxS,1:N(ng)) :: freefe
 !#if defined ASSUMED_SHAPE
@@ -868,7 +932,7 @@
 !#endif
 !#endif
       real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) ::diags
+     &  dimension(darwin_nDiag,N(ng),IminS:ImaxS) ::diags
       !real(r8),intent(in),dimension(IminS:ImaxS,N(ng)) :: Light
 !
 !  Local variable declarations
@@ -890,10 +954,10 @@
       DO k=1,N(ng)
         DO i=Istr,Iend
 !          IF (maskC(i, k) .GT. 0.0_r8) THEN
-            lig = (-ligand_stab(ng)*Bio(i,k,iFeT) +                     &
+            lig = (-ligand_stab(ng)*Bio(iFeT,k,i) +                     &
      & ligand_stab(ng)*ligand_tot(ng) -                                 &
      & 1.0_r8 +                                                         &
-     & ( ( ligand_stab(ng)*Bio(i,k,iFeT) -                              &
+     & ( ( ligand_stab(ng)*Bio(iFeT,k,i) -                              &
      & ligand_stab(ng)*ligand_tot(ng)+1.0_r8                            &
      & )**2 +                                                           &
      & 4.0_r8*ligand_stab(ng)*ligand_tot(ng)                            &
@@ -901,12 +965,12 @@
      & )/(2.0_r8*ligand_stab(ng))
 
             FeL = ligand_tot(ng) - lig
-            freefe(i,k) = Bio(i,k,iFeT) - FeL
+            freefe(i,k) = Bio(iFeT,k,i) - FeL
 #if defined DARWIN_MINFE
             freefe(i,k) = MIN(freefe(i,k), freefemax(ng))
 ! TODO: allow statement back in (dt correction required?)
 !            IF (maskInC(i) .GT. 0.0_r8) THEN
-!              Bio(i,k,iFeT)(i,k) = FeL + freefe(i,k)
+!              Bio(iFeT,k,i)(i,k) = FeL + freefe(i,k)
 !            ENDIF
 #endif
 !          ELSE
@@ -938,7 +1002,7 @@
 #if defined DARWIN_VERBOSE_IFET
       integer, intent(in) :: j
 #endif
-      real(r8),intent(inout),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
+      real(r8),intent(inout),dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
       real(r8),intent(in),dimension(IminS:ImaxS) :: inputFe
       real(r8),intent(in),dimension(IminS:ImaxS,1:N(ng)) :: freefe
 !#if defined ASSUMED_SHAPE
@@ -952,7 +1016,7 @@
 !#endif
       real(r8),intent(in),dimension(IminS:ImaxS,1:N(ng)) :: drF
       real(r8),intent(inout),                                           &
-     &  dimension(IminS:ImaxS,N(ng),darwin_nDiag) ::diags
+     &  dimension(darwin_nDiag,N(ng),IminS:ImaxS) ::diags
 !
 !  Local variable declarations
 !
@@ -973,7 +1037,7 @@
 !
 ! iron dust input
       DO i=Istr,Iend
-        Bio(i,N(ng),iFet)=Bio(i,N(ng),iFet) + dtbio(ng)*(alpfe(ng) *       &
+        Bio(iFet,N(ng),i)=Bio(iFet,N(ng),i) + dtbio(ng)*(alpfe(ng) *       &
      &    inputFe(i)/drF(i,N(ng)))
       ENDDO
 #if defined DARWIN_VERBOSE_IFET
@@ -981,40 +1045,40 @@
      &    '(1)',alpfe(ng),                                              &
      &    '(2)',maxval(inputFe),                                        &
      &    '(3)',1.0_r8/minval(abs(drF(:,N(ng))))
-        write(*,*) '<<2a',IminS,ImaxS,j,maxval(Bio(:,:,iFet))
+        write(*,*) '<<2a',IminS,ImaxS,j,maxval(Bio(iFet,:,:))
 #endif
 
 ! scavenging
       DO k=1,N(ng)
         DO i=Istr,Iend
 #if defined DARWIN_PART_SCAV_POP
-          scav_poc = MAX(0.0_r8, Bio(i,k,iPOP))/scav_R_POPPOC(ng)
+          scav_poc = MAX(0.0_r8, Bio(iPOP,k,i))/scav_R_POPPOC(ng)
           scv = scav_rat(ng)*scav_inter(ng)*(scav_poc**scav_exp(ng))
 #elif defined DARWIN_PART_SCAV
-          scav_poc = MAX(0.0_r8, Bio(i,k,iPOC))
+          scav_poc = MAX(0.0_r8, Bio(iPOC,k,i))
           scv = scav_rat(ng)*scav_inter(ng)*(scav_poc**scav_exp(ng))
 #else
           scv = scav(ng)
 #endif
-          Bio(i,k,iFet) = Bio(i,k,iFet) + dtbio(ng)*(-scv*freefe(i,k))
+          Bio(iFet,k,i) = Bio(iFet,k,i) + dtbio(ng)*(-scv*freefe(i,k))
         ENDDO
       ENDDO
 #if defined DARWIN_VERBOSE_IFET
-        write(*,*) '<<2b',IminS,ImaxS,j,maxval(Bio(:,:,iFet))
+        write(*,*) '<<2b',IminS,ImaxS,j,maxval(Bio(iFet,:,:))
 #endif
 ! iron flux
       DO i=Istr,Iend
 #if defined DARWIN_IRON_SED_SOURCE_VARIABLE
         !TODO this needs to be improved
         flx = fesedflux_pcm(ng)*wP_sink(ng)*R_CP_fesed(ng)*             &
-     &    MAX(0.0_r8, Bio(i,2,iPOP))
+     &    MAX(0.0_r8, Bio(iPOP,2,i))
 #else
         flx = fesedflux(ng)
 #endif
-        Bio(i,1,iFet)=Bio(i,1,iFet)+dtbio(ng)*(flx/drF(i,1))
+        Bio(iFet,1,i)=Bio(iFet,1,i)+dtbio(ng)*(flx/drF(i,1))
       END DO
 #if defined DARWIN_VERBOSE_IFET
-        write(*,*) '<<2c',IminS,ImaxS,j,maxval(Bio(:,:,iFet))
+        write(*,*) '<<2c',IminS,ImaxS,j,maxval(Bio(iFet,:,:))
 #endif
       RETURN
       END SUBROUTINE darwin_fe_chem2
@@ -1045,7 +1109,7 @@
 !
       integer, intent(in) :: j, tile, ng, IminS, ImaxS
       integer, intent(in) :: LBi, LBj
-      real(r8),intent(inout),dimension(IminS:ImaxS,N(ng),NT(ng)) :: Bio
+      real(r8),intent(inout),dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
@@ -1055,7 +1119,7 @@
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:UBk)
 # endif
 #if defined DARWIN_PLANK_BUOYCTRL
-      real(r8), intent(in), dimension(IminS:ImaxS,N(ng),nplank) ::  &
+      real(r8), intent(in), dimension(nplank,N(ng),IminS:ImaxS) ::  &
      &  limitnut, limitlight
 #endif
       real(r8), intent(in), dimension(IminS:ImaxS,N(ng)) :: Hz_inv
@@ -1139,7 +1203,7 @@
 #if defined DARWIN_INTERNAL_ASSERTSINK
               DO k=1,N(ng)
                 DO i=Istr,Iend
-                  Bio_ini(i,k)=Bio(i,k,ibio)
+                  Bio_ini(i,k)=Bio(ibio,k,i)
                 END DO
               END DO
 #endif
@@ -1147,14 +1211,14 @@
               DO i=Istr,Iend
 #if ! defined DARWIN_SINKTOK
 !  Determine conditions (higher values == better).
-                IF (limitlight(i,N(ng),ip)==0.0_r8) THEN
+                IF (limitlight(ip,N(ng),i)==0.0_r8) THEN
 !  Night-time.
                   DO k=1,N(ng)
-                    conditions(k)=limitnut(i,k,ip)
+                    conditions(k)=limitnut(ip,k,i)
                   END DO
                 ELSE
                   DO k=1,N(ng)
-                    conditions(k)=limitnut(i,k,ip)*limitlight(i,k,ip)
+                    conditions(k)=limitnut(ip,k,i)*limitlight(ip,k,i)
                   END DO
                 END IF
 #endif
@@ -1184,9 +1248,9 @@
               IF (j==DARWIN_VERBOSE_J.and.i==DARWIN_VERBOSE_I) THEN
                 write(*,'(a,9(a,f16.10))')                              &
      &            ' optimal conditions locally, staying put',           &
-     &            ' light limit at surface: ', limitlight(i,N(ng),ip),  &
-     &            ' limitlight(k0)=',limitlight(i,k0,ip),               &
-     &            ' limitnut(k0)=',limitnut(i,k0,ip)
+     &            ' light limit at surface: ', limitlight(ip,N(ng),i),  &
+     &            ' limitlight(k0)=',limitlight(ip,k0,i),               &
+     &            ' limitnut(k0)=',limitnut(ip,k0,i)
               END IF
             END IF
 # endif /* DARWIN_VERBOSE_SINKING */
@@ -1198,9 +1262,9 @@
               IF (j==DARWIN_VERBOSE_J.and.i==DARWIN_VERBOSE_I) THEN
                 write(*,'(a,9(a,f16.10))')                              &
      &            'better conditions below (sink)          ',           &
-     &            ' light limit at surface: ', limitlight(i,N(ng),ip),  &
-     &            ' limitlight(k0)=',limitlight(i,k0,ip),               &
-     &            ' limitnut(k0)=',limitnut(i,k0,ip),                   &
+     &            ' light limit at surface: ', limitlight(ip,N(ng),i),  &
+     &            ' limitlight(k0)=',limitlight(ip,k0,i),               &
+     &            ' limitnut(k0)=',limitnut(ip,k0,i),                   &
      &            ' z_w(k0)-z_w(k0-1)=',z_w(i,j,k0)-z_w(i,j,k0-1)
               END IF
             END IF
@@ -1231,9 +1295,9 @@
               IF (j==DARWIN_VERBOSE_J.and.i==DARWIN_VERBOSE_I) THEN
                 write(*,'(a,9(a,f16.10))')                              &
      &            'better conditions above (float)         ',           &
-     &            ' light limit at surface: ', limitlight(i,N(ng),ip),  &
-     &            ' limitlight(k0)=',limitlight(i,k0,ip),               &
-     &            ' limitnut(k0)=',limitnut(i,k0,ip),                   &
+     &            ' light limit at surface: ', limitlight(ip,N(ng),i),  &
+     &            ' limitlight(k0)=',limitlight(ip,k0,i),               &
+     &            ' limitnut(k0)=',limitnut(ip,k0,i),                   &
      &            ' z_w(k0)-z_w(k0+1)=',z_w(i,j,k0)-z_w(i,j,k0+1)
               END IF
             END IF
@@ -1276,16 +1340,16 @@
                   IF (kopt.gt.0) THEN
 !  No normal sinking, instead all plankton move from layer k0 to kopt.
                     IF (kopt.ne.k0) THEN
-                      Bio_res(i,k0)=Bio_res(i,k0)-Bio(i,k0,ibio)
+                      Bio_res(i,k0)=Bio_res(i,k0)-Bio(ibio,k0,i)
                       Bio_res(i,kopt)=Bio_res(i,kopt)+                  &
-     &                  Bio(i,k0,ibio)*Hz(i,j,k0)*Hz_inv(i,kopt)
+     &                  Bio(ibio,k0,i)*Hz(i,j,k0)*Hz_inv(i,kopt)
                     END IF
 # if defined DARWIN_VERBOSE_SINKING
             IF ((ibio.ge.ic_.and.ibio.le.ec_).or.                       &
      &          (ibio.ge.iChl.and.ibio.le.eChl)) THEN
                   IF (j==DARWIN_VERBOSE_J.and.i==DARWIN_VERBOSE_I) THEN
                     qc(i,:)=0.0_r8
-                    qc(i,k0)=Bio(i,k0,ibio)
+                    qc(i,k0)=Bio(ibio,k0,i)
                     write(*,'(a,i2,a,f16.10,9(a,i3))')                  &
      &                '(y) ibio=',ibio,' sink_k=',sink_k,               &
      &                ' ip=',ip,' k0=',k0,' kopt=',kopt
@@ -1297,12 +1361,12 @@
                       IF (k==kopt) THEN
                       write(*,'(i4,1x,f16.10,9(2x,f16.10))')            &
      &                  k,z_w(i,j,k),qc(i,k),                           &
-     &                  Bio(i,k0,ibio)*Hz(i,j,k0)*Hz_inv(i,kopt),       &
+     &                  Bio(ibio,k0,i)*Hz(i,j,k0)*Hz_inv(i,kopt),       &
      &                  Bio_res(i,k),                                   &
      &                  qc(i,k)*Hz(i,j,k),                              &
-     &                  Bio(i,k0,ibio)*Hz(i,j,k0),                      &
-     &                  conditions(k), limitnut(i,k,ip),                &
-     &                  limitlight(i,k,ip)
+     &                  Bio(ibio,k0,i)*Hz(i,j,k0),                      &
+     &                  conditions(k), limitnut(ip,k,i),                &
+     &                  limitlight(ip,k,i)
                       ELSE
                       write(*,'(i4,1x,f16.10,9(2x,f16.10))')            &
      &                  k,z_w(i,j,k),qc(i,k),                           &
@@ -1310,8 +1374,8 @@
      &                  Bio_res(i,k),                                   &
      &                  qc(i,k)*Hz(i,j,k),                              &
      &                  0.0_r8,                                         &
-     &                  conditions(k), limitnut(i,k,ip),                &
-     &                  limitlight(i,k,ip)
+     &                  conditions(k), limitnut(ip,k,i),                &
+     &                  limitlight(ip,k,i)
                       END IF
                     END DO
                   END IF
@@ -1326,7 +1390,7 @@
 !  constituent concentration.
 !
                   qc(i,:)=0.0_r8
-                  qc(i,k0)=Bio(i,k0,ibio)
+                  qc(i,k0)=Bio(ibio,k0,i)
 !
                   DO k=N(ng)-1,1,-1
                     FC(i,k)=(qc(i,k+1)-qc(i,k))*Hz_inv2(i,k)
@@ -1485,8 +1549,8 @@
      &                  Bio_res(i,k),                                   &
      &                  qc(i,k)*Hz(i,j,k),                              &
      &                  qc(i,k)*Hz(i,j,k)+(FC(i,k)-FC(i,k-1)),          &
-     &                  conditions(k), limitnut(i,k,ip),                &
-     &                  limitlight(i,k,ip)
+     &                  conditions(k), limitnut(ip,k,i),                &
+     &                  limitlight(ip,k,i)
                     END DO
                   END IF
                 END IF
@@ -1576,8 +1640,8 @@
      &                  Bio_res(i,k),                                   &
      &                  qc(i,k)*Hz(i,j,k),                              &
      &                  qc(i,k)*Hz(i,j,k)+(FC(i,k)-FC(i,k+1)),          &
-     &                  conditions(k), limitnut(i,k,ip),                &
-     &                  limitlight(i,k,ip)
+     &                  conditions(k), limitnut(ip,k,i),                &
+     &                  limitlight(ip,k,i)
                     END DO
                   END IF
                 END IF
@@ -1596,7 +1660,7 @@
      &                'k','Bio (before)','Bio (after)'
                     DO k=N(ng),1,-1
                       write(*,'(i4,1x,f16.12,2x,f16.12)')               &
-     &                  k,Bio(i,k,ibio),Bio_res(i,k)
+     &                  k,Bio(ibio,k,i),Bio_res(i,k)
                     END DO
                   END IF
                 END IF
@@ -1610,7 +1674,7 @@
      &                  'FC(old)','cu','Hz_inv2','Hz_inv3'
                       DO k=1,N(ng)
                       write(*,'(i4,1x,f16.12,2x,f16.12,99(1x,f16.12))') &
-     &                  k,Hz(i,j,k),qc(i,k),Bio(i,k,ibio),FC(i,k),      &
+     &                  k,Hz(i,j,k),qc(i,k),Bio(ibio,k,i),FC(i,k),      &
      &                  Hz_inv(i,k),bL(i,k),bR(i,k),FCold(i,k),cus(i,k),&
      &                  Hz_inv2(i,k),Hz_inv3(i,k)
                       END DO
@@ -1618,7 +1682,7 @@
 # endif /* DARWIN_VERBOSE_SINKING_EXTRAOUT */
               DO k=1,N(ng)
                 DO i=Istr,Iend
-                  Bio(i,k,ibio)=Bio_res(i,k)
+                  Bio(ibio,k,i)=Bio_res(i,k)
                 END DO
               END DO
 # if defined DARWIN_INTERNAL_ASSERTSINK
@@ -1627,7 +1691,7 @@
                 mass1=0.0_r8
                 DO k=1,N(ng)
                   mass0=mass0+Bio_ini(i,k)*Hz(i,j,k)
-                  mass1=mass1+Bio(i,k,ibio)*Hz(i,j,k)
+                  mass1=mass1+Bio(ibio,k,i)*Hz(i,j,k)
                 END DO
                 IF (rate.le.0.0_r8) THEN
                   IF (ABS(mass0-mass1).gt.1.0e-12_r8) THEN
@@ -1650,7 +1714,7 @@
 !
               DO k=1,N(ng)
                 DO i=Istr,Iend
-                  qc(i,k)=Bio(i,k,ibio)
+                  qc(i,k)=Bio(ibio,k,i)
                 END DO
               END DO
 !
@@ -1801,7 +1865,7 @@
      &                              2.0_r8*qc(i,ks))))
                   END DO
                   DO k=1,N(ng)
-                    Bio(i,k,ibio)=qc(i,k)+(FC(i,k)-FC(i,k-1))*Hz_inv(i,k)
+                    Bio(ibio,k,i)=qc(i,k)+(FC(i,k)-FC(i,k-1))*Hz_inv(i,k)
                   END DO
 # if defined DARWIN_VERBOSE_SINKING
             IF ((ibio.ge.ic_.and.ibio.le.ec_).or.                       &
@@ -1813,7 +1877,7 @@
      &                'k','Bio (before)','Bio (after)'
                     DO k=N(ng),1,-1
                       write(*,'(i4,1x,f16.12,2x,f16.12)')               &
-     &                  k,qc(i,k),Bio(i,k,ibio)
+     &                  k,qc(i,k),Bio(ibio,k,i)
                     END DO
                   END IF
             END IF
@@ -1883,7 +1947,7 @@
 !
                   FC(i,N(ng)+1)=0.0_r8
                   DO k=1,N(ng)
-                    Bio(i,k,ibio)=qc(i,k)+(FC(i,k)-FC(i,k+1))*Hz_inv(i,k)
+                    Bio(ibio,k,i)=qc(i,k)+(FC(i,k)-FC(i,k+1))*Hz_inv(i,k)
                   END DO
 # if defined DARWIN_VERBOSE_SINKING_EXTRAOUT
                   IF (j==DARWIN_VERBOSE_J.and.i==DARWIN_VERBOSE_I) THEN
@@ -1894,7 +1958,7 @@
      &                'FC(old)','cu','Hz_inv2','Hz_inv3'
                     DO k=1,N(ng)
                       write(*,'(i4,1x,f16.12,2x,f16.12,99(1x,f16.12))') &
-     &                  k,Hz(i,j,k),qc(i,k),Bio(i,k,ibio),FC(i,k),      &
+     &                  k,Hz(i,j,k),qc(i,k),Bio(ibio,k,i),FC(i,k),      &
      &                  Hz_inv(i,k),bL(i,k),bR(i,k),FCold(i,k),cus(i,k),&
      &                  Hz_inv2(i,k),Hz_inv3(i,k)
                     END DO
@@ -1910,7 +1974,7 @@
      &                'k','Bio (before)','Bio (after)'
                     DO k=N(ng),1,-1
                       write(*,'(i4,1x,f16.12,2x,f16.12)')               &
-     &                  k,qc(i,k),Bio(i,k,ibio)
+     &                  k,qc(i,k),Bio(ibio,k,i)
                     END DO
                   END IF
             END IF
@@ -1920,7 +1984,7 @@
                   mass1=0.0_r8
                   DO k=1,N(ng)
                     mass0=mass0+qc(i,k)*Hz(i,j,k)
-                    mass1=mass1+Bio(i,k,ibio)*Hz(i,j,k)
+                    mass1=mass1+Bio(ibio,k,i)*Hz(i,j,k)
                   END DO
                   IF (ABS(mass0-mass1).gt.1.0e-12_r8) THEN
                     write(*,'(2(a,i0),a,e)')                            &
@@ -1947,7 +2011,7 @@
 !
             DO k=1,N(ng)
               DO i=Istr,Iend
-                qc(i,k)=Bio(i,k,ibio)
+                qc(i,k)=Bio(ibio,k,i)
               END DO
             END DO
 !
@@ -2105,7 +2169,7 @@
               END DO
               DO k=1,N(ng)
                 DO i=Istr,Iend
-                  Bio(i,k,ibio)=qc(i,k)+(FC(i,k)-FC(i,k-1))*Hz_inv(i,k)
+                  Bio(ibio,k,i)=qc(i,k)+(FC(i,k)-FC(i,k-1))*Hz_inv(i,k)
                 END DO
               END DO
 # if defined DARWIN_VERBOSE_SINKING
@@ -2119,7 +2183,7 @@
      &            'k','Bio (before)','Bio (after)','gain','loss'
                 DO k=N(ng),1,-1
                   write(*,'(i4,1x,f16.12,9(2x,f16.12))')                &
-     &              k,qc(i,k),Bio(i,k,ibio),FC(i,k)*Hz_inv(i,k),        &
+     &              k,qc(i,k),Bio(ibio,k,i),FC(i,k)*Hz_inv(i,k),        &
      &              -FC(i,k-1)*Hz_inv(i,k)
                 END DO
               END IF
@@ -2209,7 +2273,7 @@
               END DO
               DO k=1,N(ng)
                 DO i=Istr,Iend
-                  Bio(i,k,ibio)=qc(i,k)+(FC(i,k)-FC(i,k+1))*Hz_inv(i,k)
+                  Bio(ibio,k,i)=qc(i,k)+(FC(i,k)-FC(i,k+1))*Hz_inv(i,k)
                 END DO
               END DO
 # if defined DARWIN_VERBOSE_SINKING
@@ -2223,7 +2287,7 @@
      &            'k','Bio (before)','Bio (after)'
                 DO k=N(ng),1,-1
                   write(*,'(i4,1x,f16.12,2x,f16.12)')                   &
-     &              k,qc(i,k),Bio(i,k,ibio)
+     &              k,qc(i,k),Bio(ibio,k,i)
                 END DO
               END IF
             END IF
@@ -2238,7 +2302,7 @@
      &           'cu','Hz_inv2','Hz_inv3'
                 DO k=1,N(ng)
                   write(*,'(i4,1x,f16.12,2x,f16.12,99(1x,f16.12))')     &
-     &              k,Hz(i,j,k),qc(i,k),Bio(i,k,ibio),FC(i,k),          &
+     &              k,Hz(i,j,k),qc(i,k),Bio(ibio,k,i),FC(i,k),          &
      &              Hz_inv(i,k),bL(i,k),bR(i,k),FCold(i,k),cus(i,k),    &
      &              Hz_inv2(i,k),Hz_inv3(i,k)
                 END DO
@@ -2250,7 +2314,7 @@
                 mass1=0.0_r8
                 DO k=1,N(ng)
                   mass0=mass0+qc(i,k)*Hz(i,j,k)
-                  mass1=mass1+Bio(i,k,ibio)*Hz(i,j,k)
+                  mass1=mass1+Bio(ibio,k,i)*Hz(i,j,k)
                 END DO
                 IF (ABS(mass0-mass1).gt.1.0e-12_r8) THEN
                   write(*,'(2(a,i0),a,e)')                              &

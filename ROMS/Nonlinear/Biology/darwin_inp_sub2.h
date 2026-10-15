@@ -364,6 +364,35 @@
             DO is=1,nGroup
               WRITE (out,141) grp_tempMort2(is,ng), TRIM(grp_names(is))
             END DO
+            WRITE (out,120) 'grp_tempGraz',                             &
+     &        'group value for tempGraz (dimensionless).'
+            DO is=1,nGroup
+              WRITE (out,141) grp_tempGraz(is,ng), TRIM(grp_names(is))
+            END DO
+#endif
+#if defined DARWIN_FUTURE
+            WRITE (out,120) 'grp_hillnumDIN',                           &
+     &        'group value for hillnumDIN (dimensionless).'
+            DO is=1,nGroup
+              WRITE (out,140) grp_hillnumDIN(is,ng), TRIM(grp_names(is))
+            END DO
+            WRITE (out,120) 'grp_hillnumPO4',                           &
+     &        'group value for hillnumPO4 (dimensionless).'
+            DO is=1,nGroup
+              WRITE (out,140) grp_hillnumPO4(is,ng), TRIM(grp_names(is))
+            END DO
+            WRITE (out,120) 'grp_hillnumFeT',                           &
+     &        'group value for hillnumFeT (dimensionless).'
+            DO is=1,nGroup
+              WRITE (out,140) grp_hillnumFeT(is,ng), TRIM(grp_names(is))
+            END DO
+            WRITE (out,120) 'grp_hillnumSiO2',                          &
+     &        'group value for hillnumSiO2 (dimensionless).'
+            DO is=1,nGroup
+              WRITE (out,140) grp_hillnumSiO2(is,ng), TRIM(grp_names(is))
+            END DO
+#endif
+#if ! defined DARWIN_RANDOM_TRAITS
             WRITE (out,120) 'grp_Xmin',                                 &
      &        'group value for Xmin (mmol C m^-3).'
             DO is=1,nGroup
@@ -612,13 +641,13 @@
               WRITE (out,140) b_kexc_c(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,130) 'a_vmax_NO3_pday',                          &
-     &        'a-coefficient for Vmax_NO3',                             &
+     &        'a-coefficient for VmaxNO3',                              &
      &        '(mmol N (mmol C)^-1 d^-1 um^-3).'
             DO is=1,nGroup
               WRITE (out,140) a_vmax_NO3_pday(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,120) 'b_vmax_NO3',                               &
-     &        'b-coefficient for Vmax_NO3 (dimensionless).'
+     &        'b-coefficient for VmaxNO3 (dimensionless).'
             DO is=1,nGroup
               WRITE (out,140) b_vmax_NO3(is,ng), TRIM(grp_names(is))
             END DO
@@ -663,13 +692,13 @@
               WRITE (out,140) b_kexc_n(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,130) 'a_vmax_NO2_pday',                          &
-     &        'a-coefficient for Vmax_NO2',                             &
+     &        'a-coefficient for VmaxNO2',                              &
      &        '(mmol N (mmol C)^-1 d^-1 um^-3).'
             DO is=1,nGroup
               WRITE (out,140) a_vmax_NO2_pday(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,120) 'b_vmax_NO2',                               &
-     &        'b-coefficient for Vmax_NO2 (dimensionless).'
+     &        'b-coefficient for VmaxNO2 (dimensionless).'
             DO is=1,nGroup
               WRITE (out,140) b_vmax_NO2(is,ng), TRIM(grp_names(is))
             END DO
@@ -684,13 +713,13 @@
               WRITE (out,140) b_kn_NO2(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,130) 'a_vmax_NH4_pday',                          &
-     &        'a-coefficient for Vmax_NH4',                             &
+     &        'a-coefficient for VmaxNH4',                              &
      &        '(mmol N (mmol C)^-1 d^-1 um^-3).'
             DO is=1,nGroup
               WRITE (out,140) a_vmax_NH4_pday(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,120) 'b_vmax_NH4',                               &
-     &        'b-coefficient for Vmax_NH4 (dimensionless).'
+     &        'b-coefficient for VmaxNH4 (dimensionless).'
             DO is=1,nGroup
               WRITE (out,140) b_vmax_NH4(is,ng), TRIM(grp_names(is))
             END DO
@@ -705,24 +734,24 @@
               WRITE (out,140) b_kn_NH4(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,130) 'a_vmax_N_pday',                            &
-     &        'a-coefficient for Vmax_N',                               &
+     &        'a-coefficient for VmaxN',                                &
      &        '(mmol N (mmol C)^-1 d^-1 um^-3).'
             DO is=1,nGroup
               WRITE (out,140) a_vmax_N_pday(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,120) 'b_vmax_N',                                 &
-     &        'b-coefficient for Vmax_N (dimensionless).'
+     &        'b-coefficient for VmaxN (dimensionless).'
             DO is=1,nGroup
               WRITE (out,140) b_vmax_N(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,130) 'a_vmax_PO4_pday',                          &
-     &        'a-coefficient for Vmax_PO4',                             &
+     &        'a-coefficient for VmaxPO4',                              &
      &        '(mmol P (mmol C)^-1 d^-1 um^-3).'
             DO is=1,nGroup
               WRITE (out,140) a_vmax_PO4_pday(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,120) 'b_vmax_PO4',                               &
-     &        'b-coefficient for Vmax_PO4 (dimensionless).'
+     &        'b-coefficient for VmaxPO4 (dimensionless).'
             DO is=1,nGroup
               WRITE (out,140) b_vmax_PO4(is,ng), TRIM(grp_names(is))
             END DO
@@ -767,13 +796,13 @@
               WRITE (out,140) b_kexc_p(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,130) 'a_vmax_SiO2_pday',                         &
-     &        'a-coefficient for Vmax_SiO2',                            &
+     &        'a-coefficient for VmaxSiO2',                             &
      &        '(mmol Si (mmol C)^-1 d^-1 um^-3).'
             DO is=1,nGroup
               WRITE (out,140) a_vmax_SiO2_pday(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,120) 'b_vmax_SiO2',                              &
-     &        'b-coefficient for Vmax_SiO2 (dimensionless).'
+     &        'b-coefficient for VmaxSiO2 (dimensionless).'
             DO is=1,nGroup
               WRITE (out,140) b_vmax_SiO2(is,ng), TRIM(grp_names(is))
             END DO
@@ -820,13 +849,13 @@
               WRITE (out,140) b_kexc_si(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,130) 'a_vmax_FeT_pday',                          &
-     &        'a-coefficient for Vmax_FeT',                             &
+     &        'a-coefficient for VmaxFeT',                              &
      &        '(mmol Fe (mmol C)^-1 d^-1 um^-3).'
             DO is=1,nGroup
               WRITE (out,140) a_vmax_FeT_pday(is,ng), TRIM(grp_names(is))
             END DO
             WRITE (out,120) 'b_vmax_FeT',                               &
-     &        'b-coefficient for Vmax_FeT (dimensionless).'
+     &        'b-coefficient for VmaxFeT (dimensionless).'
             DO is=1,nGroup
               WRITE (out,140) b_vmax_FeT(is,ng), TRIM(grp_names(is))
             END DO
@@ -877,7 +906,7 @@
 #endif
 #if defined DARWIN_RANDOM_TRAITS
             WRITE (out,80) phymin(ng), 'phymin',                        &
-     &        'min phyto (below which grazing and mort doesnt happ',    &
+     &        'minimum phyto',                                          &
      &        '(unknown).'
 #endif
             WRITE (out,70) katten_w(ng), 'katten_w',                    &
@@ -951,6 +980,9 @@
      &        'PON remin rate (d^-1).'
             WRITE (out,70) KPOFe_pday(ng), 'KPOFe_pday',                &
      &        'POFe remin rate (d^-1).'
+            WRITE (out,80) ksatO2remin(ng), 'ksatO2remin',              &
+     &        'half-saturation conc. of O2 for remineralization',       &
+     &        '(mmol O2 m^-3).'
             WRITE (out,70) KPOSi_pday(ng), 'KPOSi_pday',                &
      &        'POSi remin rate (d^-1).'
             WRITE (out,70) wC_sink_pday(ng), 'wC_sink_pday',            &
@@ -967,6 +999,16 @@
      &        'PIC sinking rate (m/s s d^-1).'
             WRITE (out,70) Kdissc_pday(ng), 'Kdissc_pday',              &
      &        'PIC dissociation rate (d^-1).'
+            WRITE (out,81) darwin_disscSelect(ng), 'darwin_disscSelect',&
+     &        'PIC dissolution law',                                    &
+     &        '(dimensionless).'
+#if defined DARWIN_FUTURE
+            WRITE (out,70) darwin_KeirCoeff(ng), 'darwin_KeirCoeff',    &
+     &        'Keir 1980 PIC dissolution rate coefficient (s^-1).'
+            WRITE (out,80) darwin_KeirExp(ng), 'darwin_KeirExp',        &
+     &        'Keir 1980 PIC dissolution rate exponent',                &
+     &        '(dimensionless).'
+#endif
 #if defined DARWIN_CARBON
             WRITE (out,70) gud_atmos_pCO2(ng), 'gud_atmos_pCO2',        &
      &        'CO2 fraction of air (dimensionless).'
@@ -1022,7 +1064,7 @@
      &        'ratio no3 used relative to all n in denit process',      &
      &        '(dimensionless).'
             WRITE (out,80) NO3crit(ng), 'NO3crit',                      &
-     &        'critical NO3 below which no denit (or remin) happen',    &
+     &        'critical nitrate below which no denit',                  &
      &        '(mmol N m^-3).'
 #endif
             WRITE (out,70) PARmin(ng), 'PARmin',                        &
@@ -1042,7 +1084,7 @@
             WRITE (out,80) inhib_graz_exp(ng), 'inhib_graz_exp',        &
      &        'grazing inhib. exponent (0.0 turns it off)',             &
      &        '(dimensionless).'
-            WRITE (out,80) hillnum(ng), 'hillnum',                      &
+            WRITE (out,80) hillnumGraz(ng), 'hillnumGraz',              &
      &        'exponent for limiting quota uptake in grazing',          &
      &        '(dimensionless).'
             WRITE (out,80) hollexp(ng), 'hollexp',                      &

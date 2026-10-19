@@ -65,6 +65,9 @@
 #if defined DAILY_SHORTWAVE
       integer :: idAsrf                 ! Averaged shortwave radiation
 #endif /* DAILY_SHORTWAVE */
+#if defined DARWIN_DUST_FORCING
+      integer :: idIronDust              ! Atmospheric iron dust deposition
+#endif /* DARWIN_DUST_FORCING */
       ! TODO move elsewhere?
 ! taken from GUD_SIZE.h
       !integer :: nplank
@@ -126,6 +129,13 @@
       integer :: iConsPO4
       integer :: iConsSi
       integer :: iConsFe
+#if defined DARWIN_MINFE && defined DARWIN_FUTURE
+      integer :: iFeLoss
+#endif
+#if defined DARWIN_FUTURE
+      integer :: iPartScav
+      integer :: iSedFlx
+#endif
       integer :: darwin_nDiag
 #if defined DARWIN_DEBUG_DIAG
       integer :: iOnes
@@ -159,13 +169,6 @@
       integer  :: idNPP4d = 3                 ! NPP
       integer  :: idPGrowthRate = 4           ! growth rate
       integer  :: idNUpNorm = 5               ! normalized N uptake
-# if defined DIAGNOSTICS_BIO_MAPPING
-!
-!  Biological 3D diagnostic variable mapping.
-!
-      integer, allocatable :: iDbiomapping(:,:)
-
-# endif /*DIAGNOSTICS_BIO_MAPPING*/
 #endif /*DIAGNOSTICS_BIO*/
 
 !
@@ -320,6 +323,16 @@
       idia=idia+1
       iConsFe=idia
       idia=idia+1
+#if defined DARWIN_MINFE && defined DARWIN_FUTURE
+      iFeLoss=idia
+      idia=idia+1
+#endif
+#if defined DARWIN_FUTURE
+      iPartScav=idia
+      idia=idia+1
+      iSedFlx=idia
+      idia=idia+1
+#endif
       iConsDIN=idia
       idia=idia+1
 #if defined DARWIN_DEBUG_DIAG
@@ -337,46 +350,18 @@
 !  Set sources and sinks biology number of diagnostic terms.
 !-----------------------------------------------------------------------
 !
-      NDbio3d=0  ! TODO at some point set to darwin_nDiag
+      NDbio3d=darwin_nDiag
       NDbio4d=5
 !
 !  Allocate biological diagnostics vectors
 !
-      IF (.not.allocated(iDbio3).and.NDbio3d.gt.0) THEN
+      IF (.not.allocated(iDbio3)) THEN
         allocate ( iDbio3(NDbio3d) )
       END IF
       IF (.not.allocated(iDbio4)) THEN
         allocate ( iDbio4(NDbio4d) )
       END IF
 #endif /*DIAGNOSTICS_BIO*/
-#if defined DIAGNOSTICS_BIO_DEACTIVATED
-!
-!-----------------------------------------------------------------------
-!  Interface ROMS and Darwin diagnostic terms.
-!-----------------------------------------------------------------------
-!
-!  Set number of diagnostics terms.
-!
-      NDbio3d=darwin_nDiag
-      NDbio2d=0
-!
-!  Allocate biological diagnostics vectors
-!
-      IF (.not.allocated(iDbio2)) THEN
-        allocate ( iDbio2(NDbio2d) )
-      END IF
-      IF (.not.allocated(iDbio3)) THEN
-        allocate ( iDbio3(NDbio3d) )
-      END IF
-# if defined DIAGNOSTICS_BIO_MAPPING
-      IF (.not.allocated(iDbiomapping)) THEN
-        allocate ( iDbiomapping(NDbio3d,Ngrids) )
-      END IF
-!      IF (.not.allocated(NDb3d_o)) THEN
-!        allocate ( NDb3d_o(Ngrids) )
-!      END IF
-# endif /*DIAGNOSTICS_BIO_MAPPING*/
-#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
 #if ! defined DARWIN_CDOM
       laCDOM=-1
 #endif

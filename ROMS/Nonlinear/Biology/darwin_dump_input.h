@@ -19,7 +19,17 @@
       END IF
 !
       DO j=Jstr,Jend
+# if defined DARWIN_DUMP_TILE_JSTEP
+        IF (MOD(j,DARWIN_DUMP_TILE_JSTEP).ne.0) THEN
+          CYCLE
+        END IF
+# endif
         DO i=Istr,Iend
+# if defined DARWIN_DUMP_TILE_ISTEP
+          IF (MOD(i,DARWIN_DUMP_TILE_ISTEP).ne.0) THEN
+            CYCLE
+          END IF
+# endif
           WRITE (usrout,DumpFmt) 'IN ', iic(ng), tdays(ng), ng, tile,   &
      &                           i, j, 0, 'h', h(i,j)
           WRITE (usrout,DumpFmt) 'IN ', iic(ng), tdays(ng), ng, tile,   &
@@ -40,6 +50,11 @@
      &                           i, j, 0, 'svstr', svstr(i,j)
 # endif
           DO k=1,N(ng)
+# if defined DARWIN_DUMP_TILE_KSTEP
+            IF (MOD(i,DARWIN_DUMP_TILE_KSTEP).ne.0) THEN
+              CYCLE
+            END IF
+# endif
             WRITE (usrout,DumpFmt) 'IN ', iic(ng), tdays(ng), ng, tile, &
      &                             i, j, k, 'Hz', Hz(i,j,k)
             WRITE (usrout,DumpFmt) 'IN ', iic(ng), tdays(ng), ng, tile, &

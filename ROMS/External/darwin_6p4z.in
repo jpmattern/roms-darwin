@@ -1315,6 +1315,26 @@ grp_ExportFracPreyPred == 49*0.6d0
 
  scav_R_POPPOC == 0.00011321d0
 
+! scavenging POC ballast weight (dimensionless)
+! only active for option(s) "DARWIN_PART_SCAV"
+
+ scav_POC_wgt == 1.0d0
+
+! scavenging opal (POSi) ballast weight (dimensionless)
+! only active for option(s) "DARWIN_PART_SCAV"
+
+ scav_PSi_wgt == 0.0d0
+
+! scavenging calcite (PIC) ballast weight (dimensionless)
+! only active for option(s) "DARWIN_PART_SCAV"
+
+ scav_PIC_wgt == 0.0d0
+
+! background scavenging particle conc. (mmol C m^-3)
+! only active for option(s) "DARWIN_PART_SCAV"
+
+ scav_degrPOM == 0.0d0
+
 ! iron flux (mmol Fe m^-2 d^-1)
 ! only active for option(s) " ! DARWIN_IRON_SED_SOURCE_VARIABLE"
 ! original value (including pday correction): "1.0d0 * 1.0d-3 / pday"
@@ -1327,9 +1347,21 @@ fesedflux_pday == 0.0000001d0
  fesedflux_pcm == 0.00068d0
 
 ! sedimentary C:P ratio for iron flux computation (mmol C/mmol P)
-! only active for option(s) "DARWIN_IRON_SED_SOURCE_VARIABLE"
+! only active for option(s) "DARWIN_IRON_SED_SOURCE_VARIABLE DARWIN_IRON_SED_SOURCE_POP"
 
     R_CP_fesed == 106.0d0
+
+! min iron flux subtracted from fesedflux_pcm*wC_sink*POC (mmol Fe m^-2 s^-1)
+! only active for option(s) "DARWIN_IRON_SED_SOURCE_VARIABLE ! DARWIN_IRON_SED_SOURCE_POP"
+! original value (including pday correction): "0.5d-3 / pday"
+
+ fesedflux_min == 0.0000000057870370d0
+
+! max water depth for sedimentary iron flux (m); 0 or less disables the
+! depth restriction (flux applies everywhere, this fork's original
+! behavior)
+
+ fesedflux_depth == 0.0d0
 
 ! oxidation rates for ammonium (d^-1)
 ! original value (including pday correction): "1.0d0/(.50d0*pday)"

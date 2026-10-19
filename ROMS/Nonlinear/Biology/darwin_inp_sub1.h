@@ -659,6 +659,16 @@
             CASE ('scav_R_POPPOC')
               Npts=load_r(Nval, Rval, Ngrids, scav_R_POPPOC)
 #endif
+#if defined DARWIN_PART_SCAV
+            CASE ('scav_POC_wgt')
+              Npts=load_r(Nval, Rval, Ngrids, scav_POC_wgt)
+            CASE ('scav_PSi_wgt')
+              Npts=load_r(Nval, Rval, Ngrids, scav_PSi_wgt)
+            CASE ('scav_PIC_wgt')
+              Npts=load_r(Nval, Rval, Ngrids, scav_PIC_wgt)
+            CASE ('scav_degrPOM')
+              Npts=load_r(Nval, Rval, Ngrids, scav_degrPOM)
+#endif
 #if ! defined DARWIN_IRON_SED_SOURCE_VARIABLE
             CASE ('fesedflux_pday')
               Npts=load_r(Nval, Rval, Ngrids, fesedflux_pday)
@@ -669,9 +679,16 @@
 #if defined DARWIN_IRON_SED_SOURCE_VARIABLE
             CASE ('fesedflux_pcm')
               Npts=load_r(Nval, Rval, Ngrids, fesedflux_pcm)
+# if defined DARWIN_IRON_SED_SOURCE_POP
             CASE ('R_CP_fesed')
               Npts=load_r(Nval, Rval, Ngrids, R_CP_fesed)
+# else
+            CASE ('fesedflux_min')
+              Npts=load_r(Nval, Rval, Ngrids, fesedflux_min)
+# endif
 #endif
+            CASE ('fesedflux_depth')
+              Npts=load_r(Nval, Rval, Ngrids, fesedflux_depth)
             CASE ('Knita_pday')
               Npts=load_r(Nval, Rval, Ngrids, Knita_pday)
               DO ng=1,Ngrids

@@ -6,12 +6,27 @@
 !-----------------------------------------------------------------------
 !
       DO j=Jstr,Jend
+# if defined DARWIN_DUMP_TILE_JSTEP
+        IF (MOD(j,DARWIN_DUMP_TILE_JSTEP).ne.0) THEN
+          CYCLE
+        END IF
+# endif
         DO i=Istr,Iend
+# if defined DARWIN_DUMP_TILE_ISTEP
+          IF (MOD(i,DARWIN_DUMP_TILE_ISTEP).ne.0) THEN
+            CYCLE
+          END IF
+# endif
 # if defined DARWIN_CARBON_EXTRAOUT
           WRITE (usrout,DumpFmt) 'OUT', iic(ng), tdays(ng), ng, tile,   &
      &                           i, j, 0, 'CO2flx', CO2flx(i,j)
 # endif
           DO k=1,N(ng)
+# if defined DARWIN_DUMP_TILE_KSTEP
+            IF (MOD(i,DARWIN_DUMP_TILE_KSTEP).ne.0) THEN
+              CYCLE
+            END IF
+# endif
             DO itrc=1,NBT
               ibio=idbio(itrc)
               DumpVname=Vname(1,idTvar(ibio))

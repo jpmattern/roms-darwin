@@ -705,7 +705,7 @@
      &              TRIM(ADJUSTL(Vinfo(1))),i,'_north'
                 END DO
 #endif /* DARWIN_SIQUOTA */
-#if defined DIAGNOSTICS_BIO_DEACTIVATED
+#if defined DIAGNOSTICS_BIO
 !
 !  Higher-dimensional diagnostic terms.
 !
@@ -766,5 +766,5 @@
                   WRITE (Vname(6,varid),'(3a)')                         &
      &              TRIM(ADJUSTL(Vinfo(1))),'_',TRIM(plankname(i))
                 END DO
-#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
+#endif /*DIAGNOSTICS_BIO*/
             END SELECT

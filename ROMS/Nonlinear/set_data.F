@@ -47,7 +47,8 @@
 !***********************************************************************
 !
       USE mod_param
-# if defined HYPOXIA_SRM || defined RED_TIDE || defined DAILY_SHORTWAVE
+# if defined HYPOXIA_SRM || defined RED_TIDE || defined DAILY_SHORTWAVE || \
+    defined DARWIN_DUST_FORCING
       USE mod_biology
 # endif
       USE mod_boundary
@@ -283,6 +284,18 @@
      &                     LBi, UBi, LBj, UBj,                          &
      &                     FORCES(ng)%srflxG_avg,                       &
      &                     FORCES(ng)%srflx_avg,                        &
+     &                     update)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+
+#  if defined DARWIN_DUST_FORCING
+!
+!  Set atmospheric iron dust deposition flux.
+!
+      CALL set_2dfld_tile (ng, tile, iNLM, idIronDust,                  &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     FORCES(ng)%ironDustG,                        &
+     &                     FORCES(ng)%ironDust,                         &
      &                     update)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif

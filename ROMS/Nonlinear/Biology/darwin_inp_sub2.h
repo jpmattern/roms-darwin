@@ -946,6 +946,16 @@
             WRITE (out,70) scav_R_POPPOC(ng), 'scav_R_POPPOC',          &
      &        'scavenging POP:POC ratio (mmol P/mmol C).'
 #endif
+#if defined DARWIN_PART_SCAV
+            WRITE (out,70) scav_POC_wgt(ng), 'scav_POC_wgt',            &
+     &        'scavenging POC ballast weight (dimensionless).'
+            WRITE (out,70) scav_PSi_wgt(ng), 'scav_PSi_wgt',            &
+     &        'scavenging opal (POSi) ballast weight (dimensionless).'
+            WRITE (out,70) scav_PIC_wgt(ng), 'scav_PIC_wgt',            &
+     &        'scavenging calcite (PIC) ballast weight (dimensionless).'
+            WRITE (out,70) scav_degrPOM(ng), 'scav_degrPOM',            &
+     &        'background scavenging particle conc. (mmol C m^-3).'
+#endif
 #if ! defined DARWIN_IRON_SED_SOURCE_VARIABLE
             WRITE (out,70) fesedflux_pday(ng), 'fesedflux_pday',        &
      &        'iron flux (mmol Fe m^-2 d^-1).'
@@ -953,10 +963,19 @@
 #if defined DARWIN_IRON_SED_SOURCE_VARIABLE
             WRITE (out,70) fesedflux_pcm(ng), 'fesedflux_pcm',          &
      &        'iron flux relative to POC flux (mmol Fe/mmol C).'
+# if defined DARWIN_IRON_SED_SOURCE_POP
             WRITE (out,80) R_CP_fesed(ng), 'R_CP_fesed',                &
      &        'sedimentary C:P ratio for iron flux computation',        &
      &        '(mmol C/mmol P).'
+# else
+            WRITE (out,80) fesedflux_min(ng), 'fesedflux_min',          &
+     &        'min iron flux subtracted from fesedflux_pcm*wC_sink*',   &
+     &        'POC (mmol Fe m^-2 s^-1).'
+# endif
 #endif
+            WRITE (out,80) fesedflux_depth(ng), 'fesedflux_depth',      &
+     &        'max water depth for sedimentary iron flux (m); 0 or',    &
+     &        'less disables the depth restriction.'
             WRITE (out,70) Knita_pday(ng), 'Knita_pday',                &
      &        'oxidation rates for ammonium (d^-1).'
             WRITE (out,70) Knitb_pday(ng), 'Knitb_pday',                &

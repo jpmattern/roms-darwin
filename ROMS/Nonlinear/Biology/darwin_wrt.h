@@ -1939,6 +1939,28 @@
      &  __FILE__)) RETURN
 
 #endif
+#if defined DARWIN_PART_SCAV
+      CALL netcdf_put_fvar (ng, model, ncname, 'scav_POC_wgt',          &
+     &  scav_POC_wgt(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'scav_PSi_wgt',          &
+     &  scav_PSi_wgt(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'scav_PIC_wgt',          &
+     &  scav_PIC_wgt(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'scav_degrPOM',          &
+     &  scav_degrPOM(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
 #if ! defined DARWIN_IRON_SED_SOURCE_VARIABLE
       CALL netcdf_put_fvar (ng, model, ncname, 'fesedflux_pday',        &
      &  fesedflux_pday(ng), (/0/), (/0/), ncid = ncid)
@@ -1952,12 +1974,25 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+# if defined DARWIN_IRON_SED_SOURCE_POP
       CALL netcdf_put_fvar (ng, model, ncname, 'R_CP_fesed',            &
      &  R_CP_fesed(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+# else
+      CALL netcdf_put_fvar (ng, model, ncname, 'fesedflux_min',         &
+     &  fesedflux_min(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+# endif
 #endif
+      CALL netcdf_put_fvar (ng, model, ncname, 'fesedflux_depth',       &
+     &  fesedflux_depth(ng), (/0/), (/0/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
       CALL netcdf_put_fvar (ng, model, ncname, 'Knita_pday',            &
      &  Knita_pday(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &

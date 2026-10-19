@@ -474,14 +474,25 @@
 #if defined DARWIN_PART_SCAV_POP
       real(r8), allocatable :: scav_R_POPPOC(:)       ! mmol P/mmol C
 #endif
+#if defined DARWIN_PART_SCAV
+      real(r8), allocatable :: scav_POC_wgt(:)        ! dimensionless
+      real(r8), allocatable :: scav_PSi_wgt(:)        ! dimensionless
+      real(r8), allocatable :: scav_PIC_wgt(:)        ! dimensionless
+      real(r8), allocatable :: scav_degrPOM(:)        ! mmol C m^-3
+#endif
 #if ! defined DARWIN_IRON_SED_SOURCE_VARIABLE
       real(r8), allocatable :: fesedflux(:)           ! mmol Fe m^-2 s^-1
       real(r8), allocatable :: fesedflux_pday(:)      ! mmol Fe m^-2 d^-1
 #endif
 #if defined DARWIN_IRON_SED_SOURCE_VARIABLE
       real(r8), allocatable :: fesedflux_pcm(:)       ! mmol Fe/mmol C
+# if defined DARWIN_IRON_SED_SOURCE_POP
       real(r8), allocatable :: R_CP_fesed(:)          ! mmol C/mmol P
+# else
+      real(r8), allocatable :: fesedflux_min(:)       ! mmol Fe m^-2 s^-1
+# endif
 #endif
+      real(r8), allocatable :: fesedflux_depth(:)     ! m, positive down
       real(r8), allocatable :: Knita(:)               ! s-1
       real(r8), allocatable :: Knita_pday(:)          ! d^-1
       real(r8), allocatable :: Knitb(:)               ! s-1

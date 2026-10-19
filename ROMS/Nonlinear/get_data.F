@@ -19,7 +19,8 @@
 !=======================================================================
 !
       USE mod_param
-#if defined HYPOXIA_SRM || defined RED_TIDE || defined DAILY_SHORTWAVE
+#if defined HYPOXIA_SRM || defined RED_TIDE || defined DAILY_SHORTWAVE || \
+    defined DARWIN_DUST_FORCING
       USE mod_biology
 #endif
       USE mod_boundary
@@ -458,6 +459,23 @@
      &                GRID(ng) % rmask,                                 &
 #  endif
      &                FORCES(ng) % srflxG_avg)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+
+# if defined DARWIN_DUST_FORCING
+!
+!  Atmospheric iron dust deposition flux.
+!
+      CALL get_2dfld (ng, iNLM, idIronDust, FRCncid(idIronDust,ng),     &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                FRCpioFile(idIronDust,ng),                        &
+#  endif
+     &                nFfiles(ng), FRC(1,ng), update(1),                &
+     &                LBi, UBi, LBj, UBj, 2, 1,                         &
+#  ifdef MASKING
+     &                GRID(ng) % rmask,                                 &
+#  endif
+     &                FORCES(ng) % ironDustG)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 

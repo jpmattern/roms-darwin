@@ -2676,6 +2676,36 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
 #endif
+#if defined DARWIN_PART_SCAV
+      Vinfo( 1)='scav_POC_wgt'
+      Vinfo( 2)='scavenging POC ballast weight'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='scav_PSi_wgt'
+      Vinfo( 2)='scavenging opal (POSi) ballast weight'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='scav_PIC_wgt'
+      Vinfo( 2)='scavenging calcite (PIC) ballast weight'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='scav_degrPOM'
+      Vinfo( 2)='background scavenging particle concentration'
+      Vinfo( 3)='mmol C m^-3'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
 #if ! defined DARWIN_IRON_SED_SOURCE_VARIABLE
       Vinfo( 1)='fesedflux_pday'
       Vinfo( 2)='iron flux'
@@ -2693,6 +2723,7 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+# if defined DARWIN_IRON_SED_SOURCE_POP
       Vinfo( 1)='R_CP_fesed'
       Vinfo( 2)='sedimentary C:P ratio for iron flux computation'
       Vinfo( 3)='mmol C/mmol P'
@@ -2700,7 +2731,23 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+# else
+      Vinfo( 1)='fesedflux_min'
+      Vinfo( 2)='min iron flux subtracted from fesedflux_pcm*wC_sink*POC'
+      Vinfo( 3)='mmol Fe m^-2 s^-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+# endif
 #endif
+      Vinfo( 1)='fesedflux_depth'
+      Vinfo( 2)='max water depth for sedimentary iron flux'
+      Vinfo( 3)='m'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
       Vinfo( 1)='Knita_pday'
       Vinfo( 2)='oxidation rates for ammonium'
       Vinfo( 3)='d^-1'

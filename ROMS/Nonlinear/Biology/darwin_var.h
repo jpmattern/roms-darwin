@@ -83,6 +83,10 @@
             CASE ('idAsrf')
               idAsrf=varid
 #endif /* DAILY_SHORTWAVE */
+#if defined DARWIN_DUST_FORCING
+            CASE ('idIronDust')
+              idIronDust=varid
+#endif /* DARWIN_DUST_FORCING */
 
 /*
 **  Biological tracers open boundary conditions.
@@ -418,4 +422,34 @@
               iDbio4(idPGrowthRate)=varid
             CASE ('iDbio4(idNUpNorm)')
               iDbio4(idNUpNorm)=varid
+            CASE ('iDbio3(iPP)')
+              iDbio3(iPP)=varid
+            CASE ('iDbio3(iNfix)')
+              iDbio3(iNfix)=varid
+            CASE ('iDbio3(iDenit)')
+              iDbio3(iDenit)=varid
+            CASE ('iDbio3(iDenitN)')
+              iDbio3(iDenitN)=varid
+            CASE ('iDbio3(iConsPO4)')
+              iDbio3(iConsPO4)=varid
+            CASE ('iDbio3(iConsSi)')
+              iDbio3(iConsSi)=varid
+            CASE ('iDbio3(iConsFe)')
+              iDbio3(iConsFe)=varid
+#if defined DARWIN_MINFE && defined DARWIN_FUTURE
+            CASE ('iDbio3(iFeLoss)')
+              iDbio3(iFeLoss)=varid
+#endif
+#if defined DARWIN_FUTURE
+            CASE ('iDbio3(iPartScav)')
+              iDbio3(iPartScav)=varid
+            CASE ('iDbio3(iSedFlx)')
+              iDbio3(iSedFlx)=varid
+#endif
+            CASE ('iDbio3(iConsDIN)')
+              iDbio3(iConsDIN)=varid
+            CASE ('iDbio3(iPPplank)')
+              load=.TRUE.
+            CASE ('iDbio3(iGRplank)')
+              load=.TRUE.
 #endif

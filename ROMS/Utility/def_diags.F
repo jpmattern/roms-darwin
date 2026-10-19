@@ -101,7 +101,7 @@
 !
       logical :: got_var(NV)
 !
-#if defined DIAGNOSTICS_UV && defined DARWIN_INTERNAL_EXTRAATT
+#if defined DARWIN_INTERNAL_EXTRAATT
       integer, parameter :: Natt = DARWIN_INTERNAL_EXTRAATT
 #else
       integer, parameter :: Natt = 25

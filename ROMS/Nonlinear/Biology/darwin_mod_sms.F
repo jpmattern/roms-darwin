@@ -968,10 +968,14 @@
             freefe(i,k) = Bio(iFeT,k,i) - FeL
 #if defined DARWIN_MINFE
             freefe(i,k) = MIN(freefe(i,k), freefemax(ng))
-! TODO: allow statement back in (dt correction required?)
-!            IF (maskInC(i) .GT. 0.0_r8) THEN
-!              Bio(iFeT,k,i)(i,k) = FeL + freefe(i,k)
-!            ENDIF
+# if defined DARWIN_FUTURE
+!  mass-conserving re-application of the free-iron cap to the FeT state
+!  variable itself (matches upstream gud_fe_chem.F's FeT(i,j,k)=FeL+freefe
+!  correction); previously only the local diagnostic freefe was clipped,
+!  leaving Bio(iFeT,...) itself uncapped
+            diags(iFeLoss,k,i) = Bio(iFeT,k,i) - FeL - freefe(i,k)
+            Bio(iFeT,k,i) = FeL + freefe(i,k)
+# endif
 #endif
 !          ELSE
 !            freefe(i,k) = 0.0_r8
@@ -984,7 +988,7 @@
 !
 !
       SUBROUTINE darwin_fe_chem2(tile, ng, IminS, ImaxS, Bio, inputFe,  &
-     &  freefe,                                                         &
+     &  freefe, h,                                                      &
 !#ifdef MASKING
 !     &  rmask,                                                          &
 !#endif
@@ -1005,6 +1009,7 @@
       real(r8),intent(inout),dimension(NT(ng),N(ng),IminS:ImaxS) :: Bio
       real(r8),intent(in),dimension(IminS:ImaxS) :: inputFe
       real(r8),intent(in),dimension(IminS:ImaxS,1:N(ng)) :: freefe
+      real(r8),intent(in),dimension(IminS:ImaxS) :: h
 !#if defined ASSUMED_SHAPE
 !#ifdef MASKING
 !      real(r8), intent(in) :: rmask(LBi:,LBj:)
@@ -1055,27 +1060,50 @@
           scav_poc = MAX(0.0_r8, Bio(iPOP,k,i))/scav_R_POPPOC(ng)
           scv = scav_rat(ng)*scav_inter(ng)*(scav_poc**scav_exp(ng))
 #elif defined DARWIN_PART_SCAV
-          scav_poc = MAX(0.0_r8, Bio(iPOC,k,i))
+          scav_poc = scav_POC_wgt(ng)*MAX(0.0_r8, Bio(iPOC,k,i))         &
+     &      + scav_PSi_wgt(ng)*MAX(0.0_r8, Bio(iPOSi,k,i))               &
+     &      + scav_PIC_wgt(ng)*MAX(0.0_r8, Bio(iPIC,k,i))                &
+     &      + scav_degrPOM(ng)
           scv = scav_rat(ng)*scav_inter(ng)*(scav_poc**scav_exp(ng))
 #else
           scv = scav(ng)
 #endif
+#if defined DARWIN_FUTURE
+          diags(iPartScav,k,i) = scv*MAX(0.0_r8, freefe(i,k))
+          Bio(iFet,k,i) = Bio(iFet,k,i) - dtbio(ng)*diags(iPartScav,k,i)
+#else
           Bio(iFet,k,i) = Bio(iFet,k,i) + dtbio(ng)*(-scv*freefe(i,k))
+#endif
         ENDDO
       ENDDO
 #if defined DARWIN_VERBOSE_IFET
         write(*,*) '<<2b',IminS,ImaxS,j,maxval(Bio(iFet,:,:))
 #endif
 ! iron flux
+!  restricted to water columns shallower than fesedflux_depth(ng), matching
+!  upstream gud_forcing.F's depthfesed/kMinFeSed/kMaxFeSed gating (reducing
+!  sediments that supply this flux are mainly a shelf/slope phenomenon, not
+!  an abyssal one); fesedflux_depth(ng).LE.0 disables the restriction
+!  (applies everywhere), matching this fork's original unrestricted behavior
       DO i=Istr,Iend
+        IF (fesedflux_depth(ng).LE.0.0_r8 .OR.                          &
+     &      h(i).LE.fesedflux_depth(ng)) THEN
 #if defined DARWIN_IRON_SED_SOURCE_VARIABLE
-        !TODO this needs to be improved
-        flx = fesedflux_pcm(ng)*wP_sink(ng)*R_CP_fesed(ng)*             &
-     &    MAX(0.0_r8, Bio(iPOP,2,i))
+# if defined DARWIN_IRON_SED_SOURCE_POP
+          flx = fesedflux_pcm(ng)*wP_sink(ng)*R_CP_fesed(ng)*           &
+     &      MAX(0.0_r8, Bio(iPOP,2,i))
+# else
+          flx = MAX(0.0_r8, fesedflux_pcm(ng)*wC_sink(ng)*              &
+     &      MAX(0.0_r8, Bio(iPOC,1,i)) - fesedflux_min(ng))
+# endif
 #else
-        flx = fesedflux(ng)
+          flx = fesedflux(ng)
 #endif
-        Bio(iFet,1,i)=Bio(iFet,1,i)+dtbio(ng)*(flx/drF(i,1))
+#if defined DARWIN_FUTURE
+          diags(iSedFlx,1,i) = flx
+#endif
+          Bio(iFet,1,i)=Bio(iFet,1,i)+dtbio(ng)*(flx/drF(i,1))
+        END IF
       END DO
 #if defined DARWIN_VERBOSE_IFET
         write(*,*) '<<2c',IminS,ImaxS,j,maxval(Bio(iFet,:,:))

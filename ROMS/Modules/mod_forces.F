@@ -352,6 +352,11 @@
           real(r8), pointer :: srflxG_avg(:,:,:)
 # endif
 
+# if defined DARWIN_DUST_FORCING
+          real(r8), pointer :: ironDust(:,:)
+          real(r8), pointer :: ironDustG(:,:,:)
+# endif
+
 # ifdef CLOUDS
           real(r8), pointer :: cloud(:,:)
 #  ifndef ANA_CLOUD
@@ -795,6 +800,14 @@
       Dmem(ng)=Dmem(ng)+size2d
 
       allocate ( FORCES(ng) % srflxG_avg(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+# endif
+
+# if defined DARWIN_DUST_FORCING
+      allocate ( FORCES(ng) % ironDust(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( FORCES(ng) % ironDustG(LBi:UBi,LBj:UBj,2) )
       Dmem(ng)=Dmem(ng)+2.0_r8*size2d
 # endif
 
@@ -1379,6 +1392,14 @@
 
       IF (.not.destroy(ng, FORCES(ng)%srflxG_avg, MyFile,               &
      &                 __LINE__, 'FORCES(ng)%srflxG_avg')) RETURN
+#  endif
+
+#  if defined DARWIN_DUST_FORCING
+      IF (.not.destroy(ng, FORCES(ng)%ironDust, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%ironDust')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%ironDustG, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%ironDustG')) RETURN
 #  endif
 
 #  ifdef CLOUDS
@@ -1974,6 +1995,11 @@
             FORCES(ng) % srflx_avg(i,j) = IniVal
             FORCES(ng) % srflxG_avg(i,j,1) = IniVal
             FORCES(ng) % srflxG_avg(i,j,2) = IniVal
+# endif
+# if defined DARWIN_DUST_FORCING
+            FORCES(ng) % ironDust(i,j) = IniVal
+            FORCES(ng) % ironDustG(i,j,1) = IniVal
+            FORCES(ng) % ironDustG(i,j,2) = IniVal
 # endif
 # ifdef CLOUDS
             FORCES(ng) % cloud(i,j) = IniVal

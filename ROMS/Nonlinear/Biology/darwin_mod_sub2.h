@@ -1780,6 +1780,24 @@
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 #endif
+#if defined DARWIN_PART_SCAV
+      IF (.not.allocated(scav_POC_wgt)) THEN
+        allocate ( scav_POC_wgt(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+      IF (.not.allocated(scav_PSi_wgt)) THEN
+        allocate ( scav_PSi_wgt(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+      IF (.not.allocated(scav_PIC_wgt)) THEN
+        allocate ( scav_PIC_wgt(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+      IF (.not.allocated(scav_degrPOM)) THEN
+        allocate ( scav_degrPOM(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+#endif
 #if ! defined DARWIN_IRON_SED_SOURCE_VARIABLE
       IF (.not.allocated(fesedflux)) THEN
         allocate ( fesedflux(Ngrids) )
@@ -1795,11 +1813,22 @@
         allocate ( fesedflux_pcm(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+# if defined DARWIN_IRON_SED_SOURCE_POP
       IF (.not.allocated(R_CP_fesed)) THEN
         allocate ( R_CP_fesed(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+# else
+      IF (.not.allocated(fesedflux_min)) THEN
+        allocate ( fesedflux_min(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+# endif
 #endif
+      IF (.not.allocated(fesedflux_depth)) THEN
+        allocate ( fesedflux_depth(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
       IF (.not.allocated(Knita)) THEN
         allocate ( Knita(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)

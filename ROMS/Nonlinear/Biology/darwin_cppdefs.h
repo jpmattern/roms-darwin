@@ -19,6 +19,13 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+17)=' DARWIN_CHLQUOTA,'
 # endif
+# if defined DARWIN_DUST_FORCING
+!
+      IF (Master) WRITE (stdout,20) 'DARWIN_DUST_FORCING',              &
+     &   'Read atmospheric iron dust deposition from a forcing file.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+21)=' DARWIN_DUST_FORCING,'
+# endif
 # if defined DARWIN_FEQUOTA
 !
       IF (Master) WRITE (stdout,20) 'DARWIN_FEQUOTA',                   &

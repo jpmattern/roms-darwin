@@ -611,65 +611,150 @@
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
-#endif /*DIAGNOSTICS_BIO*/
-#if defined DIAGNOSTICS_BIO_DEACTIVATED
             CASE ('Dout(iPP)')
+              IF (iDbio3(iPP).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iPP)'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iPP)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
             CASE ('Dout(iNfix)')
+              IF (iDbio3(iNfix).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iNfix)'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iNfix)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
             CASE ('Dout(iDenit)')
+              IF (iDbio3(iDenit).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iDenit)'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iDenit)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
             CASE ('Dout(iDenitN)')
+              IF (iDbio3(iDenitN).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iDenitN)'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iDenitN)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
             CASE ('Dout(iConsPO4)')
+              IF (iDbio3(iConsPO4).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iConsPO4)'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iConsPO4)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
             CASE ('Dout(iConsSi)')
+              IF (iDbio3(iConsSi).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iConsSi)'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iConsSi)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
             CASE ('Dout(iConsFe)')
+              IF (iDbio3(iConsFe).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iConsFe)'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iConsFe)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
+#if defined DARWIN_MINFE && defined DARWIN_FUTURE
+            CASE ('Dout(iFeLoss)')
+              IF (iDbio3(iFeLoss).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iFeLoss)'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              i=iDbio3(iFeLoss)
+              DO ng=1,Ngrids
+                Dout(i,ng)=Lbio(ng)
+              END DO
+#endif
+#if defined DARWIN_FUTURE
+            CASE ('Dout(iPartScav)')
+              IF (iDbio3(iPartScav).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iPartScav)'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              i=iDbio3(iPartScav)
+              DO ng=1,Ngrids
+                Dout(i,ng)=Lbio(ng)
+              END DO
+            CASE ('Dout(iSedFlx)')
+              IF (iDbio3(iSedFlx).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iSedFlx)'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              i=iDbio3(iSedFlx)
+              DO ng=1,Ngrids
+                Dout(i,ng)=Lbio(ng)
+              END DO
+#endif
             CASE ('Dout(iConsDIN)')
+              IF (iDbio3(iConsDIN).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iConsDIN)'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lbio)
               i=iDbio3(iConsDIN)
               DO ng=1,Ngrids
                 Dout(i,ng)=Lbio(ng)
               END DO
             CASE ('Dout(iPPplank)')
+              IF (iDbio3(iPPplank).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iPPplank)'
+                exit_flag=5
+                RETURN
+              END IF
               i=iDbio3(iPPplank)
               Npts=load_l(Nval, Cval, nPPplank, Ngrids,                  &
      &          Dout(i:i+nPPplank-1,1:Ngrids))
             CASE ('Dout(iGRplank)')
+              IF (iDbio3(iGRplank).eq.0) THEN
+                IF (Master) WRITE (out,40) 'iDbio3(iGRplank)'
+                exit_flag=5
+                RETURN
+              END IF
               i=iDbio3(iGRplank)
               Npts=load_l(Nval, Cval, nGRplank, Ngrids,                  &
      &          Dout(i:i+nGRplank-1,1:Ngrids))
-#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
+#endif /*DIAGNOSTICS_BIO*/
           END SELECT
         END IF
       END DO
@@ -1465,63 +1550,6 @@
         END DO
       END IF
 #endif /*DIAGNOSTICS_BIO*/
-#if defined DIAGNOSTICS_BIO_DEACTIVATED
-# if defined DIAGNOSTICS_BIO_MAPPING
-!
-!-----------------------------------------------------------------------
-!  Allocate diagnostic variables based on Dout.
-!-----------------------------------------------------------------------
-!
-      DO ng=1,Ngrids
-        NDb3d_o=0
-        iDbiomapping(:,ng)=0
-        ip=1
-        DO i=1,darwin_nDiag
-          IF (Dout(iDbio3(i),ng)) THEN
-            NDb3d_o=NDb3d_o+1
-            !iDbiomapping(i,ng)=ip
-            iDbiomapping(ip,ng)=i
-            ip=ip+1
-          END IF
-        END DO
-#  if defined DIAGNOSTICS_BIO_MAPPING_DEBUG
-        IF (Master) THEN
-          write(out,'(a,99(1x,i3))') 'iDbiomapping: ',iDbiomapping(:,ng)
-        END IF
-#  endif
-!
-!  Shuffle iDbio3 to make entries with Dout==true appear in front.
-!
-#  if defined DIAGNOSTICS_BIO_MAPPING_DEBUG
-        IF (Master) THEN
-          write(out,'(a,99(1x,i3))') 'iDbio3 before:',iDbio3
-        END IF
-#  endif
-        IF (NDb3d_o.lt.NDbio3d) THEN
-          ip=1
-          iz=NDb3d_o+1
-          DO WHILE (ip.le.NDb3d_o)
-            DO WHILE (Dout(iDbio3(ip),ng))
-              ip=ip+1
-            END DO
-            DO WHILE (iz.le.NDbio3d.and.(.not.Dout(iDbio3(iz),ng)))
-              iz=iz+1
-            END DO
-            IF (iz.gt.NDbio3d) EXIT
-            ! switch
-            ifield=iDbio3(ip)
-            iDbio3(ip)=iDbio3(iz)
-            iDbio3(iz)=ifield
-          END DO
-        END IF
-#  if defined DIAGNOSTICS_BIO_MAPPING_DEBUG
-        IF (Master) THEN
-          write(out,'(a,99(1x,i3))') 'iDbio3 after: ',iDbio3
-        END IF
-#  endif
-      END DO
-# endif /*DIAGNOSTICS_BIO_MAPPING*/
-#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
 !
 !-----------------------------------------------------------------------
 !  Perform various checks.

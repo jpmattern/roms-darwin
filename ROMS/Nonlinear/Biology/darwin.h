@@ -58,6 +58,9 @@
 #if defined DAILY_SHORTWAVE
      &                   FORCES(ng) % srflx_avg,                        &
 #endif /* DAILY_SHORTWAVE */
+#if defined DARWIN_DUST_FORCING
+     &                   FORCES(ng) % ironDust,                         &
+#endif /* DARWIN_DUST_FORCING */
      &                   FORCES(ng) % srflx,                            &
 #if defined BULK_FLUXES
      &                   FORCES(ng) % Uwind,                            &
@@ -101,6 +104,9 @@
 #if defined DAILY_SHORTWAVE
      &                         srflx_avg,                               &
 #endif /* DAILY_SHORTWAVE */
+#if defined DARWIN_DUST_FORCING
+     &                         ironDust,                                &
+#endif /* DARWIN_DUST_FORCING */
      &                         srflx,                                   &
 #if defined BULK_FLUXES
      &                         Uwind, Vwind,                            &
@@ -126,9 +132,6 @@
 #if defined DARWIN_VERBOSE
       USE mod_parallel, only: Master
 #endif
-#if defined DIAGNOSTICS_BIO_MAPPING
-      USE mod_ncparam, only: Dout
-#endif
 #if defined DARWIN_DUMP_TILE
       USE mod_iounits, only: usrout, USRname, stdout
       USE mod_ncparam, only: Vname, idTvar
@@ -152,6 +155,9 @@
 # if defined DAILY_SHORTWAVE
       real(r8), intent(in) :: srflx_avg(LBi:,LBj:)
 # endif /* DAILY_SHORTWAVE */
+# if defined DARWIN_DUST_FORCING
+      real(r8), intent(in) :: ironDust(LBi:,LBj:)
+# endif /* DARWIN_DUST_FORCING */
       real(r8), intent(in) :: srflx(LBi:,LBj:)
 # if defined BULK_FLUXES
       real(r8), intent(in) :: Uwind(LBi:,LBj:)
@@ -185,6 +191,9 @@
 # if defined DAILY_SHORTWAVE
       real(r8), intent(in) :: srflx_avg(LBi:UBi,LBj:UBj)
 # endif /* DAILY_SHORTWAVE */
+# if defined DARWIN_DUST_FORCING
+      real(r8), intent(in) :: ironDust(LBi:UBi,LBj:UBj)
+# endif /* DARWIN_DUST_FORCING */
       real(r8), intent(in) :: srflx(LBi:UBi,LBj:UBj)
 # if defined BULK_FLUXES
       real(r8), intent(in) :: Uwind(LBi:UBi,LBj:UBj)
@@ -214,9 +223,6 @@
 !
       integer :: Iter, i, ibio, isink, itime, itrc, iTrcMax, j, k, ks
       integer :: bstp, bnew
-#if defined DIAGNOSTICS_BIO_MAPPING
-      integer :: idia
-#endif
 
       character (len=*), parameter :: MyFile =                         &
      &  __FILE__
@@ -402,7 +408,11 @@
 # endif /* DAILY_SHORTWAVE */
 #endif /* LET_THERE_BE_LIGHT */
         END DO
-#if defined DARWIN_INPUTFE
+#if defined DARWIN_DUST_FORCING
+        DO i=Istr,Iend
+          inputFe(i,j)=ironDust(i,j)
+        END DO
+#elif defined DARWIN_INPUTFE
 !
 !
 !
@@ -481,7 +491,7 @@
      &    inputFe(:,j), freefe,                                         &
      &    diags)
         CALL darwin_fe_chem2(tile, ng, IminS, ImaxS, Bio,               &
-     &    inputFe(:,j), freefe,                                         &
+     &    inputFe(:,j), freefe, h(:,j),                                 &
 #if defined DARWIN_VERBOSE_IFET
      &  j,                                                              &
 #endif
@@ -570,38 +580,6 @@
             END DO
           END DO
         END DO
-#endif /*DIAGNOSTICS_BIO*/
-#if defined DIAGNOSTICS_BIO_DEACTIVATED
-!
-!-----------------------------------------------------------------------
-! Copy information from diags into ROMS diagnostic arrays.
-!-----------------------------------------------------------------------
-!
-!      IF (((iic(ng).gt.ntsDIA(ng)).and.                                 &
-!     &     (MOD(iic(ng),nDIA(ng)).eq.1)).or.                            &
-!     &    ((iic(ng).ge.ntsDIA(ng)).and.(nDIA(ng).eq.1)).or.             &
-!     &    ((nrrec(ng).gt.0).and.(iic(ng).eq.ntstart(ng)))) THEN
-# if defined DIAGNOSTICS_BIO_MAPPING
-        DO itrc=1,NDb3d_o
-          IF (Dout(iDbio3(itrc),ng)) THEN
-            idia=iDbiomapping(itrc,ng)
-            DO k=1,N(ng)
-              DO i=Istr,Iend
-                DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(idia,k,i)
-              END DO
-            END DO
-          END IF
-        END DO
-# else
-        DO itrc=1,darwin_nDiag
-          DO k=1,N(ng)
-            DO i=Istr,Iend
-              DiaBio3d(i,j,k,itrc)=DiaBio3d(i,j,k,itrc)+diags(itrc,k,i)
-            END DO
-          END DO
-        END DO
-# endif
-# if defined DIAGNOSTICS_BIO
         DO itrc=1,NDbio3d
           DO k=1,N(ng)
             DO i=Istr,Iend
@@ -609,9 +587,7 @@
             END DO
           END DO
         END DO
-# endif
-!      END IF
-#endif
+#endif /*DIAGNOSTICS_BIO*/
 #if defined DARWIN_VERBOSE_NUT || defined DARWIN_VERBOSE_PLANK
         IF (j==DARWIN_VERBOSE_J.and.DARWIN_VERBOSE_I.ge.Istr.and.DARWIN_VERBOSE_I.le.Iend) THEN
           i=DARWIN_VERBOSE_I
@@ -623,7 +599,7 @@
           write(*,'(a20,f18.12)') 'final NO3 = ',Bio(iNO3,k,i)
 # endif
         END IF
-#endif /*DIAGNOSTICS_BIO_DEACTIVATED*/
+#endif /*DARWIN_VERBOSE_NUT || DARWIN_VERBOSE_PLANK*/
 !
 !-----------------------------------------------------------------------
 !  Update global tracer variables: Add increment due to BGC processes

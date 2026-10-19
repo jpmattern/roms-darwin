@@ -7502,6 +7502,217 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       iron_dust                                        # Input
+    standard_name:  dust_deposition_flux_of_iron_at_sea_water_surface
+    long_name:      atmospheric iron dust deposition flux
+    units:          millimole_iron meter-2 second-1                  # [mmol Fe/m2/s]
+    field:          iron dust deposition
+    time:           dust_time
+    index_code:     idIronDust
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  #  Darwin Diagnostic Variables
+
+  - variable:       PP                                               # Output
+    standard_name:  net_primary_production_of_biomass_expressed_as_carbon_in_sea_water
+    long_name:      net primary production
+    units:          millimole_carbon meter-3 second-1                # [mmol C/m3/s]
+    field:          net primary production
+    time:           ocean_time
+    index_code:     iDbio3(iPP)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Nfix                                             # Output
+    standard_name:  nitrogen_fixation_flux_in_sea_water
+    long_name:      nitrogen fixation rate
+    units:          millimole_nitrogen meter-3 second-1              # [mmol N/m3/s]
+    field:          nitrogen fixation
+    time:           ocean_time
+    index_code:     iDbio3(iNfix)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Denit                                            # Output
+    standard_name:  mole_concentration_of_denitrification_flux_expressed_as_phosphorus_in_sea_water
+    long_name:      denitrification (phosphorus-equivalent organic matter remineralization subject to denitrification)
+    units:          millimole_phosphorus meter-3 second-1            # [mmol P/m3/s]
+    field:          denitrification
+    time:           ocean_time
+    index_code:     iDbio3(iDenit)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       DenitN                                           # Output
+    standard_name:  mole_concentration_of_denitrification_nitrogen_loss_flux_in_sea_water
+    long_name:      denitrification nitrogen loss rate
+    units:          millimole_nitrogen meter-3 second-1              # [mmol N/m3/s]
+    field:          denitrification nitrogen loss
+    time:           ocean_time
+    index_code:     iDbio3(iDenitN)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cons_PO4                                         # Output
+    standard_name:  mole_concentration_of_phosphate_consumption_flux_in_sea_water
+    long_name:      PO4 consumption rate by plankton
+    units:          millimole_phosphorus meter-3 second-1            # [mmol P/m3/s]
+    field:          PO4 consumption
+    time:           ocean_time
+    index_code:     iDbio3(iConsPO4)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cons_Si                                          # Output
+    standard_name:  mole_concentration_of_silicate_consumption_flux_in_sea_water
+    long_name:      Si consumption rate by plankton
+    units:          millimole_silicon meter-3 second-1               # [mmol Si/m3/s]
+    field:          Si consumption
+    time:           ocean_time
+    index_code:     iDbio3(iConsSi)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cons_Fe                                          # Output
+    standard_name:  mole_concentration_of_iron_consumption_flux_in_sea_water
+    long_name:      Fe consumption rate by plankton
+    units:          millimole_iron meter-3 second-1                  # [mmol Fe/m3/s]
+    field:          Fe consumption
+    time:           ocean_time
+    index_code:     iDbio3(iConsFe)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Fe_loss_cap                                      # Output
+    standard_name:  dissolved_iron_loss_due_to_free_iron_maximum_cap
+    long_name:      iron removed by the free-iron maximum cap (DARWIN_MINFE/DARWIN_FUTURE)
+    units:          millimole_iron meter-3                           # [mmol Fe/m3]
+    field:          iron loss to free-iron cap
+    time:           ocean_time
+    index_code:     iDbio3(iFeLoss)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Fe_part_scav                                     # Output
+    standard_name:  mole_concentration_of_dissolved_iron_particle_scavenging_flux_in_sea_water
+    long_name:      free iron loss rate due to particle scavenging
+    units:          millimole_iron meter-3 second-1                  # [mmol Fe/m3/s]
+    field:          iron particle scavenging
+    time:           ocean_time
+    index_code:     iDbio3(iPartScav)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Fe_sed_flux                                      # Output
+    standard_name:  dissolved_iron_upward_flux_at_sea_floor
+    long_name:      sedimentary iron source flux
+    units:          millimole_iron meter-2 second-1                  # [mmol Fe/m2/s]
+    field:          sedimentary iron flux
+    time:           ocean_time
+    index_code:     iDbio3(iSedFlx)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Cons_DIN                                         # Output
+    standard_name:  mole_concentration_of_dissolved_inorganic_nitrogen_consumption_flux_in_sea_water
+    long_name:      DIN consumption rate by plankton
+    units:          millimole_nitrogen meter-3 second-1              # [mmol N/m3/s]
+    field:          DIN consumption
+    time:           ocean_time
+    index_code:     iDbio3(iConsDIN)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       PP_plank                                         # Output
+    standard_name:  net_primary_production_of_biomass_expressed_as_carbon_in_sea_water
+    long_name:      net primary production by plankton type
+    units:          millimole_carbon meter-3 second-1                # [mmol C/m3/s]
+    field:          net primary production
+    time:           ocean_time
+    index_code:     iDbio3(iPPplank)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       GR_plank                                         # Output
+    standard_name:  mole_concentration_of_grazing_loss_flux_expressed_as_carbon_in_sea_water
+    long_name:      grazing loss rate by plankton type (prey)
+    units:          millimole_carbon meter-3 second-1                # [mmol C/m3/s]
+    field:          grazing loss
+    time:           ocean_time
+    index_code:     iDbio3(iGRplank)
+    type:           l3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       GrazRt                                           # Output
+    standard_name:  mole_concentration_of_grazing_loss_flux_expressed_as_carbon_in_sea_water
+    long_name:      plankton grazing loss rate (by predator and prey type)
+    units:          millimole_carbon meter-3 day-1                   # [mmol C/m3/day]
+    field:          grazing rate
+    time:           ocean_time
+    index_code:     iDbio4(idGrazRt)
+    type:           l4dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       GrazPr                                           # Output
+    standard_name:  specific_grazing_loss_rate_of_biomass_expressed_as_carbon_in_sea_water
+    long_name:      plankton grazing pressure (specific loss rate, by predator and prey type)
+    units:          day-1                                            # [1/day]
+    field:          grazing pressure
+    time:           ocean_time
+    index_code:     iDbio4(idGrazPr)
+    type:           l4dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NPP                                              # Output
+    standard_name:  net_primary_production_of_biomass_expressed_as_carbon_in_sea_water
+    long_name:      net primary production by plankton type
+    units:          millimole_carbon meter-3 day-1                   # [mmol C/m3/day]
+    field:          net primary production
+    time:           ocean_time
+    index_code:     iDbio4(idNPP4d)
+    type:           l4dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       GrowthRate                                       # Output
+    standard_name:  specific_growth_rate_of_biomass_expressed_as_carbon_in_sea_water
+    long_name:      plankton specific growth rate
+    units:          day-1                                            # [1/day]
+    field:          plankton growth rate
+    time:           ocean_time
+    index_code:     iDbio4(idPGrowthRate)
+    type:           l4dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       NUpNorm                                          # Output
+    standard_name:  nitrogen_uptake_normalized_by_dissolved_inorganic_nitrogen
+    long_name:      nitrogen uptake normalized by DIN concentration
+    units:          day-1                                            # [1/day]
+    field:          normalized nitrogen uptake
+    time:           ocean_time
+    index_code:     iDbio4(idNUpNorm)
+    type:           l4dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   - variable:       DIN_obs                                          # Input
     standard_name:  mole_concentration_of_dissolved_inorganic_nutrient
     long_name:      observed dissolved inorganic nutrient

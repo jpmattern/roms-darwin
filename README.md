@@ -6,6 +6,7 @@
 
 ROMS-Darwin is an implementation of the [Darwin ecosystem model](http://darwinproject.mit.edu/) in the Regional Ocean Modeling System ([ROMS](https://www.myroms.org/)).
 It permits running Darwin in a regional configuration.
+In version 2.0, some new Darwin features and improvements are only active when compiling with `DARWIN_FUTURE`; when not activating `DARWIN_FUTURE` ROMS-Darwin dynamics are identical to previous ROMS-Darwin versions.
 
 ## Getting started
 
@@ -19,7 +20,6 @@ As of now, there is no official documentation available for ROMS-Darwin in this 
 
 Not all features of the original Darwin code are fully implemented (yet), among them are:
 * A spectral light model as presented in Dutkiewicz *et al.* (2015).
-* Proper handling of sedimentary iron sources.
 
 ## License
 

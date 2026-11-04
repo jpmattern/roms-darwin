@@ -22,6 +22,9 @@
       integer, parameter :: nPhoto=DARWIN_DIM_NPHOTO
       integer, parameter :: nPPplank=DARWIN_DIM_NPPPLANK
       integer, parameter :: nGRplank=DARWIN_DIM_NGRPLANK
+#if defined DARWIN_POMCLASS
+      integer, parameter :: npom=DARWIN_DIM_NPOM
+#endif
 !
 !  Legacy fixed predator/prey/bacteria index ranges. These have been
 !  superseded everywhere by the isPhoto/isPred/bactType per-type trait
@@ -253,15 +256,35 @@
       iDOFe=ic
       ic=ic+1
       iPOC=ic
+#if defined DARWIN_POMCLASS
+      ic=ic+npom
+#else
       ic=ic+1
+#endif
       iPON=ic
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      ic=ic+npom
+#else
       ic=ic+1
+#endif
       iPOP=ic
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      ic=ic+npom
+#else
       ic=ic+1
+#endif
       iPOSi=ic
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      ic=ic+npom
+#else
       ic=ic+1
+#endif
       iPOFe=ic
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      ic=ic+npom
+#else
       ic=ic+1
+#endif
       iPIC=ic
       ic=ic+1
 #if defined DARWIN_TOTAL_CHLOROPHYLL

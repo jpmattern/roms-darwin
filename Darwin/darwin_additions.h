@@ -74,6 +74,10 @@
 #    define DARWIN_DIM_NGRPLANK 0
 #   endif
 #  endif
+/* Optional: only used to build descriptive "phytoplankton"/"bacteria"/
+   "zooplankton" plankname labels (ROMS/Nonlinear/Biology/darwin_mod.h). All
+   six must be defined together, or none at all; omitting them falls back to
+   generic "planktonNN" labels. */
 #  if ! defined DARWIN_INDEX_MINBACT
 #   define DARWIN_INDEX_MINBACT 101
 #  endif

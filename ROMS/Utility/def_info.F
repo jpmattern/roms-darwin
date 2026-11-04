@@ -53,6 +53,9 @@
 !    DimIDs(32) => Number of sediment tracers                          !
 #if defined DARWIN
 !    DimIDs(33) => Number of Darwin wavelengths plus one               !
+# if defined DARWIN_POMCLASS
+!    DimIDs(34) => Number of Darwin POM classes                        !
+# endif
 #else
 !    DimIDs(33) => Number of light spectral bands                      !
 #endif
@@ -150,6 +153,9 @@
       integer :: lamdim
       !integer :: lamdimplus
       integer :: groupdim
+# if defined DARWIN_POMCLASS
+      integer :: pomdim
+# endif
 #endif
 #if !defined PARALLEL_IO  && defined DISTRIBUTE
       integer :: ibuffer(2)
@@ -214,6 +220,9 @@
       chldim=DimIDs(26)
       lamdim=DimIDs(27)
       groupdim=DimIDs(28)
+# if defined DARWIN_POMCLASS
+      pomdim=DimIDs(34)
+# endif
       !lamdimplus=DimIDs(33)
 #endif
 !

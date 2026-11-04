@@ -570,6 +570,14 @@
         END DO
 #endif
 #if defined DIAGNOSTICS_BIO
+!
+!-----------------------------------------------------------------------
+! Copy information from diags/diags4d into ROMS diagnostic arrays.
+! All diagnostics are accumulated here regardless of Dout; Dout only
+! controls which ones are actually written to the diagnostics NetCDF
+! file (see def_diags.F/wrt_diags.F).
+!-----------------------------------------------------------------------
+!
         DO itrc=1,NDbio4d
           DO ibio=1,nplank
             DO k=1,N(ng)

@@ -116,7 +116,11 @@
 !  Maximum number of dimension IDs stored in local array DimIDs used to
 !  defined variable dimensions in output NetCDF files.
 !
+#if defined DARWIN && defined DARWIN_POMCLASS
+      integer, parameter :: nDimID = 34
+#else
       integer, parameter :: nDimID = 33
+#endif
 !
 !  Number of horizontal interior and boundary water points.
 !

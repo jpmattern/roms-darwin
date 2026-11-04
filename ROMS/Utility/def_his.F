@@ -338,6 +338,11 @@
 !        status=def_dim(ng, model, HIS(ng)%ncid, ncname, 'nlampone',     &
 !     &                 nlam+1, DimIDs(33))
 !        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  if defined DARWIN_POMCLASS
+        status=def_dim(ng, model, HIS(ng)%ncid, ncname, 'npom',         &
+     &                 npom, DimIDs(34))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
 # endif
 #endif
 

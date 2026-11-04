@@ -1413,11 +1413,28 @@
 !  Note that Wbio has dimensions of (MT,Ngrids) and not (Nsink,Ngrids)
         Wbio(:,ng) = 0.0_r8
         Wbio(iPIC,ng) =  wPIC_sink(ng)
+#if ! defined DARWIN_POMCLASS
         Wbio(iPOC,ng) =  wC_sink(ng)
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+        DO i=1,npom
+          Wbio(iPOC+i-1,ng) =  wC_sink(i,ng)
+        END DO
+#endif /* DARWIN_POMCLASS */
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
         Wbio(iPON,ng) =  wN_sink(ng)
         Wbio(iPOP,ng) =  wP_sink(ng)
         Wbio(iPOSi,ng) = wSi_sink(ng)
         Wbio(iPOFe,ng) = wFe_sink(ng)
+#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+        DO i=1,npom
+          Wbio(iPON+i-1,ng) =  wN_sink(i,ng)
+          Wbio(iPOP+i-1,ng) =  wP_sink(i,ng)
+          Wbio(iPOSi+i-1,ng) = wSi_sink(i,ng)
+          Wbio(iPOFe+i-1,ng) = wFe_sink(i,ng)
+        END DO
+#endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
         DO i=1,nplank
           Wbio(ic_+i-1,ng) = wsink(i,ng)
 #if defined DARWIN_NQUOTA
@@ -1472,6 +1489,7 @@
         IF (onegtzero) THEN
           idsink(itrc) = i
 #if defined BIO_SEDIMENTVARIABLES
+# if ! defined DARWIN_POMCLASS
           IF (itrc.le.6) THEN
             idsed(itrc) = itrc
           ELSE IF (i.ge.ic_.and.i.le.ec_) THEN
@@ -1487,6 +1505,61 @@
           ELSE IF (i.ge.iChl.and.i.le.eChl) THEN
             idsed(itrc) = isedchl
           END IF
+# endif /* ! DARWIN_POMCLASS */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+          IF (i.ge.iPOC.and.i.lt.(iPOC+npom)) THEN
+            idsed(itrc) = 1
+          ELSE IF (i.ge.iPON.and.i.lt.(iPON+npom)) THEN
+            idsed(itrc) = 2
+          ELSE IF (i.ge.iPOP.and.i.lt.(iPOP+npom)) THEN
+            idsed(itrc) = 3
+          ELSE IF (i.ge.iPOSi.and.i.lt.(iPOSi+npom)) THEN
+            idsed(itrc) = 4
+          ELSE IF (i.ge.iPOFe.and.i.lt.(iPOFe+npom)) THEN
+            idsed(itrc) = 5
+          ELSE IF (i.eq.iPIC) THEN
+            idsed(itrc) = 6
+          ELSE IF (i.ge.ic_.and.i.le.ec_) THEN
+            idsed(itrc) = isedc
+          ELSE IF (i.ge.in_.and.i.le.en_) THEN
+            idsed(itrc) = isedn
+          ELSE IF (i.ge.ip_.and.i.le.ep_) THEN
+            idsed(itrc) = isedp
+          ELSE IF (i.ge.ife.and.i.le.efe) THEN
+            idsed(itrc) = isedfe
+          ELSE IF (i.ge.isi.and.i.le.esi) THEN
+            idsed(itrc) = isedsi
+          ELSE IF (i.ge.iChl.and.i.le.eChl) THEN
+            idsed(itrc) = isedchl
+          END IF
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+          IF (i.ge.iPOC.and.i.lt.(iPOC+npom)) THEN
+            idsed(itrc) = 1
+          ELSE IF (i.eq.iPON) THEN
+            idsed(itrc) = 2
+          ELSE IF (i.eq.iPOP) THEN
+            idsed(itrc) = 3
+          ELSE IF (i.eq.iPOSi) THEN
+            idsed(itrc) = 4
+          ELSE IF (i.eq.iPOFe) THEN
+            idsed(itrc) = 5
+          ELSE IF (i.eq.iPIC) THEN
+            idsed(itrc) = 6
+          ELSE IF (i.ge.ic_.and.i.le.ec_) THEN
+            idsed(itrc) = isedc
+          ELSE IF (i.ge.in_.and.i.le.en_) THEN
+            idsed(itrc) = isedn
+          ELSE IF (i.ge.ip_.and.i.le.ep_) THEN
+            idsed(itrc) = isedp
+          ELSE IF (i.ge.ife.and.i.le.efe) THEN
+            idsed(itrc) = isedfe
+          ELSE IF (i.ge.isi.and.i.le.esi) THEN
+            idsed(itrc) = isedsi
+          ELSE IF (i.ge.iChl.and.i.le.eChl) THEN
+            idsed(itrc) = isedchl
+          END IF
+# endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
 #endif /* BIO_SEDIMENTVARIABLES */
           itrc=itrc+1
         END IF

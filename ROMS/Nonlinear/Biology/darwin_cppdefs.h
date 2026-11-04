@@ -61,6 +61,27 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+15)=' DARWIN_PQUOTA,'
 # endif
+# if defined DARWIN_POMCLASS
+!
+      IF (Master) WRITE (stdout,20) 'DARWIN_POMCLASS',                  &
+     &   'Include multiple particulate organic matter (POM) classes.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+17)=' DARWIN_POMCLASS,'
+# endif
+# if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_DEGFRAG
+!
+      IF (Master) WRITE (stdout,20) 'DARWIN_POMCLASS_DEGFRAG',          &
+     &   'Include POM degradation/fragmentation between POM classes.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+25)=' DARWIN_POMCLASS_DEGFRAG,'
+# endif
+# if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+!
+      IF (Master) WRITE (stdout,20) 'DARWIN_POMCLASS_FIXEDRATIO',       &
+     &   'Include POC as only POM classes with fixed POX:POC ratios.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+28)=' DARWIN_POMCLASS_FIXEDRATIO,'
+# endif
 # if defined DARWIN_RADTRANS
 !
       IF (Master) WRITE (stdout,20) 'DARWIN_RADTRANS',                  &

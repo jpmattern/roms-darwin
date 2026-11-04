@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import re
 import logging
 import numpy as np
@@ -7,7 +8,7 @@ from netCDF4 import Dataset
 
 logger = logging.getLogger('darwin.varutil')
 
-__version__ = '1.0.0'
+__version__ = '1.2.0'
 
 __variables__ = {
     'palat': {'dtype': 'float', 'dimensions': ('nplank', 'nplank'), 'attributes': {'long_name': 'grazing palatability', 'units': 'dimensionless'}},
@@ -17,6 +18,10 @@ __variables__ = {
     'ExportFracMort2': {'dtype': 'float', 'dimensions': ('nplank',), 'attributes': {'long_name': 'fraction of quadratic mortality to POM', 'units': 'dimensionless'}},
     'grazemax': {'dtype': 'float', 'dimensions': ('nplank',), 'attributes': {'long_name': 'plankton maximum grazing rate', 'units': 's-1'}},
     'mort2': {'dtype': 'float', 'dimensions': ('nplank',), 'attributes': {'long_name': 'quadratic mortality coefficient', 'units': '(mmol C m-3)-1 s-1'}},
+    'pomfrac_mort': {'dtype': 'float', 'dimensions': ('npom', 'nplank',), 'attributes': {'long_name': 'plankton mortality POM fractionation', 'units': 'dimensionless'}},
+    'pomfrac_graz': {'dtype': 'float', 'dimensions': ('npom', 'nplank',), 'attributes': {'long_name': 'predator grazing POM fractionation', 'units': 'dimensionless'}},
+    'pom_deg': {'dtype': 'float', 'dimensions': ('npom', 'npom',), 'attributes': {'long_name': 'POM degradation (remineralization-dependent)', 'units': 'dimensionless'}},
+    'pom_frag': {'dtype': 'float', 'dimensions': ('npom', 'npom',), 'attributes': {'long_name': 'POM fragmentation', 'units': 'dimensionless'}},
 }
 
 __default_values__ = {
@@ -46,6 +51,18 @@ __default_values__ = {
         'ExportFracMort2': np.array([0.1, 0.1375, 0.175, 0.175, 0.175, 0.2125, 0.2, 0.275, 0.3125, 0.35]),
         'grazemax': np.array([0, 0, 0, 0, 0, 1.28094227939622e-05, 0.000113618845587924, 0.000113618845587924, 5.33495023166272e-05, 1.65569851528889e-05]),
         'mort2': np.array([9.25925925925926e-06, 9.25925925925926e-06, 9.25925925925926e-06, 9.25925925925926e-06, 9.25925925925926e-06, 9.25925925925926e-06, 9.25925925925926e-06, 9.25925925925926e-06, 9.25925925925926e-06, 5e-05]),
+        'pomfrac_mort': np.array([[0.9, 0.8, 0.3, 0.3, 0.3, 0.2, 0.1, 0.1, 0.1, 0.0],
+                                  [0.1, 0.2, 0.6, 0.6, 0.6, 0.5, 0.6, 0.4, 0.2, 0.1],
+                                  [0.0, 0.0, 0.1, 0.1, 0.1, 0.3, 0.3, 0.5, 0.7, 0.9]]),
+        'pomfrac_graz': np.array([[0.9, 0.8, 0.3, 0.3, 0.3, 0.2, 0.1, 0.1, 0.1, 0.0],
+                                  [0.1, 0.2, 0.6, 0.6, 0.6, 0.5, 0.6, 0.4, 0.2, 0.1],
+                                  [0.0, 0.0, 0.1, 0.1, 0.1, 0.3, 0.3, 0.5, 0.7, 0.9]]),
+        'pom_deg': np.array([[0.0, 0.0, 0.0],
+                             [0.0, 0.0, 0.0],
+                             [0.0, 0.0, 0.0]]),
+        'pom_frag': np.array([[0.0, 0.0, 0.0],
+                              [0.1, 0.0, 0.0],
+                              [0.0, 0.1, 0.0]]),
     }
 }
 
@@ -119,11 +136,14 @@ def detect_darwin_config(ncfile=None, nc=None, return_str=False):
     return (n_p, n_z)
 
 
-def add_variable(ncfile, variable, values=None, darwinconfiguration=None, nplank=None, darwindatafile=None):
+def add_variable(ncfile, variable, values=None, darwinconfiguration=None, nplank=None, darwindatafile=None, dimensions=None):
     if 'long_name' in __variables__[variable]['attributes']:
         logger.info(f'adding variable "{variable}" ({__variables__[variable]["attributes"]["long_name"]})')
     else:
         logger.info(f'adding variable "{variable}"')
+
+    if dimensions is None:
+        dimensions = {}
 
     if darwinconfiguration is None:
         logger.info('Darwin configuration not specified, attempting to detect configuration from file')
@@ -136,10 +156,9 @@ def add_variable(ncfile, variable, values=None, darwinconfiguration=None, nplank
 
     nplank = np.sum(darwinconfiguration)
     logger.debug(f'setting nplank={nplank}')
-
-    dimensions = {
-        'nplank': nplank,
-    }
+    if 'nplank' in dimensions and dimensions['nplank'] != nplank:
+        logger.warning(f'The input value for "nplank" ({dimensions["nplank"]}) does not agree with that required by the Darwin {darwinconfiguration} configuration ({nplank}) and will be overridden.')
+    dimensions['nplank'] = nplank
 
     if values is not None:
         logger.debug(f'using user-specified {variable} values')
@@ -151,10 +170,10 @@ def add_variable(ncfile, variable, values=None, darwinconfiguration=None, nplank
                 if re.match('^ *'+variable+' *= *\n', line, flags=re.IGNORECASE):
                     read = True
                     values = []
-                elif re.match('^ *'+variable+' *= *[0-9]+ *\*.*, *\n', line, flags=re.IGNORECASE):
+                elif re.match('^ *'+variable+r' *= *[0-9]+ *\*.*, *\n', line, flags=re.IGNORECASE):
                     # something like:
                     # ASSEFF=  100*0.1 ,
-                    m = re.match('^ *'+variable+' *= *[0-9]+ *\* *([0-9.e+-]+) *, *\n', line, flags=re.IGNORECASE)
+                    m = re.match('^ *'+variable+r' *= *[0-9]+ *\* *([0-9.e+-]+) *, *\n', line, flags=re.IGNORECASE)
                     values = np.empty(shape=[dimensions[d] for d in __variables__[variable]['dimensions']])
                     values[:] = float(m.group(1))
                     read = True
@@ -162,7 +181,7 @@ def add_variable(ncfile, variable, values=None, darwinconfiguration=None, nplank
                     if re.match('^ *[0-9eE.+-]+,', line.strip()):
                         values.extend([float(v) for v in line.strip().strip(',').split()])
                     else:
-                        m = re.match('^ *'+variable+'\( *([0-9]+) *, *([0-9]+) *\) *= *([^ ,!]+).*', line, flags=re.IGNORECASE)
+                        m = re.match('^ *'+variable+r'\( *([0-9]+) *, *([0-9]+) *\) *= *([^ ,!]+).*', line, flags=re.IGNORECASE)
                         if not m:
                             break
                         # ROMS wants it backwards
@@ -180,12 +199,16 @@ def add_variable(ncfile, variable, values=None, darwinconfiguration=None, nplank
         if variable in nc.variables:
             logger.info(f'file "{ncfile}" already contains variable "{variable}"')
         else:
-            for d in __variables__[variable]['dimensions']:
+            for i, d in enumerate(__variables__[variable]['dimensions']):
                 if d not in nc.dimensions:
-                    if dimensions[d] is None:
-                        raise ValueError(f'The size for dimension "{d}" needs to be specified.')
+                    if d not in dimensions or dimensions[d] is None:
+                        if hasattr(values, 'shape'):
+                            dimensions[d] = values.shape[i]
+                            logger.info(f'using shape of values to set size of dimension "{d}" to {dimensions[d]}')
+                        else:
+                            raise ValueError(f'The size for dimension "{d}" needs to be specified.')
                     nc.createDimension(d, dimensions[d])
-                elif dimensions[d] != nc.dimensions[d].size:
+                elif d in dimensions and dimensions[d] != nc.dimensions[d].size:
                     raise ValueError(f'Size for dimension "{d}" in file ({nc.dimensions[d].size}) does not match required size set by the Darwin configuration ({dimensions[d]}).')
             var = nc.createVariable(variable, __variables__[variable]['dtype'], dimensions=__variables__[variable]['dimensions'])
             var.setncatts(__variables__[variable]['attributes'])
@@ -231,6 +254,7 @@ if __name__ == '__main__':
     parsers['add-var'].add_argument('ncfile', type=str, help='A ROMS netcdf file.')
     parsers['add-var'].add_argument('variable', type=str, choices=variable_choices, help='The variable to add.')
     parsers['add-var'].add_argument('--darwinconfiguration', type=str, default=None, help='The Darwin configuration string (for example "6P4Z"; default: attempt to read from NCFILE).')
+    parsers['add-var'].add_argument('--dims', '--dimensions', '--diminfo', type=str, nargs='+', default=None, help='Dimension information that may be needed if required dimension is not already in ncfile (example: "nplank 10 npom 3").')
     mut = parsers['add-var'].add_mutually_exclusive_group(required=True)
     mut.add_argument('--values', type=float, default=None, nargs='+', help='The values to set the variable to.')
     mut.add_argument('--fromfile', type=str, default=None, help='The MITgcm Darwin data file to read the values for the variable from.')
@@ -251,13 +275,21 @@ if __name__ == '__main__':
             logging.getLogger(name).setLevel(logging.WARNING)
 
     if args.type == 'add-var':
+        dimensions = {}
+        if args.dims is not None:
+            if len(args.dims) % 2 != 0:
+                parser.error('The number of arguments for --dims must be even.')
+            dimensions = {k: int(v) for k, v in zip(args.dims[::2], args.dims[1::2])}
+        logger.debug(f'dimensions: {dimensions}')
+        if not os.path.isfile(args.ncfile):
+            raise FileNotFoundError(f'File "{args.ncfile}" does not exits.')
         if args.variable == 'all':
             if args.values is not None:
                 parser.error(f'values option cannot be combined with variable choice: "{args.variable}" ')
             for variable in __variables__.keys():
-                add_variable(args.ncfile, variable, darwinconfiguration=args.darwinconfiguration, values=args.values, darwindatafile=args.fromfile)
+                add_variable(args.ncfile, variable, darwinconfiguration=args.darwinconfiguration, values=args.values, darwindatafile=args.fromfile, dimensions=dimensions)
         else:
-            add_variable(args.ncfile, args.variable, darwinconfiguration=args.darwinconfiguration, values=args.values, darwindatafile=args.fromfile)
+            add_variable(args.ncfile, args.variable, darwinconfiguration=args.darwinconfiguration, values=args.values, darwindatafile=args.fromfile, dimensions=dimensions)
     elif args.type == 'add-biosed':
         add_biosedvariables(args.ncfile)
 

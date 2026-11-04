@@ -48,7 +48,7 @@
 #if defined DARWIN
 # if defined DARWIN_REPORT_TRAITS
       use mod_biology
-# elif defined DARWIN_READ_PALAT || defined DARWIN_READ_ASSEFF || defined DARWIN_READ_EXPORTFRACMORT || defined DARWIN_READ_EXPORTFRACMORT2 || defined DARWIN_READ_EXPORTFRACPREYPRED || defined DARWIN_READ_MORT2 || defined DARWIN_READ_GRAZEMAX
+# elif defined DARWIN_READ_PALAT || defined DARWIN_READ_ASSEFF || defined DARWIN_READ_EXPORTFRACMORT || defined DARWIN_READ_EXPORTFRACMORT2 || defined DARWIN_READ_EXPORTFRACPREYPRED || defined DARWIN_READ_MORT2 || defined DARWIN_READ_GRAZEMAX || defined DARWIN_POMCLASS
       use mod_biology,        ONLY: nplank, isPred, isPrey
 #  if defined DARWIN_READ_PALAT
       use mod_biology,        ONLY: palat
@@ -70,6 +70,12 @@
 #  endif
 #  if defined DARWIN_READ_MORT2
       use mod_biology,        ONLY: mort2
+#  endif
+#  if defined DARWIN_POMCLASS
+      use mod_biology, ONLY: npom, pomfrac_mort, pomfrac_graz
+#   if defined DARWIN_POMCLASS_DEGFRAG
+      use mod_biology, ONLY: pom_deg, pom_frag
+#   endif
 #  endif
 # endif /* DARWIN_REPORT_TRAITS */
 #endif
@@ -216,8 +222,12 @@
 #endif
       logical, dimension(NV) :: get_var, have_var
 !
-#if defined DARWIN && defined DARWIN_READ_PALAT
+#if defined DARWIN && (defined DARWIN_READ_PALAT || defined DARWIN_POMCLASS)
       integer :: is
+#endif
+#if defined DARWIN && defined DARWIN_POMCLASS
+      integer :: ic
+      real(r8) :: fracsum
 #endif
       integer :: IDmod, InpRec, gtype, i, ifield, itrc, lstr, lend
       integer :: Nrec, mySize, ncINPid, nvatts, nvdim, status, varid
@@ -2637,6 +2647,292 @@
           END DO
         END IF
 #  endif /* DARWIN_READ_MORT2 */
+#  if defined DARWIN_POMCLASS
+!
+!  Read in pomfrac_mort.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'pomfrac_mort',                                               &
+     &    pomfrac_mort(:,:,ng),                                         &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1,1/),                                              &
+     &    total = (/nplank,npom/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/3a)')                                      &
+              'GET_STATE - error while reading variable: pomfrac_mort ',&
+     &        'in input NetCDF file: ',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report pomfrac_mort.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'pomfrac_mort', MINVAL(pomfrac_mort),       &
+     &      MAXVAL(pomfrac_mort)
+          write(stdout,'(27x,a)') 'POM'
+          write(stdout,'(16x,a8,3x)',advance='no') 'plankton'
+          DO i=1,npom
+            write(stdout,'(i6)',advance='no') i
+          END DO
+          write(stdout,*) ''
+          ic=1
+          DO is=1,nplank
+            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                 &
+     &        pomfrac_mort(is,1:npom,ng)
+            ic=ic+1
+          END DO
+        END IF
+        IF (Master) THEN
+          write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO is=1,npom
+            DO i=1,nplank
+              IF (pomfrac_mort(i,is,ng).gt.1e-15_r8) THEN
+                write(stdout,'(22x,a,i2,a,i2,a,f5.3)')                  &
+     &           'pomfrac_mort(',i,',',is,') = ',pomfrac_mort(i,is,ng)
+              END IF
+            END DO
+          END DO
+        END IF
+!
+!  Check pomfrac_mort.
+!
+        DO i=1,nplank
+          fracsum=0.0_r8
+          DO is=1,npom
+            fracsum=fracsum+pomfrac_mort(i,is,ng)
+            IF (pomfrac_mort(i,is,ng).lt.0.0_r8) THEN
+              IF(Master) WRITE(stdout,'(a,i0,a,i0,a,i0,a)')             &
+     &          'GET_STATE - error: grid', ng,                          &
+     &          ': pomfrac_mort < 0 at index (',i,',',is,').'
+              exit_flag=5
+              ioerror=status
+              RETURN
+            END IF
+          END DO
+          IF (ABS(fracsum-1.0_r8).gt.1e-15_r8) THEN
+            IF(Master) WRITE(stdout,'(a,i0,a,f6.3,a,i0,a)')             &
+     &        'GET_STATE - error: grid', ng,                            &
+     &        ': pomfrac_mort = ',fracsum,                              &
+     &        ' (not equal to 1.0) for plankton at index ',i,'.'
+            exit_flag=5
+            ioerror=status
+            RETURN
+          END IF
+        END DO
+!
+!  Read in pomfrac_graz.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'pomfrac_graz',                                               &
+     &    pomfrac_graz(:,:,ng),                                         &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1,1/),                                              &
+     &    total = (/nplank,npom/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/3a)')                                      &
+              'GET_STATE - error while reading variable: pomfrac_graz ',&
+     &        'in input NetCDF file: ',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report pomfrac_graz.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'pomfrac_graz', MINVAL(pomfrac_graz),       &
+     &      MAXVAL(pomfrac_graz)
+          write(stdout,'(27x,a)') 'POM'
+          write(stdout,'(16x,a8,3x)',advance='no') 'predator'
+          DO i=1,npom
+            write(stdout,'(i6)',advance='no') i
+          END DO
+          write(stdout,*) ''
+          ic=1
+          DO is=1,nplank
+            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                 &
+     &        pomfrac_graz(is,1:npom,ng)
+            ic=ic+1
+          END DO
+        END IF
+        IF (Master) THEN
+          write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO is=1,npom
+            DO i=1,nplank
+              IF (pomfrac_graz(i,is,ng).gt.1e-15_r8) THEN
+                write(stdout,'(22x,a,i2,a,i2,a,f5.3)')                  &
+     &           'pomfrac_graz(',i,',',is,') = ',pomfrac_graz(i,is,ng)
+              END IF
+            END DO
+          END DO
+        END IF
+!
+!  Check pomfrac_graz.
+!
+        DO i=1,nplank
+          fracsum=0.0_r8
+          DO is=1,npom
+            fracsum=fracsum+pomfrac_graz(i,is,ng)
+            IF (pomfrac_graz(i,is,ng).lt.0.0_r8) THEN
+              IF(Master) WRITE(stdout,'(a,i0,a,i0,a,i0,a)')             &
+     &          'GET_STATE - error: grid', ng,                          &
+     &          ': pomfrac_graz < 0 at index (',i,',',is,').'
+              exit_flag=5
+              ioerror=status
+              RETURN
+            END IF
+          END DO
+          IF (ABS(fracsum-1.0_r8).gt.1e-15_r8) THEN
+            IF(Master) WRITE(stdout,'(a,i0,a,f6.3,a,i0,a)')             &
+     &        'GET_STATE - error: grid', ng,                            &
+     &        ': pomfrac_graz = ',fracsum,                              &
+     &        ' (not equal to 1.0) for plankton at index ',i,'.'
+            exit_flag=5
+            ioerror=status
+            RETURN
+          END IF
+        END DO
+#   if defined DARWIN_POMCLASS_DEGFRAG
+!
+!  Read in pom_deg.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'pom_deg',                                                    &
+     &    pom_deg(:,:,ng),                                              &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1,1/),                                              &
+     &    total = (/npom,npom/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/3a)')                                      &
+              'GET_STATE - error while reading variable: pom_deg ',     &
+     &        'in input NetCDF file: ',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report pom_deg.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'pom_deg', MINVAL(pom_deg),       &
+     &      MAXVAL(pom_deg)
+          write(stdout,'(27x,a)') 'POM destination'
+          write(stdout,'(14x,a10,3x)',advance='no') 'POM source'
+          DO i=1,npom
+            write(stdout,'(i6)',advance='no') i
+          END DO
+          write(stdout,*) ''
+          ic=1
+          DO is=1,npom
+            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                 &
+     &        pom_deg(is,1:npom,ng)
+            ic=ic+1
+          END DO
+        END IF
+        IF (Master) THEN
+          write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO is=1,npom
+            DO i=1,npom
+              IF (pom_deg(i,is,ng).gt.1e-15_r8) THEN
+                write(stdout,'(22x,a,i2,a,i2,a,f5.3)')                  &
+     &           'pom_deg(',i,',',is,') = ',pom_deg(i,is,ng)
+              END IF
+            END DO
+          END DO
+        END IF
+!
+!  Check pom_deg.
+!
+        DO i=1,npom
+          DO is=1,npom
+            IF (pom_deg(i,is,ng).lt.0.0_r8) THEN
+              IF(Master) WRITE(stdout,'(a,i0,a,i0,a,i0,a)')             &
+     &          'GET_STATE - error: grid', ng,                          &
+     &          ': pom_deg < 0 at index (',i,',',is,').'
+              exit_flag=5
+              ioerror=status
+              RETURN
+            END IF
+          END DO
+        END DO
+!
+!  Read in pom_frag.
+!
+        CALL netcdf_get_fvar(ng, IDmod, ncname,                         &
+     &    'pom_frag',                                                   &
+     &    pom_frag(:,:,ng),                                             &
+     &    ncid = ncINPid,                                               &
+     &    start = (/1,1/),                                              &
+     &    total = (/npom,npom/))
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) THEN
+          IF (Master) THEN
+            WRITE (stdout,'(/3a)')                                      &
+              'GET_STATE - error while reading variable: pom_frag ',    &
+     &        'in input NetCDF file: ',TRIM(ncname)
+          END IF
+          exit_flag=2
+          ioerror=status
+          RETURN
+        END IF
+!
+!  Report pom_frag.
+!
+        IF (Master) THEN
+          WRITE (stdout,70) 'pom_frag', MINVAL(pom_frag),       &
+     &      MAXVAL(pom_frag)
+          write(stdout,'(27x,a)') 'POM destination'
+          write(stdout,'(14x,a10,3x)',advance='no') 'POM source'
+          DO i=1,npom
+            write(stdout,'(i6)',advance='no') i
+          END DO
+          write(stdout,*) ''
+          ic=1
+          DO is=1,npom
+            write(stdout,'(20x,i4,3x,99(1x,f5.3))') ic,                 &
+     &        pom_frag(is,1:npom,ng)
+            ic=ic+1
+          END DO
+        END IF
+        IF (Master) THEN
+          write(stdout,'(/20x,a)') 'non-zero elements:'
+          DO is=1,npom
+            DO i=1,npom
+              IF (pom_frag(i,is,ng).gt.1e-15_r8) THEN
+                write(stdout,'(22x,a,i2,a,i2,a,f5.3)')                  &
+     &           'pom_frag(',i,',',is,') = ',pom_frag(i,is,ng)
+              END IF
+            END DO
+          END DO
+        END IF
+!
+!  Check pom_frag.
+!
+        DO i=1,npom
+          DO is=1,npom
+            IF (pom_frag(i,is,ng).lt.0.0_r8) THEN
+              IF(Master) WRITE(stdout,'(a,i0,a,i0,a,i0,a)')             &
+     &          'GET_STATE - error: grid', ng,                          &
+     &          ': pom_frag < 0 at index (',i,',',is,').'
+              exit_flag=5
+              ioerror=status
+              RETURN
+            END IF
+          END DO
+        END DO
+#   endif /* DARWIN_POMCLASS_DEGFRAG */
+#  endif /* DARWIN_POMCLASS */
 #  if defined DARWIN_REPORT_TRAITS
 #   define REPFRMT_F 200
 #   define REPFRMT_I 201

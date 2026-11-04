@@ -12,11 +12,41 @@
           consumPO4 = 0.0_r8
           consumSiO2 = 0.0_r8
           consumFeT = 0.0_r8
+#if ! defined DARWIN_POMCLASS
           consumPON = 0.0_r8
           consumPOP = 0.0_r8
           consumPOC = 0.0_r8
           consumPOFe = 0.0_r8
           consumPOSi = 0.0_r8
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+          consumPOC(:) = 0.0_r8
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+          consumPON(:) = 0.0_r8
+          consumPOP(:) = 0.0_r8
+          consumPOFe(:) = 0.0_r8
+          consumPOSi(:) = 0.0_r8
+# else
+          consumPON = 0.0_r8
+          consumPOP = 0.0_r8
+          consumPOFe = 0.0_r8
+          consumPOSi = 0.0_r8
+# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS_DEGFRAG
+          transferPOC(:) = 0.0_r8
+#  if ! defined DARWIN_POMCLASS_FIXEDRATIO
+          transferPON(:) = 0.0_r8
+          transferPOP(:) = 0.0_r8
+          transferPOFe(:) = 0.0_r8
+          transferPOSi(:) = 0.0_r8
+#  else
+          transferDON = 0.0_r8
+          transferDOP = 0.0_r8
+          transferDOFe = 0.0_r8
+          transferSiO2 = 0.0_r8
+#  endif /* DARWIN_POMCLASS_FIXEDRATIO */
+# endif /* DARWIN_POMCLASS_DEGFRAG */
+#endif /* DARWIN_POMCLASS */
           consumDON = 0.0_r8
           consumDOP = 0.0_r8
           consumDOC = 0.0_r8
@@ -510,10 +540,18 @@
 
             uptakeO2 = 0.0_r8
             uptakeNO3 = 0.0_r8
+#if ! defined DARWIN_POMCLASS
             uptakePOC = 0.0_r8
             uptakePON = 0.0_r8
             uptakePOP = 0.0_r8
             uptakePOFe = 0.0_r8
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+            uptakePOC(:) = 0.0_r8
+            uptakePON(:) = 0.0_r8
+            uptakePOP(:) = 0.0_r8
+            uptakePOFe(:) = 0.0_r8
+#endif /* DARWIN_POMCLASS */
             uptakeDOC = 0.0_r8
             uptakeDON = 0.0_r8
             uptakeDOP = 0.0_r8
@@ -522,10 +560,18 @@
             hydrolPON = 0.0_r8
             hydrolPOP = 0.0_r8
             hydrolPOFe = 0.0_r8
+#if ! defined DARWIN_POMCLASS
             respPOC = 0.0_r8
             respPON = 0.0_r8
             respPOP = 0.0_r8
             respPOFe = 0.0_r8
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+            respPOC(:) = 0.0_r8
+            respPON(:) = 0.0_r8
+            respPOP(:) = 0.0_r8
+            respPOFe(:) = 0.0_r8
+#endif /* DARWIN_POMCLASS */
             respDOC = 0.0_r8
             respDON = 0.0_r8
             respDOP = 0.0_r8
@@ -550,18 +596,50 @@
 #else
               PCm = yield(ic,ng)*pmaxPON(ng)*reminTempFunc
 #endif
+#if ! defined DARWIN_POMCLASS
               muPON = PCm*Bio(iPON)/(Bio(iPON) + ksatPON(ic,ng))
               muPOC = PCm*Bio(iPOC)/(Bio(iPOC) + ksatPOC(ic,ng))
               muPOP = PCm*Bio(iPOP)/(Bio(iPOP) + ksatPOP(ic,ng))
               muPOFe = PCm*Bio(iPOFe)/(Bio(iPOFe) + ksatPOFe(ic,ng))
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+# if defined DARWIN_POMCLASS_FIXEDRATIO
+! PON/POP/POFe are bulk (not per-class) under FIXEDRATIO; no SUM needed.
+              muPON  = PCm*Bio(iPON) /(Bio(iPON) + ksatPON(ic,ng))
+              muPOP  = PCm*Bio(iPOP) /(Bio(iPOP) + ksatPOP(ic,ng))
+              muPOFe = PCm*Bio(iPOFe)/(Bio(iPOFe)+ ksatPOFe(ic,ng))
+# else
+              sumPOX = SUM(Bio(iPON:iPON+npom-1))
+              muPON  = PCm*sumPOX/(sumPOX + ksatPON(ic,ng))
+              sumPOX = SUM(Bio(iPOP:iPOP+npom-1))
+              muPOP  = PCm*sumPOX/(sumPOX + ksatPOP(ic,ng))
+              sumPOX = SUM(Bio(iPOFe:iPOFe+npom-1))
+              muPOFe = PCm*sumPOX/(sumPOX + ksatPOFe(ic,ng))
+# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+! compute sumPOX for POC last to use it later
+              sumPOX = SUM(Bio(iPOC:iPOC+npom-1))
+              muPOC  = PCm*sumPOX/(sumPOX + ksatPOC(ic,ng))
+#endif /* DARWIN_POMCLASS */
               mu = MIN(muPON, muPOC, muPOP, muPOFe, muO)
 
               growth = mu*X
 
+#if ! defined DARWIN_POMCLASS
               uptakePOC = alpha_hydrol(ng)*growth/yield(ic,ng)
               uptakePON = uptakePOC*R_NC(ic,ng)
               uptakePOP = uptakePOC*R_PC(ic,ng)
               uptakePOFe = uptakePOC*R_FeC(ic,ng)
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+              uptakePOC_total = alpha_hydrol(ng)*growth/yield(ic,ng)
+              DO ipom=1,npom
+                uptakePOC(ipom) = uptakePOC_total *                     &
+     &            Bio(iPOC+ipom-1)/sumPOX
+                uptakePON(ipom) = uptakePOC(ipom)*R_NC(ic,ng)
+                uptakePOP(ipom) = uptakePOC(ipom)*R_PC(ic,ng)
+                uptakePOFe(ipom) = uptakePOC(ipom)*R_FeC(ic,ng)
+              END DO
+#endif /* DARWIN_POMCLASS */
 ! O2/NO3 is only used for the part of POC that is metabolized:
               uptakeO2 = isAerobic(ic,ng)*growth/yieldO2(ic,ng)
               uptakeNO3 = isDenit(ic,ng)*growth/yieldNO3(ic,ng)
@@ -573,10 +651,22 @@
               hydrolPOFe = hydrolPOC*R_FeC(ic,ng)
 
 ! These are the bacteria products for remineralization of POM:
+#if ! defined DARWIN_POMCLASS
               respPOC = growth*(1/yield(ic,ng)-1)
               respPON = respPOC*R_NC(ic,ng)
               respPOP = respPOC*R_PC(ic,ng)
               respPOFe = respPOC*R_FeC(ic,ng)
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+              uptakePOC_total = growth*(1/yield(ic,ng)-1)
+              DO ipom=1,npom
+                respPOC(ipom) = uptakePOC_total *                       &
+     &            Bio(iPOC+ipom-1)/sumPOX
+                respPON(ipom) = respPOC(ipom)*R_NC(ic,ng)
+                respPOP(ipom) = respPOC(ipom)*R_PC(ic,ng)
+                respPOFe(ipom) = respPOC(ipom)*R_FeC(ic,ng)
+              END DO
+#endif /* DARWIN_POMCLASS */
 
 ! DOM-consuming (free-living):
             ELSEIF (bactType(ic,ng) .EQ. 2) THEN
@@ -638,6 +728,7 @@
             consumDOP = consumDOP + uptakeDOP
             consumDOFe = consumDOFe + uptakeDOFe
 
+#if ! defined DARWIN_POMCLASS
             consumPOC = consumPOC + uptakePOC
             consumPON = consumPON + uptakePON
             consumPOP = consumPOP + uptakePOP
@@ -647,6 +738,27 @@
             reminPON = reminPON + respPON
             reminPOP = reminPOP + respPOP
             reminPOFe = reminPOFe + respPOFe
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+            DO ipom=1,npom
+              consumPOC(ipom) = consumPOC(ipom) + uptakePOC(ipom)
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+              consumPON(ipom) = consumPON(ipom) + uptakePON(ipom)
+              consumPOP(ipom) = consumPOP(ipom) + uptakePOP(ipom)
+              consumPOFe(ipom) = consumPOFe(ipom) + uptakePOFe(ipom)
+# else
+              consumPON = consumPON + uptakePON(ipom)
+              consumPOP = consumPOP + uptakePOP(ipom)
+              consumPOFe = consumPOFe + uptakePOFe(ipom)
+# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+
+              ! sum across POM classes here
+              reminPOC = reminPOC + respPOC(ipom)
+              reminPON = reminPON + respPON(ipom)
+              reminPOP = reminPOP + respPOP(ipom)
+              reminPOFe = reminPOFe + respPOFe(ipom)
+            END DO
+#endif /* DARWIN_POMCLASS */
 
             solubilPOC = solubilPOC + hydrolPOC
             solubilPON = solubilPON + hydrolPON
@@ -710,37 +822,95 @@
           respDON = reminTempFunc*Kdon(ng) *Bio(iDON)*tmp
           respDOP = reminTempFunc*Kdop(ng) *Bio(iDOP)*tmp
           respDOFe = reminTempFunc*KdoFe(ng)*Bio(iDOFe)*tmp
+#if ! defined DARWIN_POMCLASS
           respPOC = reminTempFunc*KPOC(ng) *Bio(iPOC)*tmp
           respPON = reminTempFunc*KPON(ng) *Bio(iPON)*tmp
           respPOP = reminTempFunc*KPOP(ng) *Bio(iPOP)*tmp
           respPOSi = reminTempFunc*KPOSi(ng)*Bio(iPOSi)*tmp
           respPOFe = reminTempFunc*KPOFe(ng)*Bio(iPOFe)*tmp
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+          DO ipom=1,npom
+            respPOC(ipom)=reminTempFunc*KPOC(ng)*Bio(iPOC+ipom-1)*tmp
+            respPON(ipom)=reminTempFunc*KPON(ng)*Bio(iPON+ipom-1)*tmp
+            respPOP(ipom)=reminTempFunc*KPOP(ng)*Bio(iPOP+ipom-1)*tmp
+            respPOSi(ipom)=reminTempFunc*KPOSi(ng)*Bio(iPOSi+ipom-1)*tmp
+            respPOFe(ipom)=reminTempFunc*KPOFe(ng)*Bio(iPOFe+ipom-1)*tmp
+          END DO
+# else
+! under FIXEDRATIO each class's N/P/Si/Fe is always its own fixed
+! multiple of its own (per-class, independently decaying) carbon, so
+! there is no separate per-class PON/POP/POSi/POFe to read.
+          DO ipom=1,npom
+            respPOC(ipom)=reminTempFunc*KPOC(ng)*Bio(iPOC+ipom-1)*tmp
+            respPON(ipom)=respPOC(ipom)*R_NC_pom(ipom,ng)
+            respPOP(ipom)=respPOC(ipom)*R_PC_pom(ipom,ng)
+            respPOSi(ipom)=respPOC(ipom)*R_SiC_pom(ipom,ng)
+            respPOFe(ipom)=respPOC(ipom)*R_FeC_pom(ipom,ng)
+          END DO
+# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* DARWIN_POMCLASS */
 
           consumDOC = consumDOC + respDOC
           consumDON = consumDON + respDON
           consumDOP = consumDOP + respDOP
           consumDOFe = consumDOFe + respDOFe
+#if ! defined DARWIN_POMCLASS
           consumPOC = consumPOC + respPOC
           consumPON = consumPON + respPON
           consumPOP = consumPOP + respPOP
           consumPOSi = consumPOSi + respPOSi
           consumPOFe = consumPOFe + respPOFe
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+          DO ipom=1,npom
+            consumPOC(ipom) = consumPOC(ipom) + respPOC(ipom)
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+            consumPON(ipom) = consumPON(ipom) + respPON(ipom)
+            consumPOP(ipom) = consumPOP(ipom) + respPOP(ipom)
+            consumPOSi(ipom) = consumPOSi(ipom) + respPOSi(ipom)
+            consumPOFe(ipom) = consumPOFe(ipom) + respPOFe(ipom)
+# else
+            consumPON = consumPON + respPON(ipom)
+            consumPOP = consumPOP + respPOP(ipom)
+            consumPOSi = consumPOSi + respPOSi(ipom)
+            consumPOFe = consumPOFe + respPOFe(ipom)
+# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+          END DO
+#endif /* DARWIN_POMCLASS */
 
           reminDOC = reminDOC + respDOC
           reminDON = reminDON + respDON
           reminDOP = reminDOP + respDOP
           reminDOFe = reminDOFe + respDOFe
+#if ! defined DARWIN_POMCLASS
           reminPOC = reminPOC + respPOC
           reminPON = reminPON + respPON
           reminPOP = reminPOP + respPOP
           reminPOSi = reminPOSi + respPOSi
           reminPOFe = reminPOFe + respPOFe
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+          DO ipom=1,npom
+            reminPOC = reminPOC + respPOC(ipom)
+            reminPON = reminPON + respPON(ipom)
+            reminPOP = reminPOP + respPOP(ipom)
+            reminPOSi = reminPOSi + respPOSi(ipom)
+            reminPOFe = reminPOFe + respPOFe(ipom)
+          END DO
+#endif /* DARWIN_POMCLASS */
 
 #if defined DARWIN_CARBON
           consumO2 = consumO2 + respDOP*R_OP(ng)
-#if ! defined DARWIN_CDOM
+# if ! defined DARWIN_CDOM
+#  if ! defined DARWIN_POMCLASS
           consumO2 = consumO2 + respPOP*R_OP(ng)
-#endif
+#  endif
+#  if defined DARWIN_POMCLASS
+          consumO2 = consumO2 + SUM(respPOP)*R_OP(ng)
+#  endif
+# endif
 #endif
 
 #if defined DARWIN_FUTURE
@@ -926,11 +1096,142 @@
           Bio(iDOFe)=Bio(iDOFe)  + dtbio(ng)*(+ solubilPOFe - consumDOFe)
 
           Bio(iPIC )=Bio(iPIC )  + dtbio(ng)*(- disscPIC)
+#if ! defined DARWIN_POMCLASS
           Bio(iPOC )=Bio(iPOC )  + dtbio(ng)*(- consumPOC)
           Bio(iPON )=Bio(iPON )  + dtbio(ng)*(- consumPON)
           Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(- consumPOP)
           Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(- consumPOFe)
           Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(- consumPOSi)
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+# if defined DARWIN_POMCLASS_DEGFRAG
+! remineralization-dependent POM degradation
+!
+! act on consumPOC which combines bacterial and parameterized
+! remineralization
+          DO ipom = 1,npom
+            DO ipoms = 1,npom  ! source class
+              tmp=consumPOC(ipoms)*pom_deg(ipoms,ipom,ng)
+              transferPOC(ipom)=transferPOC(ipom)+tmp
+              transferPOC(ipoms)=transferPOC(ipoms)-tmp
+
+#  if ! defined DARWIN_POMCLASS_FIXEDRATIO
+              tmp=consumPON(ipoms)*pom_deg(ipoms,ipom,ng)
+              transferPON(ipom)=transferPON(ipom)+tmp
+              transferPON(ipoms)=transferPON(ipoms)-tmp
+
+              tmp=consumPOP(ipoms)*pom_deg(ipoms,ipom,ng)
+              transferPOP(ipom)=transferPOP(ipom)+tmp
+              transferPOP(ipoms)=transferPOP(ipoms)-tmp
+
+              tmp=consumPOFe(ipoms)*pom_deg(ipoms,ipom,ng)
+              transferPOFe(ipom)=transferPOFe(ipom)+tmp
+              transferPOFe(ipoms)=transferPOFe(ipoms)-tmp
+
+              tmp=consumPOSi(ipoms)*pom_deg(ipoms,ipom,ng)
+              transferPOSi(ipom)=transferPOSi(ipom)+tmp
+              transferPOSi(ipoms)=transferPOSi(ipoms)-tmp
+#  else
+! bulk PON/POP/POFe/POSi don't track class membership; reconcile the
+! N/P/Fe/Si content implied by each class's own fixed ratio via DON/
+! DOP/DOFe (Si has no dissolved organic pool, so it reconciles
+! directly against SiO2) for the carbon ("tmp") degradation moves.
+              transferDON = transferDON +                               &
+     &          tmp*(R_NC_pom (ipoms,ng)-R_NC_pom (ipom,ng))
+              transferDOP = transferDOP +                               &
+     &          tmp*(R_PC_pom (ipoms,ng)-R_PC_pom (ipom,ng))
+              transferDOFe= transferDOFe +                              &
+     &          tmp*(R_FeC_pom(ipoms,ng)-R_FeC_pom(ipom,ng))
+              transferSiO2= transferSiO2 +                              &
+     &          tmp*(R_SiC_pom(ipoms,ng)-R_SiC_pom(ipom,ng))
+#  endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
+            END DO
+          END DO
+! mass-dependent POM fragmentation (depleting the source class "ipoms"
+! in proportion to its own standing stock, matching the degradation
+! loop above -- not the destination's, which would be the fragmenting
+! class's own stock, not what is actually fragmenting away from it)
+          DO ipom = 1,npom
+            DO ipoms = 1,npom  ! source class
+              tmp=Bio(iPOC+ipoms-1)*pom_frag(ipoms,ipom,ng)
+              transferPOC(ipom)=transferPOC(ipom)+tmp
+              transferPOC(ipoms)=transferPOC(ipoms)-tmp
+
+#  if ! defined DARWIN_POMCLASS_FIXEDRATIO
+              tmp=Bio(iPON+ipoms-1)*pom_frag(ipoms,ipom,ng)
+              transferPON(ipom)=transferPON(ipom)+tmp
+              transferPON(ipoms)=transferPON(ipoms)-tmp
+
+              tmp=Bio(iPOP+ipoms-1)*pom_frag(ipoms,ipom,ng)
+              transferPOP(ipom)=transferPOP(ipom)+tmp
+              transferPOP(ipoms)=transferPOP(ipoms)-tmp
+
+              tmp=Bio(iPOFe+ipoms-1)*pom_frag(ipoms,ipom,ng)
+              transferPOFe(ipom)=transferPOFe(ipom)+tmp
+              transferPOFe(ipoms)=transferPOFe(ipoms)-tmp
+
+              tmp=Bio(iPOSi+ipoms-1)*pom_frag(ipoms,ipom,ng)
+              transferPOSi(ipom)=transferPOSi(ipom)+tmp
+              transferPOSi(ipoms)=transferPOSi(ipoms)-tmp
+#  else
+              transferDON = transferDON +                               &
+     &          tmp*(R_NC_pom (ipoms,ng)-R_NC_pom (ipom,ng))
+              transferDOP = transferDOP +                               &
+     &          tmp*(R_PC_pom (ipoms,ng)-R_PC_pom (ipom,ng))
+              transferDOFe= transferDOFe +                              &
+     &          tmp*(R_FeC_pom(ipoms,ng)-R_FeC_pom(ipom,ng))
+              transferSiO2= transferSiO2 +                              &
+     &          tmp*(R_SiC_pom(ipoms,ng)-R_SiC_pom(ipom,ng))
+#  endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
+            END DO
+          END DO
+! fold the net transfer into consumPOC (a positive transfer into a class
+! reduces that class's net consumption; see Bio update loop below)
+          DO ipom = 1,npom
+            consumPOC(ipom)=consumPOC(ipom)-transferPOC(ipom)
+#  if ! defined DARWIN_POMCLASS_FIXEDRATIO
+            consumPON(ipom)=consumPON(ipom)-transferPON(ipom)
+            consumPOP(ipom)=consumPOP(ipom)-transferPOP(ipom)
+            consumPOFe(ipom)=consumPOFe(ipom)-transferPOFe(ipom)
+            consumPOSi(ipom)=consumPOSi(ipom)-transferPOSi(ipom)
+#  endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
+          END DO
+# endif /* DARWIN_POMCLASS_DEGFRAG */
+          DO ipom = 1,npom
+            Bio(iPOC+ipom-1 )=Bio(iPOC+ipom-1 ) +                       &
+     &        dtbio(ng)*(- consumPOC(ipom))
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+            Bio(iPON+ipom-1 )=Bio(iPON+ipom-1 ) +                       &
+     &        dtbio(ng)*(- consumPON(ipom))
+            Bio(iPOP+ipom-1 )=Bio(iPOP+ipom-1 ) +                       &
+     &        dtbio(ng)*(- consumPOP(ipom))
+            Bio(iPOFe+ipom-1)=Bio(iPOFe+ipom-1) +                       &
+     &        dtbio(ng)*(- consumPOFe(ipom))
+            Bio(iPOSi+ipom-1)=Bio(iPOSi+ipom-1) +                       &
+     &        dtbio(ng)*(- consumPOSi(ipom))
+# endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
+          END DO
+# if defined DARWIN_POMCLASS_FIXEDRATIO
+#  if defined DARWIN_POMCLASS_DEGFRAG
+! transferDON/DOP/DOFe/transferSiO2 reconcile the N/P/Fe/Si implied by
+! DEGFRAG's class-to-class carbon transfer against bulk PON/POP/POFe/
+! POSi's own fixed-ratio requirement (see the DEGFRAG block above).
+          Bio(iPON )=Bio(iPON )  + dtbio(ng)*(- consumPON  - transferDON)
+          Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(- consumPOP  - transferDOP)
+          Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(- consumPOFe - transferDOFe)
+          Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(- consumPOSi - transferSiO2)
+          Bio(iDON )=Bio(iDON )  + dtbio(ng)*(+ transferDON)
+          Bio(iDOP )=Bio(iDOP )  + dtbio(ng)*(+ transferDOP)
+          Bio(iDOFe)=Bio(iDOFe)  + dtbio(ng)*(+ transferDOFe)
+          Bio(iSiO2)=Bio(iSiO2)  + dtbio(ng)*(+ transferSiO2)
+#  else
+          Bio(iPON )=Bio(iPON )  + dtbio(ng)*(- consumPON)
+          Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(- consumPOP)
+          Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(- consumPOFe)
+          Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(- consumPOSi)
+#  endif /* DARWIN_POMCLASS_DEGFRAG */
+# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* DARWIN_POMCLASS */
 
 #if defined DARWIN_CDOM
           Bio(iDOC )=Bio(iDOC )  + dtbio(ng)*(+ reminPOC - reminPOC_CDOM + degrCDOM_DOC)
@@ -1189,33 +1490,109 @@
             ENDDO
 
             graz2OC = graz2OC + totkillc - predgrazc(iz)
+#if ! defined DARWIN_POMCLASS
             graz2POC = graz2POC + totkillexpc - predexpc
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+! distribute this predator's egested carbon across POM classes according
+! to its own feeding strategy/behavior (pomfrac_graz), the same mechanism
+! pomfrac_mort uses to distribute dead-plankton carbon, but indexed by
+! the predator rather than the dying/consumed plankton.
+            graz2POX_total = totkillexpc - predexpc
+            DO ipom = 1,npom
+              graz2POC(ipom) = graz2POC(ipom) +                         &
+     &          graz2POX_total * pomfrac_graz(iz,ipom,ng)
+            END DO
+#endif /* DARWIN_POMCLASS */
 
 #if defined DARWIN_NQUOTA
             graz2ON = graz2ON + totkilln - predgrazn(iz)
+# if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             graz2PON = graz2PON + totkillexpn - predexpn
+# endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            graz2POX_total = totkillexpn - predexpn
+            DO ipom = 1,npom
+              graz2PON(ipom) = graz2PON(ipom) +                         &
+     &          graz2POX_total * pomfrac_graz(iz,ipom,ng)
+            END DO
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 #else
             graz2ON = graz2ON + totkilln - predgrazc(iz)*Qngraz(iz)
+# if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             graz2PON = graz2PON + totkillexpn - predexpc *Qngraz(iz)
+# endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            graz2POX_total = totkillexpn - predexpc*Qngraz(iz)
+            DO ipom = 1,npom
+              graz2PON(ipom) = graz2PON(ipom) +                         &
+     &          graz2POX_total * pomfrac_graz(iz,ipom,ng)
+            END DO
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 #endif
 
 #if defined DARWIN_PQUOTA
             graz2OP = graz2OP + totkillp - predgrazp(iz)
+# if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             graz2POP = graz2POP + totkillexpp - predexpp
+# endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            graz2POX_total = totkillexpp - predexpp
+            DO ipom = 1,npom
+              graz2POP(ipom) = graz2POP(ipom) +                         &
+     &          graz2POX_total * pomfrac_graz(iz,ipom,ng)
+            END DO
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 #else
             graz2OP = graz2OP + totkillp - predgrazc(iz)*Qpgraz(iz)
+# if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             graz2POP = graz2POP + totkillexpp - predexpc *Qpgraz(iz)
+# endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            graz2POX_total = totkillexpp - predexpc*Qpgraz(iz)
+            DO ipom = 1,npom
+              graz2POP(ipom) = graz2POP(ipom) +                         &
+     &          graz2POX_total * pomfrac_graz(iz,ipom,ng)
+            END DO
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 #endif
 
 #if defined DARWIN_FEQUOTA
             graz2OFe = graz2OFe + totkillfe - predgrazfe(iz)
+# if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             graz2POFe = graz2POFe + totkillexpfe - predexpfe
+# endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            graz2POX_total = totkillexpfe - predexpfe
+            DO ipom = 1,npom
+              graz2POFe(ipom) = graz2POFe(ipom) +                       &
+     &          graz2POX_total * pomfrac_graz(iz,ipom,ng)
+            END DO
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 #else
             graz2OFe = graz2OFe + totkillfe - predgrazc(iz)*Qfegraz(iz)
+# if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             graz2POFe = graz2POFe + totkillexpfe - predexpc *Qfegraz(iz)
+# endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            graz2POX_total = totkillexpfe - predexpc*Qfegraz(iz)
+            DO ipom = 1,npom
+              graz2POFe(ipom) = graz2POFe(ipom) +                       &
+     &          graz2POX_total * pomfrac_graz(iz,ipom,ng)
+            END DO
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 #endif
 
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             graz2POSi = graz2POSi + totkillsi
+#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            graz2POX_total = totkillsi
+            DO ipom = 1,npom
+              graz2POSi(ipom) = graz2POSi(ipom) +                       &
+     &          graz2POX_total * pomfrac_graz(iz,ipom,ng)
+            END DO
+#endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 
 #if defined DARWIN_CARBON
             graz2PIC = graz2PIC + totkillPIC
@@ -1227,6 +1604,7 @@
 
 !==== tendencies =======================================================
 
+#if ! defined DARWIN_POMCLASS
           Bio(iDOC )=Bio(iDOC )  + dtbio(ng)*(+ graz2OC - graz2POC)
           Bio(iDON )=Bio(iDON )  + dtbio(ng)*(+ graz2ON - graz2PON)
           Bio(iDOP )=Bio(iDOP )  + dtbio(ng)*(+ graz2OP - graz2POP)
@@ -1236,11 +1614,57 @@
           Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(+ graz2POP)
           Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(+ graz2POSi)
           Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(+ graz2POFe)
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+          Bio(iDOC )=Bio(iDOC )  + dtbio(ng)*(+ graz2OC - SUM(graz2POC(:)))
+          Bio(iDON )=Bio(iDON )  + dtbio(ng)*(+ graz2ON - SUM(graz2PON(:)))
+          Bio(iDOP )=Bio(iDOP )  + dtbio(ng)*(+ graz2OP - SUM(graz2POP(:)))
+          Bio(iDOFe)=Bio(iDOFe)  + dtbio(ng)*(+ graz2OFe- SUM(graz2POFe(:)))
+          DO ipom = 1,npom
+            Bio(iPOC +ipom-1)=Bio(iPOC +ipom-1)+dtbio(ng)*graz2POC(ipom)
+            Bio(iPON +ipom-1)=Bio(iPON +ipom-1)+dtbio(ng)*graz2PON(ipom)
+            Bio(iPOP +ipom-1)=Bio(iPOP +ipom-1)+dtbio(ng)*graz2POP(ipom)
+            Bio(iPOSi+ipom-1)=Bio(iPOSi+ipom-1)+dtbio(ng)*graz2POSi(ipom)
+            Bio(iPOFe+ipom-1)=Bio(iPOFe+ipom-1)+dtbio(ng)*graz2POFe(ipom)
+          END DO
+#endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+! grazing-derived POM may now be spread across several classes
+! (pomfrac_graz); reconcile N/P/Fe/Si against what those classes' own
+! fixed ratios actually require instead of the predator's own ratio, so
+! POM stays consistent with R_NC_pom/R_PC_pom/etc.
+          graz2PON_required  = SUM(graz2POC(:)*R_NC_pom (:,ng))
+          graz2POP_required  = SUM(graz2POC(:)*R_PC_pom (:,ng))
+          graz2POFe_required = SUM(graz2POC(:)*R_FeC_pom(:,ng))
+          graz2POSi_required = SUM(graz2POC(:)*R_SiC_pom(:,ng))
+          Bio(iDOC )=Bio(iDOC )  + dtbio(ng)*(+ graz2OC - SUM(graz2POC(:)))
+          Bio(iDON )=Bio(iDON )  + dtbio(ng)*(+ graz2ON - graz2PON_required)
+          Bio(iDOP )=Bio(iDOP )  + dtbio(ng)*(+ graz2OP - graz2POP_required)
+          Bio(iDOFe)=Bio(iDOFe)  + dtbio(ng)*(+ graz2OFe - graz2POFe_required)
+          DO ipom = 1,npom
+            Bio(iPOC+ipom-1)=Bio(iPOC+ipom-1)+dtbio(ng)*graz2POC(ipom)
+          END DO
+          Bio(iPON )=Bio(iPON )  + dtbio(ng)*(+ graz2PON_required)
+          Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(+ graz2POP_required)
+          Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(+ graz2POSi_required)
+          Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(+ graz2POFe_required)
+! Si has no dissolved organic pool; whatever those classes' ratios do
+! not account for goes straight to/from the inorganic pool instead.
+          Bio(iSiO2)=Bio(iSiO2)  + dtbio(ng)*(+ graz2POSi - graz2POSi_required)
+#endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
 #if defined DARWIN_CARBON
           Bio(iPIC )=Bio(iPIC )  + dtbio(ng)*(+ graz2PIC)
 #endif
 #if defined DARWIN_CDOM
+# if defined DARWIN_POMCLASS_FIXEDRATIO
+          graz2CDOM = fracCDOM(ng)*(graz2OP - graz2POP_required)
+# else
+#  if defined DARWIN_POMCLASS
+          graz2CDOM = fracCDOM(ng)*(graz2OP - SUM(graz2POP(:)))
+#  else
           graz2CDOM = fracCDOM(ng)*(graz2OP - graz2POP)
+#  endif /* DARWIN_POMCLASS */
+# endif /* DARWIN_POMCLASS_FIXEDRATIO */
           Bio(iCDOM)=Bio(iCDOM)  + dtbio(ng)*(+ graz2CDOM)
           Bio(iDOC )=Bio(iDOC )  + dtbio(ng)*(- R_CP_CDOM(ng)*graz2CDOM)
           Bio(iDON )=Bio(iDON )  + dtbio(ng)*(- R_NP_CDOM(ng)*graz2CDOM)
@@ -1291,14 +1715,27 @@
 
 !==== mortality ========================================================
           exude_DOC = 0.0_r8
-          exude_POC = 0.0_r8
           exude_DON = 0.0_r8
-          exude_PON = 0.0_r8
           exude_DOFe = 0.0_r8
-          exude_POFe = 0.0_r8
           exude_DOP = 0.0_r8
+#if ! defined DARWIN_POMCLASS
+          exude_POC = 0.0_r8
+#endif /* ! DARWIN_POMCLASS */
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+          exude_PON = 0.0_r8
+          exude_POFe = 0.0_r8
           exude_POP = 0.0_r8
           exude_POSi = 0.0_r8
+#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS
+          exude_POC(:) = 0.0_r8
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+          exude_PON(:) = 0.0_r8
+          exude_POFe(:) = 0.0_r8
+          exude_POP(:) = 0.0_r8
+          exude_POSi(:) = 0.0_r8
+# endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* DARWIN_POMCLASS */
           exude_PIC = 0.0_r8
           respir = 0.0_r8
 #if defined DARWIN_FUTURE
@@ -1325,18 +1762,52 @@
             mort_c(ip) = mortX + mortX2
 
             exude_DOC = exude_DOC + (1.0_r8-ExportFracMort(ip,ng)) *mortX+ (1.0_r8-ExportFracMort2(ip,ng))*mortX2
-            exude_POC = exude_POC + ExportFracMort(ip,ng) *mortX+ ExportFracMort2(ip,ng) *mortX2
-
             exude_DON = exude_DON + (1.0_r8-ExportFracMort(ip,ng)) *mortX *Qngraz(ip)+ (1.0_r8-ExportFracMort2(ip,ng))*mortX2*Qngraz(ip)
-            exude_PON = exude_PON + ExportFracMort(ip,ng) *mortX *Qngraz(ip)+ ExportFracMort2(ip,ng) *mortX2*Qngraz(ip)
-
             exude_DOP = exude_DOP + (1.0_r8-ExportFracMort(ip,ng)) *mortX *Qpgraz(ip)+ (1.0_r8-ExportFracMort2(ip,ng))*mortX2*Qpgraz(ip)
-            exude_POP = exude_POP + ExportFracMort(ip,ng) *mortX *Qpgraz(ip)+ ExportFracMort2(ip,ng) *mortX2*Qpgraz(ip)
-
             exude_DOFe= exude_DOFe+ (1.0_r8-ExportFracMort(ip,ng)) *mortX *Qfegraz(ip)+ (1.0_r8-ExportFracMort2(ip,ng))*mortX2*Qfegraz(ip)
-            exude_POFe= exude_POFe+ ExportFracMort(ip,ng) *mortX *Qfegraz(ip)+ ExportFracMort2(ip,ng) *mortX2*Qfegraz(ip)
 
+#if ! defined DARWIN_POMCLASS
+            exude_POC = exude_POC + ExportFracMort(ip,ng) *mortX+ ExportFracMort2(ip,ng) *mortX2
+#endif /* ! DARWIN_POMCLASS */
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+            exude_PON = exude_PON + ExportFracMort(ip,ng) *mortX *Qngraz(ip)+ ExportFracMort2(ip,ng) *mortX2*Qngraz(ip)
+            exude_POP = exude_POP + ExportFracMort(ip,ng) *mortX *Qpgraz(ip)+ ExportFracMort2(ip,ng) *mortX2*Qpgraz(ip)
+            exude_POFe= exude_POFe+ ExportFracMort(ip,ng) *mortX *Qfegraz(ip)+ ExportFracMort2(ip,ng) *mortX2*Qfegraz(ip)
             exude_POSi = exude_POSi + mort_c(ip)*Qsigraz(ip)
+#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS
+            exude_POX_total=ExportFracMort(ip,ng)*mortX+                &
+     &        ExportFracMort2(ip,ng)*mortX2
+            DO ipom = 1,npom
+              exude_POC(ipom) = exude_POC(ipom) +                       &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+            exude_POX_total=ExportFracMort(ip,ng)*mortX*Qngraz(ip)+     &
+     &        ExportFracMort2(ip,ng)*mortX2*Qngraz(ip)
+            DO ipom = 1,npom
+              exude_PON(ipom) = exude_PON(ipom) +                       &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+            exude_POX_total=ExportFracMort(ip,ng)*mortX*Qpgraz(ip)+     &
+     &        ExportFracMort2(ip,ng)*mortX2*Qpgraz(ip)
+            DO ipom = 1,npom
+              exude_POP(ipom) = exude_POP(ipom) +                       &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+            exude_POX_total=ExportFracMort(ip,ng)*mortX*Qfegraz(ip)+    &
+     &        ExportFracMort2(ip,ng)*mortX2*Qfegraz(ip)
+            DO ipom = 1,npom
+              exude_POFe(ipom) = exude_POFe(ipom) +                     &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+            exude_POX_total=mort_c(ip)*Qsigraz(ip)
+            DO ipom = 1,npom
+              exude_POSi(ipom) = exude_POSi(ipom) +                     &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+# endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* DARWIN_POMCLASS */
 
             exude_PIC = exude_PIC + mort_c(ip)*R_PICPOC(ip,ng)
 
@@ -1421,14 +1892,47 @@
 
 #if defined DARWIN_EXUDE
             exude_DOC = exude_DOC + (1.0_r8-ExportFracExude(ip,ng))*kexcC(ip,ng)*Xe
-            exude_POC = exude_POC + ExportFracExude(ip,ng) *kexcC(ip,ng)*Xe
             exude_DON = exude_DON + (1.0_r8-ExportFracExude(ip,ng))*kexcN(ip,ng)*Xe*Qngraz(ip)
-            exude_PON = exude_PON + ExportFracExude(ip,ng) *kexcN(ip,ng)*Xe*Qngraz(ip)
             exude_DOP = exude_DOP + (1.0_r8-ExportFracExude(ip,ng))*kexcP(ip,ng)*Xe*Qpgraz(ip)
-            exude_POP = exude_POP + ExportFracExude(ip,ng) *kexcP(ip,ng)*Xe*Qpgraz(ip)
             exude_DOFe=exude_DOFe+(1.0_r8-ExportFracExude(ip,ng))*kexcFe(ip,ng)*Xe*Qfegraz(ip)
+#if ! defined DARWIN_POMCLASS
+            exude_POC = exude_POC + ExportFracExude(ip,ng) *kexcC(ip,ng)*Xe
+#endif /* ! DARWIN_POMCLASS */
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+            exude_PON = exude_PON + ExportFracExude(ip,ng) *kexcN(ip,ng)*Xe*Qngraz(ip)
+            exude_POP = exude_POP + ExportFracExude(ip,ng) *kexcP(ip,ng)*Xe*Qpgraz(ip)
             exude_POFe=exude_POFe+ ExportFracExude(ip,ng) *kexcFe(ip,ng)*Xe*Qfegraz(ip)
             exude_POSi = exude_POSi + kexcSi(ip,ng)*Xe*Qsigraz(ip)
+#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS
+            exude_POX_total=ExportFracExude(ip,ng)*kexcC(ip,ng)*Xe
+            DO ipom = 1,npom
+              exude_POC(ipom) = exude_POC(ipom) +                       &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+            exude_POX_total=ExportFracExude(ip,ng)*kexcN(ip,ng)*Xe*Qngraz(ip)
+            DO ipom = 1,npom
+              exude_PON(ipom) = exude_PON(ipom) +                       &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+            exude_POX_total=ExportFracExude(ip,ng)*kexcP(ip,ng)*Xe*Qpgraz(ip)
+            DO ipom = 1,npom
+              exude_POP(ipom) = exude_POP(ipom) +                       &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+            exude_POX_total=ExportFracExude(ip,ng)*kexcFe(ip,ng)*Xe*Qfegraz(ip)
+            DO ipom = 1,npom
+              exude_POFe(ipom) = exude_POFe(ipom) +                     &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+            exude_POX_total=kexcSi(ip,ng)*Xe*Qsigraz(ip)
+            DO ipom = 1,npom
+              exude_POSi(ipom) = exude_POSi(ipom) +                     &
+     &          exude_POX_total * pomfrac_mort(ip,ipom,ng)
+            END DO
+# endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* DARWIN_POMCLASS */
             Bio(ic_+ip-1)=Bio(ic_+ip-1)  + dtbio(ng)*(- kexcC(ip,ng)*Xe)
 #if defined DARWIN_NQUOTA
             Bio(in_+ip-1)=Bio(in_+ip-1)  + dtbio(ng)*(- kexcN(ip,ng)*Xe*Qngraz(ip))
@@ -1444,6 +1948,18 @@
 #endif
 #endif
           ENDDO
+
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+! exude_PON/POP/POFe/POSi above hold the "unconstrained" N/P/Fe/Si implied
+! by each plankton's own ratio; these are what the destination classes'
+! own fixed ratios (R_NC_pom/etc.) actually require for the carbon in
+! exude_POC(:) — the difference is reconciled via DON/DOP/DOFe (Si has no
+! dissolved organic pool, so it reconciles directly against SiO2 below).
+          exude_PON_required  = SUM(exude_POC(:)*R_NC_pom (:,ng))
+          exude_POP_required  = SUM(exude_POC(:)*R_PC_pom (:,ng))
+          exude_POFe_required = SUM(exude_POC(:)*R_FeC_pom(:,ng))
+          exude_POSi_required = SUM(exude_POC(:)*R_SiC_pom(:,ng))
+#endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
 
 #if defined DARWIN_CHLQUOTA
           DO ip = 1, nChl
@@ -1468,18 +1984,61 @@
 #endif
 
           Bio(iDOC )=Bio(iDOC )  + dtbio(ng)*(+ exude_DOC)
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+          Bio(iDON )=Bio(iDON )  + dtbio(ng)*                           &
+     &      (+ exude_DON + (exude_PON  - exude_PON_required))
+          Bio(iDOP )=Bio(iDOP )  + dtbio(ng)*                           &
+     &      (+ exude_DOP + (exude_POP  - exude_POP_required))
+          Bio(iDOFe)=Bio(iDOFe)  + dtbio(ng)*                           &
+     &      (+ exude_DOFe+ (exude_POFe - exude_POFe_required))
+#else
           Bio(iDON )=Bio(iDON )  + dtbio(ng)*(+ exude_DON)
           Bio(iDOP )=Bio(iDOP )  + dtbio(ng)*(+ exude_DOP)
           Bio(iDOFe)=Bio(iDOFe)  + dtbio(ng)*(+ exude_DOFe)
+#endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
 
           Bio(iPIC )=Bio(iPIC )  + dtbio(ng)*(+ exude_PIC)
+#if ! defined DARWIN_POMCLASS
           Bio(iPOC )=Bio(iPOC )  + dtbio(ng)*(+ exude_POC)
           Bio(iPON )=Bio(iPON )  + dtbio(ng)*(+ exude_PON)
           Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(+ exude_POP)
           Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(+ exude_POSi)
           Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(+ exude_POFe)
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+          DO ipom = 1, npom
+            Bio(iPOC+ipom-1)=Bio(iPOC+ipom-1)+                          &
+     &        dtbio(ng)*exude_POC(ipom)
+          END DO
+# if ! defined DARWIN_POMCLASS_FIXEDRATIO
+          DO ipom = 1, npom
+            Bio(iPON+ipom-1)=Bio(iPON+ipom-1)+                          &
+     &        dtbio(ng)*exude_PON(ipom)
+            Bio(iPOP+ipom-1)=Bio(iPOP+ipom-1)+                          &
+     &        dtbio(ng)*exude_POP(ipom)
+            Bio(iPOSi+ipom-1)=Bio(iPOSi+ipom-1)+                        &
+     &        dtbio(ng)*exude_POSi(ipom)
+            Bio(iPOFe+ipom-1)=Bio(iPOFe+ipom-1)+                        &
+     &        dtbio(ng)*exude_POFe(ipom)
+          END DO
+# else
+          Bio(iPON )=Bio(iPON )  + dtbio(ng)*(+ exude_PON_required)
+          Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(+ exude_POP_required)
+          Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(+ exude_POSi_required)
+          Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(+ exude_POFe_required)
+! Si has no dissolved organic pool; the unconstrained-vs-required
+! difference goes straight to/from the inorganic pool instead.
+          Bio(iSiO2)=Bio(iSiO2)  + dtbio(ng)*                           &
+     &      (+ exude_POSi - exude_POSi_required)
+# endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* DARWIN_POMCLASS */
 #if defined DARWIN_CDOM
+# if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+          exude_CDOM = fracCDOM(ng)*                                    &
+     &      (exude_DOP + (exude_POP - exude_POP_required))
+# else
           exude_CDOM = fracCDOM(ng)*exude_DOP
+# endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
           Bio(iCDOM)=Bio(iCDOM)  + dtbio(ng)*(+ exude_CDOM)
           Bio(iDOC )=Bio(iDOC )  + dtbio(ng)*(- R_CP_CDOM(ng)*exude_CDOM)
           Bio(iDON )=Bio(iDON )  + dtbio(ng)*(- R_NP_CDOM(ng)*exude_CDOM)

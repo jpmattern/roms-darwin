@@ -458,6 +458,52 @@
         Dmem(1)=Dmem(1)+REAL(nplank*Ngrids,r8)
       END IF
       ksatDOFe(:,:)=0.0_r8
+#if defined DARWIN_POMCLASS
+      IF (.not.allocated(pomfrac_mort)) THEN
+        allocate ( pomfrac_mort(nplank,npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*npom*Ngrids,r8)
+      END IF
+      pomfrac_mort(:,:,:)=0.0_r8
+      IF (.not.allocated(pomfrac_graz)) THEN
+        allocate ( pomfrac_graz(nplank,npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nplank*npom*Ngrids,r8)
+      END IF
+      pomfrac_graz(:,:,:)=0.0_r8
+#endif
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_DEGFRAG
+      IF (.not.allocated(pom_deg)) THEN
+        allocate ( pom_deg(npom,npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*npom*Ngrids,r8)
+      END IF
+      pom_deg(:,:,:)=0.0_r8
+      IF (.not.allocated(pom_frag)) THEN
+        allocate ( pom_frag(npom,npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*npom*Ngrids,r8)
+      END IF
+      pom_frag(:,:,:)=0.0_r8
+#endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+      IF (.not.allocated(R_NC_pom)) THEN
+        allocate ( R_NC_pom(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      R_NC_pom(:,:)=0.0_r8
+      IF (.not.allocated(R_PC_pom)) THEN
+        allocate ( R_PC_pom(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      R_PC_pom(:,:)=0.0_r8
+      IF (.not.allocated(R_SiC_pom)) THEN
+        allocate ( R_SiC_pom(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      R_SiC_pom(:,:)=0.0_r8
+      IF (.not.allocated(R_FeC_pom)) THEN
+        allocate ( R_FeC_pom(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      R_FeC_pom(:,:)=0.0_r8
+#endif
 #if defined DARWIN_RADTRANS
       IF (.not.allocated(aphy_chl)) THEN
         allocate ( aphy_chl(nplank,nlam,Ngrids) )
@@ -1925,6 +1971,7 @@
         allocate ( KPOSi_pday(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+#if ! defined DARWIN_POMCLASS
       IF (.not.allocated(wC_sink)) THEN
         allocate ( wC_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -1933,6 +1980,18 @@
         allocate ( wC_sink_pday(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+#endif
+#if defined DARWIN_POMCLASS
+      IF (.not.allocated(wC_sink)) THEN
+        allocate ( wC_sink(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      IF (.not.allocated(wC_sink_pday)) THEN
+        allocate ( wC_sink_pday(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       IF (.not.allocated(wP_sink)) THEN
         allocate ( wP_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -1941,6 +2000,18 @@
         allocate ( wP_sink_pday(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      IF (.not.allocated(wP_sink)) THEN
+        allocate ( wP_sink(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      IF (.not.allocated(wP_sink_pday)) THEN
+        allocate ( wP_sink_pday(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       IF (.not.allocated(wN_sink)) THEN
         allocate ( wN_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -1949,6 +2020,18 @@
         allocate ( wN_sink_pday(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      IF (.not.allocated(wN_sink)) THEN
+        allocate ( wN_sink(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      IF (.not.allocated(wN_sink_pday)) THEN
+        allocate ( wN_sink_pday(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       IF (.not.allocated(wFe_sink)) THEN
         allocate ( wFe_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -1957,6 +2040,18 @@
         allocate ( wFe_sink_pday(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      IF (.not.allocated(wFe_sink)) THEN
+        allocate ( wFe_sink(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      IF (.not.allocated(wFe_sink_pday)) THEN
+        allocate ( wFe_sink_pday(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       IF (.not.allocated(wSi_sink)) THEN
         allocate ( wSi_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -1965,6 +2060,17 @@
         allocate ( wSi_sink_pday(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      IF (.not.allocated(wSi_sink)) THEN
+        allocate ( wSi_sink(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+      IF (.not.allocated(wSi_sink_pday)) THEN
+        allocate ( wSi_sink_pday(npom,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
+      END IF
+#endif
       IF (.not.allocated(wPIC_sink)) THEN
         allocate ( wPIC_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)

@@ -472,6 +472,30 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#if defined DARWIN_POMCLASS
+      CALL netcdf_put_fvar (ng, model, ncname, 'pomfrac_mort',          &
+     &  pomfrac_mort(:,:,ng), (/1,1/), (/nplank,npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'pomfrac_graz',          &
+     &  pomfrac_graz(:,:,ng), (/1,1/), (/nplank,npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_DEGFRAG
+      CALL netcdf_put_fvar (ng, model, ncname, 'pom_deg',               &
+     &  pom_deg(:,:,ng), (/1,1/), (/npom,npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'pom_frag',              &
+     &  pom_frag(:,:,ng), (/1,1/), (/npom,npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
 #if defined DARWIN_RADTRANS
       CALL netcdf_put_fvar (ng, model, ncname, 'aphy_chl',              &
      &  aphy_chl(:,:,ng), (/1,1/), (/nplank,nlam/), ncid = ncid)
@@ -2058,31 +2082,98 @@
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#if ! defined DARWIN_POMCLASS
       CALL netcdf_put_fvar (ng, model, ncname, 'wC_sink_pday',          &
      &  wC_sink_pday(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS
+      CALL netcdf_put_fvar (ng, model, ncname, 'wC_sink_pday',          &
+     &  wC_sink_pday(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       CALL netcdf_put_fvar (ng, model, ncname, 'wP_sink_pday',          &
      &  wP_sink_pday(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      CALL netcdf_put_fvar (ng, model, ncname, 'wP_sink_pday',          &
+     &  wP_sink_pday(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       CALL netcdf_put_fvar (ng, model, ncname, 'wN_sink_pday',          &
      &  wN_sink_pday(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      CALL netcdf_put_fvar (ng, model, ncname, 'wN_sink_pday',          &
+     &  wN_sink_pday(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       CALL netcdf_put_fvar (ng, model, ncname, 'wFe_sink_pday',         &
      &  wFe_sink_pday(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      CALL netcdf_put_fvar (ng, model, ncname, 'wFe_sink_pday',         &
+     &  wFe_sink_pday(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       CALL netcdf_put_fvar (ng, model, ncname, 'wSi_sink_pday',         &
      &  wSi_sink_pday(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &  __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      CALL netcdf_put_fvar (ng, model, ncname, 'wSi_sink_pday',         &
+     &  wSi_sink_pday(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+      CALL netcdf_put_fvar (ng, model, ncname, 'R_NC_pom',              &
+     &  R_NC_pom(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'R_PC_pom',              &
+     &  R_PC_pom(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'R_SiC_pom',             &
+     &  R_SiC_pom(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+      CALL netcdf_put_fvar (ng, model, ncname, 'R_FeC_pom',             &
+     &  R_FeC_pom(:,ng), (/1/), (/npom/), ncid = ncid)
+      IF (FoundError(exit_flag, NoError, __LINE__,                      &
+     &  __FILE__)) RETURN
+
+#endif
       CALL netcdf_put_fvar (ng, model, ncname, 'wPIC_sink_pday',        &
      &  wPIC_sink_pday(ng), (/0/), (/0/), ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &

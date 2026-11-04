@@ -1004,16 +1004,83 @@
      &        '(mmol O2 m^-3).'
             WRITE (out,70) KPOSi_pday(ng), 'KPOSi_pday',                &
      &        'POSi remin rate (d^-1).'
+#if ! defined DARWIN_POMCLASS
             WRITE (out,70) wC_sink_pday(ng), 'wC_sink_pday',            &
      &        'POC sinking rate (m/s s d^-1).'
+#endif
+#if defined DARWIN_POMCLASS
+            WRITE (out,120) 'wC_sink_pday',                             &
+     &        'POC sinking rate (m/s s d^-1).'
+            DO is=1,npom
+              WRITE (out,140) wC_sink_pday(is,ng), ' '
+            END DO
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             WRITE (out,70) wP_sink_pday(ng), 'wP_sink_pday',            &
      &        'POP sinking rate (d^-1).'
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            WRITE (out,120) 'wP_sink_pday',                             &
+     &        'POP sinking rate (d^-1).'
+            DO is=1,npom
+              WRITE (out,140) wP_sink_pday(is,ng), ' '
+            END DO
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             WRITE (out,70) wN_sink_pday(ng), 'wN_sink_pday',            &
      &        'PON sinking rate (d^-1).'
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            WRITE (out,120) 'wN_sink_pday',                             &
+     &        'PON sinking rate (d^-1).'
+            DO is=1,npom
+              WRITE (out,140) wN_sink_pday(is,ng), ' '
+            END DO
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             WRITE (out,70) wFe_sink_pday(ng), 'wFe_sink_pday',          &
      &        'POFe sinking rate (d^-1).'
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            WRITE (out,120) 'wFe_sink_pday',                            &
+     &        'POFe sinking rate (d^-1).'
+            DO is=1,npom
+              WRITE (out,140) wFe_sink_pday(is,ng), ' '
+            END DO
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             WRITE (out,70) wSi_sink_pday(ng), 'wSi_sink_pday',          &
      &        'POSi sinking rate (d^-1).'
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            WRITE (out,120) 'wSi_sink_pday',                            &
+     &        'POSi sinking rate (d^-1).'
+            DO is=1,npom
+              WRITE (out,140) wSi_sink_pday(is,ng), ' '
+            END DO
+#endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+            WRITE (out,120) 'R_NC_pom',                                 &
+     &        'POM class N:C ratio (mmol N (mmol C)-1).'
+            DO is=1,npom
+              WRITE (out,140) R_NC_pom(is,ng), ' '
+            END DO
+            WRITE (out,120) 'R_PC_pom',                                 &
+     &        'POM class P:C ratio (mmol P (mmol C)-1).'
+            DO is=1,npom
+              WRITE (out,140) R_PC_pom(is,ng), ' '
+            END DO
+            WRITE (out,120) 'R_SiC_pom',                                &
+     &        'POM class Si:C ratio (mmol Si (mmol C)-1).'
+            DO is=1,npom
+              WRITE (out,140) R_SiC_pom(is,ng), ' '
+            END DO
+            WRITE (out,120) 'R_FeC_pom',                                &
+     &        'POM class Fe:C ratio (mmol Fe (mmol C)-1).'
+            DO is=1,npom
+              WRITE (out,140) R_FeC_pom(is,ng), ' '
+            END DO
+#endif
             WRITE (out,70) wPIC_sink_pday(ng), 'wPIC_sink_pday',        &
      &        'PIC sinking rate (m/s s d^-1).'
             WRITE (out,70) Kdissc_pday(ng), 'Kdissc_pday',              &

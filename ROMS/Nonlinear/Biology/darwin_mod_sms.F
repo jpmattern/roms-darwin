@@ -792,6 +792,12 @@
 !  Local variable declarations
 !
       integer :: l, ic, ip, iz
+#if defined DARWIN_POMCLASS
+      integer :: ipom
+# if defined DARWIN_POMCLASS_DEGFRAG
+      integer :: ipoms
+# endif /* DARWIN_POMCLASS_DEGFRAG */
+#endif /* DARWIN_POMCLASS */
       real(r8) :: PARtot
 
       !integer, parameter :: itemp = 1
@@ -807,21 +813,65 @@
       real(r8) :: synthChl
       real(r8) :: growth
       real(r8) :: uptakeDIC, uptakeFeT, uptakeN, uptakeNH4, uptakeNO2
-      real(r8) :: uptakeNO3, uptakePO4, uptakeSiO2, uptakeO2, uptakePOC
-      real(r8) :: uptakePON, uptakePOP, uptakePOFe, uptakeDOC, uptakeDON
+      real(r8) :: uptakeNO3, uptakePO4, uptakeSiO2, uptakeO2
+#if ! defined DARWIN_POMCLASS
+      real(r8) :: uptakePOC, uptakePON, uptakePOP, uptakePOFe
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+      real(r8) :: sumPOX, uptakePOC_total
+      real(r8), dimension(npom) :: uptakePOC, uptakePON
+      real(r8), dimension(npom) :: uptakePOP, uptakePOFe
+#endif /* DARWIN_POMCLASS */
+      real(r8) :: uptakeDOC, uptakeDON
       real(r8) :: uptakeDOP, uptakeDOFe
       real(r8) :: consumDIC, consumDOC, consumDON, consumDOP, consumDOFe
       real(r8) :: consumO2, consumFeT, consumNH4, consumNO2, consumNO3
-      real(r8) :: consumPO4, consumPOC, consumPOFe,consumPON, consumPOP
-      real(r8) :: consumPOSi, consumSiO2
+      real(r8) :: consumPO4
+#if ! defined DARWIN_POMCLASS
+      real(r8) :: consumPOC, consumPOFe,consumPON, consumPOP, consumPOSi
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+      real(r8), dimension(npom) :: consumPOC
+# if defined DARWIN_POMCLASS_DEGFRAG
+      real(r8), dimension(npom) :: transferPOC
+# endif /* DARWIN_POMCLASS_DEGFRAG */
+#endif /* DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+      real(r8) :: consumPOFe, consumPON, consumPOP, consumPOSi
+#endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      real(r8), dimension(npom) :: consumPOFe, consumPON
+      real(r8), dimension(npom) :: consumPOP, consumPOSi
+# if defined DARWIN_POMCLASS_DEGFRAG
+      real(r8), dimension(npom) :: transferPOFe, transferPON
+      real(r8), dimension(npom) :: transferPOP, transferPOSi
+# endif /* DARWIN_POMCLASS_DEGFRAG */
+#endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS_FIXEDRATIO && defined DARWIN_POMCLASS_DEGFRAG
+! per-transfer-pair reconciliation accumulators (see darwin_plankton.h):
+! POM class conversion changes the implied N/P/Fe/Si content of the moved
+! carbon (each class has its own fixed ratio); the difference is created
+! or consumed via DON/DOP/DOFe (Si has no dissolved organic pool, so its
+! correction applies directly to SiO2).
+      real(r8) :: transferDON, transferDOP, transferDOFe, transferSiO2
+#endif
+      real(r8) :: consumSiO2
       real(r8) :: consumDIC_PIC
       real(r8) :: reminDOC, reminDOFe, reminDON, reminDOP, reminPOC
       real(r8) :: reminPOFe, reminPON, reminPOP, reminPOSi
       real(r8) :: solubilPOC, solubilPOFe, solubilPON, solubilPOP
       real(r8) :: prodNO2, prodNO3
       real(r8) :: hydrolPOC, hydrolPOFe, hydrolPON, hydrolPOP
-      real(r8) :: respPOC, respPON, respPOP, respPOFe, respDOC, respDON
-      real(r8) :: respDOP, respDOFe, respPOSi
+#if ! defined DARWIN_POMCLASS
+      real(r8) :: respPOC, respPON, respPOP
+      real(r8) :: respPOFe, respPOSi
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+      real(r8), dimension(npom) :: respPOC, respPON, respPOP
+      real(r8), dimension(npom) :: respPOFe, respPOSi
+#endif /* DARWIN_POMCLASS */
+      real(r8) :: respDOC, respDON
+      real(r8) :: respDOP, respDOFe
       real(r8) :: mu, muO, muPON, muPOC, muPOP, muPOFe, muDON, muDOC
       real(r8) :: muDOP, muDOFe
       real(r8) :: disscPIC
@@ -856,17 +906,62 @@
 !  two loops).
 !
       real(r8) :: tmp, Xe
-      real(r8) :: graz2POC, graz2PON, graz2POP, graz2POSI, graz2PIC
-      real(r8) :: graz2POFE, graz2OC, graz2ON, graz2OP, graz2OFE
+#if ! defined DARWIN_POMCLASS
+      real(r8) :: graz2POC, graz2PON, graz2POP, graz2POSI
+      real(r8) :: graz2POFE
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+      real(r8) :: graz2POX_total
+      real(r8), dimension(npom) :: graz2POC
+#endif /* DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      real(r8), dimension(npom) :: graz2PON, graz2POP
+      real(r8), dimension(npom) :: graz2POFE, graz2POSI
+#endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+      real(r8) :: graz2PON, graz2POP, graz2POFE, graz2POSI
+#endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
+      real(r8) :: graz2PIC, graz2OC, graz2ON, graz2OP, graz2OFE
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+! grazing-derived POM carries the predator's own N/P/Fe/Si ratio, which
+! generally differs from the fixed ratio of the class(es) pomfrac_graz
+! sends it into; these hold the amount those classes' own ratios actually
+! require (SUM(graz2POC(:)*R_XC_pom(:,ng))), substituted for
+! graz2PON/POP/POFe/POSi in the final Bio() update so POM stays consistent
+! with R_NC_pom/etc. (Si, having no dissolved organic pool, reconciles the
+! difference directly against SiO2).
+      real(r8) :: graz2PON_required, graz2POP_required
+      real(r8) :: graz2POFe_required, graz2POSi_required
+#endif /* DARWIN_POMCLASS_FIXEDRATIO */
       real(r8) :: regQn, regQp, regQfe, regQc
       real(r8) :: sumprey, sumpref
       real(r8) :: totkillc, totkilln, totkillp, totkillsi, totkillfe
       real(r8) :: totkillexpc, totkillexpn, totkillexpp, totkillexpfe
       real(r8) :: predexpc, predexpn, predexpp, predexpfe
       real(r8) :: grazphy, expfrac
-      real(r8) :: exude_DOC, exude_POC, exude_DON, exude_PON
-      real(r8) :: exude_DOFe, exude_POFe, exude_DOP, exude_POP
-      real(r8) :: exude_POSi, exude_PIC, respir, respir_c
+      real(r8) :: exude_DOC, exude_DON, exude_DOP, exude_DOFe
+#if ! defined DARWIN_POMCLASS
+      real(r8) :: exude_POC, exude_PON, exude_POP
+      real(r8) :: exude_POFe, exude_POSi
+#endif /* ! DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS
+      real(r8) :: exude_POX_total
+      real(r8),dimension(npom) :: exude_POC
+#endif /* DARWIN_POMCLASS */
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      real(r8),dimension(npom) :: exude_PON, exude_POP
+      real(r8),dimension(npom) :: exude_POFe, exude_POSi
+#endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+      real(r8) :: exude_PON, exude_POP, exude_POFe, exude_POSi
+! "required" N/P/Fe/Si content of the carbon now entering each POM class
+! (SUM(exude_POC(:)*R_XC_pom(:,ng))); the difference between this and the
+! "unconstrained" exude_PON/POP/POFe/POSi accumulated above is created or
+! consumed via DON/DOP/DOFe/SiO2 (see darwin_plankton.h).
+      real(r8) :: exude_PON_required, exude_POP_required
+      real(r8) :: exude_POFe_required, exude_POSi_required
+#endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
+      real(r8) :: exude_PIC, respir, respir_c
       real(r8) :: mortX, mortX2
 #if defined DARWIN_FUTURE
       real(r8) :: respirN, respirP, respirFe, respirSi
@@ -1057,13 +1152,36 @@
       DO k=1,N(ng)
         DO i=Istr,Iend
 #if defined DARWIN_PART_SCAV_POP
+# if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
           scav_poc = MAX(0.0_r8, Bio(iPOP,k,i))/scav_R_POPPOC(ng)
+# endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+          scav_poc = MAX(0.0_r8, SUM(Bio(iPOP:iPOP+npom-1,k,i)))        &
+     &      /scav_R_POPPOC(ng)
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
           scv = scav_rat(ng)*scav_inter(ng)*(scav_poc**scav_exp(ng))
 #elif defined DARWIN_PART_SCAV
+# if ! defined DARWIN_POMCLASS
           scav_poc = scav_POC_wgt(ng)*MAX(0.0_r8, Bio(iPOC,k,i))         &
      &      + scav_PSi_wgt(ng)*MAX(0.0_r8, Bio(iPOSi,k,i))               &
      &      + scav_PIC_wgt(ng)*MAX(0.0_r8, Bio(iPIC,k,i))                &
      &      + scav_degrPOM(ng)
+# endif /* ! DARWIN_POMCLASS */
+# if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+          scav_poc = scav_POC_wgt(ng)*                                  &
+     &      MAX(0.0_r8, SUM(Bio(iPOC:iPOC+npom-1,k,i)))                 &
+     &      + scav_PSi_wgt(ng)*                                         &
+     &      MAX(0.0_r8, SUM(Bio(iPOSi:iPOSi+npom-1,k,i)))               &
+     &      + scav_PIC_wgt(ng)*MAX(0.0_r8, Bio(iPIC,k,i))                &
+     &      + scav_degrPOM(ng)
+# endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+          scav_poc = scav_POC_wgt(ng)*                                  &
+     &      MAX(0.0_r8, SUM(Bio(iPOC:iPOC+npom-1,k,i)))                 &
+     &      + scav_PSi_wgt(ng)*MAX(0.0_r8, Bio(iPOSi,k,i))               &
+     &      + scav_PIC_wgt(ng)*MAX(0.0_r8, Bio(iPIC,k,i))                &
+     &      + scav_degrPOM(ng)
+# endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
           scv = scav_rat(ng)*scav_inter(ng)*(scav_poc**scav_exp(ng))
 #else
           scv = scav(ng)
@@ -1090,11 +1208,25 @@
      &      h(i).LE.fesedflux_depth(ng)) THEN
 #if defined DARWIN_IRON_SED_SOURCE_VARIABLE
 # if defined DARWIN_IRON_SED_SOURCE_POP
+          !TODO this needs to be improved
+#  if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
           flx = fesedflux_pcm(ng)*wP_sink(ng)*R_CP_fesed(ng)*           &
      &      MAX(0.0_r8, Bio(iPOP,2,i))
+#  endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#  if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+          flx = fesedflux_pcm(ng)*R_CP_fesed(ng)*                       &
+     &      SUM(wP_sink(:,ng)*MAX(0.0_r8, Bio(iPOP:iPOP+npom-1,2,i)))
+#  endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 # else
+#  if ! defined DARWIN_POMCLASS
           flx = MAX(0.0_r8, fesedflux_pcm(ng)*wC_sink(ng)*              &
      &      MAX(0.0_r8, Bio(iPOC,1,i)) - fesedflux_min(ng))
+#  endif /* ! DARWIN_POMCLASS */
+#  if defined DARWIN_POMCLASS
+          flx = MAX(0.0_r8, fesedflux_pcm(ng)*                          &
+     &      SUM(wC_sink(:,ng)*MAX(0.0_r8, Bio(iPOC:iPOC+npom-1,1,i)))   &
+     &      - fesedflux_min(ng))
+#  endif /* DARWIN_POMCLASS */
 # endif
 #else
           flx = fesedflux(ng)

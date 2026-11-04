@@ -748,31 +748,96 @@
               DO ng=1,Ngrids
                 KPOSi(ng)=KPOSi_pday(ng)*sec2day
               END DO
+#if ! defined DARWIN_POMCLASS
             CASE ('wC_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wC_sink_pday)
               DO ng=1,Ngrids
                 wC_sink(ng)=wC_sink_pday(ng)*sec2day
               END DO
+#endif
+#if defined DARWIN_POMCLASS
+            CASE ('wC_sink_pday')
+              Npts=load_r(Nval, Rval, npom, Ngrids, wC_sink_pday)
+              DO i=1,npom
+                DO ng=1,Ngrids
+                  wC_sink(i,ng)=wC_sink_pday(i,ng)*sec2day
+                END DO
+              END DO
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             CASE ('wP_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wP_sink_pday)
               DO ng=1,Ngrids
                 wP_sink(ng)=wP_sink_pday(ng)*sec2day
               END DO
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('wP_sink_pday')
+              Npts=load_r(Nval, Rval, npom, Ngrids, wP_sink_pday)
+              DO i=1,npom
+                DO ng=1,Ngrids
+                  wP_sink(i,ng)=wP_sink_pday(i,ng)*sec2day
+                END DO
+              END DO
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             CASE ('wN_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wN_sink_pday)
               DO ng=1,Ngrids
                 wN_sink(ng)=wN_sink_pday(ng)*sec2day
               END DO
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('wN_sink_pday')
+              Npts=load_r(Nval, Rval, npom, Ngrids, wN_sink_pday)
+              DO i=1,npom
+                DO ng=1,Ngrids
+                  wN_sink(i,ng)=wN_sink_pday(i,ng)*sec2day
+                END DO
+              END DO
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             CASE ('wFe_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wFe_sink_pday)
               DO ng=1,Ngrids
                 wFe_sink(ng)=wFe_sink_pday(ng)*sec2day
               END DO
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('wFe_sink_pday')
+              Npts=load_r(Nval, Rval, npom, Ngrids, wFe_sink_pday)
+              DO i=1,npom
+                DO ng=1,Ngrids
+                  wFe_sink(i,ng)=wFe_sink_pday(i,ng)*sec2day
+                END DO
+              END DO
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
             CASE ('wSi_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wSi_sink_pday)
               DO ng=1,Ngrids
                 wSi_sink(ng)=wSi_sink_pday(ng)*sec2day
               END DO
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('wSi_sink_pday')
+              Npts=load_r(Nval, Rval, npom, Ngrids, wSi_sink_pday)
+              DO i=1,npom
+                DO ng=1,Ngrids
+                  wSi_sink(i,ng)=wSi_sink_pday(i,ng)*sec2day
+                END DO
+              END DO
+#endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('R_NC_pom')
+              Npts=load_r(Nval, Rval, npom, Ngrids, R_NC_pom)
+            CASE ('R_PC_pom')
+              Npts=load_r(Nval, Rval, npom, Ngrids, R_PC_pom)
+            CASE ('R_SiC_pom')
+              Npts=load_r(Nval, Rval, npom, Ngrids, R_SiC_pom)
+            CASE ('R_FeC_pom')
+              Npts=load_r(Nval, Rval, npom, Ngrids, R_FeC_pom)
+#endif
             CASE ('wPIC_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wPIC_sink_pday)
               DO ng=1,Ngrids

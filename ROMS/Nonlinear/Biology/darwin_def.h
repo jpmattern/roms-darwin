@@ -651,6 +651,38 @@
      &  1, (/plankdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#if defined DARWIN_POMCLASS
+      Vinfo( 1)='pomfrac_mort'
+      Vinfo( 2)='plankton mortality POM fractionation'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  2, (/plankdim,pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='pomfrac_graz'
+      Vinfo( 2)='predator grazing POM fractionation'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  2, (/plankdim,pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_DEGFRAG
+      Vinfo( 1)='pom_deg'
+      Vinfo( 2)='POM degradation (remineralization-dependent)'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  2, (/pomdim,pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='pom_frag'
+      Vinfo( 2)='POM fragmentation'
+      Vinfo( 3)='dimensionless'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  2, (/pomdim,pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
 #if defined DARWIN_RADTRANS
       Vinfo( 1)='aphy_chl'
       Vinfo( 2)='chlorophyll absorption'
@@ -2839,6 +2871,7 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#if ! defined DARWIN_POMCLASS
       Vinfo( 1)='wC_sink_pday'
       Vinfo( 2)='POC sinking rate'
       Vinfo( 3)='m/s s d^-1'
@@ -2846,6 +2879,17 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS
+      Vinfo( 1)='wC_sink_pday'
+      Vinfo( 2)='POC sinking rate'
+      Vinfo( 3)='m/s s d^-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       Vinfo( 1)='wP_sink_pday'
       Vinfo( 2)='POP sinking rate'
       Vinfo( 3)='d^-1'
@@ -2853,6 +2897,17 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      Vinfo( 1)='wP_sink_pday'
+      Vinfo( 2)='POP sinking rate'
+      Vinfo( 3)='d^-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       Vinfo( 1)='wN_sink_pday'
       Vinfo( 2)='PON sinking rate'
       Vinfo( 3)='d^-1'
@@ -2860,6 +2915,17 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      Vinfo( 1)='wN_sink_pday'
+      Vinfo( 2)='PON sinking rate'
+      Vinfo( 3)='d^-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       Vinfo( 1)='wFe_sink_pday'
       Vinfo( 2)='POFe sinking rate'
       Vinfo( 3)='d^-1'
@@ -2867,6 +2933,17 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      Vinfo( 1)='wFe_sink_pday'
+      Vinfo( 2)='POFe sinking rate'
+      Vinfo( 3)='d^-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
       Vinfo( 1)='wSi_sink_pday'
       Vinfo( 2)='POSi sinking rate'
       Vinfo( 3)='d^-1'
@@ -2874,6 +2951,46 @@
      &  1, (/0/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
+#endif
+#if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
+      Vinfo( 1)='wSi_sink_pday'
+      Vinfo( 2)='POSi sinking rate'
+      Vinfo( 3)='d^-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+      Vinfo( 1)='R_NC_pom'
+      Vinfo( 2)='POM class N:C ratio'
+      Vinfo( 3)='mmol N (mmol C)-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='R_PC_pom'
+      Vinfo( 2)='POM class P:C ratio'
+      Vinfo( 3)='mmol P (mmol C)-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='R_SiC_pom'
+      Vinfo( 2)='POM class Si:C ratio'
+      Vinfo( 3)='mmol Si (mmol C)-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+      Vinfo( 1)='R_FeC_pom'
+      Vinfo( 2)='POM class Fe:C ratio'
+      Vinfo( 3)='mmol Fe (mmol C)-1'
+      status=def_var(ng, model, ncid, varid, NF_TYPE,                   &
+     &  1, (/pomdim/), Aval, Vinfo, ncname, SetParAccess = .FALSE.)
+      IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
+
+#endif
       Vinfo( 1)='wPIC_sink_pday'
       Vinfo( 2)='PIC sinking rate'
       Vinfo( 3)='m/s s d^-1'

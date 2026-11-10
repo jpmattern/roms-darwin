@@ -579,9 +579,12 @@
      &        )/drF(i,ks)
 ! k is at surface
           ENDIF
-          Bio(iDIC,N(ng),i)=Bio(iDIC,N(ng),i)+ gDIC(i)
-          Bio(iALK,N(ng),i)=Bio(iALK,N(ng),i)+ gALK(i)
-          Bio(iO2,N(ng),i) =Bio(iO2,N(ng),i) + gO2(i)
+! Tendency to increment conversion using multiplication with dtbio(ng) was
+! missing previously -- a long-standing bug present since the original Oct
+! 2020 port.
+          Bio(iDIC,N(ng),i)=Bio(iDIC,N(ng),i)+ dtbio(ng)*gDIC(i)
+          Bio(iALK,N(ng),i)=Bio(iALK,N(ng),i)+ dtbio(ng)*gALK(i)
+          Bio(iO2,N(ng),i) =Bio(iO2,N(ng),i) + dtbio(ng)*gO2(i)
         END DO
       END DO
       RETURN

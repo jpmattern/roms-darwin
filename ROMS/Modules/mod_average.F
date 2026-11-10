@@ -180,6 +180,14 @@
           real(r8), pointer :: avgPH(:,:,:)
 
 #  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+
+          real(r8), pointer :: avgPON(:,:,:)
+          real(r8), pointer :: avgPOP(:,:,:)
+          real(r8), pointer :: avgPOSi(:,:,:)
+          real(r8), pointer :: avgPOFe(:,:,:)
+
+#  endif
 #  if defined LMD_MIXING || defined MY25_MIXING || defined GLS_MIXING
           real(r8), pointer :: avgAKv(:,:,:)
           real(r8), pointer :: avgAKt(:,:,:)
@@ -471,6 +479,24 @@
       END IF
       IF (Aout(idpH,ng)) THEN
         allocate ( AVERAGE(ng) % avgPH(LBi:UBi,LBj:UBj,N(ng)) )
+        Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      END IF
+#  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+      IF (Aout(idPON,ng)) THEN
+        allocate ( AVERAGE(ng) % avgPON(LBi:UBi,LBj:UBj,N(ng)) )
+        Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      END IF
+      IF (Aout(idPOP,ng)) THEN
+        allocate ( AVERAGE(ng) % avgPOP(LBi:UBi,LBj:UBj,N(ng)) )
+        Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      END IF
+      IF (Aout(idPOSi,ng)) THEN
+        allocate ( AVERAGE(ng) % avgPOSi(LBi:UBi,LBj:UBj,N(ng)) )
+        Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      END IF
+      IF (Aout(idPOFe,ng)) THEN
+        allocate ( AVERAGE(ng) % avgPOFe(LBi:UBi,LBj:UBj,N(ng)) )
         Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
       END IF
 #  endif
@@ -1055,6 +1081,28 @@
       IF (Aout(idpH,ng)) THEN
         IF (.not.destroy(ng, AVERAGE(ng)%avgPH, MyFile,                 &
      &                   __LINE__, 'AVERAGE(ng)%avgPH')) RETURN
+      END IF
+
+#   endif
+#   if defined DARWIN_POMCLASS_FIXEDRATIO
+      IF (Aout(idPON,ng)) THEN
+        IF (.not.destroy(ng, AVERAGE(ng)%avgPON, MyFile,                &
+     &                   __LINE__, 'AVERAGE(ng)%avgPON')) RETURN
+      END IF
+
+      IF (Aout(idPOP,ng)) THEN
+        IF (.not.destroy(ng, AVERAGE(ng)%avgPOP, MyFile,                &
+     &                   __LINE__, 'AVERAGE(ng)%avgPOP')) RETURN
+      END IF
+
+      IF (Aout(idPOSi,ng)) THEN
+        IF (.not.destroy(ng, AVERAGE(ng)%avgPOSi, MyFile,               &
+     &                   __LINE__, 'AVERAGE(ng)%avgPOSi')) RETURN
+      END IF
+
+      IF (Aout(idPOFe,ng)) THEN
+        IF (.not.destroy(ng, AVERAGE(ng)%avgPOFe, MyFile,               &
+     &                   __LINE__, 'AVERAGE(ng)%avgPOFe')) RETURN
       END IF
 
 #   endif

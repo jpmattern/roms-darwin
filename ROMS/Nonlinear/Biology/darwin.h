@@ -74,6 +74,12 @@
      &                   OCEAN(ng) % CO2flx,                            &
      &                   OCEAN(ng) % pCO2,                              &
 #endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+     &                   OCEAN(ng) % PON,                               &
+     &                   OCEAN(ng) % POP,                               &
+     &                   OCEAN(ng) % POSi,                              &
+     &                   OCEAN(ng) % POFe,                              &
+#endif
 #if defined DARWIN_CONSTRUCTION
      &                   FORCES(ng) % SpecIr,                           &
      &                   FORCES(ng) % avcos,                            &
@@ -115,6 +121,9 @@
 #endif /* BULK_FLUXES */
 #if defined DARWIN_CARBON_EXTRAOUT
      &                         pH, CO2flx, pCO2,                        &
+#endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+     &                         PON, POP, POSi, POFe,                    &
 #endif
 #if defined DARWIN_CONSTRUCTION
      &                         SpecIr, avcos,                           &
@@ -171,6 +180,12 @@
       real(r8), intent(inout) :: CO2flx(LBi:,LBj:)
       real(r8), intent(inout) :: pCO2(LBi:,LBj:,:)
 # endif
+# if defined DARWIN_POMCLASS_FIXEDRATIO
+      real(r8), intent(inout) :: PON(LBi:,LBj:,:)
+      real(r8), intent(inout) :: POP(LBi:,LBj:,:)
+      real(r8), intent(inout) :: POSi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: POFe(LBi:,LBj:,:)
+# endif
 # if defined DARWIN_CONSTRUCTION
       real(r8), intent(in) :: SpecIr(LBi:,LBj:,:)
       real(r8), intent(in) :: avcos(LBi:,LBj:,:)
@@ -206,6 +221,12 @@
       real(r8), intent(inout) :: pH(LBi:UBi,LBj:UBj,UBk)
       real(r8), intent(inout) :: CO2flx(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: pCO2(LBi:UBi,LBj:UBj,UBk)
+# endif
+# if defined DARWIN_POMCLASS_FIXEDRATIO
+      real(r8), intent(inout) :: PON(LBi:UBi,LBj:UBj,UBk)
+      real(r8), intent(inout) :: POP(LBi:UBi,LBj:UBj,UBk)
+      real(r8), intent(inout) :: POSi(LBi:UBi,LBj:UBj,UBk)
+      real(r8), intent(inout) :: POFe(LBi:UBi,LBj:UBj,UBk)
 # endif
 # if defined DARWIN_CONSTRUCTION
       real(r8), intent(in) :: SpecIr(LBi:UBi,LBj:UBj,nlam)
@@ -552,6 +573,22 @@
      &    inputFe(:,j), freefe,                                         &
      &    diags)
 
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+!
+!  PON/POP/POSi/POFe are not tracers under DARWIN_POMCLASS_FIXEDRATIO (see
+!  darwin_mod.h) -- compute them here, after sinking, as output-only
+!  derived fields from the final per-class POC and the fixed ratios, the
+!  same way DARWIN_CARBON_EXTRAOUT computes pH/pCO2/CO2flx.
+!
+        DO k=1,N(ng)
+          DO i=Istr,Iend
+            PON(i,j,k) =SUM(Bio(iPOC:iPOC+npom-1,k,i)*R_NC_pom(:,ng))
+            POP(i,j,k) =SUM(Bio(iPOC:iPOC+npom-1,k,i)*R_PC_pom(:,ng))
+            POSi(i,j,k)=SUM(Bio(iPOC:iPOC+npom-1,k,i)*R_SiC_pom(:,ng))
+            POFe(i,j,k)=SUM(Bio(iPOC:iPOC+npom-1,k,i)*R_FeC_pom(:,ng))
+          END DO
+        END DO
+#endif
 #if defined DARWIN_TOTAL_CHLOROPHYLL
 !
 !  sum up all chlorophyll

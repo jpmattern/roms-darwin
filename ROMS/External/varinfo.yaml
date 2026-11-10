@@ -3865,6 +3865,50 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       PON
+    standard_name:  PON
+    long_name:      particulate organic nitrogen (derived from POM classes)
+    units:          mmol N m-3
+    field:          PON
+    time:           ocean_time
+    index_code:     idPON
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POP
+    standard_name:  POP
+    long_name:      particulate organic phosphorus (derived from POM classes)
+    units:          mmol P m-3
+    field:          POP
+    time:           ocean_time
+    index_code:     idPOP
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POSi
+    standard_name:  POSi
+    long_name:      particulate organic silica (derived from POM classes)
+    units:          mmol Si m-3
+    field:          POSi
+    time:           ocean_time
+    index_code:     idPOSi
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       POFe
+    standard_name:  POFe
+    long_name:      particulate organic iron (derived from POM classes)
+    units:          mmol Fe m-3
+    field:          POFe
+    time:           ocean_time
+    index_code:     idPOFe
+    type:           r3dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   - variable:       plankton
     standard_name:  plankton
     long_name:      plankton concentration

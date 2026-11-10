@@ -462,6 +462,44 @@
           END DO
         END IF
 #  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+        IF (Aout(idPON,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPON(i,j,k)=OCEAN(ng)%PON(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOP,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOP(i,j,k)=OCEAN(ng)%POP(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOSi,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOSi(i,j,k)=OCEAN(ng)%POSi(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOFe,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOFe(i,j,k)=OCEAN(ng)%POFe(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+#  endif
 #  if defined SEDIMENT && defined BEDLOAD
         DO it=1,NST
           IF (Aout(idUbld(it),ng)) THEN
@@ -1842,6 +1880,48 @@
               DO k=1,N(ng)
                 AVERAGE(ng)%avgPH(i,j,k)=                               &
      &          AVERAGE(ng)%avgPH(i,j,k)+OCEAN(ng)%pH(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+#  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+        IF (Aout(idPON,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPON(i,j,k)=                              &
+     &          AVERAGE(ng)%avgPON(i,j,k)+OCEAN(ng)%PON(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOP,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOP(i,j,k)=                              &
+     &          AVERAGE(ng)%avgPOP(i,j,k)+OCEAN(ng)%POP(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOSi,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOSi(i,j,k)=                             &
+     &          AVERAGE(ng)%avgPOSi(i,j,k)+OCEAN(ng)%POSi(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOFe,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOFe(i,j,k)=                             &
+     &          AVERAGE(ng)%avgPOFe(i,j,k)+OCEAN(ng)%POFe(i,j,k)
               END DO
             END DO
           END DO
@@ -3337,6 +3417,48 @@
               DO k=1,N(ng)
                 AVERAGE(ng)%avgPH(i,j,k)=rfac(i,j)*                     &
      &                       AVERAGE(ng)%avgPH(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+#  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+        IF (Aout(idPON,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPON(i,j,k)=rfac(i,j)*                    &
+     &                       AVERAGE(ng)%avgPON(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOP,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOP(i,j,k)=rfac(i,j)*                    &
+     &                       AVERAGE(ng)%avgPOP(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOSi,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOSi(i,j,k)=rfac(i,j)*                   &
+     &                       AVERAGE(ng)%avgPOSi(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idPOFe,ng)) THEN
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              DO k=1,N(ng)
+                AVERAGE(ng)%avgPOFe(i,j,k)=rfac(i,j)*                   &
+     &                       AVERAGE(ng)%avgPOFe(i,j,k)
               END DO
             END DO
           END DO

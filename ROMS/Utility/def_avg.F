@@ -1075,6 +1075,84 @@
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 #  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+!
+!  Define derived particulate organic nitrogen.
+!
+        IF (Aout(idPON,ng)) THEN
+          Vinfo( 1)=Vname(1,idPON)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idPON))
+          Vinfo( 3)=Vname(3,idPON)
+          Vinfo(14)=Vname(4,idPON)
+          Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#   endif
+          Vinfo(21)=Vname(6,idPON)
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idPON,ng),r8)
+          status=def_var(ng, model, AVG(ng)%ncid, AVG(ng)%Vid(idPON),  &
+     &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+!
+!  Define derived particulate organic phosphorus.
+!
+        IF (Aout(idPOP,ng)) THEN
+          Vinfo( 1)=Vname(1,idPOP)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idPOP))
+          Vinfo( 3)=Vname(3,idPOP)
+          Vinfo(14)=Vname(4,idPOP)
+          Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#   endif
+          Vinfo(21)=Vname(6,idPOP)
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idPOP,ng),r8)
+          status=def_var(ng, model, AVG(ng)%ncid, AVG(ng)%Vid(idPOP),  &
+     &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+!
+!  Define derived particulate organic silica.
+!
+        IF (Aout(idPOSi,ng)) THEN
+          Vinfo( 1)=Vname(1,idPOSi)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idPOSi))
+          Vinfo( 3)=Vname(3,idPOSi)
+          Vinfo(14)=Vname(4,idPOSi)
+          Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#   endif
+          Vinfo(21)=Vname(6,idPOSi)
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idPOSi,ng),r8)
+          status=def_var(ng, model, AVG(ng)%ncid, AVG(ng)%Vid(idPOSi), &
+     &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+!
+!  Define derived particulate organic iron.
+!
+        IF (Aout(idPOFe,ng)) THEN
+          Vinfo( 1)=Vname(1,idPOFe)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idPOFe))
+          Vinfo( 3)=Vname(3,idPOFe)
+          Vinfo(14)=Vname(4,idPOFe)
+          Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#   endif
+          Vinfo(21)=Vname(6,idPOFe)
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idPOFe,ng),r8)
+          status=def_var(ng, model, AVG(ng)%ncid, AVG(ng)%Vid(idPOFe), &
+     &                   NF_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+#  endif
 
 #  ifdef LMD_SKPP
 !
@@ -2100,6 +2178,20 @@
             got_var(idpH)=.TRUE.
             AVG(ng)%Vid(idpH)=var_id(i)
 #  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPON))) THEN
+            got_var(idPON)=.TRUE.
+            AVG(ng)%Vid(idPON)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPOP))) THEN
+            got_var(idPOP)=.TRUE.
+            AVG(ng)%Vid(idPOP)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPOSi))) THEN
+            got_var(idPOSi)=.TRUE.
+            AVG(ng)%Vid(idPOSi)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPOFe))) THEN
+            got_var(idPOFe)=.TRUE.
+            AVG(ng)%Vid(idPOFe)=var_id(i)
+#  endif
 #  ifdef LMD_SKPP
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idHsbl))) THEN
             got_var(idHsbl)=.TRUE.
@@ -2469,6 +2561,32 @@
         END IF
         IF (.not.got_var(idpH).and.Aout(idpH,ng)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idpH)),            &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+#  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+        IF (.not.got_var(idPON).and.Aout(idPON,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idPON)),           &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idPOP).and.Aout(idPOP,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idPOP)),           &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idPOSi).and.Aout(idPOSi,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idPOSi)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idPOFe).and.Aout(idPOFe,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idPOFe)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN
@@ -3896,6 +4014,100 @@
         END IF
 
 #   endif
+#   if defined DARWIN_POMCLASS_FIXEDRATIO
+!
+!  Define derived particulate organic nitrogen.
+!
+        IF (Aout(idPON,ng)) THEN
+          Vinfo( 1)=Vname(1,idPON)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idPON))
+          Vinfo( 3)=Vname(3,idPON)
+          Vinfo(14)=Vname(4,idPON)
+          Vinfo(16)=Vname(1,idtime)
+#    if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#    endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idPON,ng),r8)
+          AVG(ng)%pioVar(idPON)%dkind=PIO_FOUT
+          AVG(ng)%pioVar(idPON)%gtype=r3dvar
+!
+          status=def_var(ng, model, AVG(ng)%pioFile,                    &
+     &                   AVG(ng)%pioVar(idPON)%vd,                       &
+     &                   PIO_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+
+!
+!  Define derived particulate organic phosphorus.
+!
+        IF (Aout(idPOP,ng)) THEN
+          Vinfo( 1)=Vname(1,idPOP)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idPOP))
+          Vinfo( 3)=Vname(3,idPOP)
+          Vinfo(14)=Vname(4,idPOP)
+          Vinfo(16)=Vname(1,idtime)
+#    if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#    endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idPOP,ng),r8)
+          AVG(ng)%pioVar(idPOP)%dkind=PIO_FOUT
+          AVG(ng)%pioVar(idPOP)%gtype=r3dvar
+!
+          status=def_var(ng, model, AVG(ng)%pioFile,                    &
+     &                   AVG(ng)%pioVar(idPOP)%vd,                       &
+     &                   PIO_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+
+!
+!  Define derived particulate organic silica.
+!
+        IF (Aout(idPOSi,ng)) THEN
+          Vinfo( 1)=Vname(1,idPOSi)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idPOSi))
+          Vinfo( 3)=Vname(3,idPOSi)
+          Vinfo(14)=Vname(4,idPOSi)
+          Vinfo(16)=Vname(1,idtime)
+#    if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#    endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idPOSi,ng),r8)
+          AVG(ng)%pioVar(idPOSi)%dkind=PIO_FOUT
+          AVG(ng)%pioVar(idPOSi)%gtype=r3dvar
+!
+          status=def_var(ng, model, AVG(ng)%pioFile,                    &
+     &                   AVG(ng)%pioVar(idPOSi)%vd,                      &
+     &                   PIO_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+
+!
+!  Define derived particulate organic iron.
+!
+        IF (Aout(idPOFe,ng)) THEN
+          Vinfo( 1)=Vname(1,idPOFe)
+          WRITE (Vinfo( 2),'(a,1x,a)') Prefix, TRIM(Vname(2,idPOFe))
+          Vinfo( 3)=Vname(3,idPOFe)
+          Vinfo(14)=Vname(4,idPOFe)
+          Vinfo(16)=Vname(1,idtime)
+#    if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#    endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,idPOFe,ng),r8)
+          AVG(ng)%pioVar(idPOFe)%dkind=PIO_FOUT
+          AVG(ng)%pioVar(idPOFe)%gtype=r3dvar
+!
+          status=def_var(ng, model, AVG(ng)%pioFile,                    &
+     &                   AVG(ng)%pioVar(idPOFe)%vd,                      &
+     &                   PIO_FOUT, nvd4, t3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+
+#   endif
 #   ifdef LMD_SKPP
 !
 !  Define depth of surface boundary layer.
@@ -5128,6 +5340,28 @@
             AVG(ng)%pioVar(idpH)%dkind=PIO_FOUT
             AVG(ng)%pioVar(idpH)%gtype=r3dvar
 #   endif
+#   if defined DARWIN_POMCLASS_FIXEDRATIO
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPON))) THEN
+            got_var(idPON)=.TRUE.
+            AVG(ng)%pioVar(idPON)%vd=var_desc(i)
+            AVG(ng)%pioVar(idPON)%dkind=PIO_FOUT
+            AVG(ng)%pioVar(idPON)%gtype=r3dvar
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPOP))) THEN
+            got_var(idPOP)=.TRUE.
+            AVG(ng)%pioVar(idPOP)%vd=var_desc(i)
+            AVG(ng)%pioVar(idPOP)%dkind=PIO_FOUT
+            AVG(ng)%pioVar(idPOP)%gtype=r3dvar
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPOSi))) THEN
+            got_var(idPOSi)=.TRUE.
+            AVG(ng)%pioVar(idPOSi)%vd=var_desc(i)
+            AVG(ng)%pioVar(idPOSi)%dkind=PIO_FOUT
+            AVG(ng)%pioVar(idPOSi)%gtype=r3dvar
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPOFe))) THEN
+            got_var(idPOFe)=.TRUE.
+            AVG(ng)%pioVar(idPOFe)%vd=var_desc(i)
+            AVG(ng)%pioVar(idPOFe)%dkind=PIO_FOUT
+            AVG(ng)%pioVar(idPOFe)%gtype=r3dvar
+#   endif
 #   ifdef LMD_SKPP
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idHsbl))) THEN
             got_var(idHsbl)=.TRUE.
@@ -5603,6 +5837,32 @@
         END IF
         IF (.not.got_var(idpH).and.Aout(idpH,ng)) THEN
           IF (Master) WRITE (stdout,60) TRIM(Vname(1,idpH)),            &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+#   endif
+#   if defined DARWIN_POMCLASS_FIXEDRATIO
+        IF (.not.got_var(idPON).and.Aout(idPON,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idPON)),           &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idPOP).and.Aout(idPOP,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idPOP)),           &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idPOSi).and.Aout(idPOSi,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idPOSi)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idPOFe).and.Aout(idPOFe,ng)) THEN
+          IF (Master) WRITE (stdout,60) TRIM(Vname(1,idPOFe)),          &
      &                                  TRIM(ncname)
           exit_flag=3
           RETURN

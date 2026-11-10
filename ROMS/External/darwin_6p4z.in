@@ -1981,6 +1981,10 @@ ad_LBC(isTvar) ==   Cla     Cla     Cla     Cla \    ! idbio( 1)
 Hout(idTvar) == 35*T    ! ..., NO3, ...          biological tracers
 Hout(idTsur) == 35*F    ! ..., NO3_sflux, ...    surface tracer flux
 Hout(idBSMa) == 35*T    ! ..., POC, ...          sediment variables
+Hout(idPON) == T        ! PON (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Hout(idPOP) == T        ! POP (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Hout(idPOFe) == T       ! POFe (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Hout(idPOSi) == T       ! POSi (only active under DARWIN_POMCLASS_FIXEDRATIO)
 
 ! Logical switches (TRUE/FALSE) to activate writing of biological fields
 ! into QUICKSAVE output file: [1:NBT,Ngrids].
@@ -1989,6 +1993,10 @@ Qout(idTvar) == 35*F    ! ..., NO3, ...          biological tracers
 Qout(idsurT) == 35*F    ! ..., NO3_sur, ...      surface biological tracer
 Qout(idTsur) == 35*F    ! ..., NO3_sflux, ...    surface tracer flux
 Qout(idBSMa) == 35*T    ! ..., POC, ...          sediment variables
+Qout(idPON) == T        ! PON (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Qout(idPOP) == T        ! POP (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Qout(idPOFe) == T       ! POFe (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Qout(idPOSi) == T       ! POSi (only active under DARWIN_POMCLASS_FIXEDRATIO)
 
 ! Logical switches (TRUE/FALSE) to activate writing of time-averaged fields
 ! into AVERAGE output file: [1;NBT,Ngrids].
@@ -2000,6 +2008,10 @@ Aout(idVTav) == 35*F    ! ..., v_NO3, ...        quadratic <v*t> tracer terms
 Aout(iHUTav) == 35*F    ! ..., Huon_NO3, ...     tracer volume flux, <Huon*t>
 Aout(iHVTav) == 35*F    ! ..., Hvom_NO3, ...     tracer volume flux, <Hvom*t>
 Aout(idBSMa) == 35*T    ! ..., POC, ...          sediment variables
+Aout(idPON) == T        ! PON (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Aout(idPOP) == T        ! POP (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Aout(idPOFe) == T       ! POFe (only active under DARWIN_POMCLASS_FIXEDRATIO)
+Aout(idPOSi) == T       ! POSi (only active under DARWIN_POMCLASS_FIXEDRATIO)
 
 ! Logical switches (TRUE/FALSE) to activate writing of time-averaged,
 ! biological tracer diagnostic terms into DIAGNOSTIC output file:

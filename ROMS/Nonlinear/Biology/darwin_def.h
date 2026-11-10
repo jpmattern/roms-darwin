@@ -2889,7 +2889,7 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       Vinfo( 1)='wP_sink_pday'
       Vinfo( 2)='POP sinking rate'
       Vinfo( 3)='d^-1'
@@ -2907,7 +2907,7 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       Vinfo( 1)='wN_sink_pday'
       Vinfo( 2)='PON sinking rate'
       Vinfo( 3)='d^-1'
@@ -2925,7 +2925,7 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       Vinfo( 1)='wFe_sink_pday'
       Vinfo( 2)='POFe sinking rate'
       Vinfo( 3)='d^-1'
@@ -2943,7 +2943,7 @@
       IF (FoundError(exit_flag, NoError, __LINE__, __FILE__)) RETURN
 
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       Vinfo( 1)='wSi_sink_pday'
       Vinfo( 2)='POSi sinking rate'
       Vinfo( 3)='d^-1'

@@ -144,6 +144,12 @@
           real(r8), pointer :: CO2flx(:,:)
           real(r8), pointer :: pCO2(:,:,:)
 # endif
+# if defined DARWIN_POMCLASS_FIXEDRATIO
+          real(r8), pointer :: PON(:,:,:)
+          real(r8), pointer :: POP(:,:,:)
+          real(r8), pointer :: POSi(:,:,:)
+          real(r8), pointer :: POFe(:,:,:)
+# endif
 #endif
 
 #if defined TANGENT || defined TL_IOMS
@@ -505,6 +511,16 @@
       allocate ( OCEAN(ng) % CO2flx(LBi:UBi,LBj:UBj) )
       allocate ( OCEAN(ng) % pCO2(LBi:UBi,LBj:UBj,N(ng)) )
       allocate ( OCEAN(ng) % pH(LBi:UBi,LBj:UBj,N(ng)) )
+# endif
+# if defined DARWIN_POMCLASS_FIXEDRATIO
+      allocate ( OCEAN(ng) % PON(LBi:UBi,LBj:UBj,N(ng)) )
+      Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      allocate ( OCEAN(ng) % POP(LBi:UBi,LBj:UBj,N(ng)) )
+      Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      allocate ( OCEAN(ng) % POSi(LBi:UBi,LBj:UBj,N(ng)) )
+      Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
+      allocate ( OCEAN(ng) % POFe(LBi:UBi,LBj:UBj,N(ng)) )
+      Dmem(ng)=Dmem(ng)+REAL(N(ng),r8)*size2d
 # endif
 #endif
 
@@ -1073,6 +1089,19 @@
      &                 __LINE__, 'OCEAN(ng)%respirationG')) RETURN
 #   endif
 #  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+      IF (.not.destroy(ng, OCEAN(ng)%PON, MyFile,                       &
+     &                 __LINE__, 'OCEAN(ng)%PON')) RETURN
+
+      IF (.not.destroy(ng, OCEAN(ng)%POP, MyFile,                       &
+     &                 __LINE__, 'OCEAN(ng)%POP')) RETURN
+
+      IF (.not.destroy(ng, OCEAN(ng)%POSi, MyFile,                      &
+     &                 __LINE__, 'OCEAN(ng)%POSi')) RETURN
+
+      IF (.not.destroy(ng, OCEAN(ng)%POFe, MyFile,                      &
+     &                 __LINE__, 'OCEAN(ng)%POFe')) RETURN
+#  endif
 # endif
 
 # if defined TANGENT || defined TL_IOMS
@@ -1618,6 +1647,14 @@
             DO k=1,N(ng)
               OCEAN(ng) % pCO2(i,j,k) = 0.0_r8
               OCEAN(ng) % pH(i,j,k) = 8.0_r8
+            END DO
+#endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+            DO k=1,N(ng)
+              OCEAN(ng) % PON(i,j,k) = 0.0_r8
+              OCEAN(ng) % POP(i,j,k) = 0.0_r8
+              OCEAN(ng) % POSi(i,j,k) = 0.0_r8
+              OCEAN(ng) % POFe(i,j,k) = 0.0_r8
             END DO
 #endif
           END DO

@@ -740,6 +740,101 @@
         END IF
       END IF
 
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+!
+!  Write out derived particulate organic nitrogen.
+!
+      IF (Aout(idPON,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, model, AVG(ng)%ncid, idPON,              &
+     &                     AVG(ng)%Vid(idPON),                          &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgPON)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idPON)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out derived particulate organic phosphorus.
+!
+      IF (Aout(idPOP,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, model, AVG(ng)%ncid, idPOP,              &
+     &                     AVG(ng)%Vid(idPOP),                          &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgPOP)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idPOP)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out derived particulate organic silica.
+!
+      IF (Aout(idPOSi,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, model, AVG(ng)%ncid, idPOSi,             &
+     &                     AVG(ng)%Vid(idPOSi),                         &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgPOSi)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idPOSi)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out derived particulate organic iron.
+!
+      IF (Aout(idPOFe,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, model, AVG(ng)%ncid, idPOFe,             &
+     &                     AVG(ng)%Vid(idPOFe),                         &
+     &                     AVG(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     AVERAGE(ng) % avgPOFe)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idPOFe)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#  endif
+
 #  ifdef LMD_SKPP
 !
 !  Write out depth of surface boundary layer.
@@ -2656,6 +2751,120 @@
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) THEN
             WRITE (stdout,20) TRIM(Vname(1,idpH)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#   endif
+#   if defined DARWIN_POMCLASS_FIXEDRATIO
+!
+!  Write out derived particulate organic nitrogen.
+!
+      IF (Aout(idPON,ng)) THEN
+        scale=1.0_dp
+        IF (AVG(ng)%pioVar(idPON)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, model, AVG(ng)%pioFile, idPON,           &
+     &                     AVG(ng)%pioVar(idPON),                       &
+     &                     AVG(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#    ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#    endif
+     &                     AVERAGE(ng) % avgPON)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idPON)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out derived particulate organic phosphorus.
+!
+      IF (Aout(idPOP,ng)) THEN
+        scale=1.0_dp
+        IF (AVG(ng)%pioVar(idPOP)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, model, AVG(ng)%pioFile, idPOP,           &
+     &                     AVG(ng)%pioVar(idPOP),                       &
+     &                     AVG(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#    ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#    endif
+     &                     AVERAGE(ng) % avgPOP)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idPOP)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out derived particulate organic silica.
+!
+      IF (Aout(idPOSi,ng)) THEN
+        scale=1.0_dp
+        IF (AVG(ng)%pioVar(idPOSi)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, model, AVG(ng)%pioFile, idPOSi,          &
+     &                     AVG(ng)%pioVar(idPOSi),                      &
+     &                     AVG(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#    ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#    endif
+     &                     AVERAGE(ng) % avgPOSi)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idPOSi)), AVG(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out derived particulate organic iron.
+!
+      IF (Aout(idPOFe,ng)) THEN
+        scale=1.0_dp
+        IF (AVG(ng)%pioVar(idPOFe)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, model, AVG(ng)%pioFile, idPOFe,          &
+     &                     AVG(ng)%pioVar(idPOFe),                      &
+     &                     AVG(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#    ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#    endif
+     &                     AVERAGE(ng) % avgPOFe)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idPOFe)), AVG(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status

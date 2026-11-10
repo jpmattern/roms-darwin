@@ -26,12 +26,7 @@
           consumPOP(:) = 0.0_r8
           consumPOFe(:) = 0.0_r8
           consumPOSi(:) = 0.0_r8
-# else
-          consumPON = 0.0_r8
-          consumPOP = 0.0_r8
-          consumPOFe = 0.0_r8
-          consumPOSi = 0.0_r8
-# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+# endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
 # if defined DARWIN_POMCLASS_DEGFRAG
           transferPOC(:) = 0.0_r8
 #  if ! defined DARWIN_POMCLASS_FIXEDRATIO
@@ -604,10 +599,14 @@
 #endif /* ! DARWIN_POMCLASS */
 #if defined DARWIN_POMCLASS
 # if defined DARWIN_POMCLASS_FIXEDRATIO
-! PON/POP/POFe are bulk (not per-class) under FIXEDRATIO; no SUM needed.
-              muPON  = PCm*Bio(iPON) /(Bio(iPON) + ksatPON(ic,ng))
-              muPOP  = PCm*Bio(iPOP) /(Bio(iPOP) + ksatPOP(ic,ng))
-              muPOFe = PCm*Bio(iPOFe)/(Bio(iPOFe)+ ksatPOFe(ic,ng))
+! PON/POP/POFe are not tracers under FIXEDRATIO -- derive the bulk-
+! equivalent concentration from the per-class POC and its fixed ratio.
+              sumPOX = SUM(Bio(iPOC:iPOC+npom-1)*R_NC_pom(:,ng))
+              muPON  = PCm*sumPOX/(sumPOX + ksatPON(ic,ng))
+              sumPOX = SUM(Bio(iPOC:iPOC+npom-1)*R_PC_pom(:,ng))
+              muPOP  = PCm*sumPOX/(sumPOX + ksatPOP(ic,ng))
+              sumPOX = SUM(Bio(iPOC:iPOC+npom-1)*R_FeC_pom(:,ng))
+              muPOFe = PCm*sumPOX/(sumPOX + ksatPOFe(ic,ng))
 # else
               sumPOX = SUM(Bio(iPON:iPON+npom-1))
               muPON  = PCm*sumPOX/(sumPOX + ksatPON(ic,ng))
@@ -746,11 +745,7 @@
               consumPON(ipom) = consumPON(ipom) + uptakePON(ipom)
               consumPOP(ipom) = consumPOP(ipom) + uptakePOP(ipom)
               consumPOFe(ipom) = consumPOFe(ipom) + uptakePOFe(ipom)
-# else
-              consumPON = consumPON + uptakePON(ipom)
-              consumPOP = consumPOP + uptakePOP(ipom)
-              consumPOFe = consumPOFe + uptakePOFe(ipom)
-# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+# endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
 
               ! sum across POM classes here
               reminPOC = reminPOC + respPOC(ipom)
@@ -871,12 +866,7 @@
             consumPOP(ipom) = consumPOP(ipom) + respPOP(ipom)
             consumPOSi(ipom) = consumPOSi(ipom) + respPOSi(ipom)
             consumPOFe(ipom) = consumPOFe(ipom) + respPOFe(ipom)
-# else
-            consumPON = consumPON + respPON(ipom)
-            consumPOP = consumPOP + respPOP(ipom)
-            consumPOSi = consumPOSi + respPOSi(ipom)
-            consumPOFe = consumPOFe + respPOFe(ipom)
-# endif /* DARWIN_POMCLASS_FIXEDRATIO */
+# endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
           END DO
 #endif /* DARWIN_POMCLASS */
 
@@ -991,9 +981,11 @@
             consumDON = 0.0_r8
             consumDOFe = 0.0_r8
             consumPOC = 0.0_r8
+#if ! defined DARWIN_POMCLASS_FIXEDRATIO
             consumPOP = 0.0_r8
             consumPON = 0.0_r8
             consumPOFe = 0.0_r8
+#endif /* ! DARWIN_POMCLASS_FIXEDRATIO */
             reminDOC = 0.0_r8
             reminDOP = 0.0_r8
             reminDON = 0.0_r8
@@ -1213,22 +1205,13 @@
           END DO
 # if defined DARWIN_POMCLASS_FIXEDRATIO
 #  if defined DARWIN_POMCLASS_DEGFRAG
-! transferDON/DOP/DOFe/transferSiO2 reconcile the N/P/Fe/Si implied by
-! DEGFRAG's class-to-class carbon transfer against bulk PON/POP/POFe/
-! POSi's own fixed-ratio requirement (see the DEGFRAG block above).
-          Bio(iPON )=Bio(iPON )  + dtbio(ng)*(- consumPON  - transferDON)
-          Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(- consumPOP  - transferDOP)
-          Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(- consumPOFe - transferDOFe)
-          Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(- consumPOSi - transferSiO2)
+! PON/POP/POSi/POFe are not tracers under FIXEDRATIO, so only the DOM/
+! SiO2 side of the class-to-class transfer reconciliation applies here
+! (transferDON/DOP/DOFe/transferSiO2, see the DEGFRAG block above).
           Bio(iDON )=Bio(iDON )  + dtbio(ng)*(+ transferDON)
           Bio(iDOP )=Bio(iDOP )  + dtbio(ng)*(+ transferDOP)
           Bio(iDOFe)=Bio(iDOFe)  + dtbio(ng)*(+ transferDOFe)
           Bio(iSiO2)=Bio(iSiO2)  + dtbio(ng)*(+ transferSiO2)
-#  else
-          Bio(iPON )=Bio(iPON )  + dtbio(ng)*(- consumPON)
-          Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(- consumPOP)
-          Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(- consumPOFe)
-          Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(- consumPOSi)
 #  endif /* DARWIN_POMCLASS_DEGFRAG */
 # endif /* DARWIN_POMCLASS_FIXEDRATIO */
 #endif /* DARWIN_POMCLASS */
@@ -1644,12 +1627,9 @@
           DO ipom = 1,npom
             Bio(iPOC+ipom-1)=Bio(iPOC+ipom-1)+dtbio(ng)*graz2POC(ipom)
           END DO
-          Bio(iPON )=Bio(iPON )  + dtbio(ng)*(+ graz2PON_required)
-          Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(+ graz2POP_required)
-          Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(+ graz2POSi_required)
-          Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(+ graz2POFe_required)
-! Si has no dissolved organic pool; whatever those classes' ratios do
-! not account for goes straight to/from the inorganic pool instead.
+! PON/POP/POSi/POFe are not tracers under FIXEDRATIO; graz2*_required
+! above already reconciled their share into DON/DOP/DOFe. Si has no
+! dissolved organic pool, so its share goes straight to SiO2 instead.
           Bio(iSiO2)=Bio(iSiO2)  + dtbio(ng)*(+ graz2POSi - graz2POSi_required)
 #endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
 #if defined DARWIN_CARBON
@@ -2022,12 +2002,9 @@
      &        dtbio(ng)*exude_POFe(ipom)
           END DO
 # else
-          Bio(iPON )=Bio(iPON )  + dtbio(ng)*(+ exude_PON_required)
-          Bio(iPOP )=Bio(iPOP )  + dtbio(ng)*(+ exude_POP_required)
-          Bio(iPOSi)=Bio(iPOSi)  + dtbio(ng)*(+ exude_POSi_required)
-          Bio(iPOFe)=Bio(iPOFe)  + dtbio(ng)*(+ exude_POFe_required)
-! Si has no dissolved organic pool; the unconstrained-vs-required
-! difference goes straight to/from the inorganic pool instead.
+! PON/POP/POSi/POFe are not tracers under FIXEDRATIO; exude_*_required
+! above already reconciled their share into DON/DOP/DOFe. Si has no
+! dissolved organic pool, so its share goes straight to SiO2 instead.
           Bio(iSiO2)=Bio(iSiO2)  + dtbio(ng)*                           &
      &      (+ exude_POSi - exude_POSi_required)
 # endif /* ! DARWIN_POMCLASS_FIXEDRATIO */

@@ -264,25 +264,33 @@
       iPON=ic
 #if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
       ic=ic+npom
-#else
+#endif
+#if ! defined DARWIN_POMCLASS
       ic=ic+1
 #endif
+! (DARWIN_POMCLASS_FIXEDRATIO: ic unchanged -- PON is not a tracer at all;
+! iPON aliases whatever index comes next, same empty-range idiom used for
+! a plankton quota tracer when its quota flag is off (in_/en_ above), and
+! must never be dereferenced as a scalar Bio() index below.)
       iPOP=ic
 #if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
       ic=ic+npom
-#else
+#endif
+#if ! defined DARWIN_POMCLASS
       ic=ic+1
 #endif
       iPOSi=ic
 #if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
       ic=ic+npom
-#else
+#endif
+#if ! defined DARWIN_POMCLASS
       ic=ic+1
 #endif
       iPOFe=ic
 #if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
       ic=ic+npom
-#else
+#endif
+#if ! defined DARWIN_POMCLASS
       ic=ic+1
 #endif
       iPIC=ic

@@ -70,6 +70,7 @@ Compiling ROMS-Darwin with the `DARWIN_POMCLASS` option will add additional vari
 * The class variables are called `POC01`, `POC02`, etc.; the `varinfo.yaml` file can be used to change the default naming scheme.
 * Each class of each POM constituent can be configured to have a different sinking rate. Typically, each class is given the same sinking rate across the different constituents, so that `POC01`, `PON01`, `POP01`, `POSi01`, and `POFe01` all have identical sinking rates.
 * The fractionation of dead plankton into POM classes is configured using the `nplank`x`npom` matrix `pomfrac_mort`. For example, in a configuration with 3 POM classes, in which the first column of `pomfrac_mort` is set to `[0.9, 0.1, 0.0]`, mortality of the first phytoplankton variable, `phytoplankton01`, converts 90% of its dead biomass to POM class 1, 10% to POM class 2 and no biomass to POM class 3.
+* Similarly, the fractionation of grazing-derived POM (sloppy feeding/egestion) into POM classes is configured using the `nplank`x`npom` matrix `pomfrac_graz` -- same layout and same sum-to-1-per-row convention as `pomfrac_mort`, but indexed by the *predator* doing the grazing rather than the prey being consumed, since which POM classes an egestion event produces is treated as a property of the predator's own feeding strategy/behavior.
 
 ### Degradation and fragmentation between POM classes: `DARWIN_POMCLASS_DEGFRAG`
 
@@ -149,11 +150,21 @@ You should now be ready to start the new ROMS executable and perform a Darwin ru
 
 ## The `DARWIN_POMCLASS_FIXEDRATIO` option
 
-`DARWIN_POMCLASS` (above) gives every POM constituent (POC, PON, POP, POSi, POFe) its own independent, fully prognostic tracer for each class -- the elemental content of a class can drift freely, just like a plankton type with all of `DARWIN_NQUOTA`/`PQUOTA`/`SIQUOTA`/`FEQUOTA` turned on. `DARWIN_POMCLASS_FIXEDRATIO` (requires `DARWIN_POMCLASS`, and is combinable with `DARWIN_POMCLASS_DEGFRAG`) is a simpler alternative: only POC gets per-class tracers (`POC01`, `POC02`, ...); PON, POP, POSi, and POFe stay exactly as in a plain (non-`DARWIN_POMCLASS`) configuration -- single bulk tracers, not split per class. Each POC class instead has a fixed, configurable C:N, C:P, C:Si, and C:Fe ratio, the same way a plankton type with a quota turned *off* always uses a fixed ratio instead of an independently-evolving quota tracer.
+`DARWIN_POMCLASS` (above) gives every POM constituent (POC, PON, POP, POSi, POFe) its own independent, fully prognostic tracer for each class -- the elemental content of a class can drift freely, just like a plankton type with all of `DARWIN_NQUOTA`/`PQUOTA`/`SIQUOTA`/`FEQUOTA` turned on. `DARWIN_POMCLASS_FIXEDRATIO` (requires `DARWIN_POMCLASS`, and is combinable with `DARWIN_POMCLASS_DEGFRAG`) is a simpler alternative: only POC gets per-class tracers (`POC01`, `POC02`, ...); PON, POP, POSi, and POFe are **not tracers at all** under this option -- not even a single bulk one. Each POC class instead has a fixed, configurable C:N, C:P, C:Si, and C:Fe ratio, the same way a plankton type with a quota turned *off* has no separate "plankton N"-style tracer at all -- its N content is always `C * R_NC`, computed on demand, never stored as model state.
 
-* The four new per-class ratio parameters are `R_NC_pom`, `R_PC_pom`, `R_SiC_pom`, and `R_FeC_pom` (N:C, P:C, Si:C, and Fe:C, respectively), each an `npom`-length array read from the `.in` file like any other POM class parameter (see Step 2 below).
-* Whenever carbon enters a POM class (plankton mortality, leaky exudation under `DARWIN_EXUDE`, grazing sloppy feeding) or moves between classes (`DARWIN_POMCLASS_DEGFRAG`), the N/P/Si/Fe actually available (from the plankton's own ratio, or from the class the carbon is leaving) generally differs from what the destination class's fixed ratio requires. This difference is created or consumed via DON/DOP/DOFe; since there is no dissolved organic silica pool anywhere in this model, the silica difference is instead created or consumed directly from/to the inorganic SiO2 pool. This keeps `PON == sum(POC_i * R_NC_pom_i)` (and similarly for P/Si/Fe) an invariant, while still conserving total mass.
+(An earlier version of this option kept PON/POP/POSi/POFe as single bulk tracers alongside the per-class POC. That design was architecturally wrong: it created a second, independently-evolving N/P/Si/Fe pool that was only ever supposed to *track* `sum(POC_i * R_XC_pom_i)`, with its own decoupled sinking rate, advection, and boundary conditions -- nothing forced its value to actually equal that sum, so it could silently drift. It has been removed.)
+
+* The four per-class ratio parameters are `R_NC_pom`, `R_PC_pom`, `R_SiC_pom`, and `R_FeC_pom` (N:C, P:C, Si:C, and Fe:C, respectively), each an `npom`-length array read from the `.in` file like any other POM class parameter (see Step 2 below).
+* Whenever carbon enters a POM class (plankton mortality, leaky exudation under `DARWIN_EXUDE`, grazing sloppy feeding) or moves between classes (`DARWIN_POMCLASS_DEGFRAG`), the N/P/Si/Fe actually available (from the plankton's own ratio, or from the class the carbon is leaving) generally differs from what the destination class's fixed ratio requires. This difference is created or consumed via DON/DOP/DOFe; since there is no dissolved organic silica pool anywhere in this model, the silica difference is instead created or consumed directly from/to the inorganic SiO2 pool.
 * Simple consumption (bacterial uptake of POM) and loss (parameterized remineralization) events need no such reconciliation -- they already behave like the quota-off case does for plankton, consuming/releasing N/P/Si/Fe at a fixed ratio with no competing destination ratio involved.
+* PON/POP/POSi/POFe are still available as *output*, computed on demand as `sum(POC_i * R_XC_pom_i)` once per timestep (the same way `DARWIN_CARBON_EXTRAOUT` computes `pH`/`pCO2`/`CO2flx`) -- not stored as tracers, never advected/diffused, just written to the history/average/quicksave files when requested. Enable them per-field with the usual `Hout`/`Qout`/`Aout` keywords, e.g. in the `.in` file:
+```
+  Hout(idPON) == T
+  Hout(idPOP) == T
+  Hout(idPOSi) == T
+  Hout(idPOFe) == T
+```
+(`Qout(idPON)`/etc. for the quicksave file, `Aout(idPON)`/etc. for time-averaged output -- all three gated the same `DARWIN_POMCLASS_FIXEDRATIO` way as the fields themselves).
 
 ## Steps for adding `DARWIN_POMCLASS_FIXEDRATIO` to a `DARWIN_POMCLASS` configuration
 
@@ -167,7 +178,7 @@ MY_CPP_FLAGS="${MY_CPP_FLAGS} -DDARWIN_POMCLASS -DDARWIN_DIM_NPOM=3 -DDARWIN_POM
 ### Step 2: Configure the `darwin_6p4z.in` File
 
 Edit the `darwin_6p4z.in` file.
-1. `wP_sink_pday`, `wN_sink_pday`, `wFe_sink_pday`, and `wSi_sink_pday` revert to a single value each (one bulk PON/POP/POSi/POFe tracer again); only `wC_sink_pday` still takes `npom` values, one per POC class.
+1. Remove `wP_sink_pday`, `wN_sink_pday`, `wFe_sink_pday`, and `wSi_sink_pday` entirely -- there is no PON/POP/POSi/POFe tracer left to sink, so these keywords no longer exist under `DARWIN_POMCLASS_FIXEDRATIO`. Only `wC_sink_pday` remains, still taking `npom` values, one per POC class.
 2. Add the four new ratio parameters, one value per POC class, for example (with `npom`=3):
 ```
 ! POM class N:C ratio (mmol N (mmol C)-1)
@@ -187,11 +198,11 @@ Edit the `darwin_6p4z.in` file.
   R_FeC_pom == 0.0008d0 0.0007d0 0.0006d0
 
 ```
-3. Since PON, POP, POSi, and POFe are bulk tracers again, the tracer count/index changes described in `DARWIN_POMCLASS` Step 2 only apply to POC: the configuration now has `npom` extra biological tracers (one fewer POM expansion than plain `DARWIN_POMCLASS`), and `LBC(isTvar)`, `Hadvection`, `Vadvection`, `TNU2`, and similar variables need to be updated accordingly.
+3. Since PON, POP, POSi, and POFe are not tracers at all under `DARWIN_POMCLASS_FIXEDRATIO`, the tracer count/index changes described in `DARWIN_POMCLASS` Step 2 only apply to POC: the configuration has `npom` biological tracers for POM in total (one fewer POM expansion than plain `DARWIN_POMCLASS`, where PON/POP/POSi/POFe are each also split into `npom` classes), and `LBC(isTvar)`, `Hadvection`, `Vadvection`, `TNU2`, and similar variables need to be updated accordingly.
 
 ### Step 3: Add Variables to the Initial and Boundary Files
 
-Only POC needs new per-class tracer variables (`POC01`, `POC02`, etc., as in `DARWIN_POMCLASS` Step 3); keep the existing bulk `PON`, `POP`, `POSi`, and `POFe` initial/boundary conditions unchanged. `pomfrac_mort`, `pomfrac_graz` (and, with `DARWIN_POMCLASS_DEGFRAG`, `pom_deg`/`pom_frag`) are still required, exactly as described in `DARWIN_POMCLASS` Step 4 -- they only govern how POC is distributed/transferred between classes, with the N/P/Si/Fe implications reconciled against each class's fixed ratio (see the `DARWIN_POMCLASS_FIXEDRATIO` kernel changes above).
+Only POC needs new per-class tracer variables (`POC01`, `POC02`, etc., as in `DARWIN_POMCLASS` Step 3); do **not** add `PON`, `POP`, `POSi`, or `POFe` initial/boundary conditions at all -- they are not tracers under this option. `pomfrac_mort`, `pomfrac_graz` (and, with `DARWIN_POMCLASS_DEGFRAG`, `pom_deg`/`pom_frag`) are still required, exactly as described in `DARWIN_POMCLASS` Step 4 -- they only govern how POC is distributed/transferred between classes, with the N/P/Si/Fe implications reconciled against DON/DOP/DOFe/SiO2 using each class's fixed ratio (see the `DARWIN_POMCLASS_FIXEDRATIO` kernel changes above).
 
 ### Step 4: Run ROMS-Darwin
 

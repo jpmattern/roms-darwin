@@ -579,9 +579,12 @@
      &        )/drF(i,ks)
 ! k is at surface
           ENDIF
-          Bio(iDIC,N(ng),i)=Bio(iDIC,N(ng),i)+ gDIC(i)
-          Bio(iALK,N(ng),i)=Bio(iALK,N(ng),i)+ gALK(i)
-          Bio(iO2,N(ng),i) =Bio(iO2,N(ng),i) + gO2(i)
+! Tendency to increment conversion using multiplication with dtbio(ng) was
+! missing previously -- a long-standing bug present since the original Oct
+! 2020 port.
+          Bio(iDIC,N(ng),i)=Bio(iDIC,N(ng),i)+ dtbio(ng)*gDIC(i)
+          Bio(iALK,N(ng),i)=Bio(iALK,N(ng),i)+ dtbio(ng)*gALK(i)
+          Bio(iO2,N(ng),i) =Bio(iO2,N(ng),i) + dtbio(ng)*gO2(i)
         END DO
       END DO
       RETURN
@@ -836,9 +839,11 @@
       real(r8), dimension(npom) :: transferPOC
 # endif /* DARWIN_POMCLASS_DEGFRAG */
 #endif /* DARWIN_POMCLASS */
-#if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
-      real(r8) :: consumPOFe, consumPON, consumPOP, consumPOSi
-#endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
+! consumPON/POP/POFe/POSi only exist (as per-class arrays) when
+! DARWIN_POMCLASS_FIXEDRATIO is NOT active -- under FIXEDRATIO there is no
+! bulk PON/POP/POSi/POFe tracer left for them to deplete (see darwin_mod.h
+! and darwin_plankton.h; reminPON/etc. and the DOM/SiO2 reconciliation
+! terms are unaffected and still computed independently).
 #if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
       real(r8), dimension(npom) :: consumPOFe, consumPON
       real(r8), dimension(npom) :: consumPOP, consumPOSi
@@ -1152,13 +1157,18 @@
       DO k=1,N(ng)
         DO i=Istr,Iend
 #if defined DARWIN_PART_SCAV_POP
-# if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+# if ! defined DARWIN_POMCLASS
           scav_poc = MAX(0.0_r8, Bio(iPOP,k,i))/scav_R_POPPOC(ng)
-# endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+# endif /* ! DARWIN_POMCLASS */
 # if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
           scav_poc = MAX(0.0_r8, SUM(Bio(iPOP:iPOP+npom-1,k,i)))        &
      &      /scav_R_POPPOC(ng)
 # endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
+# if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+          scav_poc = MAX(0.0_r8,                                       &
+     &      SUM(Bio(iPOC:iPOC+npom-1,k,i)*R_PC_pom(:,ng)))             &
+     &      /scav_R_POPPOC(ng)
+# endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
           scv = scav_rat(ng)*scav_inter(ng)*(scav_poc**scav_exp(ng))
 #elif defined DARWIN_PART_SCAV
 # if ! defined DARWIN_POMCLASS
@@ -1178,7 +1188,8 @@
 # if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
           scav_poc = scav_POC_wgt(ng)*                                  &
      &      MAX(0.0_r8, SUM(Bio(iPOC:iPOC+npom-1,k,i)))                 &
-     &      + scav_PSi_wgt(ng)*MAX(0.0_r8, Bio(iPOSi,k,i))               &
+     &      + scav_PSi_wgt(ng)*                                         &
+     &      MAX(0.0_r8, SUM(Bio(iPOC:iPOC+npom-1,k,i)*R_SiC_pom(:,ng))) &
      &      + scav_PIC_wgt(ng)*MAX(0.0_r8, Bio(iPIC,k,i))                &
      &      + scav_degrPOM(ng)
 # endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
@@ -1209,14 +1220,21 @@
 #if defined DARWIN_IRON_SED_SOURCE_VARIABLE
 # if defined DARWIN_IRON_SED_SOURCE_POP
           !TODO this needs to be improved
-#  if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#  if ! defined DARWIN_POMCLASS
           flx = fesedflux_pcm(ng)*wP_sink(ng)*R_CP_fesed(ng)*           &
      &      MAX(0.0_r8, Bio(iPOP,2,i))
-#  endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#  endif /* ! DARWIN_POMCLASS */
 #  if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
           flx = fesedflux_pcm(ng)*R_CP_fesed(ng)*                       &
      &      SUM(wP_sink(:,ng)*MAX(0.0_r8, Bio(iPOP:iPOP+npom-1,2,i)))
 #  endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
+#  if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+! wP_sink/Bio(iPOP) don't exist under FIXEDRATIO -- derive the P-weighted
+! sinking flux from each POC class's own sinking rate and fixed ratio.
+          flx = fesedflux_pcm(ng)*R_CP_fesed(ng)*                       &
+     &      SUM(wC_sink(:,ng)*R_PC_pom(:,ng)*                           &
+     &          MAX(0.0_r8, Bio(iPOC:iPOC+npom-1,2,i)))
+#  endif /* DARWIN_POMCLASS && DARWIN_POMCLASS_FIXEDRATIO */
 # else
 #  if ! defined DARWIN_POMCLASS
           flx = MAX(0.0_r8, fesedflux_pcm(ng)*wC_sink(ng)*              &

@@ -1991,7 +1991,7 @@
         Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
       END IF
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       IF (.not.allocated(wP_sink)) THEN
         allocate ( wP_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -2011,7 +2011,7 @@
         Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
       END IF
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       IF (.not.allocated(wN_sink)) THEN
         allocate ( wN_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -2031,7 +2031,7 @@
         Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
       END IF
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       IF (.not.allocated(wFe_sink)) THEN
         allocate ( wFe_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -2051,7 +2051,7 @@
         Dmem(1)=Dmem(1)+REAL(npom*Ngrids,r8)
       END IF
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       IF (.not.allocated(wSi_sink)) THEN
         allocate ( wSi_sink(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)

@@ -75,10 +75,10 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+25)=' DARWIN_POMCLASS_DEGFRAG,'
 # endif
-# if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+# if defined DARWIN_POMCLASS_FIXEDRATIO
 !
       IF (Master) WRITE (stdout,20) 'DARWIN_POMCLASS_FIXEDRATIO',       &
-     &   'Include POC as only POM classes with fixed POX:POC ratios.'
+     &   'Use fixed per-class C:N:P:Si:Fe ratios for POM classes.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+28)=' DARWIN_POMCLASS_FIXEDRATIO,'
 # endif

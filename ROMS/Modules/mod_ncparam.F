@@ -453,6 +453,12 @@
       integer  :: idpCO2        ! pCO2
       integer  :: idpH          ! pH
 #endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+      integer  :: idPON         ! derived particulate organic nitrogen
+      integer  :: idPOP         ! derived particulate organic phosphorus
+      integer  :: idPOSi        ! derived particulate organic silica
+      integer  :: idPOFe        ! derived particulate organic iron
+#endif
 !
 !  Last used variable ID counter.
 !
@@ -2426,6 +2432,16 @@
               idpCO2=varid
             CASE ('idpH')
               idpH=varid
+#  endif
+#  if defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('idPON')
+              idPON=varid
+            CASE ('idPOP')
+              idPOP=varid
+            CASE ('idPOSi')
+              idPOSi=varid
+            CASE ('idPOFe')
+              idPOFe=varid
 #  endif
 # elif defined ECOSIM
 #  include <ecosim_var.h>

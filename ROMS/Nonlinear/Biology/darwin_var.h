@@ -59,7 +59,7 @@
             CASE ('idTvar(iPOFe)')
               load=.TRUE.
 #endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
             CASE ('idTvar(iPON)')
               idTvar(iPON)=varid
             CASE ('idTvar(iPOP)')
@@ -68,7 +68,7 @@
               idTvar(iPOSi)=varid
             CASE ('idTvar(iPOFe)')
               idTvar(iPOFe)=varid
-#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* ! DARWIN_POMCLASS */
             CASE ('idTvar(iPIC)')
               idTvar(iPIC)=varid
             CASE ('idTvar(ic_)')
@@ -266,7 +266,7 @@
             CASE ('idTbry(inorth,iPOFe)')
               load=.TRUE.
 #endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
             CASE ('idTbry(iwest,iPON)')
               idTbry(iwest,iPON)=varid
             CASE ('idTbry(ieast,iPON)')
@@ -302,7 +302,7 @@
               idTbry(isouth,iPOFe)=varid
             CASE ('idTbry(inorth,iPOFe)')
               idTbry(inorth,iPOFe)=varid
-#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* ! DARWIN_POMCLASS */
 
             CASE ('idTbry(iwest,iPIC)')
               idTbry(iwest,iPIC)=varid
@@ -454,7 +454,7 @@
             CASE ('idRtrc(iPOFe)')
               load=.TRUE.
 #endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
             CASE ('idRtrc(iPON)')
               idRtrc(iPON)=varid
             CASE ('idRtrc(iPOP)')
@@ -463,7 +463,7 @@
               idRtrc(iPOSi)=varid
             CASE ('idRtrc(iPOFe)')
               idRtrc(iPOFe)=varid
-#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* ! DARWIN_POMCLASS */
             CASE ('idRtrc(iPIC)')
               idRtrc(iPIC)=varid
             CASE ('idRtrc(ic_)')

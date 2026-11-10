@@ -764,7 +764,7 @@
                 END DO
               END DO
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
             CASE ('wP_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wP_sink_pday)
               DO ng=1,Ngrids
@@ -780,7 +780,7 @@
                 END DO
               END DO
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
             CASE ('wN_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wN_sink_pday)
               DO ng=1,Ngrids
@@ -796,7 +796,7 @@
                 END DO
               END DO
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
             CASE ('wFe_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wFe_sink_pday)
               DO ng=1,Ngrids
@@ -812,7 +812,7 @@
                 END DO
               END DO
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
             CASE ('wSi_sink_pday')
               Npts=load_r(Nval, Rval, Ngrids, wSi_sink_pday)
               DO ng=1,Ngrids

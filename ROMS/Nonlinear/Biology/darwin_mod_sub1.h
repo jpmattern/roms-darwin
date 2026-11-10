@@ -539,7 +539,7 @@
       real(r8), allocatable :: wC_sink(:,:)           ! m/s
       real(r8), allocatable :: wC_sink_pday(:,:)      ! m/s s d^-1
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       real(r8), allocatable :: wP_sink(:)             ! s-1
       real(r8), allocatable :: wP_sink_pday(:)        ! d^-1
 #endif
@@ -547,7 +547,7 @@
       real(r8), allocatable :: wP_sink(:,:)           ! s-1
       real(r8), allocatable :: wP_sink_pday(:,:)      ! d^-1
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       real(r8), allocatable :: wN_sink(:)             ! s-1
       real(r8), allocatable :: wN_sink_pday(:)        ! d^-1
 #endif
@@ -555,7 +555,7 @@
       real(r8), allocatable :: wN_sink(:,:)           ! s-1
       real(r8), allocatable :: wN_sink_pday(:,:)      ! d^-1
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       real(r8), allocatable :: wFe_sink(:)            ! s-1
       real(r8), allocatable :: wFe_sink_pday(:)       ! d^-1
 #endif
@@ -563,7 +563,7 @@
       real(r8), allocatable :: wFe_sink(:,:)          ! s-1
       real(r8), allocatable :: wFe_sink_pday(:,:)     ! d^-1
 #endif
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
       real(r8), allocatable :: wSi_sink(:)            ! s-1
       real(r8), allocatable :: wSi_sink_pday(:)       ! d^-1
 #endif

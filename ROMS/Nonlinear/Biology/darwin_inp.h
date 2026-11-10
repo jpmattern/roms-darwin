@@ -45,7 +45,7 @@
       integer :: i, ifield, igrid, is, ic, ip, itracer, itrc
       integer :: ng, nline, status
 
-#if defined DIAGNOSTICS_BIO
+#if defined DIAGNOSTICS_BIO || defined DARWIN_POMCLASS_FIXEDRATIO
       logical, dimension(Ngrids) :: Lbio
 #endif
       logical, dimension(NBT,Ngrids) :: Ltrc
@@ -370,6 +370,40 @@
                 END DO
               END DO
 #endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('Hout(idPON)')
+              IF (idPON.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPON'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Hout(idPON,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Hout(idPOP)')
+              IF (idPOP.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOP'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Hout(idPOP,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Hout(idPOSi)')
+              IF (idPOSi.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOSi'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Hout(idPOSi,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Hout(idPOFe)')
+              IF (idPOFe.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOFe'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Hout(idPOFe,1:Ngrids)=Lbio(1:Ngrids)
+#endif
             CASE ('Qout(idTvar)')
               Npts=load_l(Nval, Cval, NBT, Ngrids, Ltrc)
               DO ng=1,Ngrids
@@ -416,6 +450,40 @@
                 END DO
               END DO
 #endif
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('Qout(idPON)')
+              IF (idPON.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPON'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Qout(idPON,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Qout(idPOP)')
+              IF (idPOP.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOP'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Qout(idPOP,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Qout(idPOSi)')
+              IF (idPOSi.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOSi'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Qout(idPOSi,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Qout(idPOFe)')
+              IF (idPOFe.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOFe'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Qout(idPOFe,1:Ngrids)=Lbio(1:Ngrids)
+#endif
 #if defined AVERAGES    || \
    (defined AD_AVERAGES && defined ADJOINT) || \
    (defined RP_AVERAGES && defined TL_IOMS) || \
@@ -428,6 +496,40 @@
                   Aout(i,ng)=Ltrc(itrc,ng)
                 END DO
               END DO
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+            CASE ('Aout(idPON)')
+              IF (idPON.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPON'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Aout(idPON,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Aout(idPOP)')
+              IF (idPOP.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOP'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Aout(idPOP,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Aout(idPOSi)')
+              IF (idPOSi.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOSi'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Aout(idPOSi,1:Ngrids)=Lbio(1:Ngrids)
+            CASE ('Aout(idPOFe)')
+              IF (idPOFe.eq.0) THEN
+                IF (Master) WRITE (out,40) 'idPOFe'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lbio)
+              Aout(idPOFe,1:Ngrids)=Lbio(1:Ngrids)
+#endif
             CASE ('Aout(idTTav)')
               Npts=load_l(Nval, Cval, NBT, Ngrids, Ltrc)
               DO ng=1,Ngrids
@@ -929,6 +1031,20 @@
      &              'Write out tracer flux ', i,                        &
      &              TRIM(Vname(1,idTvar(i)))
               END DO
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+              IF (Hout(idPON,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')     &
+     &            Hout(idPON,ng), 'Hout(idPON)',                       &
+     &            'Write out derived particulate organic nitrogen.'
+              IF (Hout(idPOP,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')     &
+     &            Hout(idPOP,ng), 'Hout(idPOP)',                        &
+     &            'Write out derived particulate organic phosphorus.'
+              IF (Hout(idPOSi,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')    &
+     &            Hout(idPOSi,ng), 'Hout(idPOSi)',                      &
+     &            'Write out derived particulate organic silica.'
+              IF (Hout(idPOFe,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')    &
+     &            Hout(idPOFe,ng), 'Hout(idPOFe)',                      &
+     &            'Write out derived particulate organic iron.'
+#endif
             END IF
             IF ((nQCK(ng).gt.0).and.ANY(Qout(:,ng))) THEN
               WRITE (out,'(1x)')
@@ -952,6 +1068,20 @@
      &              'Write out tracer flux ', i,                        &
      &              TRIM(Vname(1,idTvar(i)))
               END DO
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+              IF (Qout(idPON,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')     &
+     &            Qout(idPON,ng), 'Qout(idPON)',                       &
+     &            'Write out derived particulate organic nitrogen.'
+              IF (Qout(idPOP,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')     &
+     &            Qout(idPOP,ng), 'Qout(idPOP)',                        &
+     &            'Write out derived particulate organic phosphorus.'
+              IF (Qout(idPOSi,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')    &
+     &            Qout(idPOSi,ng), 'Qout(idPOSi)',                      &
+     &            'Write out derived particulate organic silica.'
+              IF (Qout(idPOFe,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')    &
+     &            Qout(idPOFe,ng), 'Qout(idPOFe)',                      &
+     &            'Write out derived particulate organic iron.'
+#endif
             END IF
 #if defined AVERAGES    || \
    (defined AD_AVERAGES && defined ADJOINT) || \
@@ -1001,6 +1131,20 @@
      &              'Write out averaged <Hvom*t> for tracer ', i,       &
      &              TRIM(Vname(1,idTvar(i)))
               END DO
+#if defined DARWIN_POMCLASS_FIXEDRATIO
+              IF (Aout(idPON,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')     &
+     &            Aout(idPON,ng), 'Aout(idPON)',                       &
+     &            'Write out averaged derived particulate organic nitrogen.'
+              IF (Aout(idPOP,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')     &
+     &            Aout(idPOP,ng), 'Aout(idPOP)',                        &
+     &            'Write out averaged derived particulate organic phosphorus.'
+              IF (Aout(idPOSi,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')    &
+     &            Aout(idPOSi,ng), 'Aout(idPOSi)',                      &
+     &            'Write out averaged derived particulate organic silica.'
+              IF (Aout(idPOFe,ng)) WRITE (out,'(10x,l1,2x,a,t32,a)')    &
+     &            Aout(idPOFe,ng), 'Aout(idPOFe)',                      &
+     &            'Write out averaged derived particulate organic iron.'
+#endif
             END IF
 #endif
 #ifdef DIAGNOSTICS_TS
@@ -1421,12 +1565,12 @@
           Wbio(iPOC+i-1,ng) =  wC_sink(i,ng)
         END DO
 #endif /* DARWIN_POMCLASS */
-#if ! defined DARWIN_POMCLASS || defined DARWIN_POMCLASS_FIXEDRATIO
+#if ! defined DARWIN_POMCLASS
         Wbio(iPON,ng) =  wN_sink(ng)
         Wbio(iPOP,ng) =  wP_sink(ng)
         Wbio(iPOSi,ng) = wSi_sink(ng)
         Wbio(iPOFe,ng) = wFe_sink(ng)
-#endif /* ! DARWIN_POMCLASS || DARWIN_POMCLASS_FIXEDRATIO */
+#endif /* ! DARWIN_POMCLASS */
 #if defined DARWIN_POMCLASS && ! defined DARWIN_POMCLASS_FIXEDRATIO
         DO i=1,npom
           Wbio(iPON+i-1,ng) =  wN_sink(i,ng)
@@ -1534,16 +1678,11 @@
           END IF
 # endif /* DARWIN_POMCLASS && ! DARWIN_POMCLASS_FIXEDRATIO */
 # if defined DARWIN_POMCLASS && defined DARWIN_POMCLASS_FIXEDRATIO
+! PON/POP/POSi/POFe are not tracers under FIXEDRATIO (see darwin_mod.h) --
+! iPON/iPOP/iPOSi/iPOFe all alias iPIC, so there is no separate sediment
+! pool for them here; only POC and PIC are tracked (known limitation).
           IF (i.ge.iPOC.and.i.lt.(iPOC+npom)) THEN
             idsed(itrc) = 1
-          ELSE IF (i.eq.iPON) THEN
-            idsed(itrc) = 2
-          ELSE IF (i.eq.iPOP) THEN
-            idsed(itrc) = 3
-          ELSE IF (i.eq.iPOSi) THEN
-            idsed(itrc) = 4
-          ELSE IF (i.eq.iPOFe) THEN
-            idsed(itrc) = 5
           ELSE IF (i.eq.iPIC) THEN
             idsed(itrc) = 6
           ELSE IF (i.ge.ic_.and.i.le.ec_) THEN

@@ -395,6 +395,8 @@
         ! orig code:
         !gALK(i) = recip_drF(ks) * gsm_ALK * surfaceForcingS(i,j)/gsm_S
         gALK(i) = gsm_ALK * surfaceForcingS(i,j)/gsm_S / drF(i,ks)
+
+        Bio(iALK,ks,i)=Bio(iALK,ks,i)+ dtbio(ng)*gALK(i)
 #endif /* DARWIN_OLD_VIRTUALFLUX */
 
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -441,6 +443,8 @@
         ! orig code:
         !gO2(i) =recip_drF(ks)*recip_hFacC(i)*FluxO2
         gO2(i) = FluxO2/drF(i,ks)
+
+        Bio(iO2,ks,i) =Bio(iO2,ks,i) + dtbio(ng)*gO2(i)
 ! ======================================================================
         DO k=1,N(ng)
 ! ======================================================================
@@ -467,11 +471,6 @@
 !====================================================================
 
 ! pCO2 solver...
-#if defined DARWIN_VERBOSE_PLANK_OLD
-          IF(k==DARWIN_VERBOSE_K.and.i==DARWIN_VERBOSE_I.and.j==DARWIN_VERBOSE_J) THEN
-            write(*,'(a,1x,a16,2x,10(f,1x,a,1x))') 'surfforcing',       'ak0=',ak0
-          END IF
-#endif
 ! put bounds on tracers so pH solver doesn't blow up
           surfdic = ptr2mol(ng) * MAX(surfDICMin(ng),MIN(surfDICMax(ng), Bio(iDIC,k,i)))
           surfalk = ptr2mol(ng) * MAX(surfALKMin(ng),MIN(surfALKMax(ng), Bio(iALK,k,i)))
@@ -577,14 +576,12 @@
      &        +VirtualFlux(i,j)                                         &
 #endif
      &        )/drF(i,ks)
-! k is at surface
-          ENDIF
 ! Tendency to increment conversion using multiplication with dtbio(ng) was
 ! missing previously -- a long-standing bug present since the original Oct
 ! 2020 port.
-          Bio(iDIC,N(ng),i)=Bio(iDIC,N(ng),i)+ dtbio(ng)*gDIC(i)
-          Bio(iALK,N(ng),i)=Bio(iALK,N(ng),i)+ dtbio(ng)*gALK(i)
-          Bio(iO2,N(ng),i) =Bio(iO2,N(ng),i) + dtbio(ng)*gO2(i)
+! k is at surface
+            Bio(iDIC,k,i)=Bio(iDIC,k,i)+ dtbio(ng)*gDIC(i)
+          ENDIF
         END DO
       END DO
       RETURN
